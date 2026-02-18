@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.fable/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Cloudflare
+.wrangler/
+.dev.vars
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

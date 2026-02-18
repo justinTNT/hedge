@@ -1,0 +1,24 @@
+name = "hedge"
+main = "dist/server/Worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local development
+[dev]
+port = 8787
+local_protocol = "http"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "hedge-db"
+database_id = "local"  # Replace with real ID after `wrangler d1 create hedge-db`
+
+# KV Namespace for sessions (optional)
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "your-kv-id"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
