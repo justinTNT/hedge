@@ -5,8 +5,10 @@ CREATE TABLE items (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     link TEXT,
+    image TEXT,
     extract TEXT,  -- Rich text JSON from TipTap
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    owner_comment TEXT NOT NULL,
+    created_at INTEGER NOT NULL
 );
 
 CREATE TABLE comments (
@@ -15,7 +17,7 @@ CREATE TABLE comments (
     parent_id TEXT,  -- NULL for top-level comments
     author TEXT NOT NULL,
     content TEXT NOT NULL,  -- Rich text JSON
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at INTEGER NOT NULL,
     FOREIGN KEY (item_id) REFERENCES items(id),
     FOREIGN KEY (parent_id) REFERENCES comments(id)
 );

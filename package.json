@@ -17,7 +17,7 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "vite": "^5.4.0",
-    "vite-plugin-fable": "^1.0.0",
+    "vite-plugin-fable": "0.0.31",
     "@vitejs/plugin-react": "^4.3.0",
     "wrangler": "^3.80.0"
   },

@@ -7,7 +7,9 @@
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Shared/Shared.fsproj" />
+    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

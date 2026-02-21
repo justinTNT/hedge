@@ -1,5 +1,5 @@
 name = "hedge"
-main = "dist/server/Worker.js"
+main = "worker-entry.js"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -18,6 +18,16 @@ database_id = "local"  # Replace with real ID after `wrangler d1 create hedge-db
 # [[kv_namespaces]]
 # binding = "KV"
 # id = "your-kv-id"
+
+# Durable Objects
+[durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["EventHub"]
 
 # Environment variables
 [vars]

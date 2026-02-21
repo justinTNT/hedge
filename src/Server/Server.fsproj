@@ -4,16 +4,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Env.fs" />
-    <Compile Include="Router.fs" />
     <Compile Include="Handlers.fs" />
+    <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Shared/Shared.fsproj" />
+    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />
-    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
     <PackageReference Include="Thoth.Json" Version="10.2.0" />
   </ItemGroup>
 </Project>

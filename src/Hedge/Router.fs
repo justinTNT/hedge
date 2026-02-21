@@ -1,8 +1,10 @@
-module Server.Router
+module Hedge.Router
 
 open Fable.Core
 open Fable.Core.JsInterop
-open Browser.Types
+open Thoth.Json
+open Hedge.Workers
+open Hedge.Validate
 
 /// Minimal router for Workers.
 /// Pattern matches on method + path to dispatch to handlers.
@@ -16,9 +18,12 @@ type RouteMatch =
     | Exact of string
     | WithParam of prefix: string * param: string
 
-let parseRoute (request: Request) : Route =
-    let url = createNew (jsConstructor<URL>) (request.url)
-    let path = url?pathname |> string
+[<Emit("new URL($0)")>]
+let private createUrl (url: string) : obj = jsNative
+
+let parseRoute (request: WorkerRequest) : Route =
+    let url = createUrl request.url
+    let path : string = url?pathname
     match request.method with
     | "GET" -> GET path
     | "POST" -> POST path
@@ -37,7 +42,7 @@ let matchPath (pattern: string) (path: string) : RouteMatch option =
     else None
 
 /// Response helpers
-let jsonResponse (body: string) (status: int) : Response =
+let jsonResponse (body: string) (status: int) : WorkerResponse =
     let options = createObj [
         "status" ==> status
         "headers" ==> createObj [
@@ -45,14 +50,14 @@ let jsonResponse (body: string) (status: int) : Response =
             "Access-Control-Allow-Origin" ==> "*"
         ]
     ]
-    Response.create(body, options)
+    WorkerResponse.create(body, options)
 
 let okJson body = jsonResponse body 200
 let notFound () = jsonResponse """{"error":"Not found"}""" 404
 let badRequest msg = jsonResponse (sprintf """{"error":"%s"}""" msg) 400
 let serverError msg = jsonResponse (sprintf """{"error":"%s"}""" msg) 500
 
-let corsPreflightResponse () : Response =
+let corsPreflightResponse () : WorkerResponse =
     let options = createObj [
         "status" ==> 204
         "headers" ==> createObj [
@@ -61,4 +66,15 @@ let corsPreflightResponse () : Response =
             "Access-Control-Allow-Headers" ==> "Content-Type"
         ]
     ]
-    Response.create("", options)
+    WorkerResponse.create("", options)
+
+let validationErrorResponse (errors: ValidationError list) =
+    let body =
+        Encode.object [
+            "errors", Encode.list (errors |> List.map (fun e ->
+                Encode.object [
+                    "field", Encode.string e.Field
+                    "message", Encode.string e.Message
+                ]))
+        ] |> Encode.toString 0
+    jsonResponse body 422

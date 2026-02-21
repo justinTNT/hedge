@@ -2,15 +2,15 @@ module Server.Worker
 
 open Fable.Core
 open Fable.Core.JsInterop
-open Browser.Types
+open Hedge.Workers
+open Hedge.Router
 open Server.Env
-open Server.Router
 open Server.Handlers
 
 /// Cloudflare Worker entry point.
 /// Compiles to JS that Workers can execute.
 
-let private handleRequest (request: Request) (env: Env) (ctx: ExecutionContext) : JS.Promise<Response> =
+let private handleRequest (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
         let route = parseRoute request
 
@@ -23,8 +23,30 @@ let private handleRequest (request: Request) (env: Env) (ctx: ExecutionContext) 
         | GET path when matchPath "/api/feed" path = Some (Exact "/api/feed") ->
             return! getFeed env
 
-        // Get item by ID
+        // WebSocket events
+        | GET path when matchPath "/api/events" path = Some (Exact "/api/events") ->
+            if not (isWebSocketUpgrade request) then
+                return badRequest "WebSocket upgrade required"
+            else
+                let itemId = getQueryParam request.url "itemId"
+                if isNull (box itemId) || itemId = "" then
+                    return badRequest "Missing itemId query parameter"
+                else
+                    let doId = env.EVENTS.idFromName(itemId)
+                    let stub = env.EVENTS.get(doId)
+                    return! stub.fetch(request)
+
+        // Tags
+        | GET path when matchPath "/api/tags" path = Some (Exact "/api/tags") ->
+            return! getTags env
+
+        // Parameterized GET routes
         | GET path ->
+            match matchPath "/api/tags/:id" path with
+            | Some (WithParam (_, param)) when param.EndsWith("/items") ->
+                let tag = param.Substring(0, param.Length - "/items".Length)
+                return! getItemsByTag tag env
+            | _ ->
             match matchPath "/api/item/:id" path with
             | Some (WithParam (_, itemId)) ->
                 return! getItem itemId env
@@ -33,7 +55,7 @@ let private handleRequest (request: Request) (env: Env) (ctx: ExecutionContext) 
 
         // Submit comment
         | POST path when matchPath "/api/comment" path = Some (Exact "/api/comment") ->
-            return! submitComment request env
+            return! submitComment request env ctx
 
         // Submit item
         | POST path when matchPath "/api/item" path = Some (Exact "/api/item") ->
@@ -46,7 +68,7 @@ let private handleRequest (request: Request) (env: Env) (ctx: ExecutionContext) 
 
 /// Export the fetch handler for Cloudflare Workers
 type WorkerExports = {
-    fetch: Request -> Env -> ExecutionContext -> JS.Promise<Response>
+    fetch: WorkerRequest -> Env -> ExecutionContext -> JS.Promise<WorkerResponse>
 }
 
 [<ExportDefault>]
