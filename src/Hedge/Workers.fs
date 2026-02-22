@@ -14,6 +14,7 @@ type WorkerRequest =
     abstract headers: obj
     abstract text: unit -> JS.Promise<string>
     abstract json: unit -> JS.Promise<obj>
+    abstract formData: unit -> JS.Promise<obj>
 
 /// Workers Response — constructed to send back.
 type [<Global>] WorkerResponse =
@@ -38,6 +39,24 @@ type D1PreparedStatement =
 type D1Database =
     abstract prepare: sql: string -> D1PreparedStatement
     abstract batch: statements: D1PreparedStatement array -> JS.Promise<D1Result<obj> array>
+
+/// R2 Object Storage
+type R2Object =
+    abstract key: string
+    abstract size: int
+    abstract httpEtag: string
+
+type R2ObjectBody =
+    abstract key: string
+    abstract size: int
+    abstract httpEtag: string
+    abstract body: obj
+    abstract httpMetadata: obj
+
+type R2Bucket =
+    abstract put: key: string * value: obj -> JS.Promise<R2Object>
+    abstract get: key: string -> JS.Promise<R2ObjectBody option>
+    abstract delete: key: string -> JS.Promise<unit>
 
 /// KV Namespace binding
 type KVNamespace =
@@ -108,6 +127,36 @@ let epochNow () : int = jsNative
 [<Emit("$0[$1]")>]
 let getProp (o: obj) (key: string) : obj = jsNative
 
+// -- FormData helpers --
+
+[<Emit("$0.get($1)")>]
+let formDataGet (fd: obj) (key: string) : obj = jsNative
+
+[<Emit("$0.name")>]
+let fileName (file: obj) : string = jsNative
+
+[<Emit("$0.type")>]
+let fileType (file: obj) : string = jsNative
+
+[<Emit("new Response($0, $1)")>]
+let streamResponse (body: obj) (options: obj) : WorkerResponse = jsNative
+
+// -- Header helpers --
+
+[<Emit("($0.headers.get($1) || '')")>]
+let getHeader (request: WorkerRequest) (name: string) : string = jsNative
+
+// -- Cookie helpers --
+
+[<Emit("($0.headers.get('Cookie') || '')")>]
+let getCookieHeader (request: WorkerRequest) : string = jsNative
+
+let parseCookie (name: string) (cookieHeader: string) : string option =
+    cookieHeader.Split(';')
+    |> Array.map (fun s -> s.Trim())
+    |> Array.tryFind (fun s -> s.StartsWith(name + "="))
+    |> Option.map (fun s -> s.Substring(name.Length + 1))
+
 // -- D1 row parsing helpers --
 
 let optToDb (v: string option) : obj =
@@ -121,3 +170,15 @@ let rowInt (row: obj) (key: string) : int = getProp row key |> unbox
 let rowStrOpt (row: obj) (key: string) : string option =
     let v = getProp row key
     if isNull v then None else Some (unbox v)
+
+let rowIntOpt (row: obj) (key: string) : int option =
+    let v = getProp row key
+    if isNull v then None else Some (unbox v)
+
+let rowBool (row: obj) (key: string) : bool =
+    rowInt row key <> 0
+
+let optIntToDb (v: int option) : obj =
+    match v with
+    | Some n -> box n
+    | None -> jsNull

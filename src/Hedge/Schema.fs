@@ -2,7 +2,7 @@ module Hedge.Schema
 
 /// Schema reflection engine.
 ///
-/// Derives metadata from wrapper types (PrimaryKey, MultiTenant, etc.)
+/// Derives metadata from wrapper types (PrimaryKey, CreateTimestamp, etc.)
 /// at runtime via Fable's TypeInfo. Each record field's TypeInfo carries
 /// its full type name — so `PrimaryKey<string>` shows up as
 /// "Hedge.Interface.PrimaryKey`1" and we can classify it.
@@ -21,7 +21,6 @@ type FieldAttr =
     | PrimaryKey
     | CreateTimestamp
     | UpdateTimestamp
-    | MultiTenant
     | SoftDelete
     | ForeignKey of table: string
     | RichContent
@@ -64,7 +63,6 @@ let showAttr = function
     | PrimaryKey -> "PrimaryKey"
     | CreateTimestamp -> "CreateTimestamp"
     | UpdateTimestamp -> "UpdateTimestamp"
-    | MultiTenant -> "MultiTenant"
     | SoftDelete -> "SoftDelete"
     | ForeignKey t -> sprintf "ForeignKey(%s)" t
     | RichContent -> "RichContent"
@@ -118,9 +116,6 @@ let rec private classifyType (t: System.Type) : FieldType * FieldAttr option =
                 if g.Contains("Int32") then FInt else FString
             else FString
         innerType, Some PrimaryKey
-
-    elif fn.Contains("Interface.MultiTenant") then
-        FString, Some MultiTenant
 
     elif fn.Contains("Interface.CreateTimestamp") then
         FInt, Some CreateTimestamp

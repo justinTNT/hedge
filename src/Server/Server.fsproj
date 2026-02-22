@@ -4,7 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Env.fs" />
+    <Compile Include="Db.fs" />
     <Compile Include="Handlers.fs" />
+    <Compile Include="AdminGen.fs" />
+    <Compile Include="AdminConfig.fs" />
+    <Compile Include="Admin.fs" />
     <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>

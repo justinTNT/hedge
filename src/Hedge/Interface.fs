@@ -15,9 +15,6 @@ module Hedge.Interface
 /// Primary key. Wraps the ID type (usually string).
 type PrimaryKey<'a> = PrimaryKey of 'a
 
-/// Multi-tenant host identifier.
-type MultiTenant = MultiTenant of string
-
 /// Auto-populated creation timestamp (epoch seconds).
 type CreateTimestamp = CreateTimestamp of int
 
@@ -38,3 +35,14 @@ type RichContent = RichContent of string
 
 /// URL / link.
 type Link = Link of string
+
+// -- API endpoint types --
+
+/// GET endpoint. Phantom type carries the response shape.
+type Get<'resp> = Get of string
+
+/// GET endpoint with a path parameter. Phantom type carries the response shape.
+type GetOne<'resp> = GetOne of (string -> string)
+
+/// POST endpoint. Phantom types carry request and response shapes.
+type Post<'req, 'resp> = Post of string

@@ -16,22 +16,24 @@ module GetFeed =
         Items: FeedItem list
     }
 
+    let endpoint : Get<Response> = Get "/api/feed"
+
 module SubmitComment =
     type CommentItem = {
         Id: string
         ItemId: string
         GuestId: string
         ParentId: string option
-        AuthorName: string
-        Text: RichContent
+        Author: string
+        Content: RichContent
         Timestamp: int
     }
 
     type Request = {
         ItemId: string
         ParentId: string option
-        Text: string
-        AuthorName: string option
+        Content: string
+        Author: string option
     }
 
     type ServerContext = {
@@ -42,6 +44,8 @@ module SubmitComment =
     type Response = {
         Comment: CommentItem
     }
+
+    let endpoint : Post<Request, Response> = Post "/api/comment"
 
 module SubmitItem =
     type MicroblogItem = {
@@ -73,15 +77,21 @@ module SubmitItem =
         Item: MicroblogItem
     }
 
+    let endpoint : Post<Request, Response> = Post "/api/item"
+
 module GetItem =
     type Response = {
         Item: SubmitItem.MicroblogItem
     }
 
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/item/%s")
+
 module GetTags =
     type Response = {
         Tags: string list
     }
+
+    let endpoint : Get<Response> = Get "/api/tags"
 
 module GetItemsByTag =
     type Response = {
@@ -89,11 +99,7 @@ module GetItemsByTag =
         Items: GetFeed.FeedItem list
     }
 
-module Routes =
-    let feed = "/api/feed"
-    let item id = sprintf "/api/item/%s" id
-    let submitComment = "/api/comment"
-    let submitItem = "/api/item"
-    let tags = "/api/tags"
-    let itemsByTag tag = sprintf "/api/tags/%s/items" tag
-    let events = "/api/events"
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/tags/%s/items")
+
+module Events =
+    let endpoint : Get<unit> = Get "/api/events"

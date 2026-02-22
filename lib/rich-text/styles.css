@@ -1,0 +1,534 @@
+/**
+ * Hamlet Rich Text Editor Styles
+ *
+ * Styles for the TipTap-based rich text editor.
+ * Import with: import 'hamlet-server/rich-text/styles.css'
+ */
+
+.hamlet-rt-editor {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    overflow: visible;
+    background: white;
+}
+
+.hamlet-rt-editor:focus-within {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Toolbar */
+.hamlet-rt-toolbar {
+    display: flex;
+    gap: 3px;
+    padding: 6px;
+    border-bottom: 1px solid #ced4da;
+    background: #f8f9fa;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.hamlet-rt-separator {
+    width: 1px;
+    height: 20px;
+    background: #ced4da;
+    margin: 0 3px;
+}
+
+/* Buttons */
+.hamlet-rt-btn {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 5px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.hamlet-rt-btn:hover {
+    background: #e9ecef;
+}
+
+.hamlet-rt-btn:active {
+    background: #dee2e6;
+}
+
+.hamlet-rt-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.hamlet-rt-btn.active:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Code button */
+.hamlet-rt-btn.code-btn {
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 10px;
+    letter-spacing: -1px;
+}
+
+/* Alignment icons - using repeating gradients for clean lines */
+.align-icon {
+    width: 14px;
+    height: 11px;
+    background-repeat: no-repeat;
+    background-size: 100% 2px, 75% 2px, 100% 2px;
+    background-position:
+        left 0px,
+        left 4px,
+        left 8px;
+    background-image:
+        linear-gradient(currentColor, currentColor),
+        linear-gradient(currentColor, currentColor),
+        linear-gradient(currentColor, currentColor);
+}
+
+/* Left align - short line on left */
+.align-icon-left {
+    background-position: left 0px, left 4px, left 8px;
+    background-size: 100% 2px, 75% 2px, 55% 2px;
+}
+
+/* Center align - lines centered */
+.align-icon-center {
+    background-position: center 0px, center 4px, center 8px;
+    background-size: 100% 2px, 75% 2px, 55% 2px;
+}
+
+/* Right align - short lines on right */
+.align-icon-right {
+    background-position: right 0px, right 4px, right 8px;
+    background-size: 100% 2px, 75% 2px, 55% 2px;
+}
+
+/* Justify - all three lines full width */
+.align-icon-justify {
+    background-position: left 0px, left 4px, left 8px;
+    background-size: 100% 2px, 100% 2px, 100% 2px;
+}
+
+/* Dropdown */
+.hamlet-rt-dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.hamlet-rt-dropdown-btn {
+    position: relative;
+}
+
+.hamlet-rt-dropdown-btn .highlight-icon {
+    font-size: 14px;
+    line-height: 1;
+    background: linear-gradient(to bottom, #fff3cd 0%, #fff3cd 50%, #d4edda 50%, #d4edda 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hamlet-rt-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 6px;
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    min-width: 100px;
+    margin-top: 3px;
+}
+
+.hamlet-rt-color-option {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 11px;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.hamlet-rt-color-option:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Content area */
+.hamlet-rt-content {
+    padding: 0.75rem;
+    min-height: 150px;
+}
+
+/* ProseMirror editor styles */
+.hamlet-rt-content .ProseMirror {
+    outline: none;
+    min-height: 120px;
+}
+
+.hamlet-rt-content .ProseMirror p {
+    margin: 0 0 0.5rem 0;
+}
+
+.hamlet-rt-content .ProseMirror p:last-child {
+    margin-bottom: 0;
+}
+
+.hamlet-rt-content .ProseMirror ul,
+.hamlet-rt-content .ProseMirror ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.hamlet-rt-content .ProseMirror li {
+    margin: 0.25rem 0;
+}
+
+.hamlet-rt-content .ProseMirror li p {
+    margin: 0;
+}
+
+.hamlet-rt-content .ProseMirror blockquote {
+    border-left: 3px solid #ced4da;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #6c757d;
+}
+
+.hamlet-rt-content .ProseMirror h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.2;
+}
+
+.hamlet-rt-content .ProseMirror h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.25;
+}
+
+.hamlet-rt-content .ProseMirror h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+}
+
+.hamlet-rt-content .ProseMirror code {
+    background: #f1f3f4;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.hamlet-rt-content .ProseMirror pre {
+    background: #f1f3f4;
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.hamlet-rt-content .ProseMirror pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+}
+
+.hamlet-rt-content .ProseMirror strong {
+    font-weight: 600;
+}
+
+/* Links */
+.hamlet-rt-content .ProseMirror a,
+.hamlet-rt-content .ProseMirror .hamlet-rt-link {
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.hamlet-rt-content .ProseMirror a:hover,
+.hamlet-rt-content .ProseMirror .hamlet-rt-link:hover {
+    color: #0056b3;
+}
+
+/* Text alignment */
+.hamlet-rt-content .ProseMirror [style*="text-align: left"] {
+    text-align: left;
+}
+
+.hamlet-rt-content .ProseMirror [style*="text-align: center"] {
+    text-align: center;
+}
+
+.hamlet-rt-content .ProseMirror [style*="text-align: right"] {
+    text-align: right;
+}
+
+.hamlet-rt-content .ProseMirror [style*="text-align: justify"] {
+    text-align: justify;
+}
+
+/* Highlight marks */
+.hamlet-rt-content .ProseMirror mark {
+    border-radius: 2px;
+    padding: 0.1em 0;
+}
+
+/* Placeholder for empty editor */
+.hamlet-rt-content .ProseMirror p.is-editor-empty:first-child::before {
+    color: #adb5bd;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Images — resizable wrapper */
+.hamlet-rt-img-wrapper {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+}
+
+.hamlet-rt-img-wrapper img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.hamlet-rt-img-wrapper.ProseMirror-selectednode {
+    outline: 2px solid var(--hamlet-accent, #3b82f6);
+}
+
+/* Resize handle (bottom-right corner) */
+.hamlet-rt-resize-handle {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 12px;
+    height: 12px;
+    background: var(--hamlet-accent, #3b82f6);
+    border: 2px solid white;
+    border-radius: 2px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 1;
+}
+
+.hamlet-rt-img-wrapper:hover .hamlet-rt-resize-handle,
+.hamlet-rt-img-wrapper.ProseMirror-selectednode .hamlet-rt-resize-handle,
+.hamlet-rt-img-wrapper.hamlet-rt-resizing .hamlet-rt-resize-handle {
+    opacity: 1;
+}
+
+/* Upload progress overlay */
+.hamlet-rt-img-upload {
+    min-width: 120px;
+    min-height: 80px;
+    background: #f1f3f4;
+    border-radius: 4px;
+}
+
+.hamlet-rt-upload-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 0 0 4px 4px;
+    overflow: hidden;
+}
+
+.hamlet-rt-upload-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--hamlet-accent, #3b82f6);
+    transition: width 0.15s ease;
+}
+
+/* Pulse animation on the placeholder while uploading */
+.hamlet-rt-img-upload img {
+    opacity: 0;
+}
+
+.hamlet-rt-img-upload::before {
+    content: 'Uploading…';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    animation: hamlet-rt-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hamlet-rt-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Legacy fallback: bare img in content (no node view) */
+.hamlet-rt-content .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Selection styling */
+.hamlet-rt-content .ProseMirror ::selection {
+    background: rgba(0, 123, 255, 0.2);
+}
+
+/* ==========================================================================
+   VIEWER STYLES (read-only display)
+   ========================================================================== */
+
+.hamlet-rt-viewer {
+    /* No border or special styling - just render the content inline */
+}
+
+.hamlet-rt-viewer .ProseMirror {
+    outline: none;
+}
+
+.hamlet-rt-viewer .ProseMirror p {
+    margin: 0 0 0.5rem 0;
+}
+
+.hamlet-rt-viewer .ProseMirror p:last-child {
+    margin-bottom: 0;
+}
+
+.hamlet-rt-viewer .ProseMirror ul,
+.hamlet-rt-viewer .ProseMirror ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.hamlet-rt-viewer .ProseMirror li {
+    margin: 0.25rem 0;
+}
+
+.hamlet-rt-viewer .ProseMirror li p {
+    margin: 0;
+}
+
+.hamlet-rt-viewer .ProseMirror blockquote {
+    border-left: 3px solid #ced4da;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #6c757d;
+}
+
+.hamlet-rt-viewer .ProseMirror h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.2;
+}
+
+.hamlet-rt-viewer .ProseMirror h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.25;
+}
+
+.hamlet-rt-viewer .ProseMirror h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.3;
+}
+
+.hamlet-rt-viewer .ProseMirror code {
+    background: #f1f3f4;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.hamlet-rt-viewer .ProseMirror pre {
+    background: #f1f3f4;
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.hamlet-rt-viewer .ProseMirror pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+}
+
+.hamlet-rt-viewer .ProseMirror strong {
+    font-weight: 600;
+}
+
+.hamlet-rt-viewer .ProseMirror a,
+.hamlet-rt-viewer .ProseMirror .hamlet-rt-link {
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.hamlet-rt-viewer .ProseMirror a:hover,
+.hamlet-rt-viewer .ProseMirror .hamlet-rt-link:hover {
+    color: #0056b3;
+}
+
+.hamlet-rt-viewer .ProseMirror [style*="text-align: left"] {
+    text-align: left;
+}
+
+.hamlet-rt-viewer .ProseMirror [style*="text-align: center"] {
+    text-align: center;
+}
+
+.hamlet-rt-viewer .ProseMirror [style*="text-align: right"] {
+    text-align: right;
+}
+
+.hamlet-rt-viewer .ProseMirror [style*="text-align: justify"] {
+    text-align: justify;
+}
+
+.hamlet-rt-viewer .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+}
+
+.hamlet-rt-viewer .ProseMirror mark {
+    border-radius: 2px;
+    padding: 0.1em 0;
+}

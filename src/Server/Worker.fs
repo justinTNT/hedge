@@ -6,6 +6,7 @@ open Hedge.Workers
 open Hedge.Router
 open Server.Env
 open Server.Handlers
+open Server.Admin
 
 /// Cloudflare Worker entry point.
 /// Compiles to JS that Workers can execute.
@@ -13,6 +14,11 @@ open Server.Handlers
 let private handleRequest (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
         let route = parseRoute request
+
+        // Try admin routes first
+        match Admin.handleRequest request env route with
+        | Some p -> return! p
+        | None ->
 
         match route with
         // CORS preflight
@@ -40,6 +46,11 @@ let private handleRequest (request: WorkerRequest) (env: Env) (ctx: ExecutionCon
         | GET path when matchPath "/api/tags" path = Some (Exact "/api/tags") ->
             return! getTags env
 
+        // Serve blob
+        | GET path when path.StartsWith("/blobs/") ->
+            let key = path.Substring("/blobs/".Length)
+            return! getBlob key env
+
         // Parameterized GET routes
         | GET path ->
             match matchPath "/api/tags/:id" path with
@@ -53,9 +64,14 @@ let private handleRequest (request: WorkerRequest) (env: Env) (ctx: ExecutionCon
             | _ ->
                 return notFound ()
 
+        // Upload blob
+        | POST path when matchPath "/api/blobs" path = Some (Exact "/api/blobs") ->
+            return! uploadBlob request env
+
         // Submit comment
         | POST path when matchPath "/api/comment" path = Some (Exact "/api/comment") ->
-            return! submitComment request env ctx
+            let guest = resolveGuest request
+            return! submitComment request guest env ctx
 
         // Submit item
         | POST path when matchPath "/api/item" path = Some (Exact "/api/item") ->

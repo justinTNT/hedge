@@ -67,7 +67,6 @@ let private wrapperBaseType (fullname: string) (generics: System.Type array) : s
     if fullname.Contains("Interface.PrimaryKey") then
         if generics.Length > 0 && (tiFullname generics.[0]).Contains("Int32") then Some "int"
         else Some "string"
-    elif fullname.Contains("Interface.MultiTenant") then Some "string"
     elif fullname.Contains("Interface.CreateTimestamp") then Some "int"
     elif fullname.Contains("Interface.UpdateTimestamp") then Some "int"
     elif fullname.Contains("Interface.SoftDelete") then Some "int"

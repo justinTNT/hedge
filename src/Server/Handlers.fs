@@ -1,6 +1,7 @@
 module Server.Handlers
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Validate
@@ -49,7 +50,7 @@ let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
 
         let commentStmt =
             bind
-                (env.DB.prepare("SELECT id, item_id, parent_id, author, content, created_at FROM comments WHERE item_id = ? ORDER BY created_at"))
+                (env.DB.prepare("SELECT id, item_id, guest_id, parent_id, author, content, created_at FROM comments WHERE item_id = ? ORDER BY created_at"))
                 [| box itemId |]
 
         let tagStmt =
@@ -71,10 +72,10 @@ let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
                     let ci : SubmitComment.CommentItem =
                         { Id = rowStr r "id"
                           ItemId = rowStr r "item_id"
-                          GuestId = "guest-anon"
+                          GuestId = rowStr r "guest_id"
                           ParentId = rowStrOpt r "parent_id"
-                          AuthorName = rowStr r "author"
-                          Text = RichContent (rowStr r "content")
+                          Author = rowStr r "author"
+                          Content = RichContent (rowStr r "content")
                           Timestamp = rowInt r "created_at" }
                     ci
                 )
@@ -104,8 +105,10 @@ let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
             return okJson body
     }
 
-let submitComment (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
+let submitComment (request: WorkerRequest) (guest: Hedge.Router.GuestContext) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
+        let guestId = guest.GuestId
+
         let! bodyText = request.text()
 
         match Decode.fromString Decode.submitCommentReq bodyText with
@@ -118,30 +121,37 @@ let submitComment (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : 
             | Ok req ->
             let commentId = newId ()
             let now = epochNow ()
-            let author = req.AuthorName |> Option.defaultValue "Anonymous"
+            let author = req.Author |> Option.defaultValue "Anonymous"
 
-            let stmt =
+            let upsertGuest =
                 bind
                     (env.DB.prepare(
-                        "INSERT INTO comments (id, item_id, parent_id, author, content, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+                        "INSERT OR REPLACE INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"
                     ))
-                    [| box commentId; box req.ItemId; optToDb req.ParentId; box author; box req.Text; box now |]
+                    [| box guestId; box author; box now |]
 
-            let! _ = stmt.run()
+            let insertComment =
+                bind
+                    (env.DB.prepare(
+                        "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    ))
+                    [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box now |]
+
+            let! _ = env.DB.batch([| upsertGuest; insertComment |])
 
             let newComment : SubmitComment.CommentItem =
                 { Id = commentId
                   ItemId = req.ItemId
-                  GuestId = "guest-anon"
+                  GuestId = guestId
                   ParentId = req.ParentId
-                  AuthorName = author
-                  Text = RichContent req.Text
+                  Author = author
+                  Content = RichContent req.Content
                   Timestamp = now }
 
-            let event : Models.Sse.NewCommentEvent =
-                { Id = commentId; ItemId = req.ItemId; GuestId = "guest-anon"
-                  ParentId = req.ParentId; AuthorName = author
-                  Text = req.Text; Timestamp = now }
+            let event : Models.Ws.NewCommentEvent =
+                { Id = commentId; ItemId = req.ItemId; GuestId = guestId
+                  ParentId = req.ParentId; Author = author
+                  Content = req.Content; Timestamp = now }
 
             let eventJson =
                 Encode.object [
@@ -159,7 +169,7 @@ let submitComment (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : 
                     "comment", Encode.commentItem newComment
                 ] |> Encode.toString 0
 
-            return okJson body
+            return okJsonWithCookie body (guestCookieValue guest)
     }
 
 let getTags (env: Env) : JS.Promise<WorkerResponse> =
@@ -204,6 +214,44 @@ let getItemsByTag (tag: string) (env: Env) : JS.Promise<WorkerResponse> =
                 "items", Encode.list (List.map Encode.feedItem items)
             ] |> Encode.toString 0
         return okJson body
+    }
+
+let private allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/svg+xml" ]
+
+let uploadBlob (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! fd = request.formData()
+        let file = formDataGet fd "file"
+        if isNull file then
+            return badRequest "Missing file field"
+        else
+            let mime = fileType file
+            if not (allowedImageTypes.Contains mime) then
+                return badRequest "Unsupported image type"
+            else
+                let name = fileName file
+                let key = sprintf "%s/%s" (newId ()) name
+                let! _ = env.BLOBS.put(key, file)
+                let body = sprintf """{"url":"/blobs/%s"}""" key
+                return okJson body
+    }
+
+let getBlob (key: string) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! objOpt = env.BLOBS.get(key)
+        match objOpt with
+        | None -> return notFound ()
+        | Some obj ->
+            let contentType = getProp obj.httpMetadata "contentType"
+            let ct = if isNull contentType then box "application/octet-stream" else contentType
+            let options = createObj [
+                "status" ==> 200
+                "headers" ==> createObj [
+                    "Content-Type" ==> ct
+                    "Cache-Control" ==> "public, max-age=31536000, immutable"
+                ]
+            ]
+            return streamResponse obj.body options
     }
 
 let submitItem (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =

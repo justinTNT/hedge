@@ -1,0 +1,166 @@
+/* Base styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
+.app { max-width: 800px; margin: 0 auto; padding: 1rem; }
+header { border-bottom: 1px solid #eee; padding-bottom: 1rem; margin-bottom: 1rem; }
+h1 { font-size: 1.5rem; }
+.loading { color: #666; }
+.error { background: #fee; border: 1px solid #fcc; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+.feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
+.feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.feed-item a { color: #666; font-size: 0.875rem; }
+.tags { margin-top: 0.5rem; }
+
+/* Comment Thread Styling */
+.comment-thread {
+    position: relative;
+    margin-left: 32px;
+    padding-left: 20px;
+    margin-top: 16px;
+}
+
+/* Clickable collapse line */
+.comment-collapse-line {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+}
+
+.comment-collapse-line::before {
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: #ccc;
+    border-radius: 1px;
+}
+
+.comment-collapse-line:hover::before {
+    width: 4px;
+}
+
+/* Rainbow colors cycling through ROYGBIV based on depth */
+.comment-thread.depth-0 > .comment-collapse-line::before { background: #e74c3c; } /* Red */
+.comment-thread.depth-1 > .comment-collapse-line::before { background: #e67e22; } /* Orange */
+.comment-thread.depth-2 > .comment-collapse-line::before { background: #f1c40f; } /* Yellow */
+.comment-thread.depth-3 > .comment-collapse-line::before { background: #2ecc71; } /* Green */
+.comment-thread.depth-4 > .comment-collapse-line::before { background: #3498db; } /* Blue */
+.comment-thread.depth-5 > .comment-collapse-line::before { background: #9b59b6; } /* Indigo/Violet */
+.comment-thread.depth-6 > .comment-collapse-line::before { background: #e74c3c; } /* Red (cycle) */
+.comment-thread.depth-7 > .comment-collapse-line::before { background: #e67e22; } /* Orange */
+.comment-thread.depth-8 > .comment-collapse-line::before { background: #f1c40f; } /* Yellow */
+.comment-thread.depth-9 > .comment-collapse-line::before { background: #2ecc71; } /* Green */
+.comment-thread.depth-10 > .comment-collapse-line::before { background: #3498db; } /* Blue */
+.comment-thread.depth-11 > .comment-collapse-line::before { background: #9b59b6; } /* Violet */
+
+/* Comment content */
+.comment-content {
+    padding: 8px 0;
+}
+
+.comment-author {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.comment-body {
+    color: #444;
+    line-height: 1.5;
+}
+
+.comment-body p {
+    margin: 0 0 0.5em 0;
+}
+
+.comment-body p:last-child {
+    margin-bottom: 0;
+}
+
+.comment-meta {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 6px;
+}
+
+/* Inline collapse toggle (next to Reply) */
+.comment-collapse-toggle-inline {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.comment-collapse-toggle-inline:hover {
+    color: #333;
+}
+
+/* Collapsed state */
+.comment-thread.collapsed > .comment-children {
+    display: none;
+}
+
+/* Reply button */
+.comment-reply-btn {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.comment-reply-btn:hover {
+    color: #333;
+}
+
+/* Root level comments (no indent) */
+.comment-thread.root-comment {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.comment-thread.root-comment::before {
+    display: none;
+}
+
+/* Tag pills */
+.tag {
+    display: inline-block;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.85em;
+    margin-right: 8px;
+    margin-bottom: 6px;
+    text-decoration: none;
+    transition: filter 0.2s, transform 0.1s;
+}
+
+.tag:hover {
+    filter: brightness(0.85);
+    transform: scale(1.05);
+}
+
+/* Comment editor overrides */
+.comment-form .hamlet-rt-content {
+    min-height: 80px;
+}
+
+.comment-form .hamlet-rt-content .ProseMirror {
+    min-height: 60px;
+}
+
+/* Remove ProseMirror focus outline */
+.ProseMirror-focused {
+    outline: none !important;
+}

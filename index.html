@@ -4,23 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hedge</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
-        .app { max-width: 800px; margin: 0 auto; padding: 1rem; }
-        header { border-bottom: 1px solid #eee; padding-bottom: 1rem; margin-bottom: 1rem; }
-        h1 { font-size: 1.5rem; }
-        .loading { color: #666; }
-        .error { background: #fee; border: 1px solid #fcc; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
-        .feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
-        .feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
-        .feed-item a { color: #666; font-size: 0.875rem; }
-        .tags { margin-top: 0.5rem; }
-        .tag { background: #eee; padding: 0.125rem 0.5rem; border-radius: 2px; font-size: 0.75rem; margin-right: 0.25rem; }
-    </style>
+    <link rel="stylesheet" href="/public/styles.css">
+    <script src="/lib/guest-session.js"></script>
 </head>
 <body>
     <div id="app"></div>
+    <script type="module" src="/lib/rich-text/bootstrap.js"></script>
     <script type="module" src="/dist/client/App.js"></script>
 </body>
 </html>

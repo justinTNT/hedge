@@ -289,8 +289,8 @@ let main _ =
         Tags = ["tag1"]
         Comments = [
             { Id = "c-1"; ItemId = "view-1"; GuestId = "g-1"
-              ParentId = None; AuthorName = "Bob"
-              Text = RichContent "Nice post!"; Timestamp = 1700003000 }
+              ParentId = None; Author = "Bob"
+              Content = RichContent "Nice post!"; Timestamp = 1700003000 }
         ]
         Timestamp = 1700000000
     }
@@ -307,8 +307,8 @@ let main _ =
         let c = decoded.Comments.[0]
         check "View.Comment.Id round-trips" (c.Id = "c-1")
         check "View.Comment.ParentId round-trips" (c.ParentId = None)
-        check "View.Comment.Text round-trips" (
-            match c.Text with RichContent v -> v = "Nice post!")
+        check "View.Comment.Content round-trips" (
+            match c.Content with RichContent v -> v = "Nice post!")
         printfn "  SubmitItem.MicroblogItem (nested) round-trip: OK"
 
     // ============================================================
@@ -321,8 +321,8 @@ let main _ =
     let validComment : SubmitComment.Request = {
         ItemId = "  item-1  "
         ParentId = Some "  parent-1  "
-        Text = "  Hello world  "
-        AuthorName = Some "  Alice  "
+        Content = "  Hello world  "
+        Author = Some "  Alice  "
     }
     match Codecs.Validate.submitCommentReq validComment with
     | Error errs ->
@@ -331,16 +331,16 @@ let main _ =
     | Ok r ->
         check "Comment.ItemId trimmed" (r.ItemId = "item-1")
         check "Comment.ParentId trimmed" (r.ParentId = Some "parent-1")
-        check "Comment.Text trimmed" (r.Text = "Hello world")
-        check "Comment.AuthorName trimmed" (r.AuthorName = Some "Alice")
+        check "Comment.Content trimmed" (r.Content = "Hello world")
+        check "Comment.Author trimmed" (r.Author = Some "Alice")
         printfn "  Valid comment (trimmed): OK"
 
     // Test 2: Empty required fields → Error with correct field names
     let emptyComment : SubmitComment.Request = {
         ItemId = "  "
         ParentId = None
-        Text = "  "
-        AuthorName = None
+        Content = "  "
+        Author = None
     }
     match Codecs.Validate.submitCommentReq emptyComment with
     | Ok _ ->
@@ -348,15 +348,15 @@ let main _ =
         pass <- false
     | Error errs ->
         check "Empty ItemId error" (errs |> List.exists (fun e -> e.Field = "ItemId"))
-        check "Empty Text error" (errs |> List.exists (fun e -> e.Field = "Text"))
+        check "Empty Content error" (errs |> List.exists (fun e -> e.Field = "Content"))
         printfn "  Empty required fields: OK (%d errors)" (List.length errs)
 
     // Test 3: MaxLength violation → Error with "at most" message
     let longComment : SubmitComment.Request = {
         ItemId = "item-1"
         ParentId = None
-        Text = String.replicate 10001 "x"
-        AuthorName = None
+        Content = String.replicate 10001 "x"
+        Author = None
     }
     match Codecs.Validate.submitCommentReq longComment with
     | Ok _ ->
@@ -364,7 +364,7 @@ let main _ =
         pass <- false
     | Error errs ->
         check "MaxLength error on Text" (
-            errs |> List.exists (fun e -> e.Field = "Text" && e.Message.Contains("at most")))
+            errs |> List.exists (fun e -> e.Field = "Content" && e.Message.Contains("at most")))
         printfn "  MaxLength violation: OK"
 
     // Test 4: Valid item → Ok, verify trim on all string fields

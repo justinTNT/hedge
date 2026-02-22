@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hedge Admin</title>
+    <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+      var m = window.location.hash.match(/key=([^&]*)/);
+      if (m) {
+        localStorage.setItem('adminKey', decodeURIComponent(m[1]));
+        history.replaceState(null, '', window.location.pathname);
+      }
+    </script>
+    <script type="module" src="/lib/rich-text/bootstrap.js"></script>
+    <script type="module" src="/dist/admin/App.js"></script>
+</body>
+</html>

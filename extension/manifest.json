@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Hedge",
+  "version": "0.1.0",
+  "description": "Curate content for your Hedge microblog.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

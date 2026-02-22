@@ -5,9 +5,11 @@
   <ItemGroup>
     <Compile Include="Interface.fs" />
     <Compile Include="Schema.fs" />
+    <Compile Include="SchemaCodec.fs" />
     <Compile Include="Validate.fs" />
     <Compile Include="Codec.fs" />
     <Compile Include="Workers.fs" />
+
     <Compile Include="Router.fs" />
   </ItemGroup>
   <ItemGroup>

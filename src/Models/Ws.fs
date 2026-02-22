@@ -1,9 +1,7 @@
-module Models.Sse
+module Models.Ws
 
-/// SSE event payloads.
-/// These define the shape of data pushed to clients via Server-Sent Events.
-///
-/// Port of: horatio/models/Sse/*.elm
+/// WebSocket event payloads.
+/// These define the shape of data pushed to clients via WebSocket.
 
 /// Sent when a new comment is created on an item.
 /// Clients viewing the same item receive this to append the comment live.
@@ -12,8 +10,8 @@ type NewCommentEvent = {
     ItemId: string
     GuestId: string
     ParentId: string option
-    AuthorName: string
-    Text: string
+    Author: string
+    Content: string
     Timestamp: int
 }
 

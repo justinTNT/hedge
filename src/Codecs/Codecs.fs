@@ -8,7 +8,6 @@ open Models.Api
 
 /// Unwrap helpers — terse pattern matches used in Handlers.fs.
 let inline pk (PrimaryKey v) = v
-let inline mt (MultiTenant v) = v
 let inline ct (CreateTimestamp v) = v
 let inline ut (UpdateTimestamp v) = v
 let inline sd (SoftDelete v) = v
@@ -30,8 +29,8 @@ module Encode =
     let inline commentItem (c: SubmitComment.CommentItem) = encode c
     let inline microblogItemView (i: SubmitItem.MicroblogItem) = encode i
 
-    // -- SSE event encoders --
-    let inline newCommentEvent (e: Models.Sse.NewCommentEvent) = encode e
+    // -- WebSocket event encoders --
+    let inline newCommentEvent (e: Models.Ws.NewCommentEvent) = encode e
 
     // -- API request encoders --
     let inline submitCommentReq (r: SubmitComment.Request) = encode r
@@ -51,8 +50,8 @@ module Decode =
     let commentItem : Decoder<SubmitComment.CommentItem> = decode<SubmitComment.CommentItem>()
     let microblogItemView : Decoder<SubmitItem.MicroblogItem> = decode<SubmitItem.MicroblogItem>()
 
-    // -- SSE event decoders --
-    let newCommentEvent : Decoder<Models.Sse.NewCommentEvent> = decode<Models.Sse.NewCommentEvent>()
+    // -- WebSocket event decoders --
+    let newCommentEvent : Decoder<Models.Ws.NewCommentEvent> = decode<Models.Ws.NewCommentEvent>()
 
     // -- API response decoders --
     let getFeedResponse : Decoder<GetFeed.Response> = decode<GetFeed.Response>()
@@ -75,8 +74,8 @@ module Validate =
         schema "SubmitComment.Request" [
             fieldWith "ItemId" FString [Required; Trim]
             fieldWith "ParentId" (FOption FString) [Trim]
-            fieldWith "Text" FString [Required; Trim; MinLength 1; MaxLength 10000]
-            fieldWith "AuthorName" (FOption FString) [Trim; MaxLength 100]
+            fieldWith "Content" FString [Required; Trim; MinLength 1; MaxLength 10000]
+            fieldWith "Author" (FOption FString) [Trim; MaxLength 100]
         ]
 
     let submitItemSchema =

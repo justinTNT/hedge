@@ -4,7 +4,6 @@ open Hedge.Interface
 
 type Guest = {
     Id: PrimaryKey<string>
-    Host: MultiTenant
     Name: string
     Picture: string
     SessionId: string
@@ -12,9 +11,9 @@ type Guest = {
     DeletedAt: SoftDelete option
 }
 
+// @table items
 type MicroblogItem = {
     Id: PrimaryKey<string>
-    Host: MultiTenant
     Title: string
     Link: Link option
     Image: Link option
@@ -26,14 +25,14 @@ type MicroblogItem = {
     DeletedAt: SoftDelete option
 }
 
+// @table comments
 type ItemComment = {
     Id: PrimaryKey<string>
-    Host: MultiTenant
     ItemId: ForeignKey<MicroblogItem>
     GuestId: ForeignKey<Guest>
     ParentId: string option
-    AuthorName: string
-    Text: RichContent
+    Author: string
+    Content: RichContent
     Removed: bool
     CreatedAt: CreateTimestamp
     DeletedAt: SoftDelete option
@@ -41,7 +40,6 @@ type ItemComment = {
 
 type Tag = {
     Id: PrimaryKey<string>
-    Host: MultiTenant
     Name: string
     CreatedAt: CreateTimestamp
     DeletedAt: SoftDelete option
@@ -50,7 +48,6 @@ type Tag = {
 type ItemTag = {
     ItemId: ForeignKey<MicroblogItem>
     TagId: ForeignKey<Tag>
-    Host: MultiTenant
     DeletedAt: SoftDelete option
 }
 

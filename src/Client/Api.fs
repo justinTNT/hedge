@@ -4,6 +4,7 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Fetch
 open Thoth.Json
+open Hedge.Interface
 open Codecs
 open Models.Api
 
@@ -28,24 +29,30 @@ let private postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : J
     }
 
 let getFeed () =
-    fetchJson Routes.feed Decode.getFeedResponse
+    let (Get path) = GetFeed.endpoint
+    fetchJson path Decode.getFeedResponse
 
 let getItem (itemId: string) =
-    fetchJson (Routes.item itemId) Decode.getItemResponse
+    let (GetOne f) = GetItem.endpoint
+    fetchJson (f itemId) Decode.getItemResponse
 
 let submitComment (req: SubmitComment.Request) =
+    let (Post path) = SubmitComment.endpoint
     let body = Encode.submitCommentReq req |> Encode.toString 0
-    postJson Routes.submitComment body Decode.submitCommentResponse
+    postJson path body Decode.submitCommentResponse
 
 let submitItem (req: SubmitItem.Request) =
+    let (Post path) = SubmitItem.endpoint
     let body = Encode.submitItemReq req |> Encode.toString 0
-    postJson Routes.submitItem body Decode.submitItemResponse
+    postJson path body Decode.submitItemResponse
 
 let getTags () =
-    fetchJson Routes.tags Decode.getTagsResponse
+    let (Get path) = GetTags.endpoint
+    fetchJson path Decode.getTagsResponse
 
 let getItemsByTag (tag: string) =
-    fetchJson (Routes.itemsByTag tag) Decode.getItemsByTagResponse
+    let (GetOne f) = GetItemsByTag.endpoint
+    fetchJson (f tag) Decode.getItemsByTagResponse
 
 // -- WebSocket --
 
@@ -62,8 +69,9 @@ let private wsBase () : string = jsNative
 """)>]
 let private openWebSocket (url: string) (onMessage: obj -> unit) (onError: obj -> unit) : (unit -> unit) = jsNative
 
-let connectEvents (itemId: string) (onMessage: Models.Sse.NewCommentEvent -> unit) (onError: string -> unit) : (unit -> unit) =
-    let url = sprintf "%s%s?itemId=%s" (wsBase()) Routes.events itemId
+let connectEvents (itemId: string) (onMessage: Models.Ws.NewCommentEvent -> unit) (onError: string -> unit) : (unit -> unit) =
+    let (Get path) = Events.endpoint
+    let url = sprintf "%s%s?itemId=%s" (wsBase()) path itemId
     openWebSocket
         url
         (fun e ->

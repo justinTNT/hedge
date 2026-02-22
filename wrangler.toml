@@ -29,6 +29,12 @@ bindings = [
 tag = "v1"
 new_classes = ["EventHub"]
 
+# R2 blob storage
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "hedge-blobs"
+
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
+ADMIN_KEY = "dev-admin-key"
