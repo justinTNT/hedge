@@ -342,12 +342,12 @@ async function submit() {
     .filter(Boolean)
 
   const body = {
-    Title: title,
-    Link: pageUrl || null,
-    Image: selectedImage || null,
-    Extract: extractText ? JSON.stringify(extractJson) : null,
-    OwnerComment: JSON.stringify(commentJson),
-    Tags: tags,
+    title,
+    link: pageUrl || null,
+    image: selectedImage || null,
+    extract: extractText ? JSON.stringify(extractJson) : null,
+    ownerComment: JSON.stringify(commentJson),
+    tags,
   }
 
   const btn = document.getElementById('submitBtn')
