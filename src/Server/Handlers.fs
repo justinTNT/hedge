@@ -105,71 +105,66 @@ let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
             return okJson body
     }
 
-let submitComment (request: WorkerRequest) (guest: Hedge.Router.GuestContext) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
+let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
+    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
+        match Validate.submitCommentReq req with
+        | Error errors ->
+            return validationErrorResponse errors
+        | Ok req ->
+        let guest = resolveGuest request
         let guestId = guest.GuestId
+        let commentId = newId ()
+        let now = epochNow ()
+        let author = req.Author |> Option.defaultValue "Anonymous"
 
-        let! bodyText = request.text()
+        let upsertGuest =
+            bind
+                (env.DB.prepare(
+                    "INSERT OR REPLACE INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"
+                ))
+                [| box guestId; box author; box now |]
 
-        match Decode.fromString Decode.submitCommentReq bodyText with
-        | Error err ->
-            return badRequest err
-        | Ok raw ->
-            match Validate.submitCommentReq raw with
-            | Error errors ->
-                return validationErrorResponse errors
-            | Ok req ->
-            let commentId = newId ()
-            let now = epochNow ()
-            let author = req.Author |> Option.defaultValue "Anonymous"
+        let insertComment =
+            bind
+                (env.DB.prepare(
+                    "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                ))
+                [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box now |]
 
-            let upsertGuest =
-                bind
-                    (env.DB.prepare(
-                        "INSERT OR REPLACE INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"
-                    ))
-                    [| box guestId; box author; box now |]
+        let! _ = env.DB.batch([| upsertGuest; insertComment |])
 
-            let insertComment =
-                bind
-                    (env.DB.prepare(
-                        "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                    ))
-                    [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box now |]
+        let newComment : SubmitComment.CommentItem =
+            { Id = commentId
+              ItemId = req.ItemId
+              GuestId = guestId
+              ParentId = req.ParentId
+              Author = author
+              Content = RichContent req.Content
+              Timestamp = now }
 
-            let! _ = env.DB.batch([| upsertGuest; insertComment |])
+        let event : Models.Ws.NewCommentEvent =
+            { Id = commentId; ItemId = req.ItemId; GuestId = guestId
+              ParentId = req.ParentId; Author = author
+              Content = req.Content; Timestamp = now }
 
-            let newComment : SubmitComment.CommentItem =
-                { Id = commentId
-                  ItemId = req.ItemId
-                  GuestId = guestId
-                  ParentId = req.ParentId
-                  Author = author
-                  Content = RichContent req.Content
-                  Timestamp = now }
+        let eventJson =
+            Encode.object [
+                "type", Encode.string "NewComment"
+                "payload", Codecs.Encode.newCommentEvent event
+            ] |> Encode.toString 0
 
-            let event : Models.Ws.NewCommentEvent =
-                { Id = commentId; ItemId = req.ItemId; GuestId = guestId
-                  ParentId = req.ParentId; Author = author
-                  Content = req.Content; Timestamp = now }
+        let doId = env.EVENTS.idFromName(req.ItemId)
+        let stub = env.EVENTS.get(doId)
+        let broadcastReq = createRequest "https://do/broadcast" "POST" eventJson
+        ctx.waitUntil(stub.fetch(broadcastReq) |> unbox<JS.Promise<obj>>)
 
-            let eventJson =
-                Encode.object [
-                    "type", Encode.string "NewComment"
-                    "payload", Codecs.Encode.newCommentEvent event
-                ] |> Encode.toString 0
+        let body =
+            Encode.object [
+                "comment", Encode.commentItem newComment
+            ] |> Encode.toString 0
 
-            let doId = env.EVENTS.idFromName(req.ItemId)
-            let stub = env.EVENTS.get(doId)
-            let broadcastReq = createRequest "https://do/broadcast" "POST" eventJson
-            ctx.waitUntil(stub.fetch(broadcastReq) |> unbox<JS.Promise<obj>>)
-
-            let body =
-                Encode.object [
-                    "comment", Encode.commentItem newComment
-                ] |> Encode.toString 0
-
-            return okJsonWithCookie body (guestCookieValue guest)
+        return okJsonWithCookie body (guestCookieValue guest)
     }
 
 let getTags (env: Env) : JS.Promise<WorkerResponse> =
@@ -216,98 +211,55 @@ let getItemsByTag (tag: string) (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
-let private allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/svg+xml" ]
-
-let uploadBlob (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
+    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
-        let! fd = request.formData()
-        let file = formDataGet fd "file"
-        if isNull file then
-            return badRequest "Missing file field"
-        else
-            let mime = fileType file
-            if not (allowedImageTypes.Contains mime) then
-                return badRequest "Unsupported image type"
-            else
-                let name = fileName file
-                let key = sprintf "%s/%s" (newId ()) name
-                let! _ = env.BLOBS.put(key, file)
-                let body = sprintf """{"url":"/blobs/%s"}""" key
-                return okJson body
-    }
+        match Validate.submitItemReq req with
+        | Error errors ->
+            return validationErrorResponse errors
+        | Ok req ->
+        let itemId = newId ()
+        let now = epochNow ()
 
-let getBlob (key: string) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! objOpt = env.BLOBS.get(key)
-        match objOpt with
-        | None -> return notFound ()
-        | Some obj ->
-            let contentType = getProp obj.httpMetadata "contentType"
-            let ct = if isNull contentType then box "application/octet-stream" else contentType
-            let options = createObj [
-                "status" ==> 200
-                "headers" ==> createObj [
-                    "Content-Type" ==> ct
-                    "Cache-Control" ==> "public, max-age=31536000, immutable"
-                ]
-            ]
-            return streamResponse obj.body options
-    }
+        let insertItem =
+            bind
+                (env.DB.prepare(
+                    "INSERT INTO items (id, title, link, image, extract, owner_comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                ))
+                [| box itemId; box req.Title; optToDb req.Link; optToDb req.Image; optToDb req.Extract; box req.OwnerComment; box now |]
 
-let submitItem (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! bodyText = request.text()
+        let tagStmts =
+            req.Tags |> List.collect (fun tagName ->
+                let tagId = newId ()
+                let insertTag =
+                    bind
+                        (env.DB.prepare("INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?)"))
+                        [| box tagId; box tagName |]
+                let linkTag =
+                    bind
+                        (env.DB.prepare("INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"))
+                        [| box itemId; box tagName |]
+                [ insertTag; linkTag ]
+            )
 
-        match Decode.fromString Decode.submitItemReq bodyText with
-        | Error err ->
-            return badRequest err
-        | Ok raw ->
-            match Validate.submitItemReq raw with
-            | Error errors ->
-                return validationErrorResponse errors
-            | Ok req ->
-            let itemId = newId ()
-            let now = epochNow ()
+        let allStmts = insertItem :: tagStmts |> List.toArray
+        let! _ = env.DB.batch(allStmts)
 
-            let insertItem =
-                bind
-                    (env.DB.prepare(
-                        "INSERT INTO items (id, title, link, image, extract, owner_comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                    ))
-                    [| box itemId; box req.Title; optToDb req.Link; optToDb req.Image; optToDb req.Extract; box req.OwnerComment; box now |]
+        let newItem : SubmitItem.MicroblogItem =
+            { Id = itemId
+              Title = req.Title
+              Link = req.Link |> Option.map Link
+              Image = req.Image |> Option.map Link
+              Extract = req.Extract |> Option.map RichContent
+              OwnerComment = RichContent req.OwnerComment
+              Tags = req.Tags
+              Comments = []
+              Timestamp = now }
 
-            let tagStmts =
-                req.Tags |> List.collect (fun tagName ->
-                    let tagId = newId ()
-                    let insertTag =
-                        bind
-                            (env.DB.prepare("INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?)"))
-                            [| box tagId; box tagName |]
-                    let linkTag =
-                        bind
-                            (env.DB.prepare("INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"))
-                            [| box itemId; box tagName |]
-                    [ insertTag; linkTag ]
-                )
+        let body =
+            Encode.object [
+                "item", Encode.microblogItemView newItem
+            ] |> Encode.toString 0
 
-            let allStmts = insertItem :: tagStmts |> List.toArray
-            let! _ = env.DB.batch(allStmts)
-
-            let newItem : SubmitItem.MicroblogItem =
-                { Id = itemId
-                  Title = req.Title
-                  Link = req.Link |> Option.map Link
-                  Image = req.Image |> Option.map Link
-                  Extract = req.Extract |> Option.map RichContent
-                  OwnerComment = RichContent req.OwnerComment
-                  Tags = req.Tags
-                  Comments = []
-                  Timestamp = now }
-
-            let body =
-                Encode.object [
-                    "item", Encode.microblogItemView newItem
-                ] |> Encode.toString 0
-
-            return okJson body
+        return okJson body
     }

@@ -36,6 +36,14 @@ type RichContent = RichContent of string
 /// URL / link.
 type Link = Link of string
 
+// -- Attributes --
+
+/// Table name override for code generation.
+[<AllowNullLiteral>]
+type TableAttribute(name: string) =
+    inherit System.Attribute()
+    member _.Name = name
+
 // -- API endpoint types --
 
 /// GET endpoint. Phantom type carries the response shape.

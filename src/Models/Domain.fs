@@ -11,7 +11,7 @@ type Guest = {
     DeletedAt: SoftDelete option
 }
 
-// @table items
+[<Table "items">]
 type MicroblogItem = {
     Id: PrimaryKey<string>
     Title: string
@@ -25,7 +25,7 @@ type MicroblogItem = {
     DeletedAt: SoftDelete option
 }
 
-// @table comments
+[<Table "comments">]
 type ItemComment = {
     Id: PrimaryKey<string>
     ItemId: ForeignKey<MicroblogItem>

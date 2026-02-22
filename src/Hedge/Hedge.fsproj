@@ -9,11 +9,11 @@
     <Compile Include="Validate.fs" />
     <Compile Include="Codec.fs" />
     <Compile Include="Workers.fs" />
-
     <Compile Include="Router.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
     <PackageReference Include="Thoth.Json" Version="10.2.0" />
   </ItemGroup>
 </Project>

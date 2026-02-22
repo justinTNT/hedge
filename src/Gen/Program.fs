@@ -1,140 +1,11 @@
 module Gen.Program
 
-open Fable.Core
+open System
+open System.IO
+open System.Reflection
+open Microsoft.FSharp.Reflection
+open Hedge.Interface
 open Hedge.Schema
-
-// ============================================================
-// File I/O (Node.js)
-// ============================================================
-
-[<Import("writeFileSync", "node:fs")>]
-let writeFileSync (path: string, content: string) : unit = jsNative
-
-[<Import("readFileSync", "node:fs")>]
-let readFileSync (path: string, encoding: string) : string = jsNative
-
-let readFile path = readFileSync(path, "utf8")
-
-[<Import("readdirSync", "node:fs")>]
-let readdirSync (path: string) : string array = jsNative
-
-[<Import("existsSync", "node:fs")>]
-let existsSync (path: string) : bool = jsNative
-
-[<Import("mkdirSync", "node:fs")>]
-let private mkdirSyncImport (path: string, options: obj) : unit = jsNative
-
-let mkdirRecursive (path: string) : unit =
-    mkdirSyncImport(path, box {| recursive = true |})
-
-[<Import("execSync", "node:child_process")>]
-let private execSyncImport (cmd: string, options: obj) : string = jsNative
-
-let execSync (cmd: string) : string =
-    execSyncImport(cmd, box {| encoding = "utf8" |})
-
-[<Emit("process.argv")>]
-let argv : string array = jsNative
-
-[<Emit("JSON.parse($0)")>]
-let jsonParse (s: string) : obj = jsNative
-
-[<Emit("$0[$1]")>]
-let jsIdx (o: obj) (i: int) : obj = jsNative
-
-[<Emit("$0[$1]")>]
-let jsGet (o: obj) (key: string) : obj = jsNative
-
-[<Emit("($0 || []).length")>]
-let jsLen (o: obj) : int = jsNative
-
-// ============================================================
-// Source parser — reads Domain.fs, extracts all type definitions
-// ============================================================
-
-/// Parse "PrimaryKey<string>" etc. into FieldType + attrs
-let parseInnerType (s: string) : FieldType * FieldAttr list =
-    if s.StartsWith("PrimaryKey<") then
-        let inner = s.Substring(11, s.Length - 12)
-        let ft = if inner.Contains("int") then FInt else FString
-        ft, [PrimaryKey]
-    elif s.StartsWith("ForeignKey<") then
-        let inner = s.Substring(11, s.Length - 12)
-        FString, [ForeignKey inner]
-    elif s = "CreateTimestamp" then FInt, [CreateTimestamp]
-    elif s = "UpdateTimestamp" then FInt, [UpdateTimestamp]
-    elif s = "SoftDelete" then FInt, [SoftDelete]
-    elif s = "RichContent" then FString, [RichContent]
-    elif s = "Link" then FString, [Link]
-    elif s = "string" then FString, []
-    elif s = "int" then FInt, []
-    elif s = "bool" then FBool, []
-    else FRecord s, []
-
-/// Parse a full field type string, handling option/list wrappers
-let parseFieldType (typeStr: string) : FieldType * FieldAttr list =
-    let s = typeStr.Trim()
-    if s.EndsWith(" option") then
-        let inner = s.Substring(0, s.Length - 7)
-        let ft, attrs = parseInnerType inner
-        FOption ft, attrs
-    elif s.EndsWith(" list") then
-        let inner = s.Substring(0, s.Length - 5)
-        let ft, _ = parseInnerType inner
-        FList ft, []
-    else
-        parseInnerType s
-
-type ParsedType = {
-    Name: string
-    Table: string option
-    Fields: FieldSchema list
-}
-
-/// Parse all type definitions from a Domain.fs source file
-let parseDomainFile (path: string) : ParsedType list =
-    let content = readFile path
-    let lines = content.Split('\n')
-
-    let results = ResizeArray<ParsedType>()
-    let mutable pendingTable : string option = None
-    let mutable currentName : string option = None
-    let mutable currentFields = ResizeArray<FieldSchema>()
-
-    let flush () =
-        match currentName with
-        | Some name ->
-            results.Add({
-                Name = name
-                Table = pendingTable
-                Fields = currentFields |> Seq.toList
-            })
-            currentName <- None
-            currentFields <- ResizeArray<FieldSchema>()
-            pendingTable <- None
-        | None -> ()
-
-    for line in lines do
-        let trimmed = line.Trim()
-        if trimmed.StartsWith("// @table ") then
-            pendingTable <- Some (trimmed.Substring(10).Trim())
-        elif trimmed.StartsWith("type ") && trimmed.Contains("= {") then
-            flush ()
-            let afterType = trimmed.Substring(5)
-            let spaceIdx = afterType.IndexOf(' ')
-            let name = if spaceIdx > 0 then afterType.Substring(0, spaceIdx) else afterType
-            currentName <- Some name
-        elif currentName.IsSome && trimmed = "}" then
-            flush ()
-        elif currentName.IsSome && trimmed.Contains(":") && not (trimmed.StartsWith("//")) then
-            let colonIdx = trimmed.IndexOf(':')
-            let fieldName = trimmed.Substring(0, colonIdx).Trim()
-            let fieldTypeStr = trimmed.Substring(colonIdx + 1).Trim()
-            let ft, attrs = parseFieldType fieldTypeStr
-            currentFields.Add({ Name = fieldName; Type = ft; Attrs = attrs })
-
-    flush ()
-    results |> Seq.toList
 
 // ============================================================
 // Helpers
@@ -143,14 +14,14 @@ let parseDomainFile (path: string) : ParsedType list =
 let toSnakeCase (s: string) =
     s.ToCharArray()
     |> Array.mapi (fun i c ->
-        if i > 0 && System.Char.IsUpper c then
-            sprintf "_%c" (System.Char.ToLower c)
+        if i > 0 && Char.IsUpper c then
+            sprintf "_%c" (Char.ToLower c)
         else
-            string (System.Char.ToLower c))
+            string (Char.ToLower c))
     |> String.concat ""
 
 let toCamelCase (s: string) =
-    (System.Char.ToLower s.[0] |> string) + s.[1..]
+    (Char.ToLower s.[0] |> string) + s.[1..]
 
 let pluralize (s: string) =
     if s.EndsWith("s") then s + "es"
@@ -178,7 +49,161 @@ let isForeignKey (f: FieldSchema) =
         | _ -> false)
 
 // ============================================================
-// Shared table metadata — used by both AdminGen and Db
+// Reflection-based type discovery (Step 3)
+// ============================================================
+
+let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
+    if propType.IsGenericType then
+        let def = propType.GetGenericTypeDefinition()
+        if def = typedefof<PrimaryKey<_>> then
+            let inner = propType.GenericTypeArguments.[0]
+            (if inner = typeof<int> then FInt else FString), [PrimaryKey]
+        elif def = typedefof<ForeignKey<_>> then
+            let refType = propType.GenericTypeArguments.[0]
+            FString, [ForeignKey refType.Name]
+        elif def = typedefof<option<_>> then
+            let inner, attrs = classifyFieldType propType.GenericTypeArguments.[0]
+            FOption inner, attrs
+        elif def = typedefof<list<_>> then
+            let inner, _ = classifyFieldType propType.GenericTypeArguments.[0]
+            FList inner, []
+        else FString, []
+    elif propType = typeof<CreateTimestamp> then FInt, [CreateTimestamp]
+    elif propType = typeof<UpdateTimestamp> then FInt, [UpdateTimestamp]
+    elif propType = typeof<SoftDelete> then FInt, [SoftDelete]
+    elif propType = typeof<RichContent> then FString, [RichContent]
+    elif propType = typeof<Link> then FString, [Link]
+    elif propType = typeof<string> then FString, []
+    elif propType = typeof<int> then FInt, []
+    elif propType = typeof<bool> then FBool, []
+    else FRecord propType.Name, []
+
+let getFieldSchemas (recordType: Type) : FieldSchema list =
+    FSharpType.GetRecordFields(recordType)
+    |> Array.map (fun prop ->
+        let ft, attrs = classifyFieldType prop.PropertyType
+        { Name = prop.Name; Type = ft; Attrs = attrs })
+    |> Array.toList
+
+/// Discover all record types in Models.Domain module
+let discoverDomainTypes () : Type list =
+    let assembly = typeof<Models.Domain.Guest>.Assembly
+    assembly.GetTypes()
+    |> Array.filter (fun t ->
+        t.FullName.StartsWith("Models.Domain+")
+        && FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance))
+    |> Array.toList
+
+/// Discover all WS event types in Models.Ws module
+let discoverWsTypes () : Type list =
+    let assembly = typeof<Models.Ws.NewCommentEvent>.Assembly
+    assembly.GetTypes()
+    |> Array.filter (fun t ->
+        t.FullName.StartsWith("Models.Ws+")
+        && FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance))
+    |> Array.toList
+
+// ============================================================
+// API endpoint discovery
+// ============================================================
+
+type EndpointMethod = EGet | EGetOne | EPost
+
+type ParsedEndpoint = {
+    ModuleName: string
+    Method: EndpointMethod
+    Path: string
+    RequestType: Type option
+    ResponseType: Type option
+    ViewTypes: Type list
+}
+
+let discoverApiModules () : ParsedEndpoint list =
+    let assembly = typeof<Models.Api.GetFeed.Response>.Assembly
+    // Api modules are nested types under Models.Api
+    let apiType =
+        assembly.GetTypes()
+        |> Array.tryFind (fun t -> t.FullName = "Models.Api")
+    match apiType with
+    | None -> []
+    | Some apiParent ->
+        let nestedModules = apiParent.GetNestedTypes(BindingFlags.Public ||| BindingFlags.Static)
+        nestedModules
+        |> Array.choose (fun moduleType ->
+            let endpointProp = moduleType.GetProperty("endpoint", BindingFlags.Public ||| BindingFlags.Static)
+            if endpointProp = null then None
+            else
+                let endpointValue = endpointProp.GetValue(null)
+                let endpointType = endpointProp.PropertyType
+
+                let typeDef =
+                    if endpointType.IsGenericType then endpointType.GetGenericTypeDefinition()
+                    else endpointType
+
+                // Extract the path string from the DU value
+                let fields = FSharpValue.GetUnionFields(endpointValue, endpointType) |> snd
+
+                let method, path =
+                    if typeDef = typedefof<Get<_>> then
+                        let respArg = endpointType.GenericTypeArguments.[0]
+                        // Skip Get<unit> (WebSocket upgrade endpoint)
+                        if respArg = typeof<unit> then
+                            EGet, ""
+                        else
+                            EGet, fields.[0] :?> string
+                    elif typeDef = typedefof<Post<_,_>> then
+                        EPost, fields.[0] :?> string
+                    elif typeDef = typedefof<GetOne<_>> then
+                        // GetOne contains a function string -> string
+                        let func = fields.[0] :?> (string -> string)
+                        EGetOne, func ":id"
+                    else
+                        EGet, ""
+
+                // Skip websocket endpoints (Get<unit>)
+                if path = "" then None
+                else
+
+                let nested = moduleType.GetNestedTypes(BindingFlags.Public)
+                let requestType = nested |> Array.tryFind (fun t -> t.Name = "Request")
+                let responseType = nested |> Array.tryFind (fun t -> t.Name = "Response")
+                let viewTypes =
+                    nested |> Array.filter (fun t ->
+                        FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance)
+                        && t.Name <> "Request"
+                        && t.Name <> "Response"
+                        && t.Name <> "ServerContext")
+                    |> Array.toList
+
+                Some {
+                    ModuleName = moduleType.Name
+                    Method = method
+                    Path = path
+                    RequestType = requestType
+                    ResponseType = responseType
+                    ViewTypes = viewTypes
+                })
+        |> Array.toList
+
+// ============================================================
+// ParsedType — bridge between reflection and existing generators
+// ============================================================
+
+type ParsedType = {
+    Name: string
+    Table: string option
+    Fields: FieldSchema list
+}
+
+let reflectToParsedType (t: Type) : ParsedType =
+    let tableName =
+        match t.GetCustomAttribute<TableAttribute>() with
+        | null -> None
+        | attr -> Some attr.Name
+    { Name = t.Name; Table = tableName; Fields = getFieldSchemas t }
+
+// ============================================================
+// Shared table metadata — used by AdminGen, Db, and Schema.sql
 // ============================================================
 
 type TableMeta = {
@@ -375,7 +400,6 @@ let generateDbTable (m: TableMeta) : string list =
     let lines = ResizeArray<string>()
     let emit (s: string) = lines.Add(s)
 
-    // Section header
     emit ""
     emit "// ============================================================"
     emit (sprintf "// %s (%s)" m.DisplayName m.TableName)
@@ -616,7 +640,336 @@ let generateSchemaSql (metas: TableMeta list) : string =
     parts |> String.concat "\n"
 
 // ============================================================
-// D1 introspection
+// Codecs.fs generation (Step 5)
+// ============================================================
+
+/// Compute a unique codec name for a view type, appending "View" if it collides with a domain type
+let viewCodecName (domainNames: Set<string>) (vt: Type) =
+    let base_ = toCamelCase vt.Name
+    if domainNames.Contains base_ then base_ + "View" else base_
+
+let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (wsTypes: Type list) : string =
+    let domainNames = domainTypes |> List.map (fun t -> toCamelCase t.Name) |> Set.ofList
+    let lines = ResizeArray<string>()
+    let emit s = lines.Add(s)
+
+    emit "// AUTO-GENERATED by src/Gen/Program.fs -- do not edit by hand."
+    emit "module Codecs"
+    emit ""
+    emit "open Thoth.Json"
+    emit "open Hedge.Interface"
+    emit "open Hedge.Codec"
+    emit "open Models.Domain"
+    emit "open Models.Api"
+    emit ""
+    emit "/// Unwrap helpers — terse pattern matches used in Handlers.fs."
+    emit "let inline pk (PrimaryKey v) = v"
+    emit "let inline ct (CreateTimestamp v) = v"
+    emit "let inline ut (UpdateTimestamp v) = v"
+    emit "let inline sd (SoftDelete v) = v"
+    emit "let inline fk (ForeignKey v) = v"
+    emit "let inline rc (RichContent v) = v"
+    emit "let inline lk (Link v) = v"
+    emit ""
+    emit "module Encode ="
+    emit ""
+
+    // Domain types
+    emit "    // -- Domain types --"
+    for t in domainTypes do
+        let name = toCamelCase t.Name
+        emit (sprintf "    let inline %s (v: %s) = encode v" name t.Name)
+    emit ""
+
+    // API view types
+    emit "    // -- API view types --"
+    for ep in endpoints do
+        for vt in ep.ViewTypes do
+            let name = viewCodecName domainNames vt
+            emit (sprintf "    let inline %s (v: %s.%s) = encode v" name ep.ModuleName vt.Name)
+    emit ""
+
+    // API request encoders
+    emit "    // -- API request encoders --"
+    for ep in endpoints do
+        match ep.RequestType with
+        | Some _ ->
+            let name = toCamelCase ep.ModuleName + "Req"
+            emit (sprintf "    let inline %s (v: %s.Request) = encode v" name ep.ModuleName)
+        | None -> ()
+    emit ""
+
+    // WS event encoders
+    emit "    // -- WebSocket event encoders --"
+    for t in wsTypes do
+        let name = toCamelCase t.Name
+        emit (sprintf "    let inline %s (e: Models.Ws.%s) = encode e" name t.Name)
+    emit ""
+
+    emit "module Decode ="
+    emit ""
+
+    // Domain types
+    emit "    // -- Domain types --"
+    for t in domainTypes do
+        let name = toCamelCase t.Name
+        emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name t.Name t.Name)
+    emit ""
+
+    // API view types
+    emit "    // -- API view types --"
+    for ep in endpoints do
+        for vt in ep.ViewTypes do
+            let name = viewCodecName domainNames vt
+            emit (sprintf "    let %s : Decoder<%s.%s> = decode<%s.%s>()" name ep.ModuleName vt.Name ep.ModuleName vt.Name)
+    emit ""
+
+    // API response decoders
+    emit "    // -- API response decoders --"
+    for ep in endpoints do
+        match ep.ResponseType with
+        | Some _ ->
+            let name = toCamelCase ep.ModuleName + "Response"
+            emit (sprintf "    let %s : Decoder<%s.Response> = decode<%s.Response>()" name ep.ModuleName ep.ModuleName)
+        | None -> ()
+    emit ""
+
+    // API request decoders
+    emit "    // -- API request decoders --"
+    for ep in endpoints do
+        match ep.RequestType with
+        | Some _ ->
+            let name = toCamelCase ep.ModuleName + "Req"
+            emit (sprintf "    let %s : Decoder<%s.Request> = decode<%s.Request>()" name ep.ModuleName ep.ModuleName)
+        | None -> ()
+    emit ""
+
+    // WS event decoders
+    emit "    // -- WebSocket event decoders --"
+    for t in wsTypes do
+        let name = toCamelCase t.Name
+        emit (sprintf "    let %s : Decoder<Models.Ws.%s> = decode<Models.Ws.%s>()" name t.Name t.Name)
+    emit ""
+
+    // Validate module
+    emit "module Validate ="
+    emit ""
+    emit "    open Hedge.Schema"
+    emit "    open Hedge.Validate"
+    emit ""
+
+    for ep in endpoints do
+        match ep.RequestType with
+        | Some reqType ->
+            let fields = getFieldSchemas reqType
+            let schemaName = toCamelCase ep.ModuleName + "Schema"
+            let valName = toCamelCase ep.ModuleName + "Req"
+
+            emit (sprintf "    let %s =" schemaName)
+            emit (sprintf "        schema \"%s.Request\" [" ep.ModuleName)
+
+            for f in fields do
+                // For request types, add sensible validation attrs
+                let attrs =
+                    match f.Type with
+                    | FString -> [Required; Trim]
+                    | FOption FString -> [Trim]
+                    | FList _ -> []
+                    | _ -> []
+                let allAttrs = attrs
+                let attrsStr =
+                    if allAttrs.IsEmpty then "[]"
+                    else
+                        let inner = allAttrs |> List.map fieldAttrDsl |> String.concat "; "
+                        sprintf "[%s]" inner
+                emit (sprintf "            fieldWith \"%s\" %s %s" f.Name (fieldTypeDsl f.Type) attrsStr)
+
+            emit "        ]"
+            emit ""
+            emit (sprintf "    let inline %s (r: %s.Request) = validate %s r" valName ep.ModuleName schemaName)
+            emit ""
+        | None -> ()
+
+    lines |> String.concat "\n"
+
+// ============================================================
+// ClientGen.fs generation (Step 6)
+// ============================================================
+
+let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: Type list) : string =
+    let lines = ResizeArray<string>()
+    let emit s = lines.Add(s)
+
+    emit "// AUTO-GENERATED by src/Gen/Program.fs -- do not edit by hand."
+    emit "module Client.ClientGen"
+    emit ""
+    emit "open Fable.Core"
+    emit "open Thoth.Json"
+    emit "open Models.Api"
+    emit "open Models.Ws"
+    emit "open Codecs"
+    emit "open Client.Api"
+    emit ""
+    emit "// --- HTTP API ---"
+
+    for ep in endpoints do
+        let funcName = toCamelCase ep.ModuleName
+        match ep.Method with
+        | EGet ->
+            emit ""
+            emit (sprintf "let %s () =" funcName)
+            emit (sprintf "    fetchJson \"%s\" Decode.%sResponse" ep.Path (toCamelCase ep.ModuleName))
+        | EGetOne ->
+            emit ""
+            emit (sprintf "let %s (id: string) =" funcName)
+            // Replace :id with %s in path for sprintf
+            let pathTemplate = ep.Path.Replace(":id", "%s")
+            emit (sprintf "    fetchJson (sprintf \"%s\" id) Decode.%sResponse" pathTemplate (toCamelCase ep.ModuleName))
+        | EPost ->
+            emit ""
+            emit (sprintf "let %s (req: %s.Request) =" funcName ep.ModuleName)
+            emit (sprintf "    let body = Encode.%sReq req |> Encode.toString 0" (toCamelCase ep.ModuleName))
+            emit (sprintf "    postJson \"%s\" body Decode.%sResponse" ep.Path (toCamelCase ep.ModuleName))
+
+    emit ""
+    emit "// --- WebSocket Events ---"
+    emit ""
+
+    // WsEvent DU
+    emit "type WsEvent ="
+    for t in wsTypes do
+        let caseName = t.Name.Replace("Event", "")
+        emit (sprintf "    | %s of %s" caseName t.Name)
+    emit ""
+
+    emit "let decodeWsEvent (text: string) : Result<WsEvent, string> ="
+    emit "    match Decode.fromString (Decode.field \"type\" Decode.string) text with"
+    for t in wsTypes do
+        let caseName = t.Name.Replace("Event", "")
+        // The type field in the JSON is the case name (e.g. "NewComment")
+        let decoderName = toCamelCase t.Name
+        emit (sprintf "    | Ok \"%s\" ->" caseName)
+        emit (sprintf "        Decode.fromString (Decode.field \"payload\" Decode.%s) text" decoderName)
+        emit (sprintf "        |> Result.map %s" caseName)
+    emit "    | Ok t -> Error (sprintf \"Unknown event: %s\" t)"
+    emit "    | Error e -> Error e"
+    emit ""
+
+    lines |> String.concat "\n"
+
+// ============================================================
+// Routes.fs generation (Step 7)
+// ============================================================
+
+let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
+    let lines = ResizeArray<string>()
+    let emit s = lines.Add(s)
+
+    emit "// AUTO-GENERATED by src/Gen/Program.fs -- do not edit by hand."
+    emit "module Server.Routes"
+    emit ""
+    emit "open Fable.Core"
+    emit "open Thoth.Json"
+    emit "open Hedge.Workers"
+    emit "open Hedge.Router"
+    emit "open Codecs"
+    emit "open Server.Env"
+    emit ""
+    emit "let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)"
+    emit "    : JS.Promise<WorkerResponse> option ="
+    emit "    let route = parseRoute request"
+    emit "    match route with"
+
+    // GET exact routes
+    let getExacts = endpoints |> List.filter (fun ep -> ep.Method = EGet)
+    for ep in getExacts do
+        let handlerName = toCamelCase ep.ModuleName
+        emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
+        emit (sprintf "        Some (Server.Handlers.%s env)" handlerName)
+        emit ""
+
+    // GetOne routes — collected into a single GET path branch
+    let getOnes = endpoints |> List.filter (fun ep -> ep.Method = EGetOne)
+    if not getOnes.IsEmpty then
+        emit "    | GET path ->"
+        for i, ep in getOnes |> List.indexed do
+            let handlerName = toCamelCase ep.ModuleName
+            // Convert :id back to a match pattern
+            let pattern = ep.Path.Replace(":id", ":id")
+            emit (sprintf "        match matchPath \"%s\" path with" pattern)
+            emit (sprintf "        | Some (WithParam (_, id)) -> Some (Server.Handlers.%s id env)" handlerName)
+            emit "        | _ ->"
+        emit "        None"
+        emit ""
+
+    // POST routes
+    let posts = endpoints |> List.filter (fun ep -> ep.Method = EPost)
+    for ep in posts do
+        let handlerName = toCamelCase ep.ModuleName
+        let decoderName = toCamelCase ep.ModuleName + "Req"
+        emit (sprintf "    | POST path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
+        emit "        Some (promise {"
+        emit "            let! bodyText = request.text()"
+        emit (sprintf "            match Decode.fromString Decode.%s bodyText with" decoderName)
+        emit "            | Error err -> return badRequest err"
+        emit "            | Ok req ->"
+        emit (sprintf "                return! Server.Handlers.%s req request env ctx" handlerName)
+        emit "        })"
+        emit ""
+
+    emit "    | _ -> None"
+    emit ""
+
+    lines |> String.concat "\n"
+
+// ============================================================
+// Handlers.fs stub generation (Step 8 — init only)
+// ============================================================
+
+let generateHandlersFs (endpoints: ParsedEndpoint list) : string =
+    let lines = ResizeArray<string>()
+    let emit s = lines.Add(s)
+
+    emit "module Server.Handlers"
+    emit ""
+    emit "open Fable.Core"
+    emit "open Hedge.Workers"
+    emit "open Hedge.Router"
+    emit "open Codecs"
+    emit "open Models.Api"
+    emit "open Server.Env"
+    emit ""
+
+    for ep in endpoints do
+        let handlerName = toCamelCase ep.ModuleName
+        match ep.Method with
+        | EGet ->
+            emit (sprintf "let %s (env: Env) : JS.Promise<WorkerResponse> =" handlerName)
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+        | EGetOne ->
+            emit (sprintf "let %s (id: string) (env: Env) : JS.Promise<WorkerResponse> =" handlerName)
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+        | EPost ->
+            emit (sprintf "let %s (req: %s.Request) (request: WorkerRequest)" handlerName ep.ModuleName)
+            emit "    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> ="
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+
+    lines |> String.concat "\n"
+
+// ============================================================
+// Migration support (.NET equivalents)
 // ============================================================
 
 type ColInfo = {
@@ -626,8 +979,19 @@ type ColInfo = {
     IsPk: bool
 }
 
+let execProcess (cmd: string) (args: string) : string =
+    let psi = Diagnostics.ProcessStartInfo(cmd, args)
+    psi.RedirectStandardOutput <- true
+    psi.RedirectStandardError <- true
+    psi.UseShellExecute <- false
+    psi.CreateNoWindow <- true
+    let p = Diagnostics.Process.Start(psi)
+    let output = p.StandardOutput.ReadToEnd()
+    p.WaitForExit()
+    output
+
 let getDbName () : string =
-    let content = readFile "wrangler.toml"
+    let content = File.ReadAllText("wrangler.toml")
     let lines = content.Split('\n')
     lines
     |> Array.tryFind (fun l -> l.Trim().StartsWith("database_name"))
@@ -641,20 +1005,19 @@ let getDbName () : string =
         else None)
     |> Option.defaultValue ""
 
-let wranglerQuery (dbName: string) (sql: string) : obj array =
+let wranglerQuery (dbName: string) (sql: string) : Text.Json.JsonElement array =
     let escaped = sql.Replace("\"", "\\\"")
-    let cmd = sprintf "npx wrangler d1 execute %s --local --command \"%s\" --json" dbName escaped
-    let output = execSync cmd
-    let parsed = jsonParse output
-    let first = jsIdx parsed 0
-    let results = jsGet first "results"
-    let len = jsLen results
-    Array.init len (fun i -> jsIdx results i)
+    let args = sprintf "wrangler d1 execute %s --local --command \"%s\" --json" dbName escaped
+    let output = execProcess "npx" args
+    let doc = Text.Json.JsonDocument.Parse(output)
+    let first = doc.RootElement.[0]
+    let results = first.GetProperty("results")
+    [| for i in 0 .. results.GetArrayLength() - 1 -> results.[i] |]
 
 let getCurrentTables (dbName: string) : string list =
     let rows = wranglerQuery dbName "SELECT name FROM sqlite_master WHERE type='table'"
     rows
-    |> Array.map (fun r -> unbox<string> (jsGet r "name"))
+    |> Array.map (fun r -> r.GetProperty("name").GetString())
     |> Array.filter (fun n ->
         not (n.StartsWith("d1_") || n.StartsWith("sqlite_") || n.StartsWith("_cf_")))
     |> Array.toList
@@ -663,10 +1026,10 @@ let getTableColumns (dbName: string) (tableName: string) : ColInfo list =
     let rows = wranglerQuery dbName (sprintf "PRAGMA table_info(%s)" tableName)
     rows
     |> Array.map (fun r ->
-        { ColName = unbox<string> (jsGet r "name")
-          ColType = unbox<string> (jsGet r "type")
-          NotNull = unbox<int> (jsGet r "notnull") = 1
-          IsPk = unbox<int> (jsGet r "pk") = 1 })
+        { ColName = r.GetProperty("name").GetString()
+          ColType = r.GetProperty("type").GetString()
+          NotNull = r.GetProperty("notnull").GetInt32() = 1
+          IsPk = r.GetProperty("pk").GetInt32() = 1 })
     |> Array.toList
 
 // ============================================================
@@ -747,16 +1110,16 @@ let generateRecreateTableSql (m: TableMeta) (currentCols: ColInfo list) (metasBy
 
 let extractLeadingNumber (s: string) : int option =
     let mutable endIdx = 0
-    while endIdx < s.Length && System.Char.IsDigit s.[endIdx] do
+    while endIdx < s.Length && Char.IsDigit s.[endIdx] do
         endIdx <- endIdx + 1
     if endIdx > 0 then
         Some (int (s.Substring(0, endIdx)))
     else None
 
 let nextMigrationNumber () : int =
-    if not (existsSync "migrations") then 1
+    if not (Directory.Exists "migrations") then 1
     else
-        let files = readdirSync "migrations"
+        let files = Directory.GetFiles("migrations") |> Array.map Path.GetFileName
         let numbers =
             files
             |> Array.choose extractLeadingNumber
@@ -764,12 +1127,12 @@ let nextMigrationNumber () : int =
         else (Array.max numbers) + 1
 
 let writeMigration (sql: string) : string =
-    if not (existsSync "migrations") then
-        mkdirRecursive "migrations"
+    if not (Directory.Exists "migrations") then
+        Directory.CreateDirectory("migrations") |> ignore
     let num = nextMigrationNumber ()
     let padded = sprintf "%04d" num
     let filename = sprintf "migrations/%s_auto.sql" padded
-    writeFileSync(filename, sql)
+    File.WriteAllText(filename, sql)
     filename
 
 // ============================================================
@@ -839,36 +1202,82 @@ let runMigrate (metas: TableMeta list) (dryRun: bool) =
             printfn "Generated migration: %s" filename
 
             if not dryRun then
-                let cmd = sprintf "npx wrangler d1 migrations apply %s --local" dbName
-                let output = execSync cmd
+                let args = sprintf "wrangler d1 migrations apply %s --local" dbName
+                let output = execProcess "npx" args
                 printfn "%s" output
                 printfn "Migration applied locally."
             else
                 printfn "(dry-run: migration file written but not applied)"
 
 // ============================================================
-// Main: parse Domain.fs, generate files, optionally migrate
+// File writing helpers
+// ============================================================
+
+let ensureDir (path: string) =
+    let dir = Path.GetDirectoryName(path)
+    if dir <> "" && dir <> null && not (Directory.Exists dir) then
+        Directory.CreateDirectory(dir) |> ignore
+
+let writeIfChanged (path: string) (content: string) =
+    ensureDir path
+    if File.Exists(path) then
+        let existing = File.ReadAllText(path)
+        if existing <> content then
+            File.WriteAllText(path, content)
+            printfn "  Updated: %s" path
+        // else: no change, skip
+    else
+        File.WriteAllText(path, content)
+        printfn "  Created: %s" path
+
+// ============================================================
+// Main
 // ============================================================
 
 [<EntryPoint>]
-let main _ =
-    let parsed = parseDomainFile "src/Models/Domain.fs"
+let main (argv: string array) =
+    // Step 3: Discover types via reflection
+    let domainTypes = discoverDomainTypes ()
+    let endpoints = discoverApiModules ()
+    let wsTypes = discoverWsTypes ()
+
+    // Step 4: Build table metadata from reflected types
+    let parsed = domainTypes |> List.map reflectToParsedType
     let metas = parsed |> List.map computeMeta
 
+    // Generate existing files (Db, AdminGen, schema.sql)
     let admin = generateAdminFs metas
-    writeFileSync("src/Server/AdminGen.fs", admin)
+    writeIfChanged "src/Server/generated/AdminGen.fs" admin
 
     let db = generateDbFs metas
-    writeFileSync("src/Server/Db.fs", db)
+    writeIfChanged "src/Server/generated/Db.fs" db
 
     let schemaSql = generateSchemaSql metas
-    writeFileSync("schema.sql", schemaSql)
+    writeIfChanged "schema.sql" schemaSql
 
-    printfn "Generated %d types -> AdminGen.fs, Db.fs, schema.sql" (List.length metas)
+    // Step 5: Generate Codecs.fs
+    let codecs = generateCodecsFs domainTypes endpoints wsTypes
+    writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
-    let args = argv
-    let hasMigrate = args |> Array.exists (fun a -> a = "migrate")
-    let hasDryRun = args |> Array.exists (fun a -> a = "--dry-run")
+    // Step 6: Generate ClientGen.fs
+    let clientGen = generateClientGenFs endpoints wsTypes
+    writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
+
+    // Step 7: Generate Routes.fs
+    let routes = generateRoutesFs endpoints
+    writeIfChanged "src/Server/generated/Routes.fs" routes
+
+    // Step 8: Generate Handlers.fs stubs (only if file doesn't exist)
+    if not (File.Exists "src/Server/Handlers.fs") then
+        let handlers = generateHandlersFs endpoints
+        writeIfChanged "src/Server/Handlers.fs" handlers
+        printfn "  Created handler stubs: src/Server/Handlers.fs"
+
+    printfn "Generated %d domain types, %d endpoints, %d WS events" (List.length domainTypes) (List.length endpoints) (List.length wsTypes)
+
+    // Migration support
+    let hasMigrate = argv |> Array.exists (fun a -> a = "migrate")
+    let hasDryRun = argv |> Array.exists (fun a -> a = "--dry-run")
 
     if hasMigrate then
         runMigrate metas hasDryRun

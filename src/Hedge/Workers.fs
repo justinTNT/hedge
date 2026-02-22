@@ -182,3 +182,51 @@ let optIntToDb (v: int option) : obj =
     match v with
     | Some n -> box n
     | None -> jsNull
+
+// ============================================================
+// Blob handlers (generic R2 operations)
+// ============================================================
+
+let private allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/svg+xml" ]
+
+let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
+    promise {
+        let! fd = request.formData()
+        let file = formDataGet fd "file"
+        if isNull file then
+            let options = createObj [ "status" ==> 400; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+            return WorkerResponse.create("""{"error":"Missing file field"}""", options)
+        else
+            let mime = fileType file
+            if not (allowedImageTypes.Contains mime) then
+                let options = createObj [ "status" ==> 400; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+                return WorkerResponse.create("""{"error":"Unsupported image type"}""", options)
+            else
+                let name = fileName file
+                let key = sprintf "%s/%s" (newId ()) name
+                let! _ = blobs.put(key, file)
+                let body = sprintf """{"url":"/blobs/%s"}""" key
+                let options = createObj [ "status" ==> 200; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+                return WorkerResponse.create(body, options)
+    }
+
+let handleBlobServe (key: string) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
+    promise {
+        let! objOpt = blobs.get(key)
+        match objOpt with
+        | None ->
+            let options = createObj [ "status" ==> 404; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+            return WorkerResponse.create("""{"error":"Not found"}""", options)
+        | Some obj ->
+            let contentType = getProp obj.httpMetadata "contentType"
+            let ct = if isNull contentType then box "application/octet-stream" else contentType
+            let options = createObj [
+                "status" ==> 200
+                "headers" ==> createObj [
+                    "Content-Type" ==> ct
+                    "Cache-Control" ==> "public, max-age=31536000, immutable"
+                ]
+            ]
+            return streamResponse obj.body options
+    }
+

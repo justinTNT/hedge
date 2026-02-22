@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Codecs.fs" />
+    <Compile Include="generated/Codecs.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Hedge/Hedge.fsproj" />

@@ -1,10 +1,12 @@
 module Client.App
 
+open Fable.Core.JsInterop
 open Feliz
 open Feliz.Router
 open Elmish
 open Hedge.Interface
 open Models.Api
+open Client.ClientGen
 
 type ItemForm = {
     Title: string
@@ -61,11 +63,17 @@ let private connectEventsCmd (itemId: string) : Cmd<Msg> =
         match currentWsClose with
         | Some close -> close ()
         | None -> ()
+        let url = sprintf "%s/api/events?itemId=%s" (Client.Api.wsBase()) itemId
         let close =
-            Client.Api.connectEvents
-                itemId
-                (fun event -> dispatch (GotEvent event))
-                (fun err -> dispatch (EventError err))
+            Client.Api.openWebSocket
+                url
+                (fun e ->
+                    let text : string = e?data |> string
+                    match decodeWsEvent text with
+                    | Ok (NewComment event) -> dispatch (GotEvent event)
+                    | Ok _ -> ()
+                    | Error err -> dispatch (EventError err))
+                (fun _ -> dispatch (EventError "WebSocket error"))
         currentWsClose <- Some close
     )
 
@@ -179,7 +187,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadFeed ->
         { model with IsLoading = true },
-        Cmd.OfPromise.either Client.Api.getFeed () GotFeed (fun ex -> GotFeed (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.getFeed () GotFeed (fun ex -> GotFeed (Error ex.Message))
 
     | GotFeed (Ok response) ->
         { model with Feed = Some response; IsLoading = false; Error = None }, Cmd.none
@@ -189,7 +197,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadItem itemId ->
         { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Client.Api.getItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.getItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
@@ -239,7 +247,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadTagItems tag ->
         { model with IsLoading = true; TagItems = None },
-        Cmd.OfPromise.either Client.Api.getItemsByTag tag GotTagItems (fun ex -> GotTagItems (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.getItemsByTag tag GotTagItems (fun ex -> GotTagItems (Error ex.Message))
 
     | GotTagItems (Ok response) ->
         { model with TagItems = Some response; IsLoading = false; Error = None }, Cmd.none
@@ -261,7 +269,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,
-            Cmd.OfPromise.either Client.Api.submitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Client.ClientGen.submitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok _) ->
@@ -296,7 +304,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
               OwnerComment = ownerComment
               Tags = tags }
         { model with ItemForm = emptyItemForm },
-        Cmd.OfPromise.either Client.Api.submitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.submitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
 
     | GotSubmitItem (Ok _) ->
         model, Cmd.batch [

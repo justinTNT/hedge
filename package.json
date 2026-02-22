@@ -14,10 +14,10 @@
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:admin": "dotnet fable watch src/Admin/Admin.fsproj -o dist/admin",
     "spike:reflection": "dotnet fable ReflectionTest/ReflectionTest.fsproj --outDir dist/spike && node dist/spike/Program.js",
-    "gen": "dotnet fable src/Gen/Gen.fsproj --outDir dist/gen && node dist/gen/Program.js",
-    "gen:watch": "dotnet fable watch src/Gen/Gen.fsproj --outDir dist/gen --runWatch \"node dist/gen/Program.js\"",
-    "migrate": "dotnet fable src/Gen/Gen.fsproj --outDir dist/gen && node dist/gen/Program.js migrate",
-    "migrate:dry": "dotnet fable src/Gen/Gen.fsproj --outDir dist/gen && node dist/gen/Program.js migrate --dry-run",
+    "gen": "dotnet run --project src/Gen/Gen.fsproj",
+    "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
+    "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
+    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run",
     "build:extension": "node extension/build.js"
   },
   "devDependencies": {

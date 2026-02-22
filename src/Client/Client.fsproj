@@ -5,6 +5,7 @@
   <ItemGroup>
     <Compile Include="GuestSession.fs" />
     <Compile Include="Api.fs" />
+    <Compile Include="generated/ClientGen.fs" />
     <Compile Include="RichText.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

@@ -35,11 +35,16 @@ let parseRoute (request: WorkerRequest) : Route =
     | _ -> GET path  // fallback
 
 let matchPath (pattern: string) (path: string) : RouteMatch option =
-    if pattern.EndsWith("/:id") then
-        let prefix = pattern.Replace("/:id", "")
-        if path.StartsWith(prefix + "/") then
-            let param = path.Substring(prefix.Length + 1)
-            Some (WithParam (prefix, param))
+    if pattern.Contains(":id") then
+        let idIdx = pattern.IndexOf(":id")
+        let prefix = pattern.Substring(0, idIdx)
+        let suffix = pattern.Substring(idIdx + 3)
+        if path.StartsWith(prefix) && path.EndsWith(suffix) then
+            let paramLen = path.Length - prefix.Length - suffix.Length
+            if paramLen > 0 then
+                let param = path.Substring(prefix.Length, paramLen)
+                Some (WithParam (prefix, param))
+            else None
         else None
     elif pattern = path then
         Some (Exact path)
@@ -114,3 +119,61 @@ let validationErrorResponse (errors: ValidationError list) =
                 ]))
         ] |> Encode.toString 0
     jsonResponse body 422
+
+// ============================================================
+// createWorker — framework entry point
+// ============================================================
+
+type WorkerConfig = {
+    Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
+    Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
+}
+
+let createWorker (config: WorkerConfig) =
+    {| fetch = fun (request: WorkerRequest) (env: obj) (ctx: ExecutionContext) ->
+        promise {
+            let route = parseRoute request
+
+            // 1. CORS preflight
+            match route with
+            | OPTIONS _ ->
+                return corsPreflightResponse ()
+            | _ ->
+
+            // 2. Admin routes
+            match config.Admin |> Option.bind (fun f -> f request env route) with
+            | Some p -> return! p
+            | None ->
+
+            // 3. WebSocket upgrade
+            match route with
+            | GET path when matchPath "/api/events" path = Some (Exact "/api/events")
+                          && isWebSocketUpgrade request ->
+                let events : DurableObjectNamespace = env?EVENTS
+                let itemId = getQueryParam request.url "itemId"
+                if isNull (box itemId) || itemId = "" then
+                    return badRequest "Missing itemId query parameter"
+                else
+                    let doId = events.idFromName(itemId)
+                    return! events.get(doId).fetch(request)
+            | _ ->
+
+            // 4. Blob routes
+            match route with
+            | POST path when matchPath "/api/blobs" path = Some (Exact "/api/blobs") ->
+                let blobs : R2Bucket = env?BLOBS
+                return! handleBlobUpload request blobs
+            | GET path when path.StartsWith("/blobs/") ->
+                let blobs : R2Bucket = env?BLOBS
+                return! handleBlobServe (path.Substring(7)) blobs
+            | _ ->
+
+            // 5. App routes (generated)
+            match config.Routes request env ctx with
+            | Some p -> return! p
+            | None ->
+
+            // 6. 404
+            return notFound ()
+        }
+    |}
