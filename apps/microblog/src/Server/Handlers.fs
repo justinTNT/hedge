@@ -10,49 +10,40 @@ open Hedge.Router
 open Codecs
 open Models.Api
 open Server.Env
+open Server.Db
+
+let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
+    { Id = r.Id
+      Title = r.Title
+      Image = r.Image
+      Extract = r.Extract |> Option.map RichContent
+      OwnerComment = RichContent r.OwnerComment
+      Timestamp = r.CreatedAt }
+
+let private toCommentItem (r: ItemCommentRow) : SubmitComment.CommentItem =
+    { Id = r.Id
+      ItemId = r.ItemId
+      GuestId = r.GuestId
+      ParentId = r.ParentId
+      Author = r.Author
+      Content = RichContent r.Content
+      Timestamp = r.CreatedAt }
 
 let getFeed (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let stmt =
-            env.DB.prepare(
-                "SELECT id, title, image, extract, owner_comment, created_at FROM items ORDER BY created_at DESC LIMIT 50"
-            )
-        let! result = stmt.all()
-
-        let items =
-            result.results
-            |> Array.map (fun row ->
-                let fi : GetFeed.FeedItem =
-                    { Id = rowStr row "id"
-                      Title = rowStr row "title"
-                      Image = rowStrOpt row "image"
-                      Extract = rowStrOpt row "extract" |> Option.map RichContent
-                      OwnerComment = RichContent (rowStr row "owner_comment")
-                      Timestamp = rowInt row "created_at" }
-                fi
-            )
-            |> Array.toList
-
+        let! result = selectMicroblogItems(env.DB).all()
+        let items = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
         let body =
             Encode.object [
                 "items", Encode.list (List.map Encode.feedItem items)
             ] |> Encode.toString 0
-
         return okJson body
     }
 
 let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let itemStmt =
-            bind
-                (env.DB.prepare("SELECT id, title, link, image, extract, owner_comment, created_at FROM items WHERE id = ?"))
-                [| box itemId |]
-
-        let commentStmt =
-            bind
-                (env.DB.prepare("SELECT id, item_id, guest_id, parent_id, author, content, created_at FROM comments WHERE item_id = ? ORDER BY created_at"))
-                [| box itemId |]
-
+        let itemStmt = selectMicroblogItem itemId env.DB
+        let commentStmt = selectItemCommentsByItemId itemId env.DB
         let tagStmt =
             bind
                 (env.DB.prepare("SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"))
@@ -64,38 +55,20 @@ let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
         if itemRows.Length = 0 then
             return notFound ()
         else
-            let row = itemRows.[0]
-
-            let comments =
-                results.[1].results
-                |> Array.map (fun r ->
-                    let ci : SubmitComment.CommentItem =
-                        { Id = rowStr r "id"
-                          ItemId = rowStr r "item_id"
-                          GuestId = rowStr r "guest_id"
-                          ParentId = rowStrOpt r "parent_id"
-                          Author = rowStr r "author"
-                          Content = RichContent (rowStr r "content")
-                          Timestamp = rowInt r "created_at" }
-                    ci
-                )
-                |> Array.toList
-
-            let tags =
-                results.[2].results
-                |> Array.map (fun r -> rowStr r "name")
-                |> Array.toList
+            let r = parseMicroblogItemRow itemRows.[0]
+            let comments = results.[1].results |> Array.map (parseItemCommentRow >> toCommentItem) |> Array.toList
+            let tags = results.[2].results |> Array.map (fun row -> rowStr row "name") |> Array.toList
 
             let item : SubmitItem.MicroblogItem =
-                { Id = rowStr row "id"
-                  Title = rowStr row "title"
-                  Link = rowStrOpt row "link" |> Option.map Link
-                  Image = rowStrOpt row "image" |> Option.map Link
-                  Extract = rowStrOpt row "extract" |> Option.map RichContent
-                  OwnerComment = RichContent (rowStr row "owner_comment")
+                { Id = r.Id
+                  Title = r.Title
+                  Link = r.Link |> Option.map Link
+                  Image = r.Image |> Option.map Link
+                  Extract = r.Extract |> Option.map RichContent
+                  OwnerComment = RichContent r.OwnerComment
                   Tags = tags
                   Comments = comments
-                  Timestamp = rowInt row "created_at" }
+                  Timestamp = r.CreatedAt }
 
             let body =
                 Encode.object [
@@ -183,7 +156,7 @@ let getItemsByTag (tag: string) (env: Env) : JS.Promise<WorkerResponse> =
         let stmt =
             bind
                 (env.DB.prepare(
-                    "SELECT i.id, i.title, i.image, i.extract, i.owner_comment, i.created_at
+                    "SELECT i.*
                      FROM items i
                      JOIN item_tags it ON i.id = it.item_id
                      JOIN tags t ON it.tag_id = t.id
@@ -191,18 +164,7 @@ let getItemsByTag (tag: string) (env: Env) : JS.Promise<WorkerResponse> =
                      ORDER BY i.created_at DESC LIMIT 50"))
                 [| box tag |]
         let! result = stmt.all()
-        let items =
-            result.results
-            |> Array.map (fun row ->
-                let fi : GetFeed.FeedItem =
-                    { Id = rowStr row "id"
-                      Title = rowStr row "title"
-                      Image = rowStrOpt row "image"
-                      Extract = rowStrOpt row "extract" |> Option.map RichContent
-                      OwnerComment = RichContent (rowStr row "owner_comment")
-                      Timestamp = rowInt row "created_at" }
-                fi)
-            |> Array.toList
+        let items = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
         let body =
             Encode.object [
                 "tag", Encode.string tag
@@ -218,15 +180,9 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Error errors ->
             return validationErrorResponse errors
         | Ok req ->
-        let itemId = newId ()
-        let now = epochNow ()
-
-        let insertItem =
-            bind
-                (env.DB.prepare(
-                    "INSERT INTO items (id, title, link, image, extract, owner_comment, created_at, view_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)"
-                ))
-                [| box itemId; box req.Title; optToDb req.Link; optToDb req.Image; optToDb req.Extract; box req.OwnerComment; box now |]
+        let ins = insertMicroblogItem env.DB
+                    { Title = req.Title; Link = req.Link; Image = req.Image
+                      Extract = req.Extract; OwnerComment = req.OwnerComment; ViewCount = 0 }
 
         let tagStmts =
             req.Tags |> List.collect (fun tagName ->
@@ -238,15 +194,15 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
                 let linkTag =
                     bind
                         (env.DB.prepare("INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"))
-                        [| box itemId; box tagName |]
+                        [| box ins.Id; box tagName |]
                 [ insertTag; linkTag ]
             )
 
-        let allStmts = insertItem :: tagStmts |> List.toArray
+        let allStmts = ins.Stmt :: tagStmts |> List.toArray
         let! _ = env.DB.batch(allStmts)
 
         let newItem : SubmitItem.MicroblogItem =
-            { Id = itemId
+            { Id = ins.Id
               Title = req.Title
               Link = req.Link |> Option.map Link
               Image = req.Image |> Option.map Link
@@ -254,7 +210,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
               OwnerComment = RichContent req.OwnerComment
               Tags = req.Tags
               Comments = []
-              Timestamp = now }
+              Timestamp = ins.CreatedAt }
 
         let body =
             Encode.object [

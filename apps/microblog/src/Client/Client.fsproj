@@ -7,6 +7,12 @@
     <Compile Include="Api.fs" />
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="RichText.fs" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Shared.fs" />
+    <Compile Include="Pages/Feed.fs" />
+    <Compile Include="Pages/Item.fs" />
+    <Compile Include="Pages/NewItem.fs" />
+    <Compile Include="Pages/TagItems.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
