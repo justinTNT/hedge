@@ -224,7 +224,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         let insertItem =
             bind
                 (env.DB.prepare(
-                    "INSERT INTO items (id, title, link, image, extract, owner_comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO items (id, title, link, image, extract, owner_comment, created_at, view_count) VALUES (?, ?, ?, ?, ?, ?, ?, 0)"
                 ))
                 [| box itemId; box req.Title; optToDb req.Link; optToDb req.Image; optToDb req.Extract; box req.OwnerComment; box now |]
 

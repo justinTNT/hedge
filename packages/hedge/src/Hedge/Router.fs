@@ -95,8 +95,12 @@ let jsonResponseWithCookie (body: string) (status: int) (cookie: string) : Worke
 let okJsonWithCookie body cookie = jsonResponseWithCookie body 200 cookie
 let unauthorized () = jsonResponse """{"error":"Unauthorized"}""" 401
 let notFound () = jsonResponse """{"error":"Not found"}""" 404
-let badRequest msg = jsonResponse (sprintf """{"error":"%s"}""" msg) 400
-let serverError msg = jsonResponse (sprintf """{"error":"%s"}""" msg) 500
+let badRequest msg =
+    let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
+    jsonResponse body 400
+let serverError msg =
+    let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
+    jsonResponse body 500
 
 let corsPreflightResponse () : WorkerResponse =
     let options = createObj [

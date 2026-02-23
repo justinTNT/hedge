@@ -14,7 +14,7 @@
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>

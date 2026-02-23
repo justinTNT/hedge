@@ -52,6 +52,9 @@ let isForeignKey (f: FieldSchema) =
 // Reflection-based type discovery (Step 3)
 // ============================================================
 
+let private modelsAssembly =
+    lazy (Assembly.Load("Models"))
+
 let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
     if propType.IsGenericType then
         let def = propType.GetGenericTypeDefinition()
@@ -87,7 +90,7 @@ let getFieldSchemas (recordType: Type) : FieldSchema list =
 
 /// Discover all record types in Models.Domain module
 let discoverDomainTypes () : Type list =
-    let assembly = typeof<Models.Domain.Guest>.Assembly
+    let assembly = modelsAssembly.Value
     assembly.GetTypes()
     |> Array.filter (fun t ->
         t.FullName.StartsWith("Models.Domain+")
@@ -96,7 +99,7 @@ let discoverDomainTypes () : Type list =
 
 /// Discover all WS event types in Models.Ws module
 let discoverWsTypes () : Type list =
-    let assembly = typeof<Models.Ws.NewCommentEvent>.Assembly
+    let assembly = modelsAssembly.Value
     assembly.GetTypes()
     |> Array.filter (fun t ->
         t.FullName.StartsWith("Models.Ws+")
@@ -119,7 +122,7 @@ type ParsedEndpoint = {
 }
 
 let discoverApiModules () : ParsedEndpoint list =
-    let assembly = typeof<Models.Api.GetFeed.Response>.Assembly
+    let assembly = modelsAssembly.Value
     // Api modules are nested types under Models.Api
     let apiType =
         assembly.GetTypes()
@@ -835,25 +838,26 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: Type list) : 
     emit "// --- WebSocket Events ---"
     emit ""
 
-    // WsEvent DU
-    emit "type WsEvent ="
-    for t in wsTypes do
-        let caseName = t.Name.Replace("Event", "")
-        emit (sprintf "    | %s of %s" caseName t.Name)
-    emit ""
+    if not wsTypes.IsEmpty then
+        // WsEvent DU
+        emit "type WsEvent ="
+        for t in wsTypes do
+            let caseName = t.Name.Replace("Event", "")
+            emit (sprintf "    | %s of %s" caseName t.Name)
+        emit ""
 
-    emit "let decodeWsEvent (text: string) : Result<WsEvent, string> ="
-    emit "    match Decode.fromString (Decode.field \"type\" Decode.string) text with"
-    for t in wsTypes do
-        let caseName = t.Name.Replace("Event", "")
-        // The type field in the JSON is the case name (e.g. "NewComment")
-        let decoderName = toCamelCase t.Name
-        emit (sprintf "    | Ok \"%s\" ->" caseName)
-        emit (sprintf "        Decode.fromString (Decode.field \"payload\" Decode.%s) text" decoderName)
-        emit (sprintf "        |> Result.map %s" caseName)
-    emit "    | Ok t -> Error (sprintf \"Unknown event: %s\" t)"
-    emit "    | Error e -> Error e"
-    emit ""
+        emit "let decodeWsEvent (text: string) : Result<WsEvent, string> ="
+        emit "    match Decode.fromString (Decode.field \"type\" Decode.string) text with"
+        for t in wsTypes do
+            let caseName = t.Name.Replace("Event", "")
+            // The type field in the JSON is the case name (e.g. "NewComment")
+            let decoderName = toCamelCase t.Name
+            emit (sprintf "    | Ok \"%s\" ->" caseName)
+            emit (sprintf "        Decode.fromString (Decode.field \"payload\" Decode.%s) text" decoderName)
+            emit (sprintf "        |> Result.map %s" caseName)
+        emit "    | Ok t -> Error (sprintf \"Unknown event: %s\" t)"
+        emit "    | Error e -> Error e"
+        emit ""
 
     lines |> String.concat "\n"
 

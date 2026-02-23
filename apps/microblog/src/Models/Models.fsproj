@@ -10,7 +10,7 @@
     <Compile Include="Api.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

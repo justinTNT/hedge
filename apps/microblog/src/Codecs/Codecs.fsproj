@@ -6,7 +6,7 @@
     <Compile Include="generated/Codecs.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
   </ItemGroup>
   <ItemGroup>
