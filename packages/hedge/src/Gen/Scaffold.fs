@@ -681,182 +681,38 @@ type GlobalConfig = {
 }
 """
 
-let handlersFs = """module Server.Handlers
-
-open Fable.Core
-open Thoth.Json
-open Hedge.Workers
-open Hedge.Router
-open Codecs
-open Models.Api
-open Server.Env
-open Server.Db
-
-let private toPostItem (row: obj) : GetPosts.PostItem =
-    { Id = rowStr row "id"
-      Title = rowStr row "title"
-      Body = rowStr row "body"
-      Timestamp = rowInt row "created_at" }
-
-let getPosts (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! result = selectPosts(env.DB).all()
-        let items = result.results |> Array.map toPostItem |> Array.toList
-        let body =
-            Encode.object [
-                "posts", Encode.list (items |> List.map Encode.postItem)
-            ] |> Encode.toString 0
-        return okJson body
-    }
-
-let createPost (req: CreatePost.Request) (request: WorkerRequest)
-    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
-    promise {
-        match Validate.createPostReq req with
-        | Error errors -> return validationErrorResponse errors
-        | Ok validated ->
-            let ins = insertPost env.DB { Title = validated.Title; Body = validated.Body }
-            let! _ = ins.Stmt.run()
-            let post : GetPosts.PostItem =
-                { Id = ins.Id
-                  Title = validated.Title
-                  Body = validated.Body
-                  Timestamp = ins.CreatedAt }
-            let body =
-                Encode.object [
-                    "post", Encode.postItem post
-                ] |> Encode.toString 0
-            return okJson body
-    }
-"""
-
 let private clientAppTmpl = """module Client.App
 
 open Feliz
 open Elmish
-open Fable.Core
-open Client.ClientGen
-open Models.Api
-
-// ============================================================
-// Model
-// ============================================================
 
 type Model = {
-    Posts: GetPosts.PostItem list
-    Title: string
-    Body: string
     Loading: bool
     Error: string option
 }
 
 type Msg =
-    | LoadPosts
-    | PostsLoaded of Result<GetPosts.Response, string>
-    | SetTitle of string
-    | SetBody of string
-    | SubmitPost
-    | PostCreated of Result<CreatePost.Response, string>
-
-// ============================================================
-// Init / Update
-// ============================================================
+    | NoOp
 
 let init () =
-    { Posts = []; Title = ""; Body = ""; Loading = true; Error = None },
-    Cmd.OfPromise.either getPosts () PostsLoaded (fun ex -> PostsLoaded (Error ex.Message))
+    { Loading = false; Error = None }, Cmd.none
 
 let update msg model =
     match msg with
-    | LoadPosts ->
-        { model with Loading = true },
-        Cmd.OfPromise.either getPosts () PostsLoaded (fun ex -> PostsLoaded (Error ex.Message))
-    | PostsLoaded (Ok response) ->
-        { model with Posts = response.Posts; Loading = false; Error = None }, Cmd.none
-    | PostsLoaded (Error err) ->
-        { model with Loading = false; Error = Some err }, Cmd.none
-    | SetTitle t -> { model with Title = t }, Cmd.none
-    | SetBody b -> { model with Body = b }, Cmd.none
-    | SubmitPost ->
-        let req : CreatePost.Request = { Title = model.Title; Body = model.Body }
-        model,
-        Cmd.OfPromise.either (createPost) req PostCreated (fun ex -> PostCreated (Error ex.Message))
-    | PostCreated (Ok response) ->
-        { model with
-            Posts = response.Post :: model.Posts
-            Title = ""; Body = ""
-            Error = None }, Cmd.none
-    | PostCreated (Error err) ->
-        { model with Error = Some err }, Cmd.none
-
-// ============================================================
-// View
-// ============================================================
+    | NoOp -> model, Cmd.none
 
 let view model dispatch =
     Html.div [
         prop.className "app"
         prop.children [
-            Html.header [
-                prop.children [
-                    Html.h1 "{{NAME}}"
-                ]
-            ]
-
-            // Error banner
+            Html.h1 "{{NAME}}"
             match model.Error with
             | Some err ->
-                Html.div [
-                    prop.className "error"
-                    prop.text err
-                ]
+                Html.div [ prop.className "error"; prop.text err ]
             | None -> Html.none
-
-            // New post form
-            Html.div [
-                prop.style [ style.marginBottom 20 ]
-                prop.children [
-                    Html.input [
-                        prop.placeholder "Title"
-                        prop.value model.Title
-                        prop.onChange (SetTitle >> dispatch)
-                        prop.style [ style.display.block; style.width (length.percent 100); style.marginBottom 8 ]
-                    ]
-                    Html.textarea [
-                        prop.placeholder "Body"
-                        prop.value model.Body
-                        prop.onChange (SetBody >> dispatch)
-                        prop.style [ style.display.block; style.width (length.percent 100); style.height 100; style.marginBottom 8 ]
-                    ]
-                    Html.button [
-                        prop.text "Create Post"
-                        prop.onClick (fun _ -> dispatch SubmitPost)
-                    ]
-                ]
-            ]
-
-            // Post list
-            if model.Loading then
-                Html.p [ prop.className "loading"; prop.text "Loading..." ]
-            else
-                Html.div [
-                    prop.children (
-                        model.Posts |> List.map (fun post ->
-                            Html.div [
-                                prop.className "feed-item"
-                                prop.key post.Id
-                                prop.children [
-                                    Html.h2 post.Title
-                                    Html.p post.Body
-                                ]
-                            ]))
-                ]
+            Html.p "Edit src/Client/App.fs to get started."
         ]
     ]
-
-// ============================================================
-// Entry point
-// ============================================================
 
 open Elmish.React
 
@@ -1041,7 +897,7 @@ let main (argv: string array) =
             writeFile root "src/Models/Api.fs" apiFs
             writeFile root "src/Models/Ws.fs" wsFs
             writeFile root "src/Models/Config.fs" configFs
-            writeFile root "src/Server/Handlers.fs" handlersFs
+            // Handlers.fs is generated by `npm run gen` on first run
             writeFile root "src/Client/App.fs" (clientAppFs appName)
             writeFile root "public/styles.css" stylesCss
 
