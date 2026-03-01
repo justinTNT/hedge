@@ -12,7 +12,7 @@ local_protocol = "http"
 [[d1_databases]]
 binding = "DB"
 database_name = "hedge-db"
-database_id = KEEP+THIS=SECRET
+database_id = "a215d0da-0471-4ed2-b421-f1b0a9df30f3"
 
 # KV Namespace for sessions (optional)
 # [[kv_namespaces]]
