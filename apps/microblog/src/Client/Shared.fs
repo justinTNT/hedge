@@ -82,7 +82,7 @@ let nav =
                 prop.onClick (fun _ -> Router.navigate "")
                 prop.children [
                   Html.img [
-                    prop.src "/public/darwinnews.png"
+                    prop.src "/public/wtfail.png"
                   ]
                 ]
             ]

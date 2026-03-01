@@ -1,4 +1,4 @@
-name = "hedge"
+name = "fail"
 main = "worker-entry.js"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -11,8 +11,8 @@ local_protocol = "http"
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
-database_name = "hedge-db"
-database_id = KEEP+THIS=SECRET
+database_name = "wt-fail-db"
+database_id = "bfa6ed44-c70a-4f5f-b578-7c4dbd1515b7"
 
 # KV Namespace for sessions (optional)
 # [[kv_namespaces]]
@@ -32,7 +32,7 @@ new_sqlite_classes = ["EventHub"]
 # R2 blob storage
 [[r2_buckets]]
 binding = "BLOBS"
-bucket_name = "hedge-blobs"
+bucket_name = "wt-fail-blobs"
 
 # Static assets (index.html, CSS, JS, images)
 [assets]
@@ -43,4 +43,4 @@ not_found_handling = "single-page-application"
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
-ADMIN_KEY = "dev-admin-key"
+ADMIN_KEY = "wtf-admin-key"
