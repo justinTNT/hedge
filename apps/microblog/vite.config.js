@@ -5,6 +5,9 @@ export default defineConfig({
     port: 3030,
     host: true,
     allowedHosts: true,
+    watch: {
+      ignored: ['!**/dist/**']
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8787',

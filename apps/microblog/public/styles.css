@@ -2,14 +2,42 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
 .app { max-width: 800px; margin: 0 auto; padding: 1rem; }
-header { border-bottom: 1px solid #eee; padding-bottom: 1rem; margin-bottom: 1rem; }
+header { border-bottom: 0.5px solid #dadada; }
 h1 { font-size: 1.5rem; }
 .loading { color: #666; }
 .error { background: #fee; border: 1px solid #fcc; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
 .feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
-.feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; margin-left: 0.75rem; }
 .feed-item a { color: #666; font-size: 0.875rem; }
+.feed-item img { max-width: 100%; }
 .tags { margin-top: 0.5rem; }
+.main-link { text-decoration: none; }
+
+.extract {
+  padding: 1em;
+  border-left: 4px solid #bbb;
+  border-bottom: 4px solid #bbb;
+  border-radius: 9px;
+  display: flex;
+  background: #fafafa;
+}
+
+.extract span {
+  flex: fit-content;
+}
+
+.extract img {
+  margin-left: 1em;
+  width: 20%;
+}
+
+
+
+.owner-comment {
+    margin: 1em;
+    padding: 1em;
+    background: #eee;
+}
 
 /* Comment Thread Styling */
 .comment-thread {
@@ -149,6 +177,34 @@ h1 { font-size: 1.5rem; }
 .tag:hover {
     filter: brightness(0.85);
     transform: scale(1.05);
+}
+
+.tag-header {
+  margin-top: -1em;
+}
+
+/* Avatar */
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4em;
+    height: 4em;
+    border-radius: 50%;
+    font-size: 1em;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.commenting-as {
+    display: flex;
+    align-items: center;
+}
+
+.comment-author {
+    display: flex;
+    align-items: center;
 }
 
 /* Comment editor overrides */

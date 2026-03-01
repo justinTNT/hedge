@@ -91,7 +91,14 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let now = epochNow ()
         let author = req.Author |> Option.defaultValue "Anonymous"
 
-        let upsertGuest =
+        let ensureGuest =
+            bind
+                (env.DB.prepare(
+                    "INSERT OR IGNORE INTO guests (id, name, picture, session_id, created_at) VALUES (?, ?, ?, ?, ?)"
+                ))
+                [| box guestId; box author; box ""; box guestId; box now |]
+
+        let upsertGuestSession =
             bind
                 (env.DB.prepare(
                     "INSERT OR REPLACE INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"
@@ -101,11 +108,11 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let insertComment =
             bind
                 (env.DB.prepare(
-                    "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 ))
-                [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box now |]
+                [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box 0; box now |]
 
-        let! _ = env.DB.batch([| upsertGuest; insertComment |])
+        let! _ = env.DB.batch([| ensureGuest; upsertGuestSession; insertComment |])
 
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
@@ -189,8 +196,8 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
                 let tagId = newId ()
                 let insertTag =
                     bind
-                        (env.DB.prepare("INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?)"))
-                        [| box tagId; box tagName |]
+                        (env.DB.prepare("INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?, ?, ?)"))
+                        [| box tagId; box tagName; box ins.CreatedAt |]
                 let linkTag =
                     bind
                         (env.DB.prepare("INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"))

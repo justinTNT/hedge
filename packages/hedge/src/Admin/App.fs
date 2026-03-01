@@ -258,11 +258,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 model, Cmd.none
         | _ -> model, Cmd.none
 
-    | GotSave (Ok record) ->
-        match model.CurrentType |> Option.bind (fun t -> findSchema model.Types t) with
-        | Some schema ->
-            let fields = recordToFields schema record
-            { model with EditRecord = Some record; EditFields = fields; IsLoading = false; Error = None }, Cmd.none
+    | GotSave (Ok _) ->
+        match model.CurrentType with
+        | Some typeName ->
+            { model with IsLoading = false },
+            Cmd.batch [ destroyEditorsCmd; Cmd.ofMsg (SelectType typeName) ]
         | None ->
             { model with IsLoading = false }, Cmd.none
 

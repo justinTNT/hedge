@@ -128,14 +128,14 @@ Adding a second app to `apps/` gives us a cross-app compatibility test — ensur
 
 ## Migration Steps
 
-Rough order when we're ready:
+Steps 1-7 are complete. Two remain and can be tackled together:
 
-1. Create `packages/hedge/` directory, move `src/Hedge/` and `src/Admin/` into it
-2. Create `apps/microblog/`, move remaining app code into it
-3. Set up Gen as per-app template: `apps/microblog/src/Gen/Gen.fsproj` referencing own Models + framework Hedge, with shared `Program.fs` link
-4. Update all fsproj `<ProjectReference>` paths
-5. Update `package.json` scripts (gen uses `dotnet run`, fable, vite, wrangler)
-6. Update `vite.config.js` and `wrangler.toml` paths
-7. Verify: `npm run gen && dotnet build` all projects from `apps/microblog/`
-8. Add golden model snapshot test (diff generated files against expected)
-9. Extract Admin.fs dispatcher into framework (optional, can defer)
+1. ~~Create `packages/hedge/` directory, move `src/Hedge/` and `src/Admin/` into it~~
+2. ~~Create `apps/microblog/`, move remaining app code into it~~
+3. ~~Set up Gen as per-app template: `apps/microblog/src/Gen/Gen.fsproj` referencing own Models + framework Hedge, with shared `Program.fs` link~~
+4. ~~Update all fsproj `<ProjectReference>` paths~~
+5. ~~Update `package.json` scripts (gen uses `dotnet run`, fable, vite, wrangler)~~
+6. ~~Update `vite.config.js` and `wrangler.toml` paths~~
+7. ~~Verify: `npm run gen && dotnet build` all projects from `apps/microblog/`~~
+8. **Add golden model snapshot test** — `test.sh` currently does build verification only. Add diffing generated files against checked-in expected output to catch generator regressions.
+9. **Extract Admin.fs dispatcher into framework** — Admin.fs is 100% generic (dispatches CRUD via entity list from AdminConfig.fs). Move into `packages/hedge/src/Hedge/` as a function parameterized over entities and admin key extraction, eliminating the 130-line copy in every scaffolded app.

@@ -54,9 +54,23 @@ let feedItem (item: GetFeed.FeedItem) =
             Html.h2 [ prop.text item.Title ]
             match item.Extract with
             | Some (RichContent text) ->
-                Html.p [ prop.className "extract"; prop.text (RichText.extractPlainText text) ]
+                Html.p [ prop.className "extract"; 
+                         prop.children [
+                                   Html.span [ prop.text (RichText.extractPlainText text) ];
+                                   match item.Image with
+                                   | Some url ->
+                                       Html.img [ prop.src url ]
+                                   | None -> Html.none
+                               ]
+                ]
             | None -> Html.none
         ]
+    ]
+
+let avatar (url: string) =
+    Html.img [
+        prop.className "avatar"
+        prop.src url
     ]
 
 let nav =
@@ -66,11 +80,11 @@ let nav =
                 prop.text "Hedge"
                 prop.style [ style.cursor.pointer ]
                 prop.onClick (fun _ -> Router.navigate "")
-            ]
-            Html.a [
-                prop.text "New Item"
-                prop.style [ style.cursor.pointer; style.marginLeft 16 ]
-                prop.onClick (fun _ -> Router.navigate "new")
+                prop.children [
+                  Html.img [
+                    prop.src "/public/darwinnews.png"
+                  ]
+                ]
             ]
         ]
     ]

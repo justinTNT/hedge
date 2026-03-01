@@ -96,12 +96,12 @@ let private genericUpdate (table: AdminTable) (id: string) (body: string) (env: 
                     let jsonKey = camelCase fieldName
                     match Map.tryFind jsonKey pairMap with
                     | Some v ->
-                        let s = Encode.toString 0 v
-                        if s = "null" then jsNull
-                        else
-                            // Strip quotes from string values
-                            let trimmed = s.Trim('"')
-                            box trimmed
+                        match Decode.fromValue "" Decode.string v with
+                        | Ok s -> box s
+                        | _ ->
+                            let s = Encode.toString 0 v
+                            if s = "null" then jsNull
+                            else box s
                     | None -> jsNull)
             let allArgs = args @ [box id] |> List.toArray
             let stmt = bind (env.DB.prepare(table.Update)) allArgs

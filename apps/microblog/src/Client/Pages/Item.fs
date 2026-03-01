@@ -206,7 +206,10 @@ let private replyForm (model: Model) (parentId: string option) dispatch =
             prop.children [
                 Html.div [
                     prop.className "commenting-as"
-                    prop.text (sprintf "Commenting as %s" model.GuestSession.DisplayName)
+                    prop.children [
+                        avatar model.GuestSession.AvatarUrl
+                        Html.span [ prop.text (sprintf "Commenting as %s" model.GuestSession.DisplayName) ]
+                    ]
                 ]
                 Html.div [ prop.id RichText.commentEditorId ]
                 Html.div [
@@ -252,7 +255,10 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
                 prop.children [
                     Html.div [
                         prop.className "comment-author"
-                        prop.text comment.Author
+                        prop.children [
+                            avatar (GuestSession.avatarForAuthor comment.Author)
+                            Html.span [ prop.text comment.Author ]
+                        ]
                     ]
                     Html.div [ prop.id (sprintf "comment-%s" comment.Id) ]
                     Html.div [
@@ -299,16 +305,19 @@ let view (response: GetItem.Response) (model: Model) dispatch =
     Html.div [
         prop.className "item-detail"
         prop.children [
-            Html.h2 [ prop.text item.Title ]
             match item.Link with
             | Some (Link url) ->
-                Html.a [
-                    prop.href url
-                    prop.target "_blank"
-                    prop.rel "noopener"
-                    prop.text url
+                Html.h2 [
+                    Html.a [
+                        prop.className "main-link"
+                        prop.href url
+                        prop.target "_blank"
+                        prop.rel "noopener"
+                        prop.text item.Title
+                    ]
                 ]
-            | None -> Html.none
+            | None ->
+                Html.h2 [ prop.text item.Title ]
             match item.Image with
             | Some (Link imgUrl) ->
                 Html.img [ prop.src imgUrl; prop.className "item-image" ]
@@ -329,7 +338,8 @@ let view (response: GetItem.Response) (model: Model) dispatch =
             Html.div [
                 prop.className "comments"
                 prop.children [
-                    Html.h3 [ prop.text (sprintf "Comments (%d)" item.Comments.Length) ]
+                    if item.Comments.Length > 0 then
+                        Html.h3 [ prop.text (sprintf "Comments (%d)" item.Comments.Length) ]
                     yield! filterRootComments item.Comments
                            |> List.map (commentView model item.Comments 0 dispatch)
                     replyForm model None dispatch
