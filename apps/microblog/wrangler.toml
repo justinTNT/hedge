@@ -12,7 +12,7 @@ local_protocol = "http"
 [[d1_databases]]
 binding = "DB"
 database_name = "hedge-db"
-database_id = "local"  # Replace with real ID after `wrangler d1 create hedge-db`
+database_id = KEEP+THIS=SECRET
 
 # KV Namespace for sessions (optional)
 # [[kv_namespaces]]
@@ -27,12 +27,18 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["EventHub"]
+new_sqlite_classes = ["EventHub"]
 
 # R2 blob storage
 [[r2_buckets]]
 binding = "BLOBS"
 bucket_name = "hedge-blobs"
+
+# Static assets (index.html, CSS, JS, images)
+[assets]
+directory = "./_site"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
 
 # Environment variables
 [vars]

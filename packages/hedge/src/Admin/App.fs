@@ -110,34 +110,31 @@ let private recordToFields (schema: TypeSchema) (record: obj) : Map<string, stri
     |> Map.ofList
 
 let private fieldsToJson (schema: TypeSchema) (fields: Map<string, string>) : string =
-    let pairs =
-        schema.Fields |> List.choose (fun field ->
-            // Skip read-only fields
-            let isReadOnly = field.Attrs |> List.exists (fun a ->
-                match a with PrimaryKey | CreateTimestamp | UpdateTimestamp -> true | _ -> false)
-            if isReadOnly then None
-            else
-                let key = camelCase field.Name
-                let v = fields |> Map.tryFind field.Name |> Option.defaultValue ""
-                let encoded =
-                    match field.Type with
-                    | FOption _ ->
-                        if v = "" then "null" else sprintf "\"%s\"" (v.Replace("\"", "\\\""))
-                    | FList FString ->
-                        let items =
-                            v.Split(',')
-                            |> Array.map (fun s -> s.Trim())
-                            |> Array.filter (fun s -> s <> "")
-                            |> Array.map (fun s -> sprintf "\"%s\"" (s.Replace("\"", "\\\"")))
-                        sprintf "[%s]" (items |> String.concat ",")
-                    | FInt ->
-                        if v = "" then "0" else v
-                    | FBool ->
-                        if v = "true" then "true" else "false"
-                    | _ ->
-                        sprintf "\"%s\"" (v.Replace("\"", "\\\""))
-                Some (sprintf "\"%s\":%s" key encoded))
-    sprintf "{%s}" (pairs |> String.concat ",")
+    schema.Fields
+    |> List.choose (fun field ->
+        let isReadOnly = field.Attrs |> List.exists (fun a ->
+            match a with PrimaryKey | CreateTimestamp | UpdateTimestamp -> true | _ -> false)
+        if isReadOnly then None
+        else
+            let key = camelCase field.Name
+            let v = fields |> Map.tryFind field.Name |> Option.defaultValue ""
+            let value : obj =
+                match field.Type with
+                | FOption _ ->
+                    if v = "" then null else box v
+                | FList FString ->
+                    v.Split(',')
+                    |> Array.map (fun s -> s.Trim())
+                    |> Array.filter (fun s -> s <> "")
+                    |> box
+                | FInt ->
+                    if v = "" then box 0 else box (int v)
+                | FBool ->
+                    box (v = "true")
+                | _ -> box v
+            Some (key, value))
+    |> createObj
+    |> JS.JSON.stringify
 
 let private idField (schema: TypeSchema) : string option =
     schema.Fields

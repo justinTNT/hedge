@@ -546,7 +546,7 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
 
 // -- WebSocket --
 
-[<Emit("'ws://' + window.location.host")>]
+[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host")>]
 let wsBase () : string = jsNative
 
 [<Emit(TQTQ
