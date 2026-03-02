@@ -11,7 +11,7 @@
     "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
     "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
-    "build:site": "vite build && mkdir -p _site/public _site/lib && cp -r public/* _site/public/ && cp lib/guest-session.js _site/lib/",
+    "build:site": "vite build && mkdir -p _site/st/public _site/st/lib && cp -r public/* _site/st/public/ && cp lib/guest-session.js _site/st/lib/ && cp _site/st/index.html _site/index.html",
     "deploy": "npm run build && wrangler deploy",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",

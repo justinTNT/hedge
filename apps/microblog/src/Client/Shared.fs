@@ -2,9 +2,36 @@ module Client.Shared
 
 open Feliz
 open Feliz.Router
+open Fable.Core
 open Hedge.Interface
 open Models.Api
 open Client.Types
+
+// -- Base path support (for deploying under a subpath, e.g. /st) --
+
+[<Emit("window.BASE_PATH || ''")>]
+let private basePath : string = jsNative
+
+let private baseSegments =
+    if basePath = "" then []
+    else basePath.TrimStart('/').Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
+
+let currentRoute () =
+    let url = Router.currentUrl ()
+    let rec strip ps rs =
+        match ps, rs with
+        | [], r -> r
+        | p :: pt, r :: rt when p = r -> strip pt rt
+        | _ -> rs
+    strip baseSegments url
+
+let navigateTo (segments: string list) =
+    match baseSegments @ segments with
+    | [] -> Router.navigate ""
+    | [a] -> Router.navigate a
+    | [a; b] -> Router.navigate (a, b)
+    | [a; b; c] -> Router.navigate (a, b, c)
+    | _ -> Router.navigate ""
 
 let private tagColors = [| "#e74c3c"; "#3498db"; "#2ecc71"; "#9b59b6"; "#f39c12"; "#1abc9c"; "#e91e63"; "#00bcd4" |]
 
@@ -23,7 +50,7 @@ let tagPill (tag: string) =
         prop.text tag
         prop.onClick (fun e ->
             e.stopPropagation ()
-            Router.navigate ("tag", tag)
+            navigateTo ["tag"; tag]
         )
     ]
 
@@ -49,7 +76,7 @@ let feedItem (item: GetFeed.FeedItem) =
     Html.article [
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
-        prop.onClick (fun _ -> Router.navigate ("item", item.Id))
+        prop.onClick (fun _ -> navigateTo ["item"; item.Id])
         prop.children [
             Html.h2 [ prop.text item.Title ]
             match item.Extract with
@@ -79,10 +106,10 @@ let nav =
             Html.a [
                 prop.text "Hedge"
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> Router.navigate "")
+                prop.onClick (fun _ -> navigateTo [])
                 prop.children [
                   Html.img [
-                    prop.src "/public/darwinnews.png"
+                    prop.src "/public/idealist.jpg"
                   ]
                 ]
             ]

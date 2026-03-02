@@ -7,16 +7,19 @@ open Thoth.Json
 
 /// Framework HTTP helpers — typed API functions are in generated/ClientGen.fs.
 
+[<Emit("window.BASE_PATH || ''")>]
+let basePath : string = jsNative
+
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch url []
+        let! response = fetch (basePath + url) []
         let! text = response.text()
         return Decode.fromString decoder text
     }
 
 let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch url [
+        let! response = fetch (basePath + url) [
             Method HttpMethod.POST
             requestHeaders [ ContentType "application/json" ]
             Body (BodyInit.Case3 body)
@@ -27,7 +30,7 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
 
 // -- WebSocket --
 
-[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host")>]
+[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
 let wsBase () : string = jsNative
 
 [<Emit("""

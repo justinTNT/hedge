@@ -2,8 +2,9 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: '/st/',
   build: {
-    outDir: '_site',
+    outDir: '_site/st',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

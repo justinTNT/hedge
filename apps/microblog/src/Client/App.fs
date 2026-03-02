@@ -7,7 +7,7 @@ open Client.Types
 open Client.Pages
 
 let init () : Model * Cmd<Msg> =
-    let route = Router.currentUrl ()
+    let route = Shared.currentRoute ()
     let model =
         { Route = route
           Feed = None
@@ -19,17 +19,20 @@ let init () : Model * Cmd<Msg> =
           ItemForm = emptyItemForm
           CollapsedComments = Set.empty
           ReplyingTo = None }
-    let cmd =
+    let routeCmd =
         match route with
         | ["item"; id] -> Cmd.ofMsg (LoadItem id)
         | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
         | ["new"] -> Cmd.batch [ Cmd.ofMsg LoadFeed; NewItem.initOwnerCommentEditorCmd ]
         | _ -> Cmd.ofMsg LoadFeed
-    model, cmd
+    let syncCmd =
+        Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
+    model, Cmd.batch [ routeCmd; syncCmd ]
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | UrlChanged route ->
+    | UrlChanged rawRoute ->
+        let route = Shared.currentRoute ()
         let cleanupCmd = Cmd.batch [
             Item.disconnectEventsCmd ()
             Item.destroyCommentEditorCmd
@@ -60,6 +63,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadTagItems _ | GotTagItems _ ->
         TagItems.update msg model
+
+    | GotSessionSync session ->
+        { model with GuestSession = session }, Cmd.none
 
 let appView (model: Model) dispatch =
     Html.div [
