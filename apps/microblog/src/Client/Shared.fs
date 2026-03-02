@@ -104,12 +104,12 @@ let nav =
     Html.nav [
         prop.children [
             Html.a [
-                prop.text "Hedge"
+                prop.text "id-ea.li/st"
                 prop.style [ style.cursor.pointer ]
                 prop.onClick (fun _ -> navigateTo [])
                 prop.children [
                   Html.img [
-                    prop.src "/public/idealist.jpg"
+                    prop.src (basePath + "/public/idealist.jpg")
                   ]
                 ]
             ]

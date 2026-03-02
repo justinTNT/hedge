@@ -71,7 +71,11 @@ let appView (model: Model) dispatch =
     Html.div [
         prop.className "app"
         prop.children [
-            Html.header [ Shared.nav ]
+            Html.header [
+              Shared.nav
+              Html.span [ prop.className "title"
+                          prop.text "id-ea.li/st" ]
+            ]
             Html.main [
                 match model.Error with
                 | Some err -> Shared.error err dispatch
