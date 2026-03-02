@@ -144,5 +144,33 @@
     var h = hash(author || '');
     return makeAvatar(pickH(colors, h).hex, pickH(emojis, h >>> 5).c);
   }
-  window.HedgeGuest = { getSession: getSession, avatarForAuthor: avatarForAuthor };
+  function syncSession() {
+    var basePath = window.BASE_PATH || '';
+    return fetch(basePath + '/api/me', { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.guest) {
+          var current = null;
+          try { current = JSON.parse(localStorage.getItem(KEY)); } catch(_) {}
+          if (!current || current.guestId !== data.guest.guestId) {
+            var url = avatarForAuthor(data.guest.displayName);
+            var parts = data.guest.displayName.split(' ');
+            var c = parts.length >= 3 ? colors.find(function(x) { return x.name === parts[1]; }) : null;
+            var e = parts.length >= 3 ? emojis.find(function(x) { return x.n === parts.slice(2).join(' '); }) : null;
+            var session = {
+              guestId: data.guest.guestId,
+              displayName: data.guest.displayName,
+              avatarHex: c ? c.hex : '#888',
+              avatarChar: e ? e.c : '?',
+              avatarUrl: url,
+              createdAt: Math.floor(Date.now() / 1000)
+            };
+            localStorage.setItem(KEY, JSON.stringify(session));
+          }
+        }
+        return getSession();
+      })
+      .catch(function() { return getSession(); });
+  }
+  window.HedgeGuest = { getSession: getSession, avatarForAuthor: avatarForAuthor, syncSession: syncSession };
 })();

@@ -11,6 +11,9 @@ let ownerCommentEditorId = "owner-comment-editor"
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null }); })")>]
 let createEditorWhenReady (elementId: string) (initialContent: string) : unit = jsNative
 
+[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2 }); })")>]
+let createEditorWithClose (elementId: string) (initialContent: string) (onClose: unit -> unit) : unit = jsNative
+
 [<Emit("window.HedgeRT.destroyRichTextEditor($0)")>]
 let destroyEditor (elementId: string) : unit = jsNative
 

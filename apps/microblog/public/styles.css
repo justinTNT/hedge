@@ -9,7 +9,9 @@ h1 { font-size: 1.5rem; }
 .feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
 .feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; margin-left: 0.75rem; }
 .feed-item a { color: #666; font-size: 0.875rem; }
+.item-detail h2 { margin-bottom: 1rem; margin-top: 1rem; }
 .item-image { max-width: 100%; }
+nav img { width: 100%; }
 .tags { margin-top: 0.5rem; }
 .main-link { text-decoration: none; }
 
@@ -149,6 +151,7 @@ h1 { font-size: 1.5rem; }
     cursor: pointer;
     padding: 0;
     text-decoration: underline;
+  margin-top: 3em;
 }
 
 .comment-reply-btn:hover {
@@ -212,6 +215,10 @@ h1 { font-size: 1.5rem; }
 }
 
 /* Comment editor overrides */
+.comment-form {
+  margin-top: 2em;
+}
+
 .comment-form .hamlet-rt-content {
     min-height: 80px;
 }

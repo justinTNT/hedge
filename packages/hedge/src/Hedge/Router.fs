@@ -149,7 +149,31 @@ let createWorker (config: WorkerConfig) =
             | Some p -> return! p
             | None ->
 
-            // 3. WebSocket upgrade
+            // 3. Guest session lookup
+            match route with
+            | GET path when matchPath "/api/me" path = Some (Exact "/api/me") ->
+                let guest = resolveGuest request
+                if guest.IsNew then
+                    return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
+                else
+                    let db : D1Database = env?DB
+                    let stmt = bind (db.prepare("SELECT display_name FROM guest_sessions WHERE guest_id = ?")) [| box guest.GuestId |]
+                    let! result = stmt.all()
+                    if result.results.Length > 0 then
+                        let name : string = result.results.[0]?display_name
+                        let body =
+                            Encode.object [
+                                "guest", Encode.object [
+                                    "guestId", Encode.string guest.GuestId
+                                    "displayName", Encode.string name
+                                ]
+                            ] |> Encode.toString 0
+                        return okJsonWithCookie body (guestCookieValue guest)
+                    else
+                        return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
+            | _ ->
+
+            // 4. WebSocket upgrade
             match route with
             | GET path when matchPath "/api/events" path = Some (Exact "/api/events")
                           && isWebSocketUpgrade request ->
@@ -162,7 +186,7 @@ let createWorker (config: WorkerConfig) =
                     return! events.get(doId).fetch(request)
             | _ ->
 
-            // 4. Blob routes
+            // 5. Blob routes
             match route with
             | POST path when matchPath "/api/blobs" path = Some (Exact "/api/blobs") ->
                 let blobs : R2Bucket = env?BLOBS
@@ -172,7 +196,7 @@ let createWorker (config: WorkerConfig) =
                 return! handleBlobServe (path.Substring(7)) blobs
             | _ ->
 
-            // 5. App routes (generated)
+            // 6. App routes (generated)
             match config.Routes request env ctx with
             | Some p -> return! p
             | None ->

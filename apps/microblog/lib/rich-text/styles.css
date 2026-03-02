@@ -28,6 +28,18 @@
     align-items: center;
 }
 
+.hamlet-rt-close-btn {
+    font-size: 16px;
+    color: #6c757d;
+    border-color: transparent;
+    background: transparent;
+}
+
+.hamlet-rt-close-btn:hover {
+    color: #dc3545;
+    background: #f8d7da;
+}
+
 .hamlet-rt-separator {
     width: 1px;
     height: 20px;
