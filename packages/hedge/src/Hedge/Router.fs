@@ -186,7 +186,7 @@ let createWorker (config: WorkerConfig) =
                     return! events.get(doId).fetch(request)
             | _ ->
 
-            // 4. Blob routes
+            // 5. Blob routes
             match route with
             | POST path when matchPath "/api/blobs" path = Some (Exact "/api/blobs") ->
                 let blobs : R2Bucket = env?BLOBS
@@ -196,7 +196,7 @@ let createWorker (config: WorkerConfig) =
                 return! handleBlobServe (path.Substring(7)) blobs
             | _ ->
 
-            // 5. App routes (generated)
+            // 6. App routes (generated)
             match config.Routes request env ctx with
             | Some p -> return! p
             | None ->
