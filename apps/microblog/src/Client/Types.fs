@@ -47,5 +47,6 @@ type Msg =
     | ToggleCollapse of string
     | SetReplyTo of itemId: string * parentId: string option
     | CancelReply
+    | GotSessionSync of GuestSession.GuestSessionData
 
 let emptyItemForm = { Title = ""; Link = ""; Tags = "" }

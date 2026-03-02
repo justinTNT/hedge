@@ -518,6 +518,24 @@ function createToolbar(editor, container) {
     toolbar.appendChild(createColorDropdown(editor, 'text', TEXT_COLORS, toolbar))
     toolbar.appendChild(createColorDropdown(editor, 'highlight', HIGHLIGHT_COLORS, toolbar))
 
+    // Close button (pushed to right end of toolbar)
+    if (container._hamletOnClose) {
+        const spacer = document.createElement('span')
+        spacer.style.flex = '1'
+        toolbar.appendChild(spacer)
+
+        const closeBtn = document.createElement('button')
+        closeBtn.type = 'button'
+        closeBtn.className = 'hamlet-rt-btn hamlet-rt-close-btn'
+        closeBtn.innerHTML = '×'
+        closeBtn.title = 'Cancel'
+        closeBtn.onclick = (e) => {
+            e.preventDefault()
+            container._hamletOnClose()
+        }
+        toolbar.appendChild(closeBtn)
+    }
+
     // Update button active states on selection change
     const updateActiveStates = () => {
         toolbar.querySelectorAll('.hamlet-rt-btn:not(.hamlet-rt-dropdown-btn)').forEach((b) => {
@@ -545,7 +563,7 @@ function createToolbar(editor, container) {
  * @param {string} [options.uploadEndpoint] - Custom upload endpoint URL (default: '/api/blobs')
  * @returns {Editor|null} The TipTap editor instance, or null if container not found
  */
-export function createRichTextEditor({ elementId, initialContent, onChange, uploadEndpoint }) {
+export function createRichTextEditor({ elementId, initialContent, onChange, uploadEndpoint, onClose }) {
     const container = document.getElementById(elementId)
     if (!container) {
         console.warn(`[hamlet-rt] Container not found: ${elementId}`)
@@ -651,6 +669,9 @@ export function createRichTextEditor({ elementId, initialContent, onChange, uplo
     container.classList.add('hamlet-rt-editor')
     if (uploadEndpoint) {
         container._hamletUploadEndpoint = uploadEndpoint
+    }
+    if (onClose) {
+        container._hamletOnClose = onClose
     }
     createToolbar(editor, container)
     container.appendChild(editorEl)

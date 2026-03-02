@@ -27,3 +27,16 @@ let getSession () : GuestSessionData =
       AvatarHex = orEmpty raw?avatarHex
       AvatarChar = orEmpty raw?avatarChar
       AvatarUrl = orEmpty raw?avatarUrl }
+
+[<Emit("window.HedgeGuest.syncSession()")>]
+let private rawSyncSession () : JS.Promise<obj> = jsNative
+
+let syncSession () : JS.Promise<GuestSessionData> =
+    promise {
+        let! raw = rawSyncSession ()
+        return { GuestId = raw?guestId
+                 DisplayName = raw?displayName
+                 AvatarHex = orEmpty raw?avatarHex
+                 AvatarChar = orEmpty raw?avatarChar
+                 AvatarUrl = orEmpty raw?avatarUrl }
+    }

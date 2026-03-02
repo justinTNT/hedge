@@ -48,10 +48,10 @@ let mutable private commentEditorActive = false
 let mutable private activeViewerIds : string list = []
 
 let initCommentEditorCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
+    Cmd.ofEffect (fun dispatch ->
         if not commentEditorActive then
             commentEditorActive <- true
-            RichText.createEditorWhenReady RichText.commentEditorId ""
+            RichText.createEditorWithClose RichText.commentEditorId "" (fun () -> dispatch CancelReply)
     )
 
 let destroyCommentEditorCmd : Cmd<Msg> =
@@ -212,18 +212,9 @@ let private replyForm (model: Model) (parentId: string option) dispatch =
                     ]
                 ]
                 Html.div [ prop.id RichText.commentEditorId ]
-                Html.div [
-                    prop.children [
-                        Html.button [
-                            prop.text "Submit"
-                            prop.onClick (fun _ -> dispatch SubmitComment)
-                        ]
-                        Html.button [
-                            prop.className "comment-reply-btn"
-                            prop.text "cancel"
-                            prop.onClick (fun _ -> dispatch CancelReply)
-                        ]
-                    ]
+                Html.button [
+                    prop.text "Submit"
+                    prop.onClick (fun _ -> dispatch SubmitComment)
                 ]
             ]
         ]
