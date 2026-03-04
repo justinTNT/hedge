@@ -6,6 +6,7 @@ module GetFeed =
     type FeedItem = {
         Id: string
         Title: string
+        Slug: string option
         Image: string option
         Extract: RichContent option
         OwnerComment: RichContent
@@ -51,6 +52,7 @@ module SubmitItem =
     type MicroblogItem = {
         Id: string
         Title: string
+        Slug: string option
         Link: Link option
         Image: Link option
         Extract: RichContent option
@@ -62,6 +64,7 @@ module SubmitItem =
 
     type Request = {
         Title: string
+        Slug: string option
         Link: string option
         Image: string option
         Extract: string option

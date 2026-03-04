@@ -80,6 +80,7 @@ module Validate =
     let submitItemSchema =
         schema "SubmitItem.Request" [
             fieldWith "Title" FString [Required; Trim]
+            fieldWith "Slug" (FOption FString) [Trim]
             fieldWith "Link" (FOption FString) [Trim]
             fieldWith "Image" (FOption FString) [Trim]
             fieldWith "Extract" (FOption FString) [Trim]

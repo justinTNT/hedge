@@ -73,6 +73,7 @@ let error (msg: string) dispatch =
     ]
 
 let feedItem (item: GetFeed.FeedItem) =
+    let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]

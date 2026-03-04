@@ -21,9 +21,9 @@ let init () : Model * Cmd<Msg> =
           ReplyingTo = None }
     let routeCmd =
         match route with
-        | ["item"; id] -> Cmd.ofMsg (LoadItem id)
         | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
         | ["new"] -> Cmd.batch [ Cmd.ofMsg LoadFeed; NewItem.initOwnerCommentEditorCmd ]
+        | [idOrSlug] -> Cmd.ofMsg (LoadItem idOrSlug)
         | _ -> Cmd.ofMsg LoadFeed
     let syncCmd =
         Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
@@ -41,10 +41,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         ]
         let cmd =
             match route with
-            | [] | ["feed"] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg LoadFeed ]
-            | ["item"; id] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem id) ]
+            | [] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg LoadFeed ]
             | ["tag"; name] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadTagItems name) ]
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
+            | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
             | _ -> cleanupCmd
         { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty }, cmd
 
@@ -85,16 +85,16 @@ let appView (model: Model) dispatch =
                     Shared.loading
                 else
                     match model.Route with
-                    | ["item"; _] ->
-                        match model.CurrentItem with
-                        | Some response -> Item.view response model dispatch
-                        | None -> Html.p [ prop.text "Item not found." ]
                     | ["tag"; _] ->
                         match model.TagItems with
                         | Some response -> TagItems.view response
                         | None -> Html.p [ prop.text "No items for this tag." ]
                     | ["new"] ->
                         NewItem.view model.ItemForm dispatch
+                    | [_] ->
+                        match model.CurrentItem with
+                        | Some response -> Item.view response model dispatch
+                        | None -> Html.p [ prop.text "Item not found." ]
                     | _ ->
                         match model.Feed with
                         | Some response -> Feed.view response
@@ -107,6 +107,7 @@ open Elmish.React
 
 let view model dispatch =
     React.router [
+        router.pathMode
         router.onUrlChanged (UrlChanged >> dispatch)
         router.children [ appView model dispatch ]
     ]
