@@ -68,6 +68,9 @@ let resolveGuest (request: WorkerRequest) : GuestContext =
 let guestCookieValue (guest: GuestContext) : string =
     sprintf "%s=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" guestCookieName guest.GuestId guestCookieMaxAge
 
+[<Emit("$0.ASSETS.fetch($1)")>]
+let private fetchFromAssets (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
+
 /// Response helpers
 let jsonResponse (body: string) (status: int) : WorkerResponse =
     let options = createObj [
@@ -201,7 +204,11 @@ let createWorker (config: WorkerConfig) =
             | Some p -> return! p
             | None ->
 
-            // 6. 404
-            return notFound ()
+            // 7. SPA fallback — delegate to Cloudflare Assets for non-API GET
+            match route with
+            | GET _ ->
+                return! fetchFromAssets env request
+            | _ ->
+                return notFound ()
         }
     |}

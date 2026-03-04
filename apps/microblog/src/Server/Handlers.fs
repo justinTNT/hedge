@@ -15,10 +15,34 @@ open Server.Db
 let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
     { Id = r.Id
       Title = r.Title
+      Slug = r.Slug
       Image = r.Image
       Extract = r.Extract |> Option.map RichContent
       OwnerComment = RichContent r.OwnerComment
       Timestamp = r.CreatedAt }
+
+let private uuidPattern = System.Text.RegularExpressions.Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+
+let private isUuid (s: string) = uuidPattern.IsMatch(s)
+
+let private slugPattern = System.Text.RegularExpressions.Regex("^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+let private reservedSlugs = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin" ]
+
+let private validateSlug (slug: string option) =
+    match slug with
+    | None | Some "" -> Ok None
+    | Some s ->
+        let s = s.ToLowerInvariant().Trim()
+        if not (slugPattern.IsMatch(s)) then
+            Error "Slug must be lowercase alphanumeric with hyphens only"
+        elif s.Length < 2 then
+            Error "Slug must be at least 2 characters"
+        elif s.Length > 80 then
+            Error "Slug must be 80 characters or fewer"
+        elif Set.contains s reservedSlugs then
+            Error (sprintf "Slug '%s' is reserved" s)
+        else Ok (Some s)
 
 let private toCommentItem (r: ItemCommentRow) : SubmitComment.CommentItem =
     { Id = r.Id
@@ -40,28 +64,34 @@ let getFeed (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
-let getItem (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
+let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let itemStmt = selectMicroblogItem itemId env.DB
-        let commentStmt = selectItemCommentsByItemId itemId env.DB
-        let tagStmt =
-            bind
-                (env.DB.prepare("SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"))
-                [| box itemId |]
+        let itemStmt =
+            if isUuid idOrSlug then
+                selectMicroblogItem idOrSlug env.DB
+            else
+                bind (env.DB.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE slug = ?")) [| box idOrSlug |]
 
-        let! results = env.DB.batch([| itemStmt; commentStmt; tagStmt |])
-
-        let itemRows = results.[0].results
+        let! itemResult = itemStmt.all()
+        let itemRows = itemResult.results
         if itemRows.Length = 0 then
             return notFound ()
         else
             let r = parseMicroblogItemRow itemRows.[0]
-            let comments = results.[1].results |> Array.map (parseItemCommentRow >> toCommentItem) |> Array.toList
-            let tags = results.[2].results |> Array.map (fun row -> rowStr row "name") |> Array.toList
+            let commentStmt = selectItemCommentsByItemId r.Id env.DB
+            let tagStmt =
+                bind
+                    (env.DB.prepare("SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"))
+                    [| box r.Id |]
+
+            let! results = env.DB.batch([| commentStmt; tagStmt |])
+            let comments = results.[0].results |> Array.map (parseItemCommentRow >> toCommentItem) |> Array.toList
+            let tags = results.[1].results |> Array.map (fun row -> rowStr row "name") |> Array.toList
 
             let item : SubmitItem.MicroblogItem =
                 { Id = r.Id
                   Title = r.Title
+                  Slug = r.Slug
                   Link = r.Link |> Option.map Link
                   Image = r.Image |> Option.map Link
                   Extract = r.Extract |> Option.map RichContent
@@ -187,9 +217,14 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Error errors ->
             return validationErrorResponse errors
         | Ok req ->
+        match validateSlug req.Slug with
+        | Error msg ->
+            return validationErrorResponse [ { Field = "Slug"; Message = msg } ]
+        | Ok validatedSlug ->
         let ins = insertMicroblogItem env.DB
                     { Title = req.Title; Link = req.Link; Image = req.Image
-                      Extract = req.Extract; OwnerComment = req.OwnerComment; ViewCount = 0 }
+                      Extract = req.Extract; OwnerComment = req.OwnerComment
+                      Slug = validatedSlug; ViewCount = 0 }
 
         let tagStmts =
             req.Tags |> List.collect (fun tagName ->
@@ -206,11 +241,23 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
             )
 
         let allStmts = ins.Stmt :: tagStmts |> List.toArray
-        let! _ = env.DB.batch(allStmts)
+        let! insertOk = promise {
+            try
+                let! _ = env.DB.batch(allStmts)
+                return true
+            with ex ->
+                if ex.Message.Contains("UNIQUE") && ex.Message.Contains("slug") then
+                    return false
+                else return raise ex
+        }
+        if not insertOk then
+            return validationErrorResponse [ { Field = "Slug"; Message = "This slug is already taken" } ]
+        else
 
         let newItem : SubmitItem.MicroblogItem =
             { Id = ins.Id
               Title = req.Title
+              Slug = validatedSlug
               Link = req.Link |> Option.map Link
               Image = req.Image |> Option.map Link
               Extract = req.Extract |> Option.map RichContent

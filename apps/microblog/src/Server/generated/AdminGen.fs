@@ -43,16 +43,17 @@ let microblogItem : AdminTable =
             fieldWith "Image" (FOption FString) [Link]
             fieldWith "Extract" (FOption FString) [RichContent]
             fieldWith "OwnerComment" FString [RichContent]
+            fieldWith "Slug" (FOption FString) []
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "ViewCount" FInt []
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, title, link, image, extract, owner_comment, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, title, link, image, extract, owner_comment, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
-      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, view_count = ? WHERE id = ?"
+      SelectAll = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
+      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ? WHERE id = ?"
       Delete = "DELETE FROM items WHERE id = ?"
-      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "ViewCount"] }
+      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "Slug"; "ViewCount"] }
 
 let itemComment : AdminTable =
     { Name = "ItemComment"

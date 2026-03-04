@@ -62,6 +62,7 @@ type MicroblogItemRow = {
     Image: string option
     Extract: string option
     OwnerComment: string
+    Slug: string option
     CreatedAt: int
     UpdatedAt: int option
     ViewCount: int
@@ -74,6 +75,7 @@ type MicroblogItemCreate = {
     Image: string option
     Extract: string option
     OwnerComment: string
+    Slug: string option
     ViewCount: int
 }
 
@@ -84,29 +86,30 @@ let parseMicroblogItemRow (row: obj) : MicroblogItemRow =
       Image = rowStrOpt row "image"
       Extract = rowStrOpt row "extract"
       OwnerComment = rowStr row "owner_comment"
+      Slug = rowStrOpt row "slug"
       CreatedAt = rowInt row "created_at"
       UpdatedAt = rowIntOpt row "updated_at"
       ViewCount = rowInt row "view_count"
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectMicroblogItems (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, title, link, image, extract, owner_comment, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100")
 
 let selectMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?")) [| box id |]
 
 let insertMicroblogItem (db: D1Database) (create: MicroblogItemCreate) =
     let id = newId()
     let now = epochNow()
     let stmt =
-        bind (db.prepare("INSERT INTO items (id, title, link, image, extract, owner_comment, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
-             [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; box create.ViewCount; box now |]
+        bind (db.prepare("INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updateMicroblogItem (id: string) (create: MicroblogItemCreate) (db: D1Database) : D1PreparedStatement =
     let now = epochNow()
-    bind (db.prepare("UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, view_count = ?, updated_at = ? WHERE id = ?"))
-         [| box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; box create.ViewCount; box now; box id |]
+    bind (db.prepare("UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"))
+         [| box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; box now; box id |]
 
 let deleteMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM items WHERE id = ?")) [| box id |]

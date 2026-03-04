@@ -47,6 +47,7 @@ let update msg model =
             |> Array.toList
         let req : SubmitItem.Request =
             { Title = form.Title
+              Slug = None
               Link = if form.Link = "" then None else Some form.Link
               Image = None
               Extract = None

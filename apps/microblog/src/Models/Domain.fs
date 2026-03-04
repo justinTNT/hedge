@@ -19,6 +19,7 @@ type MicroblogItem = {
     Image: Link option
     Extract: RichContent option
     OwnerComment: RichContent
+    Slug: string option
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option
     ViewCount: int
