@@ -335,6 +335,9 @@ async function submit() {
   const extractJson = extractEditor.getJSON()
   const extractText = extractEditor.getText().trim()
 
+  const slugRaw = document.getElementById('slug').value.trim()
+  const slug = slugRaw || null
+
   const tagsRaw = document.getElementById('tags').value
   const tags = tagsRaw
     .split(',')
@@ -343,6 +346,7 @@ async function submit() {
 
   const body = {
     title,
+    slug,
     link: pageUrl || null,
     image: selectedImage || null,
     extract: extractText ? JSON.stringify(extractJson) : null,

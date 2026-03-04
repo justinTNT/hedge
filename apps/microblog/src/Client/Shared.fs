@@ -23,7 +23,7 @@ let tagPill (tag: string) =
         prop.text tag
         prop.onClick (fun e ->
             e.stopPropagation ()
-            Router.navigate ("tag", tag)
+            Router.navigatePath ("tag", tag)
         )
     ]
 
@@ -46,10 +46,11 @@ let error (msg: string) dispatch =
     ]
 
 let feedItem (item: GetFeed.FeedItem) =
+    let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
-        prop.onClick (fun _ -> Router.navigate ("item", item.Id))
+        prop.onClick (fun _ -> Router.navigatePath itemPath)
         prop.children [
             Html.h2 [ prop.text item.Title ]
             match item.Extract with
@@ -79,7 +80,7 @@ let nav =
             Html.a [
                 prop.text "Hedge"
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> Router.navigate "")
+                prop.onClick (fun _ -> Router.navigatePath "")
                 prop.children [
                   Html.img [
                     prop.src "/public/wtfail.png"
