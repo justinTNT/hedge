@@ -24,6 +24,9 @@ obj/
 .wrangler/
 .dev.vars
 
+# Extension config (contains admin keys)
+extension/sites.json
+
 # OS
 .DS_Store
 Thumbs.db

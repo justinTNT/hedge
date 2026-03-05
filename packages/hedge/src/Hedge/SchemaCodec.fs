@@ -25,6 +25,7 @@ let encodeFieldAttr (fa: FieldAttr) : JsonValue =
     | ForeignKey table -> Encode.object [ "foreignKey", Encode.string table ]
     | RichContent -> Encode.string "richContent"
     | Link -> Encode.string "link"
+    | Unique -> Encode.string "unique"
     | Required -> Encode.string "required"
     | Trim -> Encode.string "trim"
     | Inject -> Encode.string "inject"
@@ -85,6 +86,7 @@ let decodeFieldAttr : Decoder<FieldAttr> =
             | "softDelete" -> Decode.succeed SoftDelete
             | "richContent" -> Decode.succeed RichContent
             | "link" -> Decode.succeed Link
+            | "unique" -> Decode.succeed Unique
             | "required" -> Decode.succeed Required
             | "trim" -> Decode.succeed Trim
             | "inject" -> Decode.succeed Inject

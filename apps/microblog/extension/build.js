@@ -6,7 +6,7 @@
  */
 
 import * as esbuild from 'esbuild'
-import { copyFileSync, mkdirSync } from 'fs'
+import { copyFileSync, mkdirSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -30,6 +30,12 @@ await esbuild.build({
 const statics = ['manifest.json', 'popup.html', 'background.js']
 for (const file of statics) {
   copyFileSync(resolve(__dirname, file), resolve(dist, file))
+}
+
+// Copy sites.json if present (gitignored, developer-specific)
+const sitesJson = resolve(__dirname, 'sites.json')
+if (existsSync(sitesJson)) {
+  copyFileSync(sitesJson, resolve(dist, 'sites.json'))
 }
 
 console.log('Extension built → extension/dist/')

@@ -37,6 +37,7 @@ bucket_name = "hedge-blobs"
 # Static assets (index.html, CSS, JS, images)
 [assets]
 directory = "./_site"
+binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
