@@ -231,3 +231,17 @@ nav img { width: 100%; }
 .ProseMirror-focused {
     outline: none !important;
 }
+
+/* Dark mode */
+html.dark { background: #1a1a1a; color: #e0e0e0; }
+html.dark .feed-item { border-bottom-color: #333; }
+html.dark .extract { background: #252525; border-color: #444; }
+html.dark .owner-comment { background: #2a2a2a; }
+html.dark a { color: #6cb4ee; }
+html.dark header { border-bottom-color: #333; }
+
+/* Mobile */
+@media (max-width: 600px) {
+    .extract { flex-direction: column; }
+    .extract img { width: 100%; margin-left: 0; margin-top: 1em; }
+}
