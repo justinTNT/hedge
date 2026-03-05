@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/Codecs/generated/Codecs.fs" Link="Codecs.fs" />
+    <Compile Include="../src/Client/generated/ClientGen.fs" Link="ClientGen.fs" />
+    <Compile Include="Popup.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../packages/hedge-extension/HedgeExtension.fsproj" />
+    <ProjectReference Include="../src/Models/Models.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+  </ItemGroup>
+</Project>
