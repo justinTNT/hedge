@@ -872,6 +872,7 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: Type list) : 
     lines |> String.concat "\n"
 
 // ============================================================
+// ============================================================
 // Routes.fs generation (Step 7)
 // ============================================================
 
