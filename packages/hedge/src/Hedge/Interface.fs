@@ -36,6 +36,9 @@ type RichContent = RichContent of string
 /// URL / link.
 type Link = Link of string
 
+/// Unique constraint. Wraps the value type.
+type Unique<'a> = Unique of 'a
+
 // -- Attributes --
 
 /// Table name override for code generation.

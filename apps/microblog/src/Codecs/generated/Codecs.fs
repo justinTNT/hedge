@@ -15,6 +15,7 @@ let inline sd (SoftDelete v) = v
 let inline fk (ForeignKey v) = v
 let inline rc (RichContent v) = v
 let inline lk (Link v) = v
+let inline uq (Unique v) = v
 
 module Encode =
 

@@ -65,6 +65,7 @@ CREATE INDEX idx_items_created_at ON items(created_at DESC);
 CREATE INDEX idx_comments_item_id ON comments(item_id);
 CREATE INDEX idx_comments_guest_id ON comments(guest_id);
 CREATE INDEX idx_comments_created_at ON comments(created_at DESC);
+CREATE UNIQUE INDEX idx_tags_name ON tags(name);
 CREATE INDEX idx_tags_created_at ON tags(created_at DESC);
 CREATE INDEX idx_item_tags_item_id ON item_tags(item_id);
 CREATE INDEX idx_item_tags_tag_id ON item_tags(tag_id);

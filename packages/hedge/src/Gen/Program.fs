@@ -61,6 +61,9 @@ let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
         if def = typedefof<PrimaryKey<_>> then
             let inner = propType.GenericTypeArguments.[0]
             (if inner = typeof<int> then FInt else FString), [PrimaryKey]
+        elif def = typedefof<Unique<_>> then
+            let inner = propType.GenericTypeArguments.[0]
+            (if inner = typeof<int> then FInt else FString), [Unique]
         elif def = typedefof<ForeignKey<_>> then
             let refType = propType.GenericTypeArguments.[0]
             FString, [ForeignKey refType.Name]
@@ -291,6 +294,7 @@ let fieldAttrDsl (fa: FieldAttr) =
     | ForeignKey table -> sprintf "ForeignKey \"%s\"" table
     | RichContent -> "RichContent"
     | Link -> "Link"
+    | Unique -> "Unique"
     | Required -> "Required"
     | Trim -> "Trim"
     | Inject -> "Inject"
@@ -615,6 +619,11 @@ let generateIndexes (m: TableMeta) : string list =
         let col = toSnakeCase f.Name
         indexes.Add(sprintf "CREATE INDEX idx_%s_%s ON %s(%s);" m.TableName col m.TableName col)
 
+    for f in m.DbFields do
+        if f.Attrs |> List.contains FieldAttr.Unique then
+            let col = toSnakeCase f.Name
+            indexes.Add(sprintf "CREATE UNIQUE INDEX idx_%s_%s ON %s(%s);" m.TableName col m.TableName col)
+
     if m.HasCreateTs then
         indexes.Add(sprintf "CREATE INDEX idx_%s_created_at ON %s(created_at DESC);" m.TableName m.TableName)
 
@@ -673,6 +682,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "let inline fk (ForeignKey v) = v"
     emit "let inline rc (RichContent v) = v"
     emit "let inline lk (Link v) = v"
+    emit "let inline uq (Unique v) = v"
     emit ""
     emit "module Encode ="
     emit ""

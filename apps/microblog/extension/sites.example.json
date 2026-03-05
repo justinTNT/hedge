@@ -1,0 +1,6 @@
+{
+  "sites": [
+    { "name": "Local", "url": "http://localhost:8787", "key": "wtf-admin-key" },
+    { "name": "Production", "url": "https://wt.fail", "key": "" }
+  ]
+}

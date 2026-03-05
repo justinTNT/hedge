@@ -19,10 +19,23 @@ async function getSitesData() {
     return migrated
   }
 
-  return {
-    sites: data.sites || [],
-    activeSiteIndex: data.activeSiteIndex || 0,
+  if (data.sites && data.sites.length > 0) {
+    return { sites: data.sites, activeSiteIndex: data.activeSiteIndex || 0 }
   }
+
+  // Storage empty — seed from bundled sites.json if present
+  try {
+    const res = await fetch(chrome.runtime.getURL('sites.json'))
+    const defaults = await res.json()
+    if (defaults.sites && defaults.sites.length > 0) {
+      await chrome.storage.local.set({ sites: defaults.sites, activeSiteIndex: 0 })
+      return { sites: defaults.sites, activeSiteIndex: 0 }
+    }
+  } catch {
+    // No sites.json bundled — that's fine
+  }
+
+  return { sites: [], activeSiteIndex: 0 }
 }
 
 function getActiveSite(data) {

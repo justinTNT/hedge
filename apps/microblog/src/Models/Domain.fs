@@ -41,7 +41,7 @@ type ItemComment = {
 
 type Tag = {
     Id: PrimaryKey<string>
-    Name: string
+    Name: Unique<string>
     CreatedAt: CreateTimestamp
     DeletedAt: SoftDelete option
 }
