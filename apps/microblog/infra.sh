@@ -10,8 +10,8 @@ USAGE="Usage: ./infra.sh <command> [site-name]
 
 Commands:
   create <site-name>  Create D1 database + R2 bucket for a new site
-  migrate             Run schema.sql locally (uses wrangler.toml)
-  migrate-remote      Run schema.sql in production (uses wrangler.toml)
+  migrate             Apply pending migrations locally
+  migrate-remote      Apply pending migrations in production
   deploy              Build and deploy
 
 Examples:
@@ -37,13 +37,13 @@ case "$cmd" in
   migrate)
     DB=$(db_name)
     echo "==> Migrating $DB (local)"
-    npx wrangler d1 execute "$DB" --local --file schema.sql
+    npx wrangler d1 migrations apply "$DB" --local
     ;;
 
   migrate-remote)
     DB=$(db_name)
     echo "==> Migrating $DB (remote/production)"
-    npx wrangler d1 execute "$DB" --remote --file schema.sql
+    npx wrangler d1 migrations apply "$DB" --remote
     ;;
 
   deploy)

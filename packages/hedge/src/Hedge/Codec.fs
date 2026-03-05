@@ -73,6 +73,9 @@ let private wrapperBaseType (fullname: string) (generics: System.Type array) : s
     elif fullname.Contains("Interface.ForeignKey") then Some "string"
     elif fullname.Contains("Interface.RichContent") then Some "string"
     elif fullname.Contains("Interface.Link") then Some "string"
+    elif fullname.Contains("Interface.Unique") then
+        if generics.Length > 0 && (tiFullname generics.[0]).Contains("Int32") then Some "int"
+        else Some "string"
     else None
 
 // ============================================================

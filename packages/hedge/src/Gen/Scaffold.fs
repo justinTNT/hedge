@@ -739,6 +739,13 @@ new_classes = ["EventHub"]
 binding = "BLOBS"
 bucket_name = "{{APP}}-blobs"
 
+# Static assets
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
 # Environment variables
 [vars]
 ENVIRONMENT = "development"

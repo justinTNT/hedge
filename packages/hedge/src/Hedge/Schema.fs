@@ -28,6 +28,7 @@ type FieldAttr =
     | Required
     | Trim
     | Inject
+    | Unique
     | MinLength of int
     | MaxLength of int
 
@@ -67,6 +68,7 @@ let showAttr = function
     | ForeignKey t -> sprintf "ForeignKey(%s)" t
     | RichContent -> "RichContent"
     | Link -> "Link"
+    | Unique -> "Unique"
     | Required -> "Required"
     | Trim -> "Trim"
     | Inject -> "Inject"
@@ -141,6 +143,14 @@ let rec private classifyType (t: System.Type) : FieldType * FieldAttr option =
 
     elif fn.Contains("Interface.Link") then
         FString, Some Link
+
+    elif fn.Contains("Interface.Unique") then
+        let innerType =
+            if gs.Length > 0 then
+                let g = tiFullname gs.[0]
+                if g.Contains("Int32") then FInt else FString
+            else FString
+        innerType, Some Unique
 
     // Standard types
     elif fn.Contains("String") then

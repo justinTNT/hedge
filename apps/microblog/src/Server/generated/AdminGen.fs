@@ -82,7 +82,7 @@ let tag : AdminTable =
       Schema =
         schema "Tag" [
             fieldWith "Id" FString [PrimaryKey]
-            fieldWith "Name" FString []
+            fieldWith "Name" FString [Unique]
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
