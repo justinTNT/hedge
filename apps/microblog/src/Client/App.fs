@@ -73,8 +73,15 @@ let appView (model: Model) dispatch =
         prop.children [
             Html.header [
               Shared.nav
-              Html.span [ prop.className "title"
-                          prop.text "id-ea.li/st" ]
+              Html.a [
+                prop.text "id-ea.li/st"
+                prop.style [ style.cursor.pointer ]
+                prop.onClick (fun _ -> Shared.navigateTo [])
+                prop.children [
+                  Html.span [ prop.className "title"
+                              prop.text "id-ea.li/st" ]
+            ]
+              ]
             ]
             Html.main [
                 match model.Error with

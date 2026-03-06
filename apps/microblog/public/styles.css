@@ -244,10 +244,10 @@ header span.title {
 }
 
 /* Dark mode */
-html.dark { background: #1a1a1a; color: #e0e0e0; }
+html.dark { background: #000; color: #e0e0e0; }
 html.dark .feed-item { border-bottom-color: #333; }
 html.dark .extract { background: #252525; border-color: #444; }
-html.dark .owner-comment { background: #2a2a2a; }
+html.dark .owner-comment { background: #222; }
 html.dark a { color: #6cb4ee; }
 html.dark header { border-bottom-color: #333; }
 
