@@ -75,9 +75,12 @@ let avatar (url: string) =
     ]
 
 let private loginButton (provider: string) (label: string) =
+    // Never round-trip back to an /auth/* page — after claiming it would dead-end
+    let path = Browser.Dom.window.location.pathname
+    let returnTo = if path.StartsWith "/auth/" then "/" else path
     Html.a [
         prop.className (sprintf "login-btn login-%s" provider)
-        prop.href (sprintf "/api/auth/%s/login?returnTo=%s" provider (Fable.Core.JS.encodeURIComponent (Browser.Dom.window.location.pathname)))
+        prop.href (sprintf "/api/auth/%s/login?returnTo=%s" provider (Fable.Core.JS.encodeURIComponent returnTo))
         prop.text label
     ]
 
