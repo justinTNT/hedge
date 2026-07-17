@@ -54,7 +54,7 @@ let init () : Model * Cmd<Msg> =
     let route = Router.currentUrl ()
     let claimState =
         match route with
-        | ["auth"; "claim"] -> parseClaimFromRoute ()
+        | ["auth"; "claim"] | ["auth"; "claim"; _] -> parseClaimFromRoute ()
         | _ -> None
     let model =
         { Route = route
@@ -72,7 +72,7 @@ let init () : Model * Cmd<Msg> =
           ShowIdentitySwitcher = false }
     let routeCmd =
         match route with
-        | ["auth"; "claim"] -> Cmd.none
+        | ["auth"; "claim"] | ["auth"; "claim"; _] -> Cmd.none
         | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
         | ["new"] -> Cmd.batch [ Cmd.ofMsg LoadFeed; NewItem.initOwnerCommentEditorCmd ]
         | [idOrSlug] -> Cmd.ofMsg (LoadItem idOrSlug)
@@ -92,11 +92,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         ]
         let claimState =
             match route with
-            | ["auth"; "claim"] -> parseClaimFromRoute ()
+            | ["auth"; "claim"] | ["auth"; "claim"; _] -> parseClaimFromRoute ()
             | _ -> None
         let cmd =
             match route with
-            | ["auth"; "claim"] -> cleanupCmd
+            | ["auth"; "claim"] | ["auth"; "claim"; _] -> cleanupCmd
             | [] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg LoadFeed ]
             | ["tag"; name] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadTagItems name) ]
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
@@ -175,7 +175,7 @@ let appView (model: Model) dispatch =
                     Shared.loading
                 else
                     match model.Route with
-                    | ["auth"; "claim"] ->
+                    | ["auth"; "claim"] | ["auth"; "claim"; _] ->
                         Shared.claimView model dispatch
                     | ["tag"; _] ->
                         match model.TagItems with
