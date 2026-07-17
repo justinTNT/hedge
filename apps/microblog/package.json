@@ -20,7 +20,9 @@
     "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
     "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
     "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run",
-    "build:extension": "node extension/build.js"
+    "build:extension": "cd extension && node build.js chrome",
+    "build:extension:firefox": "cd extension && node build.js firefox",
+    "build:extension:all": "npm run build:extension && npm run build:extension:firefox"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

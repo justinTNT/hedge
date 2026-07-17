@@ -4,6 +4,10 @@
  * 1. Fable-compiles Extension.fsproj to JS
  * 2. Bundles the Fable output (with TipTap npm deps) into extension/dist/ via esbuild
  * 3. Copies static files (manifest, popup.html, background.js) alongside
+ *
+ * Usage:
+ *   node build.js [chrome|firefox]
+ *   Default: chrome
  */
 
 import { execSync } from 'child_process'
@@ -13,9 +17,11 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const dist = resolve(__dirname, 'dist')
+const target = process.argv[2] || 'chrome'
+const dist = resolve(__dirname, `dist-${target}`)
 const fableOut = resolve(__dirname, 'fable_output')
 
+console.log(`Building extension for: ${target}`)
 mkdirSync(dist, { recursive: true })
 
 // Step 1: Fable compile F# to JS
@@ -37,7 +43,10 @@ await esbuild.build({
 })
 
 // Step 3: Copy static files
-const statics = ['manifest.json', 'popup.html', 'background.js']
+const manifestFile = target === 'firefox' ? 'manifest.firefox.json' : 'manifest.json'
+copyFileSync(resolve(__dirname, manifestFile), resolve(dist, 'manifest.json'))
+
+const statics = ['popup.html', 'background.js']
 for (const file of statics) {
   copyFileSync(resolve(__dirname, file), resolve(dist, file))
 }
@@ -48,4 +57,13 @@ if (existsSync(sitesJson)) {
   copyFileSync(sitesJson, resolve(dist, 'sites.json'))
 }
 
-console.log('Extension built → extension/dist/')
+console.log(`Extension built → extension/dist-${target}/`)
+
+// Step 4: Package as zip for easy installation
+const zipFile = resolve(__dirname, `hedge-${target}.zip`)
+execSync(`cd ${dist} && zip -r ${zipFile} . -x '*.DS_Store'`, {
+  cwd: __dirname,
+  stdio: 'inherit',
+})
+
+console.log(`Packaged → extension/hedge-${target}.zip`)
