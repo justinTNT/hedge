@@ -11,19 +11,13 @@ open Client.Pages
 [<Emit("new URLSearchParams(window.location.search).get($0)")>]
 let private getQueryParam (name: string) : string = jsNative
 
-let private parseClaimFromRoute () : ClaimState option =
+/// OAuth return: /auth/claim?identity=...&returnTo=...
+let private parseClaimFromRoute () : (string option * string) =
     let identity = getQueryParam "identity"
     let returnTo = getQueryParam "returnTo"
-    if isNull identity || identity = "" then None
-    else Some { IdentityId = identity; ReturnTo = if isNull returnTo || returnTo = "" then "/" else returnTo }
-
-let private activateIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
-    let body = sprintf """{"identityId":"%s","merge":%s}""" identityId (if merge then "true" else "false")
-    Cmd.OfPromise.either
-        (fun () -> Client.Api.postJsonRaw "/api/auth/activate" body)
-        ()
-        GotActivateClaim
-        (fun ex -> GotActivateClaim (Error ex.Message))
+    let identity = if isNull identity || identity = "" then None else Some identity
+    let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
+    identity, returnTo
 
 let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
     let body = sprintf """{"identityId":"%s","merge":%s}""" identityId (if merge then "true" else "false")
@@ -52,10 +46,10 @@ let private loadIdentitiesCmd : Cmd<Msg> =
 
 let init () : Model * Cmd<Msg> =
     let route = Router.currentUrl ()
-    let claimState =
+    let claimFocus, claimReturnTo =
         match route with
         | ["auth"; "claim"] | ["auth"; "claim"; _] -> parseClaimFromRoute ()
-        | _ -> None
+        | _ -> None, "/"
     let model =
         { Route = route
           Feed = None
@@ -67,12 +61,20 @@ let init () : Model * Cmd<Msg> =
           ItemForm = emptyItemForm
           CollapsedComments = Set.empty
           ReplyingTo = None
-          ClaimState = claimState
           Identities = []
-          ShowIdentitySwitcher = false }
+          ShowIdentitySwitcher = false
+          ShowConnections = false
+          SelectedIdentity = None
+          PendingClaimFocus = claimFocus }
     let routeCmd =
         match route with
-        | ["auth"; "claim"] | ["auth"; "claim"; _] -> Cmd.none
+        | ["auth"; "claim"] | ["auth"; "claim"; _] ->
+            // Land on the page the user came from; UrlChanged consumes
+            // PendingClaimFocus to open the switcher pre-selected
+            Cmd.batch [
+                loadIdentitiesCmd
+                Cmd.ofEffect (fun _ -> Router.navigatePath claimReturnTo)
+            ]
         | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
         | ["new"] -> Cmd.batch [ Cmd.ofMsg LoadFeed; NewItem.initOwnerCommentEditorCmd ]
         | [idOrSlug] -> Cmd.ofMsg (LoadItem idOrSlug)
@@ -90,10 +92,12 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             NewItem.destroyOwnerCommentEditorCmd
             Item.destroyAllViewersCmd
         ]
-        let claimState =
-            match route with
-            | ["auth"; "claim"] | ["auth"; "claim"; _] -> parseClaimFromRoute ()
-            | _ -> None
+        // An OAuth return sets PendingClaimFocus; consume it here so the
+        // switcher opens pre-selected on the page we navigate back to
+        let showSwitcher, selected =
+            match model.PendingClaimFocus with
+            | Some id -> true, Some id
+            | None -> false, None
         let cmd =
             match route with
             | ["auth"; "claim"] | ["auth"; "claim"; _] -> cleanupCmd
@@ -102,7 +106,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
             | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
             | _ -> cleanupCmd
-        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ClaimState = claimState; ShowIdentitySwitcher = false }, cmd
+        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; ShowConnections = false; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
 
     | DismissError ->
         { model with Error = None }, Cmd.none
@@ -123,29 +127,15 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | GotSessionSync session ->
         { model with GuestSession = session }, Cmd.none
 
-    | ActivateClaim merge ->
-        match model.ClaimState with
-        | Some claim ->
-            { model with IsLoading = true }, activateIdentityCmd claim.IdentityId merge
-        | None -> model, Cmd.none
-
-    | GotActivateClaim (Ok _) ->
-        let returnTo = model.ClaimState |> Option.map (fun c -> c.ReturnTo) |> Option.defaultValue "/"
-        { model with ClaimState = None; IsLoading = false },
-        Cmd.batch [
-            Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
-            Cmd.ofEffect (fun _ -> Router.navigatePath returnTo)
-        ]
-
-    | GotActivateClaim (Error err) ->
-        { model with IsLoading = false; Error = Some err }, Cmd.none
-
     | RevertIdentity (identityId, merge) ->
         { model with IsLoading = true }, revertIdentityCmd identityId merge
 
     | GotRevertIdentity (Ok _) ->
-        { model with IsLoading = false; ShowIdentitySwitcher = false },
-        Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
+        { model with IsLoading = false; ShowIdentitySwitcher = false; SelectedIdentity = None },
+        Cmd.batch [
+            Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
+            loadIdentitiesCmd
+        ]
 
     | GotRevertIdentity (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -158,8 +148,17 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | ToggleIdentitySwitcher ->
         let show = not model.ShowIdentitySwitcher
-        { model with ShowIdentitySwitcher = show },
+        { model with ShowIdentitySwitcher = show; ShowConnections = false; SelectedIdentity = None },
         if show then loadIdentitiesCmd else Cmd.none
+
+    | ToggleConnections ->
+        let show = not model.ShowConnections
+        { model with ShowConnections = show; ShowIdentitySwitcher = false; SelectedIdentity = None },
+        if show then loadIdentitiesCmd else Cmd.none
+
+    | SelectIdentity identityId ->
+        let selected = if model.SelectedIdentity = Some identityId then None else Some identityId
+        { model with SelectedIdentity = selected }, Cmd.none
 
 let appView (model: Model) dispatch =
     Html.div [
@@ -176,7 +175,8 @@ let appView (model: Model) dispatch =
                 else
                     match model.Route with
                     | ["auth"; "claim"] | ["auth"; "claim"; _] ->
-                        Shared.claimView model dispatch
+                        // Transient: init immediately navigates to returnTo
+                        Shared.loading
                     | ["tag"; _] ->
                         match model.TagItems with
                         | Some response -> TagItems.view response

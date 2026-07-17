@@ -105,8 +105,13 @@ let private identitySwitcher (model: Model) dispatch =
                     // ActivatedAt is history (most recent wins) — only the session's
                     // current identity is active, not everything ever activated
                     let isActive = Some id.Id = activeId
+                    let isSelected = model.SelectedIdentity = Some id.Id
                     Html.div [
-                        prop.className (if isActive then "identity-option active" else "identity-option")
+                        prop.className (
+                            if isActive then "identity-option active"
+                            elif isSelected then "identity-option selected"
+                            else "identity-option selectable")
+                        if not isActive then prop.onClick (fun _ -> dispatch (SelectIdentity id.Id))
                         prop.children [
                             avatar (if id.Picture <> "" then id.Picture else GuestSession.avatarForAuthor id.Name)
                             Html.div [
@@ -116,17 +121,43 @@ let private identitySwitcher (model: Model) dispatch =
                                     Html.span [ prop.className "identity-provider"; prop.text (providerLabel id.Provider) ]
                                 ]
                             ]
-                            if not isActive then
+                            // Merge/fresh only appear once this identity is chosen
+                            if isSelected && not isActive then
                                 Html.button [
                                     prop.className "btn-merge"
-                                    prop.text "Switch (merge)"
-                                    prop.onClick (fun _ -> dispatch (RevertIdentity (id.Id, true)))
+                                    prop.text "Merge"
+                                    prop.title "Bring my comments with me"
+                                    prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, true)))
                                 ]
                                 Html.button [
                                     prop.className "btn-abandon"
-                                    prop.text "Switch (fresh)"
-                                    prop.onClick (fun _ -> dispatch (RevertIdentity (id.Id, false)))
+                                    prop.text "Fresh"
+                                    prop.title "Leave comments where they are"
+                                    prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, false)))
                                 ]
+                        ]
+                    ]
+                )
+            ]
+        ]
+
+let private connectionsPane (model: Model) dispatch =
+    if not model.ShowConnections then Html.none
+    else
+        Html.div [
+            prop.className "connections-pane"
+            prop.children [
+                Html.h4 [ prop.text "Connections" ]
+                yield! [ "github", "GitHub"; "google", "Google" ] |> List.map (fun (provider, label) ->
+                    let connected = model.Identities |> List.exists (fun i -> i.Provider = provider)
+                    Html.div [
+                        prop.className "connection-row"
+                        prop.children [
+                            if connected then
+                                Html.span [ prop.className "connection-label"; prop.text label ]
+                                Html.span [ prop.className "connection-status"; prop.text "Connected" ]
+                            else
+                                loginButton provider label
                         ]
                     ]
                 )
@@ -135,11 +166,11 @@ let private identitySwitcher (model: Model) dispatch =
 
 let private identityView (model: Model) dispatch =
     let session = model.GuestSession
-    match session.Identity with
-    | Some identity ->
-        Html.div [
-            prop.className "identity-area"
-            prop.children [
+    Html.div [
+        prop.className "identity-area"
+        prop.children [
+            match session.Identity with
+            | Some identity ->
                 Html.div [
                     prop.className "identity-badge"
                     prop.onClick (fun _ -> dispatch ToggleIdentitySwitcher)
@@ -148,23 +179,18 @@ let private identityView (model: Model) dispatch =
                         Html.span [ prop.text identity.Name ]
                     ]
                 ]
-                // An anonymous identity can still be upgraded — keep the claim path visible
-                if identity.Provider = "anonymous" then
-                    loginButton "github" "GitHub"
-                    loginButton "google" "Google"
-                identitySwitcher model dispatch
-            ]
-        ]
-    | None ->
-        Html.div [
-            prop.className "login-options"
-            prop.children [
+            | None ->
                 avatar session.AvatarUrl
                 Html.span [ prop.className "anon-name"; prop.text session.DisplayName ]
-                loginButton "github" "GitHub"
-                loginButton "google" "Google"
+            Html.button [
+                prop.className "connections-btn"
+                prop.text "Connections"
+                prop.onClick (fun _ -> dispatch ToggleConnections)
             ]
+            connectionsPane model dispatch
+            if session.Identity.IsSome then identitySwitcher model dispatch
         ]
+    ]
 
 let navWithSession (model: Model) dispatch =
     Html.nav [
@@ -198,35 +224,3 @@ let nav =
         ]
     ]
 
-let claimView (model: Model) dispatch =
-    match model.ClaimState with
-    | None ->
-        Html.div [
-            prop.className "claim-page"
-            prop.children [
-                Html.p [ prop.text "No claim in progress." ]
-            ]
-        ]
-    | Some _claim ->
-        Html.div [
-            prop.className "claim-page"
-            prop.children [
-                Html.h2 [ prop.text "Welcome!" ]
-                Html.p [ prop.text "You've signed in successfully. What would you like to do with your previous anonymous comments?" ]
-                Html.div [
-                    prop.className "claim-actions"
-                    prop.children [
-                        Html.button [
-                            prop.className "btn-merge"
-                            prop.text "Bring my comments with me"
-                            prop.onClick (fun _ -> dispatch (ActivateClaim true))
-                        ]
-                        Html.button [
-                            prop.className "btn-abandon"
-                            prop.text "Start fresh"
-                            prop.onClick (fun _ -> dispatch (ActivateClaim false))
-                        ]
-                    ]
-                ]
-            ]
-        ]

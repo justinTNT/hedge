@@ -11,11 +11,6 @@ type ItemForm = {
     Tags: string
 }
 
-type ClaimState = {
-    IdentityId: string
-    ReturnTo: string
-}
-
 type IdentityListItem = {
     Id: string
     Provider: string
@@ -35,9 +30,13 @@ type Model = {
     ItemForm: ItemForm
     CollapsedComments: Set<string>
     ReplyingTo: {| ItemId: string; ParentId: string option |} option
-    ClaimState: ClaimState option
     Identities: IdentityListItem list
     ShowIdentitySwitcher: bool
+    ShowConnections: bool
+    /// Identity id awaiting a merge/fresh decision in the switcher
+    SelectedIdentity: string option
+    /// Set on OAuth return; consumed by UrlChanged to open the switcher pre-selected
+    PendingClaimFocus: string option
 }
 
 type Msg =
@@ -64,12 +63,12 @@ type Msg =
     | SetReplyTo of itemId: string * parentId: string option
     | CancelReply
     | GotSessionSync of GuestSession.GuestSessionData
-    | ActivateClaim of merge: bool
-    | GotActivateClaim of Result<unit, string>
     | RevertIdentity of identityId: string * merge: bool
     | GotRevertIdentity of Result<unit, string>
     | LoadIdentities
     | GotIdentities of IdentityListItem list
     | ToggleIdentitySwitcher
+    | ToggleConnections
+    | SelectIdentity of identityId: string
 
 let emptyItemForm = { Title = ""; Link = ""; Tags = "" }

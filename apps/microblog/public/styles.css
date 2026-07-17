@@ -298,6 +298,11 @@ html.dark .identity-switcher { background: #2a2a2a; border-color: #444; }
 }
 .identity-option.active { background: #f0f7ff; }
 html.dark .identity-option.active { background: #1a2a3a; }
+.identity-option.selectable { cursor: pointer; }
+.identity-option.selectable:hover { background: #f5f5f5; }
+html.dark .identity-option.selectable:hover { background: #333; }
+.identity-option.selected { background: #fff7e6; outline: 1px solid #f0c060; cursor: pointer; }
+html.dark .identity-option.selected { background: #3a2f1a; outline-color: #806020; }
 .identity-option .avatar { width: 2em; height: 2em; }
 .identity-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .identity-name { font-size: 0.85rem; font-weight: 600; }
@@ -305,17 +310,45 @@ html.dark .identity-option.active { background: #1a2a3a; }
 
 .identity-area { position: relative; }
 
-/* Claim page */
-.claim-page {
-    max-width: 480px;
-    margin: 3rem auto;
-    text-align: center;
+/* Connections */
+.connections-btn {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
 }
-.claim-page h2 { margin-bottom: 1rem; }
-.claim-page p { color: #666; margin-bottom: 2rem; }
-html.dark .claim-page p { color: #aaa; }
+.connections-btn:hover { background: #f0f0f0; }
+html.dark .connections-btn { border-color: #444; }
+html.dark .connections-btn:hover { background: #333; }
 
-.claim-actions { display: flex; gap: 1rem; justify-content: center; }
+.connections-pane {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    min-width: 220px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+html.dark .connections-pane { background: #2a2a2a; border-color: #444; }
+.connections-pane h4 { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
+
+.connection-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.25rem;
+}
+.connection-label { font-size: 0.85rem; font-weight: 600; }
+.connection-status { font-size: 0.75rem; color: #22a06b; }
 
 .btn-merge, .btn-abandon {
     padding: 0.5rem 1rem;
