@@ -5,8 +5,11 @@ node_modules/
 dist/
 build/
 _site/
-extension/dist/
 .fable/
+
+# Extension packaged builds
+apps/microblog/extension/dist-*/
+apps/microblog/extension/*.zip
 
 # IDE
 .idea/
@@ -25,7 +28,10 @@ obj/
 .dev.vars
 
 # Extension config (contains admin keys)
-extension/sites.json
+apps/microblog/extension/sites.json
+
+# Local secrets
+/private/
 
 # OS
 .DS_Store
