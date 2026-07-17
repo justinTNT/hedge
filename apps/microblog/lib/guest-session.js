@@ -169,7 +169,9 @@
             var id = data.guest.identity;
             current.identity = id;
             current.displayName = id.name;
-            current.avatarUrl = id.picture || current.avatarUrl;
+            // Don't fall back to the cached avatarUrl — it may belong to a
+            // previously active identity. Derive from the name like comments do.
+            current.avatarUrl = id.picture || avatarForAuthor(id.name);
           } else {
             current.identity = null;
           }
