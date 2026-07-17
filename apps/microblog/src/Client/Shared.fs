@@ -100,8 +100,11 @@ let private identitySwitcher (model: Model) dispatch =
             prop.className "identity-switcher"
             prop.children [
                 Html.h4 [ prop.text "Switch identity" ]
+                let activeId = model.GuestSession.Identity |> Option.map (fun i -> i.Id)
                 yield! model.Identities |> List.map (fun id ->
-                    let isActive = id.ActivatedAt.IsSome
+                    // ActivatedAt is history (most recent wins) — only the session's
+                    // current identity is active, not everything ever activated
+                    let isActive = Some id.Id = activeId
                     Html.div [
                         prop.className (if isActive then "identity-option active" else "identity-option")
                         prop.children [
