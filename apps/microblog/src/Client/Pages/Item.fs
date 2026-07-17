@@ -121,6 +121,7 @@ let update msg model =
                   IdentityId = event.IdentityId
                   ParentId = event.ParentId
                   Author = event.Author
+                  Picture = event.Picture
                   Content = RichContent event.Content
                   Timestamp = event.Timestamp }
             let existingIds = response.Item.Comments |> List.map (fun c -> c.Id) |> Set.ofList
@@ -247,7 +248,7 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
                     Html.div [
                         prop.className "comment-author"
                         prop.children [
-                            avatar (GuestSession.avatarForAuthor comment.Author)
+                            avatar (if comment.Picture <> "" then comment.Picture else GuestSession.avatarForAuthor comment.Author)
                             Html.span [ prop.text comment.Author ]
                         ]
                     ]

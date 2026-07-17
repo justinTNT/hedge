@@ -11,6 +11,7 @@ type NewCommentEvent = {
     IdentityId: string
     ParentId: string option
     Author: string
+    Picture: string
     Content: string
     Timestamp: int
 }

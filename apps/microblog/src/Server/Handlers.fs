@@ -244,12 +244,13 @@ let private validateSlug (slug: string option) =
             Error (sprintf "Slug '%s' is reserved" s)
         else Ok (Some s)
 
-let private toCommentItem (r: ItemCommentRow) : SubmitComment.CommentItem =
+let private toCommentItem (pictureOf: string -> string) (r: ItemCommentRow) : SubmitComment.CommentItem =
     { Id = r.Id
       ItemId = r.ItemId
       IdentityId = r.IdentityId
       ParentId = r.ParentId
       Author = r.Author
+      Picture = pictureOf r.IdentityId
       Content = RichContent r.Content
       Timestamp = r.CreatedAt }
 
@@ -283,9 +284,18 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
                 bind
                     (env.DB.prepare("SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"))
                     [| box r.Id |]
+            let pictureStmt =
+                bind
+                    (env.DB.prepare("SELECT DISTINCT i.id, i.picture FROM identities i JOIN comments c ON c.identity_id = i.id WHERE c.item_id = ?"))
+                    [| box r.Id |]
 
-            let! results = env.DB.batch([| commentStmt; tagStmt |])
-            let comments = results.[0].results |> Array.map (parseItemCommentRow >> toCommentItem) |> Array.toList
+            let! results = env.DB.batch([| commentStmt; tagStmt; pictureStmt |])
+            let pictures =
+                results.[2].results
+                |> Array.map (fun row -> rowStr row "id", rowStr row "picture")
+                |> Map.ofArray
+            let pictureOf identityId = pictures |> Map.tryFind identityId |> Option.defaultValue ""
+            let comments = results.[0].results |> Array.map (parseItemCommentRow >> toCommentItem pictureOf) |> Array.toList
             let tags = results.[1].results |> Array.map (fun row -> rowStr row "name") |> Array.toList
 
             let item : SubmitItem.MicroblogItem =
@@ -339,7 +349,7 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let resolveIdentityId =
             bind
                 (env.DB.prepare(
-                    "SELECT id FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"
+                    "SELECT id, picture FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"
                 ))
                 [| box guestId |]
 
@@ -348,6 +358,9 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let activeIdentityId : string =
             if isNull (box identityResult) then identityId
             else identityResult?id
+        let activePicture : string =
+            if isNull (box identityResult) then ""
+            else identityResult?picture
 
         let insertComment =
             bind
@@ -364,12 +377,13 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               IdentityId = activeIdentityId
               ParentId = req.ParentId
               Author = author
+              Picture = activePicture
               Content = RichContent req.Content
               Timestamp = now }
 
         let event : Models.Ws.NewCommentEvent =
             { Id = commentId; ItemId = req.ItemId; IdentityId = activeIdentityId
-              ParentId = req.ParentId; Author = author
+              ParentId = req.ParentId; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
         let eventJson =
