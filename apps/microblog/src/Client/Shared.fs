@@ -55,7 +55,7 @@ let feedItem (item: GetFeed.FeedItem) =
             Html.h2 [ prop.text item.Title ]
             match item.Extract with
             | Some (RichContent text) ->
-                Html.p [ prop.className "extract"; 
+                Html.p [ prop.className "extract";
                          prop.children [
                                    Html.span [ prop.text (RichText.extractPlainText text) ];
                                    match item.Image with
@@ -74,6 +74,104 @@ let avatar (url: string) =
         prop.src url
     ]
 
+let private loginButton (provider: string) (label: string) =
+    Html.a [
+        prop.className (sprintf "login-btn login-%s" provider)
+        prop.href (sprintf "/api/auth/%s/login?returnTo=%s" provider (Fable.Core.JS.encodeURIComponent (Browser.Dom.window.location.pathname)))
+        prop.text label
+    ]
+
+let private providerLabel (provider: string) =
+    match provider with
+    | "google" -> "Google"
+    | "github" -> "GitHub"
+    | "microsoft" -> "Microsoft"
+    | "facebook" -> "Facebook"
+    | "anonymous" -> "Anonymous"
+    | p -> p
+
+let private identitySwitcher (model: Model) dispatch =
+    if not model.ShowIdentitySwitcher then Html.none
+    else
+        Html.div [
+            prop.className "identity-switcher"
+            prop.children [
+                Html.h4 [ prop.text "Switch identity" ]
+                yield! model.Identities |> List.map (fun id ->
+                    let isActive = id.ActivatedAt.IsSome
+                    Html.div [
+                        prop.className (if isActive then "identity-option active" else "identity-option")
+                        prop.children [
+                            avatar (if id.Picture <> "" then id.Picture else GuestSession.avatarForAuthor id.Name)
+                            Html.div [
+                                prop.className "identity-info"
+                                prop.children [
+                                    Html.span [ prop.className "identity-name"; prop.text id.Name ]
+                                    Html.span [ prop.className "identity-provider"; prop.text (providerLabel id.Provider) ]
+                                ]
+                            ]
+                            if not isActive then
+                                Html.button [
+                                    prop.className "btn-merge"
+                                    prop.text "Switch (merge)"
+                                    prop.onClick (fun _ -> dispatch (RevertIdentity (id.Id, true)))
+                                ]
+                                Html.button [
+                                    prop.className "btn-abandon"
+                                    prop.text "Switch (fresh)"
+                                    prop.onClick (fun _ -> dispatch (RevertIdentity (id.Id, false)))
+                                ]
+                        ]
+                    ]
+                )
+            ]
+        ]
+
+let private identityView (model: Model) dispatch =
+    let session = model.GuestSession
+    match session.Identity with
+    | Some identity ->
+        Html.div [
+            prop.className "identity-area"
+            prop.children [
+                Html.div [
+                    prop.className "identity-badge"
+                    prop.onClick (fun _ -> dispatch ToggleIdentitySwitcher)
+                    prop.children [
+                        avatar session.AvatarUrl
+                        Html.span [ prop.text identity.Name ]
+                    ]
+                ]
+                identitySwitcher model dispatch
+            ]
+        ]
+    | None ->
+        Html.div [
+            prop.className "login-options"
+            prop.children [
+                avatar session.AvatarUrl
+                Html.span [ prop.className "anon-name"; prop.text session.DisplayName ]
+                loginButton "github" "GitHub"
+                loginButton "google" "Google"
+            ]
+        ]
+
+let navWithSession (model: Model) dispatch =
+    Html.nav [
+        prop.children [
+            Html.a [
+                prop.style [ style.cursor.pointer ]
+                prop.onClick (fun _ -> Router.navigatePath "")
+                prop.children [
+                  Html.img [
+                    prop.src "/public/darwinnews.png"
+                  ]
+                ]
+            ]
+            identityView model dispatch
+        ]
+    ]
+
 let nav =
     Html.nav [
         prop.children [
@@ -89,3 +187,36 @@ let nav =
             ]
         ]
     ]
+
+let claimView (model: Model) dispatch =
+    match model.ClaimState with
+    | None ->
+        Html.div [
+            prop.className "claim-page"
+            prop.children [
+                Html.p [ prop.text "No claim in progress." ]
+            ]
+        ]
+    | Some _claim ->
+        Html.div [
+            prop.className "claim-page"
+            prop.children [
+                Html.h2 [ prop.text "Welcome!" ]
+                Html.p [ prop.text "You've signed in successfully. What would you like to do with your previous anonymous comments?" ]
+                Html.div [
+                    prop.className "claim-actions"
+                    prop.children [
+                        Html.button [
+                            prop.className "btn-merge"
+                            prop.text "Bring my comments with me"
+                            prop.onClick (fun _ -> dispatch (ActivateClaim true))
+                        ]
+                        Html.button [
+                            prop.className "btn-abandon"
+                            prop.text "Start fresh"
+                            prop.onClick (fun _ -> dispatch (ActivateClaim false))
+                        ]
+                    ]
+                ]
+            ]
+        ]

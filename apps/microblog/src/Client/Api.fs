@@ -25,6 +25,26 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
         return Decode.fromString decoder text
     }
 
+let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> =
+    promise {
+        let! response = fetch url [
+            Method HttpMethod.POST
+            requestHeaders [ ContentType "application/json" ]
+            Body (BodyInit.Case3 body)
+        ]
+        if response.Ok then return Ok ()
+        else
+            let! text = response.text()
+            return Error text
+    }
+
+let fetchJsonRaw (url: string) : JS.Promise<obj> =
+    promise {
+        let! response = fetch url []
+        let! text = response.text()
+        return JS.JSON.parse text
+    }
+
 // -- WebSocket --
 
 [<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host")>]

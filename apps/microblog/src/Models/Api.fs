@@ -23,7 +23,7 @@ module SubmitComment =
     type CommentItem = {
         Id: string
         ItemId: string
-        GuestId: string
+        IdentityId: string
         ParentId: string option
         Author: string
         Content: RichContent

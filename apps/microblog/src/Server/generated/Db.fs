@@ -9,47 +9,102 @@ open Hedge.Workers
 
 type GuestRow = {
     Id: string
-    Name: string
-    Picture: string
     SessionId: string
     CreatedAt: int
     DeletedAt: int option
 }
 
 type GuestCreate = {
-    Name: string
-    Picture: string
     SessionId: string
 }
 
 let parseGuestRow (row: obj) : GuestRow =
     { Id = rowStr row "id"
-      Name = rowStr row "name"
-      Picture = rowStr row "picture"
       SessionId = rowStr row "session_id"
       CreatedAt = rowInt row "created_at"
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectGuests (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, name, picture, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100")
 
 let selectGuest (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, name, picture, session_id, created_at, deleted_at FROM guests WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ?")) [| box id |]
 
 let insertGuest (db: D1Database) (create: GuestCreate) =
     let id = newId()
     let now = epochNow()
     let stmt =
-        bind (db.prepare("INSERT INTO guests (id, name, picture, session_id, created_at) VALUES (?, ?, ?, ?, ?)"))
-             [| box id; box create.Name; box create.Picture; box create.SessionId; box now |]
+        bind (db.prepare("INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"))
+             [| box id; box create.SessionId; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updateGuest (id: string) (create: GuestCreate) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("UPDATE guests SET name = ?, picture = ?, session_id = ? WHERE id = ?"))
-         [| box create.Name; box create.Picture; box create.SessionId; box id |]
+    bind (db.prepare("UPDATE guests SET session_id = ? WHERE id = ?"))
+         [| box create.SessionId; box id |]
 
 let deleteGuest (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM guests WHERE id = ?")) [| box id |]
+
+// ============================================================
+// Identity (identities)
+// ============================================================
+
+type IdentityRow = {
+    Id: string
+    GuestId: string
+    Provider: string
+    ProviderUserId: string
+    Name: string
+    Picture: string
+    Email: string option
+    ActivatedAt: int option
+    CreatedAt: int
+}
+
+type IdentityCreate = {
+    GuestId: string
+    Provider: string
+    ProviderUserId: string
+    Name: string
+    Picture: string
+    Email: string option
+    ActivatedAt: int option
+}
+
+let parseIdentityRow (row: obj) : IdentityRow =
+    { Id = rowStr row "id"
+      GuestId = rowStr row "guest_id"
+      Provider = rowStr row "provider"
+      ProviderUserId = rowStr row "provider_user_id"
+      Name = rowStr row "name"
+      Picture = rowStr row "picture"
+      Email = rowStrOpt row "email"
+      ActivatedAt = rowIntOpt row "activated_at"
+      CreatedAt = rowInt row "created_at" }
+
+let selectIdentitys (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100")
+
+let selectIdentity (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?")) [| box id |]
+
+let insertIdentity (db: D1Database) (create: IdentityCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateIdentity (id: string) (create: IdentityCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"))
+         [| box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box id |]
+
+let deleteIdentity (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM identities WHERE id = ?")) [| box id |]
+
+let selectIdentitysByGuestId (guestId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
 
 // ============================================================
 // MicroblogItem (items)
@@ -121,7 +176,7 @@ let deleteMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
 type ItemCommentRow = {
     Id: string
     ItemId: string
-    GuestId: string
+    IdentityId: string
     ParentId: string option
     Author: string
     Content: string
@@ -132,7 +187,7 @@ type ItemCommentRow = {
 
 type ItemCommentCreate = {
     ItemId: string
-    GuestId: string
+    IdentityId: string
     ParentId: string option
     Author: string
     Content: string
@@ -142,7 +197,7 @@ type ItemCommentCreate = {
 let parseItemCommentRow (row: obj) : ItemCommentRow =
     { Id = rowStr row "id"
       ItemId = rowStr row "item_id"
-      GuestId = rowStr row "guest_id"
+      IdentityId = rowStr row "identity_id"
       ParentId = rowStrOpt row "parent_id"
       Author = rowStr row "author"
       Content = rowStr row "content"
@@ -151,31 +206,31 @@ let parseItemCommentRow (row: obj) : ItemCommentRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectItemComments (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100")
 
 let selectItemComment (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?")) [| box id |]
 
 let insertItemComment (db: D1Database) (create: ItemCommentCreate) =
     let id = newId()
     let now = epochNow()
     let stmt =
-        bind (db.prepare("INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
-             [| box id; box create.ItemId; box create.GuestId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box now |]
+        bind (db.prepare("INSERT INTO comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.ItemId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updateItemComment (id: string) (create: ItemCommentCreate) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("UPDATE comments SET item_id = ?, guest_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"))
-         [| box create.ItemId; box create.GuestId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box id |]
+    bind (db.prepare("UPDATE comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"))
+         [| box create.ItemId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box id |]
 
 let deleteItemComment (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM comments WHERE id = ?")) [| box id |]
 
 let selectItemCommentsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE item_id = ? ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE item_id = ? ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
 
-let selectItemCommentsByGuestId (guestId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
+let selectItemCommentsByIdentityId (identityId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE identity_id = ? ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
 
 // ============================================================
 // Tag (tags)
@@ -263,43 +318,3 @@ let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStateme
 
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
-
-// ============================================================
-// GuestSession (guest_sessions)
-// ============================================================
-
-type GuestSessionRow = {
-    GuestId: string
-    DisplayName: string
-    CreatedAt: int
-}
-
-type GuestSessionCreate = {
-    GuestId: string
-    DisplayName: string
-    CreatedAt: int
-}
-
-let parseGuestSessionRow (row: obj) : GuestSessionRow =
-    { GuestId = rowStr row "guest_id"
-      DisplayName = rowStr row "display_name"
-      CreatedAt = rowInt row "created_at" }
-
-let selectGuestSessions (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT guest_id, display_name, created_at FROM guest_sessions ORDER BY created_at DESC LIMIT 100")
-
-let selectGuestSession (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT guest_id, display_name, created_at FROM guest_sessions WHERE guest_id = ?")) [| box id |]
-
-let insertGuestSession (db: D1Database) (create: GuestSessionCreate) =
-    let stmt =
-        bind (db.prepare("INSERT INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"))
-             [| box create.GuestId; box create.DisplayName; box create.CreatedAt |]
-    {| Stmt = stmt |}
-
-let updateGuestSession (id: string) (create: GuestSessionCreate) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("UPDATE guest_sessions SET guest_id = ?, display_name = ?, created_at = ? WHERE guest_id = ?"))
-         [| box create.GuestId; box create.DisplayName; box create.CreatedAt; box id |]
-
-let deleteGuestSession (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM guest_sessions WHERE guest_id = ?")) [| box id |]

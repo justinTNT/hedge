@@ -146,27 +146,35 @@
   }
   function syncSession() {
     var basePath = window.BASE_PATH || '';
-    return fetch(basePath + '/api/me', { credentials: 'same-origin' })
+    return fetch(basePath + '/api/auth/me', { credentials: 'same-origin' })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data && data.guest) {
-          var current = null;
-          try { current = JSON.parse(localStorage.getItem(KEY)); } catch(_) {}
-          if (!current || current.guestId !== data.guest.guestId) {
-            var url = avatarForAuthor(data.guest.displayName);
-            var parts = data.guest.displayName.split(' ');
-            var c = parts.length >= 3 ? colors.find(function(x) { return x.name === parts[1]; }) : null;
-            var e = parts.length >= 3 ? emojis.find(function(x) { return x.n === parts.slice(2).join(' '); }) : null;
-            var session = {
+          var current = getSession();
+          if (current.guestId !== data.guest.guestId) {
+            var h = hash(data.guest.guestId);
+            var c = pickH(colors, h);
+            var e = pickH(emojis, h >>> 5);
+            current = {
               guestId: data.guest.guestId,
-              displayName: data.guest.displayName,
-              avatarHex: c ? c.hex : '#888',
-              avatarChar: e ? e.c : '?',
-              avatarUrl: url,
+              displayName: pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n,
+              avatarHex: c.hex,
+              avatarChar: e.c,
+              avatarUrl: makeAvatar(c.hex, e.c),
               createdAt: Math.floor(Date.now() / 1000)
             };
-            localStorage.setItem(KEY, JSON.stringify(session));
           }
+          // Overlay identity if present
+          if (data.guest.identity) {
+            var id = data.guest.identity;
+            current.identity = id;
+            current.displayName = id.name;
+            current.avatarUrl = id.picture || current.avatarUrl;
+          } else {
+            current.identity = null;
+          }
+          localStorage.setItem(KEY, JSON.stringify(current));
+          return current;
         }
         return getSession();
       })

@@ -21,11 +21,11 @@ module Encode =
 
     // -- Domain types --
     let inline guest (v: Guest) = encode v
+    let inline identity (v: Identity) = encode v
     let inline microblogItem (v: MicroblogItem) = encode v
     let inline itemComment (v: ItemComment) = encode v
     let inline tag (v: Tag) = encode v
     let inline itemTag (v: ItemTag) = encode v
-    let inline guestSession (v: GuestSession) = encode v
 
     // -- API view types --
     let inline microblogItemView (v: SubmitItem.MicroblogItem) = encode v
@@ -45,11 +45,11 @@ module Decode =
 
     // -- Domain types --
     let guest : Decoder<Guest> = decode<Guest>()
+    let identity : Decoder<Identity> = decode<Identity>()
     let microblogItem : Decoder<MicroblogItem> = decode<MicroblogItem>()
     let itemComment : Decoder<ItemComment> = decode<ItemComment>()
     let tag : Decoder<Tag> = decode<Tag>()
     let itemTag : Decoder<ItemTag> = decode<ItemTag>()
-    let guestSession : Decoder<GuestSession> = decode<GuestSession>()
 
     // -- API view types --
     let microblogItemView : Decoder<SubmitItem.MicroblogItem> = decode<SubmitItem.MicroblogItem>()

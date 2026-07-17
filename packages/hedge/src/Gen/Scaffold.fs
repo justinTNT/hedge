@@ -208,6 +208,7 @@ let exports = createWorker {
         Server.Routes.dispatch request (env :?> Env) ctx
     Admin = Some (fun request env route ->
         Server.Admin.handleRequest request (env :?> Env) route)
+    OAuth = None
 }
 """
 

@@ -3,11 +3,22 @@
 
 CREATE TABLE guests (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    picture TEXT NOT NULL,
     session_id TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     deleted_at INTEGER
+);
+
+CREATE TABLE identities (
+    id TEXT PRIMARY KEY,
+    guest_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    picture TEXT NOT NULL,
+    email TEXT,
+    activated_at INTEGER,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (guest_id) REFERENCES guests(id)
 );
 
 CREATE TABLE items (
@@ -27,7 +38,7 @@ CREATE TABLE items (
 CREATE TABLE comments (
     id TEXT PRIMARY KEY,
     item_id TEXT NOT NULL,
-    guest_id TEXT NOT NULL,
+    identity_id TEXT NOT NULL,
     parent_id TEXT,
     author TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -35,7 +46,7 @@ CREATE TABLE comments (
     created_at INTEGER NOT NULL,
     deleted_at INTEGER,
     FOREIGN KEY (item_id) REFERENCES items(id),
-    FOREIGN KEY (guest_id) REFERENCES guests(id)
+    FOREIGN KEY (identity_id) REFERENCES identities(id)
 );
 
 CREATE TABLE tags (
@@ -53,17 +64,13 @@ CREATE TABLE item_tags (
     FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
 
-CREATE TABLE guest_sessions (
-    guest_id TEXT NOT NULL,
-    display_name TEXT NOT NULL,
-    created_at INTEGER NOT NULL
-);
-
 -- Indexes
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
+CREATE INDEX idx_identities_guest_id ON identities(guest_id);
+CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
 CREATE INDEX idx_items_created_at ON items(created_at DESC);
 CREATE INDEX idx_comments_item_id ON comments(item_id);
-CREATE INDEX idx_comments_guest_id ON comments(guest_id);
+CREATE INDEX idx_comments_identity_id ON comments(identity_id);
 CREATE INDEX idx_comments_created_at ON comments(created_at DESC);
 CREATE UNIQUE INDEX idx_tags_name ON tags(name);
 CREATE INDEX idx_tags_created_at ON tags(created_at DESC);

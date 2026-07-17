@@ -230,3 +230,45 @@ let handleBlobServe (key: string) (blobs: R2Bucket) : JS.Promise<WorkerResponse>
             return streamResponse obj.body options
     }
 
+// ============================================================
+// HMAC-SHA256 helpers (SubtleCrypto)
+// ============================================================
+
+[<Emit("new TextEncoder().encode($0)")>]
+let private textEncode (s: string) : obj = jsNative
+
+[<Emit("crypto.subtle.importKey('raw', $0, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])")>]
+let private importHmacKey (keyData: obj) : JS.Promise<obj> = jsNative
+
+[<Emit("crypto.subtle.sign('HMAC', $0, $1)")>]
+let private hmacSign (key: obj) (data: obj) : JS.Promise<obj> = jsNative
+
+[<Emit("Array.from(new Uint8Array($0)).map(b => b.toString(16).padStart(2, '0')).join('')")>]
+let private bufferToHex (buffer: obj) : string = jsNative
+
+[<Emit("fetch($0, $1)")>]
+let fetchRaw (url: string) (options: obj) : JS.Promise<WorkerResponse> = jsNative
+
+[<Emit("$0.text()")>]
+let responseText (response: WorkerResponse) : JS.Promise<string> = jsNative
+
+[<Emit("$0.json()")>]
+let responseJson (response: WorkerResponse) : JS.Promise<obj> = jsNative
+
+/// Sign a message with HMAC-SHA256, returning a hex string.
+let hmacSha256 (secret: string) (message: string) : JS.Promise<string> =
+    promise {
+        let keyData = textEncode secret
+        let! key = importHmacKey keyData
+        let! signature = hmacSign key (textEncode message)
+        return bufferToHex signature
+    }
+
+/// Base64url encode a string.
+[<Emit("btoa($0).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '')")>]
+let base64urlEncode (s: string) : string = jsNative
+
+/// Base64url decode to a string.
+[<Emit("atob($0.replace(/-/g, '+').replace(/_/g, '/'))")>]
+let base64urlDecode (s: string) : string = jsNative
+

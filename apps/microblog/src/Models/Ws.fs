@@ -8,7 +8,7 @@ module Models.Ws
 type NewCommentEvent = {
     Id: string
     ItemId: string
-    GuestId: string
+    IdentityId: string
     ParentId: string option
     Author: string
     Content: string

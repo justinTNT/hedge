@@ -9,6 +9,7 @@
     <Compile Include="Validate.fs" />
     <Compile Include="Codec.fs" />
     <Compile Include="Workers.fs" />
+    <Compile Include="OAuth.fs" />
     <Compile Include="Router.fs" />
   </ItemGroup>
   <ItemGroup>

@@ -240,8 +240,100 @@ html.dark .owner-comment { background: #2a2a2a; }
 html.dark a { color: #6cb4ee; }
 html.dark header { border-bottom-color: #333; }
 
+/* Identity & Auth */
+nav { display: flex; align-items: center; justify-content: space-between; }
+
+.login-options, .identity-area { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.anon-name { color: #888; white-space: nowrap; }
+.login-options .avatar { width: 2em; height: 2em; }
+
+.login-btn {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    text-decoration: none;
+    color: #fff;
+    white-space: nowrap;
+}
+.login-github { background: #333; }
+.login-google { background: #4285f4; }
+html.dark .login-github { background: #555; }
+
+.identity-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+.identity-badge:hover { background: #f0f0f0; }
+html.dark .identity-badge:hover { background: #333; }
+.identity-badge .avatar { width: 2em; height: 2em; }
+
+.identity-switcher {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    min-width: 280px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+html.dark .identity-switcher { background: #2a2a2a; border-color: #444; }
+
+.identity-switcher h4 { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
+
+.identity-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+.identity-option.active { background: #f0f7ff; }
+html.dark .identity-option.active { background: #1a2a3a; }
+.identity-option .avatar { width: 2em; height: 2em; }
+.identity-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.identity-name { font-size: 0.85rem; font-weight: 600; }
+.identity-provider { font-size: 0.75rem; color: #888; }
+
+.identity-area { position: relative; }
+
+/* Claim page */
+.claim-page {
+    max-width: 480px;
+    margin: 3rem auto;
+    text-align: center;
+}
+.claim-page h2 { margin-bottom: 1rem; }
+.claim-page p { color: #666; margin-bottom: 2rem; }
+html.dark .claim-page p { color: #aaa; }
+
+.claim-actions { display: flex; gap: 1rem; justify-content: center; }
+
+.btn-merge, .btn-abandon {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.btn-merge { background: #3b82f6; color: #fff; }
+.btn-merge:hover { background: #2563eb; }
+.btn-abandon { background: #e5e7eb; color: #333; }
+.btn-abandon:hover { background: #d1d5db; }
+html.dark .btn-abandon { background: #444; color: #ddd; }
+
 /* Mobile */
 @media (max-width: 600px) {
     .extract { flex-direction: column; }
     .extract img { width: 100%; margin-left: 0; margin-top: 1em; }
+    .login-options { flex-wrap: wrap; }
+    .claim-actions { flex-direction: column; }
 }

@@ -20,17 +20,36 @@ let guest : AdminTable =
       Schema =
         schema "Guest" [
             fieldWith "Id" FString [PrimaryKey]
-            fieldWith "Name" FString []
-            fieldWith "Picture" FString []
             fieldWith "SessionId" FString []
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, name, picture, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, name, picture, session_id, created_at, deleted_at FROM guests WHERE id = ?"
-      Update = "UPDATE guests SET name = ?, picture = ?, session_id = ? WHERE id = ?"
+      SelectAll = "SELECT id, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ?"
+      Update = "UPDATE guests SET session_id = ? WHERE id = ?"
       Delete = "DELETE FROM guests WHERE id = ?"
-      MutableFields = ["Name"; "Picture"; "SessionId"] }
+      MutableFields = ["SessionId"] }
+
+let identity : AdminTable =
+    { Name = "Identity"
+      Table = "identities"
+      Schema =
+        schema "Identity" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString [ForeignKey "Guest"]
+            fieldWith "Provider" FString []
+            fieldWith "ProviderUserId" FString []
+            fieldWith "Name" FString []
+            fieldWith "Picture" FString []
+            fieldWith "Email" (FOption FString) []
+            fieldWith "ActivatedAt" (FOption FInt) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?"
+      Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
+      Delete = "DELETE FROM identities WHERE id = ?"
+      MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
 
 let microblogItem : AdminTable =
     { Name = "MicroblogItem"
@@ -62,7 +81,7 @@ let itemComment : AdminTable =
         schema "ItemComment" [
             fieldWith "Id" FString [PrimaryKey]
             fieldWith "ItemId" FString [ForeignKey "MicroblogItem"]
-            fieldWith "GuestId" FString [ForeignKey "Guest"]
+            fieldWith "IdentityId" FString [ForeignKey "Identity"]
             fieldWith "ParentId" (FOption FString) []
             fieldWith "Author" FString []
             fieldWith "Content" FString [RichContent]
@@ -70,11 +89,11 @@ let itemComment : AdminTable =
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, item_id, guest_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?"
-      Update = "UPDATE comments SET item_id = ?, guest_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
+      SelectAll = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?"
+      Update = "UPDATE comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
       Delete = "DELETE FROM comments WHERE id = ?"
-      MutableFields = ["ItemId"; "GuestId"; "ParentId"; "Author"; "Content"; "Removed"] }
+      MutableFields = ["ItemId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
 
 let tag : AdminTable =
     { Name = "Tag"
@@ -107,26 +126,11 @@ let itemTag : AdminTable =
       Delete = "DELETE FROM item_tags WHERE item_id = ?"
       MutableFields = ["ItemId"; "TagId"] }
 
-let guestSession : AdminTable =
-    { Name = "GuestSession"
-      Table = "guest_sessions"
-      Schema =
-        schema "GuestSession" [
-            fieldWith "GuestId" FString []
-            fieldWith "DisplayName" FString []
-            fieldWith "CreatedAt" FInt []
-        ]
-      SelectAll = "SELECT guest_id, display_name, created_at FROM guest_sessions ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT guest_id, display_name, created_at FROM guest_sessions WHERE guest_id = ?"
-      Update = "UPDATE guest_sessions SET guest_id = ?, display_name = ?, created_at = ? WHERE guest_id = ?"
-      Delete = "DELETE FROM guest_sessions WHERE guest_id = ?"
-      MutableFields = ["GuestId"; "DisplayName"; "CreatedAt"] }
-
 let tables : AdminTable list = [
     guest
+    identity
     microblogItem
     itemComment
     tag
     itemTag
-    guestSession
 ]

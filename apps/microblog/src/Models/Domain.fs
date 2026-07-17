@@ -4,11 +4,21 @@ open Hedge.Interface
 
 type Guest = {
     Id: PrimaryKey<string>
-    Name: string
-    Picture: string
     SessionId: string
     CreatedAt: CreateTimestamp
     DeletedAt: SoftDelete option
+}
+
+type Identity = {
+    Id: PrimaryKey<string>
+    GuestId: ForeignKey<Guest>
+    Provider: string
+    ProviderUserId: string
+    Name: string
+    Picture: string
+    Email: string option
+    ActivatedAt: int option
+    CreatedAt: CreateTimestamp
 }
 
 [<Table "items">]
@@ -30,7 +40,7 @@ type MicroblogItem = {
 type ItemComment = {
     Id: PrimaryKey<string>
     ItemId: ForeignKey<MicroblogItem>
-    GuestId: ForeignKey<Guest>
+    IdentityId: ForeignKey<Identity>
     ParentId: string option
     Author: string
     Content: RichContent
@@ -50,10 +60,4 @@ type ItemTag = {
     ItemId: ForeignKey<MicroblogItem>
     TagId: ForeignKey<Tag>
     DeletedAt: SoftDelete option
-}
-
-type GuestSession = {
-    GuestId: string
-    DisplayName: string
-    CreatedAt: int
 }

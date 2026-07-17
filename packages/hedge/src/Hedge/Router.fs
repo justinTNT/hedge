@@ -5,6 +5,7 @@ open Fable.Core.JsInterop
 open Thoth.Json
 open Hedge.Workers
 open Hedge.Validate
+open Hedge.OAuth
 
 /// Minimal router for Workers.
 /// Pattern matches on method + path to dispatch to handlers.
@@ -105,6 +106,16 @@ let serverError msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
     jsonResponse body 500
 
+let redirectResponse (url: string) (cookie: string) : WorkerResponse =
+    let options = createObj [
+        "status" ==> 302
+        "headers" ==> createObj [
+            "Location" ==> url
+            "Set-Cookie" ==> cookie
+        ]
+    ]
+    WorkerResponse.create("", options)
+
 let corsPreflightResponse () : WorkerResponse =
     let options = createObj [
         "status" ==> 204
@@ -131,9 +142,18 @@ let validationErrorResponse (errors: ValidationError list) =
 // createWorker — framework entry point
 // ============================================================
 
+type OAuthConfig = {
+    Secret: string
+    Providers: Map<string, {| ClientId: string; ClientSecret: string |}>
+    /// Called by /api/auth/me. App resolves guest → JSON string (or None for anon).
+    ResolveIdentity: D1Database -> string -> JS.Promise<string option>
+    OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<string>
+}
+
 type WorkerConfig = {
     Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
     Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
+    OAuth: (obj -> OAuthConfig) option
 }
 
 let createWorker (config: WorkerConfig) =
@@ -152,28 +172,80 @@ let createWorker (config: WorkerConfig) =
             | Some p -> return! p
             | None ->
 
-            // 3. Guest session lookup
+            // 3. Auth routes (/api/auth/*)
+            let oauthCfg = config.OAuth |> Option.map (fun f -> f env)
+
             match route with
-            | GET path when matchPath "/api/me" path = Some (Exact "/api/me") ->
+            | GET path when matchPath "/api/auth/me" path = Some (Exact "/api/auth/me") ->
                 let guest = resolveGuest request
                 if guest.IsNew then
                     return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
                 else
-                    let db : D1Database = env?DB
-                    let stmt = bind (db.prepare("SELECT display_name FROM guest_sessions WHERE guest_id = ?")) [| box guest.GuestId |]
-                    let! result = stmt.all()
-                    if result.results.Length > 0 then
-                        let name : string = result.results.[0]?display_name
-                        let body =
-                            Encode.object [
-                                "guest", Encode.object [
-                                    "guestId", Encode.string guest.GuestId
-                                    "displayName", Encode.string name
-                                ]
-                            ] |> Encode.toString 0
-                        return okJsonWithCookie body (guestCookieValue guest)
-                    else
+                    match oauthCfg with
+                    | Some oauth ->
+                        let db : D1Database = env?DB
+                        let! identityJson = oauth.ResolveIdentity db guest.GuestId
+                        match identityJson with
+                        | Some json ->
+                            let body = sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guest.GuestId json
+                            return okJsonWithCookie body (guestCookieValue guest)
+                        | None ->
+                            return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
+                    | None ->
                         return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
+            | _ ->
+
+            match route, oauthCfg with
+            | GET path, Some oauth when matchPath "/api/auth/:id/login" path |> Option.isSome ->
+                let providerName = match (matchPath "/api/auth/:id/login" path).Value with WithParam (_, p) -> p | Exact _ -> ""
+                match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
+                | Some providerCfg, Some creds ->
+                    let guest = resolveGuest request
+                    let returnTo = getQueryParam request.url "returnTo"
+                    let returnTo = if isNull (box returnTo) || returnTo = "" then "/" else returnTo
+                    let! state = OAuth.generateState oauth.Secret guest.GuestId returnTo
+                    let redirectUri =
+                        let url = createUrl request.url
+                        let origin : string = url?origin
+                        sprintf "%s/api/auth/%s/callback" origin providerName
+                    let authUrl = OAuth.generateAuthUrl providerCfg creds.ClientId redirectUri state
+                    return redirectResponse authUrl (guestCookieValue guest)
+                | _ ->
+                    return badRequest (sprintf "Unknown provider: %s" providerName)
+
+            | GET path, Some oauth when matchPath "/api/auth/:id/callback" path |> Option.isSome ->
+                let providerName = match (matchPath "/api/auth/:id/callback" path).Value with WithParam (_, p) -> p | Exact _ -> ""
+                match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
+                | Some providerCfg, Some creds ->
+                    let guest = resolveGuest request
+                    let code = getQueryParam request.url "code"
+                    let stateParam = getQueryParam request.url "state"
+                    if isNull (box code) || code = "" then
+                        return badRequest "Missing code parameter"
+                    elif isNull (box stateParam) || stateParam = "" then
+                        return badRequest "Missing state parameter"
+                    else
+                        let! stateResult = OAuth.verifyState oauth.Secret stateParam
+                        match stateResult with
+                        | Error err ->
+                            return badRequest (sprintf "Invalid state: %s" err)
+                        | Ok (stateGuestId, returnTo) ->
+                            if stateGuestId <> guest.GuestId then
+                                return badRequest "State mismatch"
+                            else
+                                let redirectUri =
+                                    let url = createUrl request.url
+                                    let origin : string = url?origin
+                                    sprintf "%s/api/auth/%s/callback" origin providerName
+                                let! accessToken = OAuth.exchangeCode providerCfg code redirectUri creds.ClientId creds.ClientSecret
+                                let! userInfo = OAuth.fetchUserinfo providerCfg accessToken
+                                let db : D1Database = env?DB
+                                let blobs : R2Bucket = env?BLOBS
+                                let! redirectUrl = oauth.OnOAuthComplete db blobs guest.GuestId (box userInfo) returnTo
+                                return redirectResponse redirectUrl (guestCookieValue guest)
+                | _ ->
+                    return badRequest (sprintf "Unknown provider: %s" providerName)
+
             | _ ->
 
             // 4. WebSocket upgrade

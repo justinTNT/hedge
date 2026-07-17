@@ -12,6 +12,206 @@ open Models.Api
 open Server.Env
 open Server.Db
 
+let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string option> =
+    promise {
+        let stmt =
+            bind
+                (db.prepare(
+                    "SELECT id, provider, provider_user_id, name, picture, email, activated_at FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"
+                ))
+                [| box guestId |]
+        let! result = stmt.first()
+        if isNull (box result) then return None
+        else
+            let id : string = result?id
+            let provider : string = result?provider
+            let name : string = result?name
+            let picture : string = result?picture
+            let email = rowStrOpt result "email"
+            let emailJson = match email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
+            let json = sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s}""" id provider name picture emailJson
+            return Some json
+    }
+
+let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userInfoObj: obj) (returnTo: string) : JS.Promise<string> =
+    promise {
+        let name : string = userInfoObj?Name
+        let picture : string = userInfoObj?PictureUrl
+        let provider : string = userInfoObj?Provider
+        let providerUserId : string = userInfoObj?ProviderUserId
+        let email = let e : string = userInfoObj?Email in if isNull (box e) then None else Some e
+        let now = epochNow ()
+        let identityId = newId ()
+
+        // Ensure guest exists
+        let ensureGuest =
+            bind
+                (db.prepare("INSERT OR IGNORE INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"))
+                [| box guestId; box guestId; box now |]
+
+        // Check if this provider+providerUserId already exists for this guest
+        let findExisting =
+            bind
+                (db.prepare("SELECT id FROM identities WHERE guest_id = ? AND provider = ? AND provider_user_id = ?"))
+                [| box guestId; box provider; box providerUserId |]
+
+        let! _ = ensureGuest.run()
+        let! existing = findExisting.first()
+
+        let finalId =
+            if isNull (box existing) then
+                identityId
+            else
+                existing?id |> unbox<string>
+
+        if isNull (box existing) then
+            // New identity — insert but do NOT activate yet (user chooses merge/abandon first)
+            let insert =
+                bind
+                    (db.prepare(
+                        "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)"
+                    ))
+                    [| box identityId; box guestId; box provider; box providerUserId; box name; box picture; optToDb email; box now |]
+            let! _ = insert.run()
+            ()
+        else
+            // Existing identity — update name/picture/email (don't activate yet)
+            let update =
+                bind
+                    (db.prepare(
+                        "UPDATE identities SET name = ?, picture = ?, email = ? WHERE id = ?"
+                    ))
+                    [| box name; box picture; optToDb email; box finalId |]
+            let! _ = update.run()
+            ()
+
+        // Redirect to claim page where user chooses merge/abandon
+        let encodedReturnTo = JS.encodeURIComponent returnTo
+        return sprintf "/auth/claim?identity=%s&returnTo=%s" finalId encodedReturnTo
+    }
+
+let activateIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let guest = resolveGuest request
+        let! bodyText = request.text()
+        let parsed = JS.JSON.parse bodyText
+        let identityId : string = parsed?identityId
+        let merge : bool = parsed?merge |> unbox
+        let now = epochNow ()
+
+        // Verify this identity belongs to this guest
+        let verify =
+            bind
+                (env.DB.prepare("SELECT id FROM identities WHERE id = ? AND guest_id = ?"))
+                [| box identityId; box guest.GuestId |]
+        let! verifyResult = verify.first()
+        if isNull (box verifyResult) then
+            return unauthorized ()
+        else
+
+        if merge then
+            // Find the current active identity
+            let findActive =
+                bind
+                    (env.DB.prepare("SELECT id FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"))
+                    [| box guest.GuestId |]
+            let! activeResult = findActive.first()
+            if not (isNull (box activeResult)) then
+                let oldId : string = activeResult?id
+                if oldId <> identityId then
+                    // Merge: reassign comments from old identity to new
+                    let mergeStmt =
+                        bind
+                            (env.DB.prepare("UPDATE comments SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?) WHERE identity_id = ?"))
+                            [| box identityId; box identityId; box oldId |]
+                    let! _ = mergeStmt.run()
+                    ()
+
+        // Activate the identity
+        let activate =
+            bind
+                (env.DB.prepare("UPDATE identities SET activated_at = ? WHERE id = ?"))
+                [| box now; box identityId |]
+        let! _ = activate.run()
+
+        return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
+    }
+
+let revertIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let guest = resolveGuest request
+        let! bodyText = request.text()
+        let parsed = JS.JSON.parse bodyText
+        let identityId : string = parsed?identityId
+        let merge : bool = parsed?merge |> unbox
+        let now = epochNow ()
+
+        // Verify target identity belongs to this guest
+        let verify =
+            bind
+                (env.DB.prepare("SELECT id FROM identities WHERE id = ? AND guest_id = ?"))
+                [| box identityId; box guest.GuestId |]
+        let! verifyResult = verify.first()
+        if isNull (box verifyResult) then
+            return unauthorized ()
+        else
+
+        if merge then
+            // Find current active identity
+            let findActive =
+                bind
+                    (env.DB.prepare("SELECT id FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"))
+                    [| box guest.GuestId |]
+            let! activeResult = findActive.first()
+            if not (isNull (box activeResult)) then
+                let oldId : string = activeResult?id
+                if oldId <> identityId then
+                    let mergeStmt =
+                        bind
+                            (env.DB.prepare("UPDATE comments SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?) WHERE identity_id = ?"))
+                            [| box identityId; box identityId; box oldId |]
+                    let! _ = mergeStmt.run()
+                    ()
+
+        // Activate the target identity (most-recent activated_at wins)
+        let activate =
+            bind
+                (env.DB.prepare("UPDATE identities SET activated_at = ? WHERE id = ?"))
+                [| box now; box identityId |]
+        let! _ = activate.run()
+
+        return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
+    }
+
+let getIdentities (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let guest = resolveGuest request
+        if guest.IsNew then
+            return okJson """{"identities":[]}"""
+        else
+        let stmt =
+            bind
+                (env.DB.prepare(
+                    "SELECT id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE guest_id = ? ORDER BY activated_at DESC NULLS LAST, created_at DESC"
+                ))
+                [| box guest.GuestId |]
+        let! result = stmt.all()
+        let identities =
+            result.results |> Array.map (fun row ->
+                let id = rowStr row "id"
+                let provider = rowStr row "provider"
+                let name = rowStr row "name"
+                let picture = rowStr row "picture"
+                let email = rowStrOpt row "email"
+                let activatedAt = rowIntOpt row "activated_at"
+                let emailJson = match email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
+                let activeJson = match activatedAt with Some t -> sprintf ",\"activatedAt\":%d" t | None -> ""
+                sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s%s}""" id provider name picture emailJson activeJson
+            )
+        let body = sprintf """{"identities":[%s]}""" (identities |> String.concat ",")
+        return okJsonWithCookie body (guestCookieValue guest)
+    }
+
 let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
     { Id = r.Id
       Title = r.Title
@@ -47,7 +247,7 @@ let private validateSlug (slug: string option) =
 let private toCommentItem (r: ItemCommentRow) : SubmitComment.CommentItem =
     { Id = r.Id
       ItemId = r.ItemId
-      GuestId = r.GuestId
+      IdentityId = r.IdentityId
       ParentId = r.ParentId
       Author = r.Author
       Content = RichContent r.Content
@@ -118,43 +318,57 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let guest = resolveGuest request
         let guestId = guest.GuestId
         let commentId = newId ()
+        let identityId = newId ()
         let now = epochNow ()
         let author = req.Author |> Option.defaultValue "Anonymous"
 
         let ensureGuest =
             bind
                 (env.DB.prepare(
-                    "INSERT OR IGNORE INTO guests (id, name, picture, session_id, created_at) VALUES (?, ?, ?, ?, ?)"
+                    "INSERT OR IGNORE INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"
                 ))
-                [| box guestId; box author; box ""; box guestId; box now |]
+                [| box guestId; box guestId; box now |]
 
-        let upsertGuestSession =
+        let ensureIdentity =
             bind
                 (env.DB.prepare(
-                    "INSERT OR REPLACE INTO guest_sessions (guest_id, display_name, created_at) VALUES (?, ?, ?)"
+                    "INSERT OR IGNORE INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) SELECT ?, ?, 'anonymous', '', ?, '', NULL, ?, ? WHERE NOT EXISTS (SELECT 1 FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL)"
                 ))
-                [| box guestId; box author; box now |]
+                [| box identityId; box guestId; box author; box now; box now; box guestId |]
+
+        let resolveIdentityId =
+            bind
+                (env.DB.prepare(
+                    "SELECT id FROM identities WHERE guest_id = ? AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1"
+                ))
+                [| box guestId |]
+
+        let! _ = env.DB.batch([| ensureGuest; ensureIdentity |])
+        let! identityResult = resolveIdentityId.first()
+        let activeIdentityId : string =
+            if isNull (box identityResult) then identityId
+            else identityResult?id
 
         let insertComment =
             bind
                 (env.DB.prepare(
-                    "INSERT INTO comments (id, item_id, guest_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 ))
-                [| box commentId; box req.ItemId; box guestId; optToDb req.ParentId; box author; box req.Content; box 0; box now |]
+                [| box commentId; box req.ItemId; box activeIdentityId; optToDb req.ParentId; box author; box req.Content; box 0; box now |]
 
-        let! _ = env.DB.batch([| ensureGuest; upsertGuestSession; insertComment |])
+        let! _ = env.DB.batch([| insertComment |])
 
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
               ItemId = req.ItemId
-              GuestId = guestId
+              IdentityId = activeIdentityId
               ParentId = req.ParentId
               Author = author
               Content = RichContent req.Content
               Timestamp = now }
 
         let event : Models.Ws.NewCommentEvent =
-            { Id = commentId; ItemId = req.ItemId; GuestId = guestId
+            { Id = commentId; ItemId = req.ItemId; IdentityId = activeIdentityId
               ParentId = req.ParentId; Author = author
               Content = req.Content; Timestamp = now }
 
