@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 echo "=== Step 1: Microblog golden model ==="
 cd "$ROOT/apps/microblog"
 npm run gen
+./check-sql.sh
 dotnet build src/Server/Server.fsproj
 dotnet build src/Client/Client.fsproj
 echo "--- Microblog OK ---"

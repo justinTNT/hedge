@@ -4,7 +4,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Env.fs" />
+    <Compile Include="Sql.fs" />
     <Compile Include="generated/Db.fs" />
+    <Compile Include="Identity.fs" />
+    <Compile Include="Attribution.fs" />
     <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
