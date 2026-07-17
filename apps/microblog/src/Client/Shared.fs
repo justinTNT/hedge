@@ -142,6 +142,10 @@ let private identityView (model: Model) dispatch =
                         Html.span [ prop.text identity.Name ]
                     ]
                 ]
+                // An anonymous identity can still be upgraded — keep the claim path visible
+                if identity.Provider = "anonymous" then
+                    loginButton "github" "GitHub"
+                    loginButton "google" "Google"
                 identitySwitcher model dispatch
             ]
         ]
