@@ -53,12 +53,15 @@ case "$cmd" in
     url="${3:-}"
     scope="--local"
     [ "${4:-}" = "--remote" ] && scope="--remote"
-    [ -z "$topic" ] || [ -z "$url" ] && echo "Usage: ./infra.sh add-alert <topic> <feed-url> [--remote]" && exit 1
+    if [ -z "$topic" ] || [ -z "$url" ]; then
+      echo "Usage: ./infra.sh add-alert <topic> <feed-url> [--remote]"
+      exit 1
+    fi
     DB=$(db_name)
-    # single-quote the URL to protect &-separated query params; escape embedded quotes
+    id=$(uuidgen | tr 'A-Z' 'a-z')
+    # SQL string literals: double any single quotes; the &-laden URL is safe inside quotes
     esc_topic=${topic//\'/\'\'}
     esc_url=${url//\'/\'\'}
-    id=$(npx wrangler d1 execute "$DB" $scope --json --command "SELECT lower(hex(randomblob(16))) AS id" | grep -o '"id":"[^"]*"' | head -1 | sed 's/"id":"\(.*\)"/\1/')
     echo "==> Registering alert '$topic' on $DB ($scope)"
     npx wrangler d1 execute "$DB" $scope --command \
       "INSERT INTO alert_sources (id, topic, feed_url, enabled, created_at) VALUES ('$id', '$esc_topic', '$esc_url', 1, strftime('%s','now'))"
