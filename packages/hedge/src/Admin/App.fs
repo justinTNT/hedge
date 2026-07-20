@@ -16,6 +16,9 @@ let private lsSet (key: string) (value: string) : unit = jsNative
 [<Emit("$0[$1]")>]
 let private getField (record: obj) (key: string) : obj = jsNative
 
+[<Emit("window.confirm($0)")>]
+let private confirm (message: string) : bool = jsNative
+
 [<Emit("($0 == null)")>]
 let private isNull (v: obj) : bool = jsNative
 
@@ -148,7 +151,8 @@ let private fieldsToJson (schema: TypeSchema) (fields: Map<string, string>) : st
                 | FInt ->
                     if v = "" then box 0 else box (int v)
                 | FBool ->
-                    box (v = "true")
+                    // D1 ints load as "0"/"1"; accept both so an untouched row round-trips
+                    box (v = "true" || v = "1")
                 | _ -> box v
             Some (key, value))
     |> createObj
@@ -477,7 +481,10 @@ module View =
                         Html.button [
                             prop.className "admin-btn admin-btn-danger"
                             prop.text "Delete"
-                            prop.onClick (fun e -> e.stopPropagation(); dispatch (DeleteRecord id))
+                            prop.onClick (fun e ->
+                                e.stopPropagation()
+                                if confirm "Delete this record? This cannot be undone." then
+                                    dispatch (DeleteRecord id))
                         ]
                     ]
                 ]
@@ -584,6 +591,26 @@ module View =
                         prop.value (values |> Map.tryFind field.Name |> Option.defaultValue "")
                         prop.disabled isReadOnly
                         prop.onChange (fun v -> dispatch (FieldChanged (field.Name, v)))
+                    ]
+                ]
+            ]
+        | FBool ->
+            let cur = values |> Map.tryFind field.Name |> Option.defaultValue ""
+            Html.div [
+                prop.className "admin-field admin-field-bool"
+                prop.children [
+                    Html.label [
+                        prop.children [
+                            Html.input [
+                                prop.type' "checkbox"
+                                // D1 int form "1" must render checked, not just "true"
+                                prop.isChecked (cur = "true" || cur = "1")
+                                prop.disabled isReadOnly
+                                prop.onChange (fun (b: bool) ->
+                                    dispatch (FieldChanged (field.Name, (if b then "true" else "false"))))
+                            ]
+                            Html.text field.Name
+                        ]
                     ]
                 ]
             ]

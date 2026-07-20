@@ -456,12 +456,16 @@ let private genericUpdate (table: AdminTable) (id: string) (body: string) (env: 
                     let jsonKey = camelCase fieldName
                     match Map.tryFind jsonKey pairMap with
                     | Some v ->
-                        let s = Encode.toString 0 v
-                        if s = "null" then jsNull
-                        else
-                            // Strip quotes from string values
-                            let trimmed = s.Trim('"')
-                            box trimmed
+                        // Bools bind as 0/1 (SQLite can't coerce the string "true")
+                        match Decode.fromValue "" Decode.bool v with
+                        | Ok b -> box (if b then 1 else 0)
+                        | _ ->
+                            let s = Encode.toString 0 v
+                            if s = "null" then jsNull
+                            else
+                                // Strip quotes from string values
+                                let trimmed = s.Trim('"')
+                                box trimmed
                     | None -> jsNull)
             let allArgs = args @ [box id] |> List.toArray
             let stmt = bind (env.DB.prepare(table.Update)) allArgs

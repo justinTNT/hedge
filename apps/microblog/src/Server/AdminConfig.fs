@@ -98,9 +98,14 @@ let private mutableArgs (table: AdminTable) (pairMap: Map<string, JsonValue>) =
             match Decode.fromValue "" Decode.string v with
             | Ok s -> box s
             | _ ->
-                let s = Encode.toString 0 v
-                if s = "null" then jsNull
-                else box s
+                // Bools arrive as JSON true/false → bind 0/1, not the string
+                // "true" (which SQLite can't coerce to INTEGER)
+                match Decode.fromValue "" Decode.bool v with
+                | Ok b -> box (if b then 1 else 0)
+                | _ ->
+                    let s = Encode.toString 0 v
+                    if s = "null" then jsNull
+                    else box s
         | None -> jsNull)
 
 let private genericCreate (table: AdminTable) (body: string) (env: Env) : JS.Promise<string> =
