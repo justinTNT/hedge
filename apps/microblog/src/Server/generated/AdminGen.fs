@@ -9,9 +9,6 @@ type AdminTable = {
     Schema: TypeSchema
     SelectAll: string
     SelectOne: string
-    Insert: string
-    HasCreateTs: bool
-    HasUpdateTs: bool
     Update: string
     Delete: string
     MutableFields: string list
@@ -29,9 +26,6 @@ let guest : AdminTable =
         ]
       SelectAll = "SELECT id, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ?"
-      Insert = "INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"
-      HasCreateTs = true
-      HasUpdateTs = false
       Update = "UPDATE guests SET session_id = ? WHERE id = ?"
       Delete = "DELETE FROM guests WHERE id = ?"
       MutableFields = ["SessionId"] }
@@ -53,9 +47,6 @@ let identity : AdminTable =
         ]
       SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?"
-      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      HasCreateTs = true
-      HasUpdateTs = false
       Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
       Delete = "DELETE FROM identities WHERE id = ?"
       MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
@@ -75,16 +66,14 @@ let microblogItem : AdminTable =
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "ViewCount" FInt []
+            fieldWith "OriginEntryKey" (FOption FString) [Unique]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
-      Insert = "INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      HasCreateTs = true
-      HasUpdateTs = true
-      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
+      SelectAll = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items WHERE id = ?"
+      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, origin_entry_key = ? WHERE id = ?"
       Delete = "DELETE FROM items WHERE id = ?"
-      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "Slug"; "ViewCount"] }
+      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "Slug"; "ViewCount"; "OriginEntryKey"] }
 
 let itemComment : AdminTable =
     { Name = "ItemComment"
@@ -103,9 +92,6 @@ let itemComment : AdminTable =
         ]
       SelectAll = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?"
-      Insert = "INSERT INTO comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      HasCreateTs = true
-      HasUpdateTs = false
       Update = "UPDATE comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
       Delete = "DELETE FROM comments WHERE id = ?"
       MutableFields = ["ItemId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
@@ -122,9 +108,6 @@ let tag : AdminTable =
         ]
       SelectAll = "SELECT id, name, created_at, deleted_at FROM tags ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, name, created_at, deleted_at FROM tags WHERE id = ?"
-      Insert = "INSERT INTO tags (id, name, created_at) VALUES (?, ?, ?)"
-      HasCreateTs = true
-      HasUpdateTs = false
       Update = "UPDATE tags SET name = ? WHERE id = ?"
       Delete = "DELETE FROM tags WHERE id = ?"
       MutableFields = ["Name"] }
@@ -140,12 +123,49 @@ let itemTag : AdminTable =
         ]
       SelectAll = "SELECT item_id, tag_id, deleted_at FROM item_tags LIMIT 100"
       SelectOne = "SELECT item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ?"
-      Insert = ""
-      HasCreateTs = false
-      HasUpdateTs = false
       Update = "UPDATE item_tags SET item_id = ?, tag_id = ? WHERE item_id = ?"
       Delete = "DELETE FROM item_tags WHERE item_id = ?"
       MutableFields = ["ItemId"; "TagId"] }
+
+let alertSource : AdminTable =
+    { Name = "AlertSource"
+      Table = "alert_sources"
+      Schema =
+        schema "AlertSource" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Topic" FString []
+            fieldWith "FeedUrl" FString [Unique]
+            fieldWith "Enabled" FBool []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, topic, feed_url, enabled, created_at FROM alert_sources ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, topic, feed_url, enabled, created_at FROM alert_sources WHERE id = ?"
+      Update = "UPDATE alert_sources SET topic = ?, feed_url = ?, enabled = ? WHERE id = ?"
+      Delete = "DELETE FROM alert_sources WHERE id = ?"
+      MutableFields = ["Topic"; "FeedUrl"; "Enabled"] }
+
+let pendingPost : AdminTable =
+    { Name = "PendingPost"
+      Table = "pending_posts"
+      Schema =
+        schema "PendingPost" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "SourceId" FString [ForeignKey "AlertSource"]
+            fieldWith "EntryKey" FString [Unique]
+            fieldWith "Title" FString []
+            fieldWith "Link" FString [Link]
+            fieldWith "Snippet" FString []
+            fieldWith "PublishedAt" FInt []
+            fieldWith "Approved" FBool []
+            fieldWith "Rejected" FBool []
+            fieldWith "OwnerComment" FString [RichContent]
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM pending_posts ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM pending_posts WHERE id = ?"
+      Update = "UPDATE pending_posts SET source_id = ?, entry_key = ?, title = ?, link = ?, snippet = ?, published_at = ?, approved = ?, rejected = ?, owner_comment = ? WHERE id = ?"
+      Delete = "DELETE FROM pending_posts WHERE id = ?"
+      MutableFields = ["SourceId"; "EntryKey"; "Title"; "Link"; "Snippet"; "PublishedAt"; "Approved"; "Rejected"; "OwnerComment"] }
 
 let tables : AdminTable list = [
     guest
@@ -154,4 +174,6 @@ let tables : AdminTable list = [
     itemComment
     tag
     itemTag
+    alertSource
+    pendingPost
 ]

@@ -491,7 +491,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         let ins = insertMicroblogItem env.DB
                     { Title = req.Title; Link = req.Link; Image = req.Image
                       Extract = req.Extract; OwnerComment = req.OwnerComment
-                      Slug = validatedSlug; ViewCount = 0 }
+                      Slug = validatedSlug; ViewCount = 0; OriginEntryKey = None }
 
         let tagStmts =
             req.Tags |> List.collect (fun tagName ->

@@ -32,6 +32,7 @@ CREATE TABLE items (
     created_at INTEGER NOT NULL,
     updated_at INTEGER,
     view_count INTEGER NOT NULL,
+    origin_entry_key TEXT,
     deleted_at INTEGER
 );
 
@@ -64,10 +65,34 @@ CREATE TABLE item_tags (
     FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
 
+CREATE TABLE alert_sources (
+    id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL,
+    feed_url TEXT NOT NULL,
+    enabled INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE pending_posts (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    entry_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    link TEXT NOT NULL,
+    snippet TEXT NOT NULL,
+    published_at INTEGER NOT NULL,
+    approved INTEGER NOT NULL,
+    rejected INTEGER NOT NULL,
+    owner_comment TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (source_id) REFERENCES alert_sources(id)
+);
+
 -- Indexes
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
+CREATE UNIQUE INDEX idx_items_origin_entry_key ON items(origin_entry_key);
 CREATE INDEX idx_items_created_at ON items(created_at DESC);
 CREATE INDEX idx_comments_item_id ON comments(item_id);
 CREATE INDEX idx_comments_identity_id ON comments(identity_id);
@@ -76,3 +101,8 @@ CREATE UNIQUE INDEX idx_tags_name ON tags(name);
 CREATE INDEX idx_tags_created_at ON tags(created_at DESC);
 CREATE INDEX idx_item_tags_item_id ON item_tags(item_id);
 CREATE INDEX idx_item_tags_tag_id ON item_tags(tag_id);
+CREATE UNIQUE INDEX idx_alert_sources_feed_url ON alert_sources(feed_url);
+CREATE INDEX idx_alert_sources_created_at ON alert_sources(created_at DESC);
+CREATE INDEX idx_pending_posts_source_id ON pending_posts(source_id);
+CREATE UNIQUE INDEX idx_pending_posts_entry_key ON pending_posts(entry_key);
+CREATE INDEX idx_pending_posts_created_at ON pending_posts(created_at DESC);

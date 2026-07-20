@@ -121,6 +121,7 @@ type MicroblogItemRow = {
     CreatedAt: int
     UpdatedAt: int option
     ViewCount: int
+    OriginEntryKey: string option
     DeletedAt: int option
 }
 
@@ -132,6 +133,7 @@ type MicroblogItemCreate = {
     OwnerComment: string
     Slug: string option
     ViewCount: int
+    OriginEntryKey: string option
 }
 
 let parseMicroblogItemRow (row: obj) : MicroblogItemRow =
@@ -145,26 +147,27 @@ let parseMicroblogItemRow (row: obj) : MicroblogItemRow =
       CreatedAt = rowInt row "created_at"
       UpdatedAt = rowIntOpt row "updated_at"
       ViewCount = rowInt row "view_count"
+      OriginEntryKey = rowStrOpt row "origin_entry_key"
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectMicroblogItems (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items ORDER BY created_at DESC LIMIT 100")
 
 let selectMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items WHERE id = ?")) [| box id |]
 
 let insertMicroblogItem (db: D1Database) (create: MicroblogItemCreate) =
     let id = newId()
     let now = epochNow()
     let stmt =
-        bind (db.prepare("INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
-             [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; box now |]
+        bind (db.prepare("INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, origin_entry_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; optToDb create.OriginEntryKey; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updateMicroblogItem (id: string) (create: MicroblogItemCreate) (db: D1Database) : D1PreparedStatement =
     let now = epochNow()
-    bind (db.prepare("UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"))
-         [| box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; box now; box id |]
+    bind (db.prepare("UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, origin_entry_key = ?, updated_at = ? WHERE id = ?"))
+         [| box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; optToDb create.Slug; box create.ViewCount; optToDb create.OriginEntryKey; box now; box id |]
 
 let deleteMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM items WHERE id = ?")) [| box id |]
@@ -318,3 +321,116 @@ let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStateme
 
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
+
+// ============================================================
+// AlertSource (alert_sources)
+// ============================================================
+
+type AlertSourceRow = {
+    Id: string
+    Topic: string
+    FeedUrl: string
+    Enabled: bool
+    CreatedAt: int
+}
+
+type AlertSourceCreate = {
+    Topic: string
+    FeedUrl: string
+    Enabled: bool
+}
+
+let parseAlertSourceRow (row: obj) : AlertSourceRow =
+    { Id = rowStr row "id"
+      Topic = rowStr row "topic"
+      FeedUrl = rowStr row "feed_url"
+      Enabled = rowBool row "enabled"
+      CreatedAt = rowInt row "created_at" }
+
+let selectAlertSources (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, topic, feed_url, enabled, created_at FROM alert_sources ORDER BY created_at DESC LIMIT 100")
+
+let selectAlertSource (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, topic, feed_url, enabled, created_at FROM alert_sources WHERE id = ?")) [| box id |]
+
+let insertAlertSource (db: D1Database) (create: AlertSourceCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO alert_sources (id, topic, feed_url, enabled, created_at) VALUES (?, ?, ?, ?, ?)"))
+             [| box id; box create.Topic; box create.FeedUrl; box create.Enabled; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateAlertSource (id: string) (create: AlertSourceCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE alert_sources SET topic = ?, feed_url = ?, enabled = ? WHERE id = ?"))
+         [| box create.Topic; box create.FeedUrl; box create.Enabled; box id |]
+
+let deleteAlertSource (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM alert_sources WHERE id = ?")) [| box id |]
+
+// ============================================================
+// PendingPost (pending_posts)
+// ============================================================
+
+type PendingPostRow = {
+    Id: string
+    SourceId: string
+    EntryKey: string
+    Title: string
+    Link: string
+    Snippet: string
+    PublishedAt: int
+    Approved: bool
+    Rejected: bool
+    OwnerComment: string
+    CreatedAt: int
+}
+
+type PendingPostCreate = {
+    SourceId: string
+    EntryKey: string
+    Title: string
+    Link: string
+    Snippet: string
+    PublishedAt: int
+    Approved: bool
+    Rejected: bool
+    OwnerComment: string
+}
+
+let parsePendingPostRow (row: obj) : PendingPostRow =
+    { Id = rowStr row "id"
+      SourceId = rowStr row "source_id"
+      EntryKey = rowStr row "entry_key"
+      Title = rowStr row "title"
+      Link = rowStr row "link"
+      Snippet = rowStr row "snippet"
+      PublishedAt = rowInt row "published_at"
+      Approved = rowBool row "approved"
+      Rejected = rowBool row "rejected"
+      OwnerComment = rowStr row "owner_comment"
+      CreatedAt = rowInt row "created_at" }
+
+let selectPendingPosts (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM pending_posts ORDER BY created_at DESC LIMIT 100")
+
+let selectPendingPost (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM pending_posts WHERE id = ?")) [| box id |]
+
+let insertPendingPost (db: D1Database) (create: PendingPostCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO pending_posts (id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.SourceId; box create.EntryKey; box create.Title; box create.Link; box create.Snippet; box create.PublishedAt; box create.Approved; box create.Rejected; box create.OwnerComment; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updatePendingPost (id: string) (create: PendingPostCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE pending_posts SET source_id = ?, entry_key = ?, title = ?, link = ?, snippet = ?, published_at = ?, approved = ?, rejected = ?, owner_comment = ? WHERE id = ?"))
+         [| box create.SourceId; box create.EntryKey; box create.Title; box create.Link; box create.Snippet; box create.PublishedAt; box create.Approved; box create.Rejected; box create.OwnerComment; box id |]
+
+let deletePendingPost (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM pending_posts WHERE id = ?")) [| box id |]
+
+let selectPendingPostsBySourceId (sourceId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM pending_posts WHERE source_id = ? ORDER BY created_at DESC LIMIT 100")) [| box sourceId |]

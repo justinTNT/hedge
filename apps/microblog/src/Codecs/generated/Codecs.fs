@@ -26,6 +26,8 @@ module Encode =
     let inline itemComment (v: ItemComment) = encode v
     let inline tag (v: Tag) = encode v
     let inline itemTag (v: ItemTag) = encode v
+    let inline alertSource (v: AlertSource) = encode v
+    let inline pendingPost (v: PendingPost) = encode v
 
     // -- API view types --
     let inline microblogItemView (v: SubmitItem.MicroblogItem) = encode v
@@ -50,6 +52,8 @@ module Decode =
     let itemComment : Decoder<ItemComment> = decode<ItemComment>()
     let tag : Decoder<Tag> = decode<Tag>()
     let itemTag : Decoder<ItemTag> = decode<ItemTag>()
+    let alertSource : Decoder<AlertSource> = decode<AlertSource>()
+    let pendingPost : Decoder<PendingPost> = decode<PendingPost>()
 
     // -- API view types --
     let microblogItemView : Decoder<SubmitItem.MicroblogItem> = decode<SubmitItem.MicroblogItem>()
