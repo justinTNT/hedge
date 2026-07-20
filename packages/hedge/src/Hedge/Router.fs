@@ -163,6 +163,8 @@ type WorkerConfig = {
     Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
     Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
     OAuth: (obj -> OAuthConfig) option
+    /// Cron handler. None ⇒ inert (a scheduled export with no [triggers] never fires).
+    Scheduled: (ScheduledController -> obj -> ExecutionContext -> JS.Promise<unit>) option
 }
 
 let createWorker (config: WorkerConfig) =
@@ -322,5 +324,13 @@ let createWorker (config: WorkerConfig) =
                 return! fetchFromAssets env request
             | _ ->
                 return notFound ()
+        }
+       // Literal 3-arg lambda (like fetch) so Fable emits scheduled(c,e,ctx)
+       // uncurried; a point-free value would bind only the controller.
+       scheduled = fun (controller: ScheduledController) (env: obj) (ctx: ExecutionContext) ->
+        promise {
+            match config.Scheduled with
+            | Some handler -> return! handler controller env ctx
+            | None -> return ()
         }
     |}

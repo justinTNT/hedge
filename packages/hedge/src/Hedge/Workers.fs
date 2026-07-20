@@ -89,6 +89,11 @@ type ExecutionContext =
     abstract waitUntil: promise: JS.Promise<obj> -> unit
     abstract passThroughOnException: unit -> unit
 
+/// Controller passed to the scheduled handler by the Workers runtime.
+type ScheduledController =
+    abstract scheduledTime: float   // ms epoch
+    abstract cron: string
+
 /// Bind parameters to a D1 prepared statement (Emit spread required —
 /// Fable's ParamArray on abstract members passes array as single arg).
 [<Emit("$0.bind(...$1)")>]
@@ -123,6 +128,15 @@ let newId () : string = jsNative
 
 [<Emit("Math.floor(Date.now() / 1000)")>]
 let epochNow () : int = jsNative
+
+/// Parse an ISO-8601 timestamp to epoch SECONDS (matches epochNow).
+/// Emit (not an F# int cast) so no Int32 truncation runs on the ms value.
+/// Returns NaN for an unparseable string — guard with isFinite.
+[<Emit("Math.floor(Date.parse($0) / 1000)")>]
+let isoToEpoch (s: string) : int = jsNative
+
+[<Emit("Number.isFinite($0)")>]
+let isFinite (x: int) : bool = jsNative
 
 [<Emit("$0[$1]")>]
 let getProp (o: obj) (key: string) : obj = jsNative

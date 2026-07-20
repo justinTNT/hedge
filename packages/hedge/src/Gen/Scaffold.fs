@@ -209,6 +209,7 @@ let exports = createWorker {
     Admin = Some (fun request env route ->
         Server.Admin.handleRequest request (env :?> Env) route)
     OAuth = None
+    Scheduled = None
 }
 """
 
@@ -718,6 +719,10 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 8787
 local_protocol = "http"
+
+# Cron triggers (uncomment and set WorkerConfig.Scheduled in Worker.fs)
+# [triggers]
+# crons = ["0 * * * *"]
 
 # D1 Database binding
 [[d1_databases]]
