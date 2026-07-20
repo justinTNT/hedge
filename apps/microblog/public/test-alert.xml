@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:idx="urn:google:alerts">
+  <title>Google Alert - quantum widgets</title>
+  <updated>2026-07-20T09:00:00Z</updated>
+  <entry>
+    <id>tag:google.com,2005:reader/item/0000000000000001</id>
+    <title type="html">Quantum &lt;b&gt;widgets&lt;/b&gt; ship in Q3 &amp;amp; sell out</title>
+    <link href="https://www.google.com/url?rct=j&amp;sa=t&amp;url=https://example.com/quantum-a1&amp;ct=ga"/>
+    <published>2026-07-19T14:30:00Z</published>
+    <updated>2026-07-19T14:30:00Z</updated>
+    <content type="html">A new line of &lt;b&gt;quantum widgets&lt;/b&gt; hits shelves — prices from &amp;#36;99.</content>
+    <author><name>Example News</name></author>
+  </entry>
+  <entry>
+    <id>tag:google.com,2005:reader/item/0000000000000002</id>
+    <title type="html">Second &lt;b&gt;widget&lt;/b&gt; story, freshly crawled</title>
+    <link href="https://www.google.com/url?rct=j&amp;sa=t&amp;url=https://example.com/quantum-b2&amp;ct=ga"/>
+    <published>2026-07-20T08:15:00Z</published>
+    <updated>2026-07-20T08:15:00Z</updated>
+    <content type="html">Analysts weigh in on the &lt;b&gt;widget&lt;/b&gt; boom.</content>
+    <author><name>Example News</name></author>
+  </entry>
+  <entry>
+    <id>tag:google.com,2005:reader/item/0000000000000003</id>
+    <title type="html">Back-dated &lt;b&gt;retrospective&lt;/b&gt; surfaced late</title>
+    <link href="https://www.google.com/url?rct=j&amp;sa=t&amp;url=https://example.com/quantum-c3&amp;ct=ga"/>
+    <published>2026-06-01T10:00:00Z</published>
+    <updated>2026-07-20T08:20:00Z</updated>
+    <content type="html">An older piece Google only just indexed — proves no date-based drop.</content>
+    <author><name>Archive Weekly</name></author>
+  </entry>
+</feed>

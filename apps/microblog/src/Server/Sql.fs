@@ -106,7 +106,7 @@ let reassignComments = """
 // ---- Items / comments / tags ----
 
 let itemBySlug =
-    "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE slug = ?"
+    "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items WHERE slug = ?"
 
 let tagsForItem =
     "SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"
@@ -134,3 +134,26 @@ let insertTag =
 
 let linkItemTag =
     "INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"
+
+// ---- Alert monitoring (see Server.Alerts) ----
+
+let selectEnabledAlertSources =
+    "SELECT id, topic, feed_url, enabled, created_at FROM alert_sources WHERE enabled = 1"
+
+/// OR IGNORE on entry_key: re-polls and same-run dupes land once. New drafts
+/// import un-approved/un-rejected with an empty owner_comment.
+let insertPendingPost = """
+    INSERT OR IGNORE INTO pending_posts
+        (id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, '', ?)"""
+
+/// Promotable = approved, not rejected, and not already promoted (its entry_key
+/// is absent from items.origin_entry_key). Derived — no promoted_at flag.
+let selectPromotable = """
+    SELECT p.id, p.source_id, p.entry_key, p.title, p.link, p.snippet, p.published_at,
+           p.approved, p.rejected, p.owner_comment, p.created_at, s.topic AS topic
+    FROM pending_posts p
+    JOIN alert_sources s ON s.id = p.source_id
+    WHERE p.approved = 1 AND p.rejected = 0
+      AND p.entry_key NOT IN (SELECT origin_entry_key FROM items WHERE origin_entry_key IS NOT NULL)
+    ORDER BY p.published_at ASC LIMIT 20"""

@@ -9,14 +9,16 @@ db_name() {
 USAGE="Usage: ./infra.sh <command> [site-name]
 
 Commands:
-  create <site-name>  Create D1 database + R2 bucket for a new site
-  migrate             Apply pending migrations locally
-  migrate-remote      Apply pending migrations in production
-  deploy              Build and deploy
+  create <site-name>          Create D1 database + R2 bucket for a new site
+  migrate                     Apply pending migrations locally
+  migrate-remote              Apply pending migrations in production
+  add-alert <topic> <url>     Register a Google Alerts RSS feed (add --remote for prod)
+  deploy                      Build and deploy
 
 Examples:
   ./infra.sh create wt-fail
   ./infra.sh migrate
+  ./infra.sh add-alert climate 'https://www.google.com/alerts/feeds/12345/67890'
   ./infra.sh deploy"
 
 cmd="${1:-}"
@@ -44,6 +46,22 @@ case "$cmd" in
     DB=$(db_name)
     echo "==> Migrating $DB (remote/production)"
     npx wrangler d1 migrations apply "$DB" --remote
+    ;;
+
+  add-alert)
+    topic="${2:-}"
+    url="${3:-}"
+    scope="--local"
+    [ "${4:-}" = "--remote" ] && scope="--remote"
+    [ -z "$topic" ] || [ -z "$url" ] && echo "Usage: ./infra.sh add-alert <topic> <feed-url> [--remote]" && exit 1
+    DB=$(db_name)
+    # single-quote the URL to protect &-separated query params; escape embedded quotes
+    esc_topic=${topic//\'/\'\'}
+    esc_url=${url//\'/\'\'}
+    id=$(npx wrangler d1 execute "$DB" $scope --json --command "SELECT lower(hex(randomblob(16))) AS id" | grep -o '"id":"[^"]*"' | head -1 | sed 's/"id":"\(.*\)"/\1/')
+    echo "==> Registering alert '$topic' on $DB ($scope)"
+    npx wrangler d1 execute "$DB" $scope --command \
+      "INSERT INTO alert_sources (id, topic, feed_url, enabled, created_at) VALUES ('$id', '$esc_topic', '$esc_url', 1, strftime('%s','now'))"
     ;;
 
   deploy)

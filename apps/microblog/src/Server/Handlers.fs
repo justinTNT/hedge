@@ -488,29 +488,16 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Error msg ->
             return validationErrorResponse [ { Field = "Slug"; Message = msg } ]
         | Ok validatedSlug ->
-        let ins = insertMicroblogItem env.DB
-                    { Title = req.Title; Link = req.Link; Image = req.Image
-                      Extract = req.Extract; OwnerComment = req.OwnerComment
-                      Slug = validatedSlug; ViewCount = 0; OriginEntryKey = None }
+        let ins =
+            Items.createItemStmts env.DB
+                { Title = req.Title; Link = req.Link; Image = req.Image
+                  Extract = req.Extract; OwnerComment = req.OwnerComment
+                  Slug = validatedSlug; ViewCount = 0; OriginEntryKey = None }
+                req.Tags
 
-        let tagStmts =
-            req.Tags |> List.collect (fun tagName ->
-                let tagId = newId ()
-                let insertTag =
-                    bind
-                        (env.DB.prepare Sql.insertTag)
-                        [| box tagId; box tagName; box ins.CreatedAt |]
-                let linkTag =
-                    bind
-                        (env.DB.prepare Sql.linkItemTag)
-                        [| box ins.Id; box tagName |]
-                [ insertTag; linkTag ]
-            )
-
-        let allStmts = ins.Stmt :: tagStmts |> List.toArray
         let! insertOk = promise {
             try
-                let! _ = env.DB.batch(allStmts)
+                let! _ = env.DB.batch(ins.Stmts)
                 return true
             with ex ->
                 if ex.Message.Contains("UNIQUE") && ex.Message.Contains("slug") then
