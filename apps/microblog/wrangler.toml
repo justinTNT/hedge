@@ -41,10 +41,6 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# Hourly alert poll + promotion sweep
-[triggers]
-crons = ["0 * * * *"]
-
 # Environment variables
 # ADMIN_KEY is deliberately absent: a plain-text var here would override a
 # secret of the same name on deploy. Local dev reads it from .dev.vars,
@@ -118,3 +114,9 @@ directory = "./_site"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+
+
+# Hourly alert poll + promotion sweep. Scoped to this environment so the
+# cron runs only on the alerts staging site, never on darwin.news or wt.fail.
+[env.idealist.triggers]
+crons = ["0 * * * *"]
