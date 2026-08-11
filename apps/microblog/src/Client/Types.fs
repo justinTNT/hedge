@@ -31,6 +31,9 @@ type Model = {
     CollapsedComments: Set<string>
     ReplyingTo: {| ItemId: string; ParentId: string option |} option
     Identities: IdentityListItem list
+    /// Providers the server has credentials for — the connections pane offers
+    /// only these, so an unconfigured provider is never a dead button
+    AvailableProviders: string list
     ShowIdentitySwitcher: bool
     ShowConnections: bool
     /// Identity id awaiting a merge/fresh decision in the switcher
@@ -67,6 +70,7 @@ type Msg =
     | GotRevertIdentity of Result<unit, string>
     | LoadIdentities
     | GotIdentities of IdentityListItem list
+    | GotProviders of string list
     | ToggleIdentitySwitcher
     | ToggleConnections
     | SelectIdentity of identityId: string

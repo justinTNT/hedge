@@ -148,7 +148,8 @@ let private connectionsPane (model: Model) dispatch =
             prop.className "connections-pane"
             prop.children [
                 Html.h4 [ prop.text "Connections" ]
-                yield! [ "github", "GitHub"; "google", "Google" ] |> List.map (fun (provider, label) ->
+                yield! model.AvailableProviders |> List.map (fun provider ->
+                    let label = providerLabel provider
                     let connected = model.Identities |> List.exists (fun i -> i.Provider = provider)
                     Html.div [
                         prop.className "connection-row"

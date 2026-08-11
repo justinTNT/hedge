@@ -195,6 +195,33 @@ let createWorker (config: WorkerConfig) =
                         return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
             | _ ->
 
+            // Which providers can actually complete a login: known to the
+            // framework AND carrying credentials. Clients render their sign-in
+            // options from this, so dropping a provider is deleting a secret
+            // rather than a redeploy.
+            match route with
+            | GET path when matchPath "/api/auth/providers" path = Some (Exact "/api/auth/providers") ->
+                let configured =
+                    match oauthCfg with
+                    | None -> []
+                    | Some oauth ->
+                        oauth.Providers
+                        |> Map.toList
+                        |> List.filter (fun (name, creds) ->
+                            OAuth.providers.ContainsKey name
+                            && not (isNull creds.ClientId)
+                            && creds.ClientId <> ""
+                            && not (isNull creds.ClientSecret)
+                            && creds.ClientSecret <> "")
+                        |> List.map fst
+                let body =
+                    configured
+                    |> List.map (sprintf "\"%s\"")
+                    |> String.concat ","
+                    |> sprintf """{"providers":[%s]}"""
+                return okJson body
+            | _ ->
+
             match route, oauthCfg with
             | GET path, Some oauth when matchPath "/api/auth/:id/login" path |> Option.isSome ->
                 let providerName = match (matchPath "/api/auth/:id/login" path).Value with WithParam (_, p) -> p | Exact _ -> ""

@@ -27,6 +27,17 @@ let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
         GotRevertIdentity
         (fun ex -> GotRevertIdentity (Error ex.Message))
 
+let private loadProvidersCmd : Cmd<Msg> =
+    Cmd.OfPromise.perform
+        (fun () ->
+            promise {
+                let! data = Client.Api.fetchJsonRaw "/api/auth/providers"
+                let arr : string array = data?providers |> unbox
+                return List.ofArray arr
+            })
+        ()
+        GotProviders
+
 let private loadIdentitiesCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
@@ -62,6 +73,7 @@ let init () : Model * Cmd<Msg> =
           CollapsedComments = Set.empty
           ReplyingTo = None
           Identities = []
+          AvailableProviders = []
           ShowIdentitySwitcher = false
           ShowConnections = false
           SelectedIdentity = None
@@ -81,7 +93,7 @@ let init () : Model * Cmd<Msg> =
         | _ -> Cmd.ofMsg LoadFeed
     let syncCmd =
         Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
-    model, Cmd.batch [ routeCmd; syncCmd ]
+    model, Cmd.batch [ routeCmd; syncCmd; loadProvidersCmd ]
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -177,6 +189,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadIdentities ->
         model, loadIdentitiesCmd
+
+    | GotProviders providers ->
+        { model with AvailableProviders = providers }, Cmd.none
 
     | GotIdentities identities ->
         { model with Identities = identities }, Cmd.none
