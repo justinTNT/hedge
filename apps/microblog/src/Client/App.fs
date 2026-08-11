@@ -92,6 +92,30 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             NewItem.destroyOwnerCommentEditorCmd
             Item.destroyAllViewersCmd
         ]
+        match route with
+        | ["auth"; "claim"] | ["auth"; "claim"; _] ->
+            // The OAuth return lands on a path URL, which only the router
+            // sees — init reads the hash — so the claim is parsed here. The
+            // UrlChanged from the redirect below consumes PendingClaimFocus.
+            let claimFocus, claimReturnTo = parseClaimFromRoute ()
+            let updated =
+                { model with
+                    Route = route
+                    CurrentItem = None
+                    TagItems = None
+                    ReplyingTo = None
+                    CollapsedComments = Set.empty
+                    ShowIdentitySwitcher = false
+                    ShowConnections = false
+                    SelectedIdentity = None
+                    PendingClaimFocus = claimFocus }
+            updated,
+            Cmd.batch [
+                cleanupCmd
+                loadIdentitiesCmd
+                Cmd.ofEffect (fun _ -> Router.navigatePath claimReturnTo)
+            ]
+        | _ ->
         // An OAuth return sets PendingClaimFocus; consume it here so the
         // switcher opens pre-selected on the page we navigate back to
         let showSwitcher, selected =
@@ -100,7 +124,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | None -> false, None
         let cmd =
             match route with
-            | ["auth"; "claim"] | ["auth"; "claim"; _] -> cleanupCmd
             | [] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg LoadFeed ]
             | ["tag"; name] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadTagItems name) ]
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
@@ -128,13 +151,25 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with GuestSession = session }, Cmd.none
 
     | RevertIdentity (identityId, merge) ->
-        { model with IsLoading = true }, revertIdentityCmd identityId merge
+        // Deliberately not setting IsLoading: that swaps the whole view for a
+        // spinner, and a switch is a background request on a page we want to
+        // keep showing.
+        model, revertIdentityCmd identityId merge
 
     | GotRevertIdentity (Ok _) ->
+        // A merge rewrites comment authorship server-side, so refetch whatever
+        // the current route is displaying rather than trusting the local copy.
+        let reloadCmd =
+            match model.Route with
+            | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
+            | ["new"] -> Cmd.none
+            | [idOrSlug] -> Cmd.ofMsg (LoadItem idOrSlug)
+            | _ -> Cmd.ofMsg LoadFeed
         { model with IsLoading = false; ShowIdentitySwitcher = false; SelectedIdentity = None },
         Cmd.batch [
             Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
             loadIdentitiesCmd
+            reloadCmd
         ]
 
     | GotRevertIdentity (Error err) ->

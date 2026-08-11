@@ -5,7 +5,7 @@
  * (admin, web, extension). Uses TipTap with comprehensive formatting options.
  */
 
-import { Editor } from '@tiptap/core'
+import { Editor, generateHTML } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
@@ -746,6 +746,87 @@ export function setEditorContent(elementId, content) {
 const viewers = new Map()
 
 /**
+ * Normalizes stored content into a ProseMirror doc.
+ * Accepts a JSON string, an already-parsed object, or legacy plain text.
+ */
+function parseRichContent(content) {
+    const asPlainText = text => ({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+    })
+    if (!content) return { type: 'doc', content: [{ type: 'paragraph' }] }
+    if (typeof content === 'object') return content
+    if (typeof content !== 'string') return { type: 'doc', content: [{ type: 'paragraph' }] }
+
+    const trimmed = content.trimStart()
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return asPlainText(content)
+    try {
+        return JSON.parse(content)
+    } catch {
+        return asPlainText(content)
+    }
+}
+
+/**
+ * The schema for displaying content. Shared by the imperative viewer and the
+ * pure renderer below so both produce identical markup.
+ */
+const VIEWER_EXTENSIONS = [
+    StarterKit,
+    Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+            class: 'hamlet-rt-link',
+            target: '_blank',
+            rel: 'noopener noreferrer',
+        },
+    }),
+    Image.extend({
+        addAttributes() {
+            return {
+                ...this.parent?.(),
+                width: {
+                    default: null,
+                    parseHTML: el => el.style.width || el.getAttribute('width') || null,
+                    renderHTML: attrs => attrs.width ? { style: `width: ${attrs.width}` } : {},
+                },
+            }
+        },
+    }).configure({
+        inline: false,
+    }),
+    TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+    }),
+    TextStyle,
+    Color,
+    Highlight.configure({
+        multicolor: true,
+    }),
+]
+
+/**
+ * Renders stored content to an HTML string — a pure function of the content,
+ * with no DOM ownership and no instance to dispose of. Callers that render
+ * declaratively (React et al) should use this instead of createRichTextViewer.
+ *
+ * Output is constrained by VIEWER_EXTENSIONS: nodes and marks outside that
+ * schema are dropped, and legacy plain text is emitted as an escaped text node.
+ *
+ * @param {string|Object} content - Content as JSON string or ProseMirror doc
+ * @returns {string} HTML string
+ */
+export function renderRichTextHtml(content) {
+    try {
+        return generateHTML(parseRichContent(content), VIEWER_EXTENSIONS)
+    } catch (e) {
+        console.warn('[hamlet-rt] Failed to render content', e)
+        return ''
+    }
+}
+
+/**
  * Creates a read-only TipTap viewer for displaying rich content.
  * No toolbar, not editable - just renders the content with full formatting.
  *
@@ -764,71 +845,11 @@ export function createRichTextViewer({ elementId, content }) {
     // Destroy existing viewer if any
     destroyRichTextViewer(elementId)
 
-    // Parse content (accepts JSON string or object)
-    // Backward compat: if it's a plain text string that doesn't parse as JSON,
-    // wrap it in a ProseMirror doc structure
-    let parsedContent = { type: 'doc', content: [{ type: 'paragraph' }] }
-    if (content) {
-        if (typeof content === 'string') {
-            const trimmed = content.trimStart()
-            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                try {
-                    parsedContent = JSON.parse(content)
-                } catch (e) {
-                    // Looked like JSON but wasn't — treat as plain text
-                    parsedContent = {
-                        type: 'doc',
-                        content: [{ type: 'paragraph', content: [{ type: 'text', text: content }] }]
-                    }
-                }
-            } else {
-                // Plain text — wrap in ProseMirror doc
-                parsedContent = {
-                    type: 'doc',
-                    content: [{ type: 'paragraph', content: [{ type: 'text', text: content }] }]
-                }
-            }
-        } else if (typeof content === 'object') {
-            parsedContent = content
-        }
-    }
+    const parsedContent = parseRichContent(content)
 
     const viewer = new Editor({
         element: container,
-        extensions: [
-            StarterKit,
-            Link.configure({
-                openOnClick: true,
-                HTMLAttributes: {
-                    class: 'hamlet-rt-link',
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                },
-            }),
-            Image.extend({
-                addAttributes() {
-                    return {
-                        ...this.parent?.(),
-                        width: {
-                            default: null,
-                            parseHTML: el => el.style.width || el.getAttribute('width') || null,
-                            renderHTML: attrs => attrs.width ? { style: `width: ${attrs.width}` } : {},
-                        },
-                    }
-                },
-            }).configure({
-                inline: false,
-            }),
-            TextAlign.configure({
-                types: ['heading', 'paragraph'],
-                alignments: ['left', 'center', 'right', 'justify'],
-            }),
-            TextStyle,
-            Color,
-            Highlight.configure({
-                multicolor: true,
-            }),
-        ],
+        extensions: VIEWER_EXTENSIONS,
         content: parsedContent,
         editable: false,
     })

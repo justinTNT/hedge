@@ -23,6 +23,12 @@ let getEditorContent (elementId: string) : string = jsNative
 [<Emit("(function(){ var e = window.HedgeRT.getEditor($0); if(e) e.commands.clearContent(); })()")>]
 let clearEditor (elementId: string) : unit = jsNative
 
+// Rendering — pure content -> HTML, for declarative views. Preferred over the
+// viewer lifecycle below: nothing to dispose, and it survives any re-render.
+
+[<Emit("window.HedgeRT.renderRichTextHtml($0)")>]
+let toHtml (content: string) : string = jsNative
+
 // Viewer lifecycle (deferred — waits for DOM element to appear)
 
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextViewer({ elementId: $0, content: $1 }); })")>]

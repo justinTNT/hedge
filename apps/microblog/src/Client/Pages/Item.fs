@@ -45,7 +45,6 @@ let disconnectEventsCmd () : Cmd<Msg> =
 // --- Rich text editor lifecycle ---
 
 let mutable private commentEditorActive = false
-let mutable private activeViewerIds : string list = []
 
 let initCommentEditorCmd : Cmd<Msg> =
     Cmd.ofEffect (fun dispatch ->
@@ -61,32 +60,20 @@ let destroyCommentEditorCmd : Cmd<Msg> =
             commentEditorActive <- false
     )
 
-let destroyAllViewersCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
-        activeViewerIds |> List.iter RichText.destroyViewer
-        activeViewerIds <- []
-    )
+/// Rich content is rendered declaratively (see `richContent`), so there are no
+/// viewer instances to tear down. Kept as a no-op command so the route-change
+/// cleanup batch in App.fs stays uniform.
+let destroyAllViewersCmd : Cmd<Msg> = Cmd.none
 
-let private initViewersForItemCmd (response: GetItem.Response) : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
-        let item = response.Item
-        let (RichContent ownerComment) = item.OwnerComment
-        let ownerViewerId = sprintf "owner-comment-%s" item.Id
-        RichText.createViewerWhenReady ownerViewerId ownerComment
-        activeViewerIds <- ownerViewerId :: activeViewerIds
-        match item.Extract with
-        | Some (RichContent extract) ->
-            let extractViewerId = sprintf "extract-%s" item.Id
-            RichText.createViewerWhenReady extractViewerId extract
-            activeViewerIds <- extractViewerId :: activeViewerIds
-        | None -> ()
-        item.Comments |> List.iter (fun comment ->
-            let (RichContent text) = comment.Content
-            let commentViewerId = sprintf "comment-%s" comment.Id
-            RichText.createViewerWhenReady commentViewerId text
-            activeViewerIds <- commentViewerId :: activeViewerIds
-        )
-    )
+/// Stored content -> markup, as a pure function of the model. The HTML is
+/// produced by the same TipTap schema the editor writes with, so anything
+/// outside that schema is dropped rather than passed through.
+let private richContent (className: string) (content: RichContent) =
+    let (RichContent text) = content
+    Html.div [
+        prop.className (className + " hamlet-rt-viewer")
+        prop.dangerouslySetInnerHTML (RichText.toHtml text)
+    ]
 
 // --- Update ---
 
@@ -98,10 +85,7 @@ let update msg model =
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
-        Cmd.batch [
-            connectEventsCmd response.Item.Id
-            initViewersForItemCmd response
-        ]
+        connectEventsCmd response.Item.Id
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -129,12 +113,7 @@ let update msg model =
                 model, Cmd.none
             else
                 let updatedItem = { response.Item with Comments = response.Item.Comments @ [newComment] }
-                let viewerId = sprintf "comment-%s" event.Id
-                let initViewerCmd = Cmd.ofEffect (fun _dispatch ->
-                    RichText.createViewerWhenReady viewerId event.Content
-                    activeViewerIds <- viewerId :: activeViewerIds
-                )
-                { model with CurrentItem = Some { Item = updatedItem } }, initViewerCmd
+                { model with CurrentItem = Some { Item = updatedItem } }, Cmd.none
         | _ -> model, Cmd.none
 
     | EventError _ ->
@@ -252,7 +231,7 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
                             Html.span [ prop.text comment.Author ]
                         ]
                     ]
-                    Html.div [ prop.id (sprintf "comment-%s" comment.Id) ]
+                    richContent "comment-body" comment.Content
                     Html.div [
                         prop.className "comment-meta"
                         prop.children [
@@ -315,13 +294,9 @@ let view (response: GetItem.Response) (model: Model) dispatch =
                 Html.img [ prop.src imgUrl; prop.className "item-image" ]
             | None -> Html.none
             match item.Extract with
-            | Some _ ->
-                Html.div [ prop.className "extract"; prop.id (sprintf "extract-%s" item.Id) ]
+            | Some extract -> richContent "extract" extract
             | None -> Html.none
-            Html.div [
-                prop.className "owner-comment"
-                prop.id (sprintf "owner-comment-%s" item.Id)
-            ]
+            richContent "owner-comment" item.OwnerComment
             if not item.Tags.IsEmpty then
                 Html.div [
                     prop.className "tags"
