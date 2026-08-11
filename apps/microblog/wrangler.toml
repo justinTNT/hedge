@@ -43,5 +43,4 @@ not_found_handling = "single-page-application"
 
 # Environment variables
 [vars]
-ENVIRONMENT = "development"
-ADMIN_KEY = "dev-admin-key"
+ENVIRONMENT = "production"
