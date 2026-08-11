@@ -202,7 +202,7 @@ let createWorker (config: WorkerConfig) =
                 | Some providerCfg, Some creds ->
                     let guest = resolveGuest request
                     let returnTo = getQueryParam request.url "returnTo"
-                    let returnTo = if isNull (box returnTo) || returnTo = "" then "/" else returnTo
+                    let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
                     let! state = OAuth.generateState oauth.Secret guest.GuestId returnTo
                     let redirectUri =
                         let url = createUrl request.url
@@ -220,9 +220,9 @@ let createWorker (config: WorkerConfig) =
                     let guest = resolveGuest request
                     let code = getQueryParam request.url "code"
                     let stateParam = getQueryParam request.url "state"
-                    if isNull (box code) || code = "" then
+                    if isNull code || code = "" then
                         return badRequest "Missing code parameter"
-                    elif isNull (box stateParam) || stateParam = "" then
+                    elif isNull stateParam || stateParam = "" then
                         return badRequest "Missing state parameter"
                     else
                         let! stateResult = OAuth.verifyState oauth.Secret stateParam
@@ -254,7 +254,7 @@ let createWorker (config: WorkerConfig) =
                           && isWebSocketUpgrade request ->
                 let events : DurableObjectNamespace = env?EVENTS
                 let itemId = getQueryParam request.url "itemId"
-                if isNull (box itemId) || itemId = "" then
+                if isNull itemId || itemId = "" then
                     return badRequest "Missing itemId query parameter"
                 else
                     let doId = events.idFromName(itemId)

@@ -31,7 +31,7 @@ let private googleConfig : ProviderConfig = {
     ParseUserinfo = fun o ->
         { Name = o?name |> unbox<string>
           PictureUrl = o?picture |> unbox<string>
-          Email = let e : string = o?email |> unbox in if isNull (box e) then None else Some e
+          Email = let e : string = o?email |> unbox in if isNull e then None else Some e
           ProviderUserId = o?id |> unbox<string>
           Provider = "google" }
 }
@@ -42,9 +42,9 @@ let private githubConfig : ProviderConfig = {
     UserinfoUrl = "https://api.github.com/user"
     Scopes = "read:user user:email"
     ParseUserinfo = fun o ->
-        { Name = o?name |> unbox<string> |> fun n -> if isNull (box n) then o?login |> unbox<string> else n
+        { Name = o?name |> unbox<string> |> fun n -> if isNull n then o?login |> unbox<string> else n
           PictureUrl = o?avatar_url |> unbox<string>
-          Email = let e : string = o?email |> unbox in if isNull (box e) then None else Some e
+          Email = let e : string = o?email |> unbox in if isNull e then None else Some e
           ProviderUserId = string (o?id |> unbox<int>)
           Provider = "github" }
 }
@@ -57,7 +57,7 @@ let private microsoftConfig : ProviderConfig = {
     ParseUserinfo = fun o ->
         { Name = o?displayName |> unbox<string>
           PictureUrl = ""
-          Email = let e : string = o?mail |> unbox in if isNull (box e) then None else Some e
+          Email = let e : string = o?mail |> unbox in if isNull e then None else Some e
           ProviderUserId = o?id |> unbox<string>
           Provider = "microsoft" }
 }
@@ -74,7 +74,7 @@ let private facebookConfig : ProviderConfig = {
             if isNull pic then "" else
             let data = pic?data
             if isNull data then "" else data?url |> unbox<string>
-          Email = let e : string = o?email |> unbox in if isNull (box e) then None else Some e
+          Email = let e : string = o?email |> unbox in if isNull e then None else Some e
           ProviderUserId = o?id |> unbox<string>
           Provider = "facebook" }
 }
@@ -177,7 +177,7 @@ let exchangeCode
         else
         let! data = responseJson response
         let token : string = data?access_token |> unbox
-        if isNull (box token) || token = "" then
+        if isNull token || token = "" then
             return failwith (sprintf "No access_token in response")
         else
         return token

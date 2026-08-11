@@ -16,6 +16,58 @@ let private identityJson (i: IdentityRow) : string =
     let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
     sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s}""" i.Id i.Provider i.Name i.Picture emailJson
 
+[<Emit("$0.arrayBuffer()")>]
+let private responseArrayBuffer (response: WorkerResponse) : JS.Promise<obj> = jsNative
+
+[<Emit("$0.headers.get($1)")>]
+let private responseHeader (response: WorkerResponse) (name: string) : string = jsNative
+
+// The typed R2 binding has no options arg; httpMetadata matters because
+// handleBlobServe reads contentType back off it when serving.
+[<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
+let private r2PutTyped (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) : JS.Promise<obj> = jsNative
+
+let private avatarTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp" ]
+
+/// Copy a provider's avatar into R2 and return a local /blobs/ URL.
+///
+/// Provider avatar URLs are hotlinks: they rot when the user changes or deletes
+/// their account, and they leak every reader's request to a third party. The
+/// key is content-addressed by source URL, so repeat logins reuse the stored
+/// copy (no refetch, no growth) while a changed avatar lands under a new key —
+/// which keeps handleBlobServe's immutable cache header honest.
+///
+/// Best-effort by design: any failure returns the provider URL unchanged, so a
+/// flaky avatar host can never break sign-in.
+let private cacheAvatar (blobs: R2Bucket) (url: string) : JS.Promise<string> =
+    promise {
+        if isNull url || url = "" || not (url.StartsWith "https://") then return url
+        else
+            try
+                // HMAC used purely as a content-addressing hash, not for secrecy.
+                let! digest = hmacSha256 "hedge-avatar" url
+                let key = sprintf "avatars/%s" (digest.Substring(0, 32))
+                let! existing = blobs.get key
+                match existing with
+                | Some _ -> return sprintf "/blobs/%s" key
+                | None ->
+                    let! response = fetchRaw url (createObj [])
+                    if not response.ok then return url
+                    else
+                        let raw = responseHeader response "content-type"
+                        let contentType =
+                            if isNull raw then ""
+                            else raw.Split(';').[0].Trim().ToLowerInvariant()
+                        if not (avatarTypes.Contains contentType) then return url
+                        else
+                            let! body = responseArrayBuffer response
+                            let! _ = r2PutTyped blobs key body contentType
+                            return sprintf "/blobs/%s" key
+            with ex ->
+                JS.console.error ("avatar cache failed: " + ex.Message)
+                return url
+    }
+
 let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string option> =
     promise {
         let! active = Identity.activeFor db guestId
@@ -28,7 +80,7 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
         let picture : string = userInfoObj?PictureUrl
         let provider : string = userInfoObj?Provider
         let providerUserId : string = userInfoObj?ProviderUserId
-        let email = let e : string = userInfoObj?Email in if isNull (box e) then None else Some e
+        let email = let e : string = userInfoObj?Email in if isNull e then None else Some e
         let now = epochNow ()
         let identityId = newId ()
 
@@ -45,18 +97,21 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
             else
                 existing?id |> unbox<string>
 
+        // Store our own copy of the avatar rather than the provider's hotlink.
+        let! storedPicture = cacheAvatar blobs picture
+
         if isNull (box existing) then
             // New identity — insert but do NOT activate yet (user chooses merge/abandon first)
             let insert =
                 bind
                     (db.prepare Sql.insertProviderIdentity)
-                    [| box identityId; box guestId; box provider; box providerUserId; box name; box picture; optToDb email; box now |]
+                    [| box identityId; box guestId; box provider; box providerUserId; box name; box storedPicture; optToDb email; box now |]
             let! _ = insert.run()
             ()
         else
             // Existing identity — update name/picture/email (don't activate yet)
             let update =
-                bind (db.prepare Sql.refreshIdentityProfile) [| box name; box picture; optToDb email; box finalId |]
+                bind (db.prepare Sql.refreshIdentityProfile) [| box name; box storedPicture; optToDb email; box finalId |]
             let! _ = update.run()
             ()
 
