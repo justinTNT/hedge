@@ -27,6 +27,14 @@ let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
         GotRevertIdentity
         (fun ex -> GotRevertIdentity (Error ex.Message))
 
+let private disconnectIdentityCmd (identityId: string) (fallbackName: string) : Cmd<Msg> =
+    let body = sprintf """{"identityId":"%s","name":"%s"}""" identityId fallbackName
+    Cmd.OfPromise.either
+        (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" body)
+        ()
+        GotDisconnect
+        (fun ex -> GotDisconnect (Error ex.Message))
+
 let private loadProvidersCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
@@ -75,7 +83,6 @@ let init () : Model * Cmd<Msg> =
           Identities = []
           AvailableProviders = []
           ShowIdentitySwitcher = false
-          ShowConnections = false
           SelectedIdentity = None
           PendingClaimFocus = claimFocus }
     let routeCmd =
@@ -118,7 +125,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                     ReplyingTo = None
                     CollapsedComments = Set.empty
                     ShowIdentitySwitcher = false
-                    ShowConnections = false
                     SelectedIdentity = None
                     PendingClaimFocus = claimFocus }
             updated,
@@ -141,7 +147,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
             | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
             | _ -> cleanupCmd
-        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; ShowConnections = false; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
+        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
 
     | DismissError ->
         { model with Error = None }, Cmd.none
@@ -187,6 +193,28 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | GotRevertIdentity (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
+    | DisconnectIdentity identityId ->
+        model, disconnectIdentityCmd identityId model.GuestSession.DisplayName
+
+    | GotDisconnect (Ok _) ->
+        // Abandoning doesn't re-attribute anything, but the active identity may
+        // have changed, so refresh the page's authorship along with the session.
+        let reloadCmd =
+            match model.Route with
+            | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
+            | ["new"] -> Cmd.none
+            | [idOrSlug] -> Cmd.ofMsg (LoadItem idOrSlug)
+            | _ -> Cmd.ofMsg LoadFeed
+        { model with ShowIdentitySwitcher = false; SelectedIdentity = None },
+        Cmd.batch [
+            Cmd.OfPromise.perform GuestSession.syncSession () GotSessionSync
+            loadIdentitiesCmd
+            reloadCmd
+        ]
+
+    | GotDisconnect (Error err) ->
+        { model with Error = Some err }, Cmd.none
+
     | LoadIdentities ->
         model, loadIdentitiesCmd
 
@@ -198,12 +226,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | ToggleIdentitySwitcher ->
         let show = not model.ShowIdentitySwitcher
-        { model with ShowIdentitySwitcher = show; ShowConnections = false; SelectedIdentity = None },
-        if show then loadIdentitiesCmd else Cmd.none
-
-    | ToggleConnections ->
-        let show = not model.ShowConnections
-        { model with ShowConnections = show; ShowIdentitySwitcher = false; SelectedIdentity = None },
+        { model with ShowIdentitySwitcher = show; SelectedIdentity = None },
         if show then loadIdentitiesCmd else Cmd.none
 
     | SelectIdentity identityId ->

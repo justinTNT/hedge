@@ -34,6 +34,53 @@ let ensureAnonymousIdentity = """
 let findIdentityByProvider =
     "SELECT id FROM identities WHERE guest_id = ? AND provider = ? AND provider_user_id = ?"
 
+/// A provider account, regardless of which guest currently holds it. This is
+/// what makes one identity usable from several machines: the second machine
+/// finds the existing identity instead of minting a parallel one.
+/// Ordered by history, not age: pre-fix data can hold several rows for one
+/// provider account (one per browser that ever signed in), and the canonical
+/// one is whichever actually carries the comments — which is not necessarily
+/// the oldest. Earliest created breaks ties.
+let findIdentityByProviderGlobal = """
+    SELECT i.id, i.guest_id
+    FROM identities i
+    WHERE i.provider = ? AND i.provider_user_id = ?
+    ORDER BY (SELECT COUNT(*) FROM comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
+    LIMIT 1"""
+
+/// Fold one guest's identities into another (their comments follow, since
+/// comments are attributed to the identity, not the guest).
+let moveIdentitiesToGuest =
+    "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
+
+let countCommentsForIdentity =
+    "SELECT COUNT(*) AS n FROM comments WHERE identity_id = ?"
+
+/// Park a single identity on another guest. Disconnect uses this to abandon a
+/// credentialed identity onto a fresh empty guest: its comments stay attached,
+/// so signing in with that provider again reclaims the whole history.
+let moveIdentityToGuest =
+    "UPDATE identities SET guest_id = ? WHERE id = ?"
+
+/// The guest's anonymous identity, if they have one. Not guaranteed to exist:
+/// it's created by the comment path, so a guest who signed in with a provider
+/// before ever commenting has none.
+let anonymousIdentityForGuest =
+    "SELECT id FROM identities WHERE guest_id = ? AND provider = 'anonymous' ORDER BY created_at LIMIT 1"
+
+/// Unconditional anonymous identity, for disconnect's fallback — unlike
+/// ensureAnonymousIdentity this doesn't skip when an active identity exists,
+/// because the identity being disconnected is the active one.
+let insertAnonymousIdentity = """
+    INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at)
+    VALUES (?, ?, 'anonymous', '', ?, '', NULL, ?, ?)"""
+
+let countIdentitiesForGuest =
+    "SELECT COUNT(*) AS n FROM identities WHERE guest_id = ?"
+
+let deleteIdentityById =
+    "DELETE FROM identities WHERE id = ?"
+
 /// New provider identity is inserted un-activated — the user chooses
 /// merge/fresh before it becomes active.
 let insertProviderIdentity = """

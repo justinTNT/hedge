@@ -13,6 +13,8 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Handlers.activateIdentity request env)
     | POST path when matchPath "/api/auth/revert" path = Some (Exact "/api/auth/revert") ->
         Some (Server.Handlers.revertIdentity request env)
+    | POST path when matchPath "/api/auth/disconnect" path = Some (Exact "/api/auth/disconnect") ->
+        Some (Server.Handlers.disconnectIdentity request env)
     | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
         Some (Server.Handlers.getIdentities request env)
     | _ -> None

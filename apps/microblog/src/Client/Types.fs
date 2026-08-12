@@ -35,7 +35,6 @@ type Model = {
     /// only these, so an unconfigured provider is never a dead button
     AvailableProviders: string list
     ShowIdentitySwitcher: bool
-    ShowConnections: bool
     /// Identity id awaiting a merge/fresh decision in the switcher
     SelectedIdentity: string option
     /// Set on OAuth return; consumed by UrlChanged to open the switcher pre-selected
@@ -72,7 +71,8 @@ type Msg =
     | GotIdentities of IdentityListItem list
     | GotProviders of string list
     | ToggleIdentitySwitcher
-    | ToggleConnections
+    | DisconnectIdentity of identityId: string
+    | GotDisconnect of Result<unit, string>
     | SelectIdentity of identityId: string
 
 let emptyItemForm = { Title = ""; Link = ""; Tags = "" }

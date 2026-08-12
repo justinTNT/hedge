@@ -142,12 +142,21 @@ let validationErrorResponse (errors: ValidationError list) =
 // createWorker — framework entry point
 // ============================================================
 
+/// Outcome of a completed OAuth round trip.
+type OAuthComplete = {
+    RedirectUrl: string
+    /// Set when the provider account is already known to a different guest.
+    /// The browser is re-cookied to that guest, so a second machine joins the
+    /// existing identity set rather than starting a parallel one.
+    AdoptGuestId: string option
+}
+
 type OAuthConfig = {
     Secret: string
     Providers: Map<string, {| ClientId: string; ClientSecret: string |}>
     /// Called by /api/auth/me. App resolves guest → JSON string (or None for anon).
     ResolveIdentity: D1Database -> string -> JS.Promise<string option>
-    OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<string>
+    OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete>
 }
 
 type WorkerConfig = {
@@ -268,8 +277,12 @@ let createWorker (config: WorkerConfig) =
                                 let! userInfo = OAuth.fetchUserinfo providerCfg accessToken
                                 let db : D1Database = env?DB
                                 let blobs : R2Bucket = env?BLOBS
-                                let! redirectUrl = oauth.OnOAuthComplete db blobs guest.GuestId (box userInfo) returnTo
-                                return redirectResponse redirectUrl (guestCookieValue guest)
+                                let! completion = oauth.OnOAuthComplete db blobs guest.GuestId (box userInfo) returnTo
+                                let cookieGuest =
+                                    match completion.AdoptGuestId with
+                                    | Some adopted -> { guest with GuestId = adopted }
+                                    | None -> guest
+                                return redirectResponse completion.RedirectUrl (guestCookieValue cookieGuest)
                 | _ ->
                     return badRequest (sprintf "Unknown provider: %s" providerName)
 

@@ -111,7 +111,9 @@ let private identitySwitcher (model: Model) dispatch =
                             if isActive then "identity-option active"
                             elif isSelected then "identity-option selected"
                             else "identity-option selectable")
-                        if not isActive then prop.onClick (fun _ -> dispatch (SelectIdentity id.Id))
+                        // Every row is selectable: the active one still has an
+                        // action (disconnect), it just can't be switched to.
+                        prop.onClick (fun _ -> dispatch (SelectIdentity id.Id))
                         prop.children [
                             avatar (if id.Picture <> "" then id.Picture else GuestSession.avatarForAuthor id.Name)
                             Html.div [
@@ -121,47 +123,48 @@ let private identitySwitcher (model: Model) dispatch =
                                     Html.span [ prop.className "identity-provider"; prop.text (providerLabel id.Provider) ]
                                 ]
                             ]
-                            // Merge/fresh only appear once this identity is chosen
-                            if isSelected && not isActive then
-                                Html.button [
-                                    prop.className "btn-merge"
-                                    prop.text "Merge"
-                                    prop.title "Bring my comments with me"
-                                    prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, true)))
-                                ]
-                                Html.button [
-                                    prop.className "btn-abandon"
-                                    prop.text "Fresh"
-                                    prop.title "Leave comments where they are"
-                                    prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, false)))
-                                ]
+                                // Actions appear once a row is chosen
+                            if isSelected then
+                                if not isActive then
+                                    Html.button [
+                                        prop.className "btn-merge"
+                                        prop.text "Merge"
+                                        prop.title "Bring my comments with me"
+                                        prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, true)))
+                                    ]
+                                    Html.button [
+                                        prop.className "btn-abandon"
+                                        prop.text "Fresh"
+                                        prop.title "Leave comments where they are"
+                                        prop.onClick (fun e -> e.stopPropagation(); dispatch (RevertIdentity (id.Id, false)))
+                                    ]
+                                if id.Provider <> "anonymous" then
+                                    Html.button [
+                                        prop.className "btn-disconnect"
+                                        prop.text "Disconnect"
+                                        prop.title "Abandon this identity — its comments stay with it, and signing in again reclaims them"
+                                        prop.onClick (fun e -> e.stopPropagation(); dispatch (DisconnectIdentity id.Id))
+                                    ]
                         ]
                     ]
                 )
-            ]
-        ]
 
-let private connectionsPane (model: Model) dispatch =
-    if not model.ShowConnections then Html.none
-    else
-        Html.div [
-            prop.className "connections-pane"
-            prop.children [
-                Html.h4 [ prop.text "Connections" ]
-                yield! model.AvailableProviders |> List.map (fun provider ->
-                    let label = providerLabel provider
-                    let connected = model.Identities |> List.exists (fun i -> i.Provider = provider)
+                // Providers you haven't linked. Connected ones aren't repeated
+                // here — they're already above as identities, with avatars.
+                let unconnected =
+                    model.AvailableProviders
+                    |> List.filter (fun p -> model.Identities |> List.forall (fun i -> i.Provider <> p))
+                if not unconnected.IsEmpty then
                     Html.div [
-                        prop.className "connection-row"
+                        prop.className "switcher-connect"
                         prop.children [
-                            if connected then
-                                Html.span [ prop.className "connection-label"; prop.text label ]
-                                Html.span [ prop.className "connection-status"; prop.text "Connected" ]
-                            else
-                                loginButton provider label
+                            Html.h4 [ prop.text "Add a connection" ]
+                            Html.div [
+                                prop.className "connect-options"
+                                prop.children (unconnected |> List.map (fun p -> loginButton p (providerLabel p)))
+                            ]
                         ]
                     ]
-                )
             ]
         ]
 
@@ -170,26 +173,22 @@ let private identityView (model: Model) dispatch =
     Html.div [
         prop.className "identity-area"
         prop.children [
-            match session.Identity with
-            | Some identity ->
-                Html.div [
-                    prop.className "identity-badge"
-                    prop.onClick (fun _ -> dispatch ToggleIdentitySwitcher)
-                    prop.children [
-                        avatar session.AvatarUrl
-                        Html.span [ prop.text identity.Name ]
+            // One control, one panel. Even with no identity yet the badge opens
+            // it, so signing in is reachable without a second button.
+            Html.div [
+                prop.className "identity-badge"
+                prop.onClick (fun _ -> dispatch ToggleIdentitySwitcher)
+                prop.children [
+                    avatar session.AvatarUrl
+                    Html.span [
+                        prop.text (
+                            match session.Identity with
+                            | Some identity -> identity.Name
+                            | None -> session.DisplayName)
                     ]
                 ]
-            | None ->
-                avatar session.AvatarUrl
-                Html.span [ prop.className "anon-name"; prop.text session.DisplayName ]
-            Html.button [
-                prop.className "connections-btn"
-                prop.text "Connections"
-                prop.onClick (fun _ -> dispatch ToggleConnections)
             ]
-            connectionsPane model dispatch
-            if session.Identity.IsSome then identitySwitcher model dispatch
+            identitySwitcher model dispatch
         ]
     ]
 

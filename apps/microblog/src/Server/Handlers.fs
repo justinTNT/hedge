@@ -74,7 +74,43 @@ let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string optio
         return active |> Option.map identityJson
     }
 
-let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userInfoObj: obj) (returnTo: string) : JS.Promise<string> =
+/// Collapse duplicate identities on a guest, keeping the one carrying the most
+/// history and folding the rest into it. Duplicates are per provider account,
+/// so two different Google accounts stay separate while two rows for the *same*
+/// Google account merge. Anonymous identities all share ('anonymous', ''), so
+/// "one anonymous self per person" is this same rule rather than a special case.
+///
+/// Returns a map of removed id -> surviving id, so callers holding an identity
+/// id can follow it.
+let private mergeDuplicateIdentities (db: D1Database) (guestId: string) : JS.Promise<Map<string, string>> =
+    promise {
+        let! all = Identity.listFor db guestId
+        let mutable moved = Map.empty
+        let groups = all |> Array.groupBy (fun i -> i.Provider, i.ProviderUserId)
+        for (_, rows) in groups do
+            if rows.Length > 1 then
+                // Rank by comments, then by age — the richest row wins
+                let! counted =
+                    rows
+                    |> Array.map (fun r ->
+                        promise {
+                            let! row = (bind (db.prepare Sql.countCommentsForIdentity) [| box r.Id |]).first()
+                            let n = if isNull (box row) then 0 else row?n |> unbox<int>
+                            return r, n
+                        })
+                    |> Promise.all
+                let ordered =
+                    counted
+                    |> Array.sortBy (fun (r, n) -> -n, r.CreatedAt)
+                let survivor = fst ordered.[0]
+                for (dup, _) in ordered.[1..] do
+                    do! Attribution.reassign db dup.Id survivor.Id
+                    let! _ = (bind (db.prepare Sql.deleteIdentityById) [| box dup.Id |]).run()
+                    moved <- moved |> Map.add dup.Id survivor.Id
+        return moved
+    }
+
+let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userInfoObj: obj) (returnTo: string) : JS.Promise<OAuthComplete> =
     promise {
         let name : string = userInfoObj?Name
         let picture : string = userInfoObj?PictureUrl
@@ -86,16 +122,17 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
 
         let! _ = (Identity.ensureGuestStmt db guestId now).run()
 
-        // Check if this provider+providerUserId already exists for this guest
+        // Look up the provider account globally, not just under this guest —
+        // signing in on a second machine should join the identity you already
+        // have rather than mint a parallel one.
         let findExisting =
-            bind (db.prepare Sql.findIdentityByProvider) [| box guestId; box provider; box providerUserId |]
+            bind (db.prepare Sql.findIdentityByProviderGlobal) [| box provider; box providerUserId |]
         let! existing = findExisting.first()
 
+        let ownerGuestId =
+            if isNull (box existing) then guestId else existing?guest_id |> unbox<string>
         let finalId =
-            if isNull (box existing) then
-                identityId
-            else
-                existing?id |> unbox<string>
+            if isNull (box existing) then identityId else existing?id |> unbox<string>
 
         // Store our own copy of the avatar rather than the provider's hotlink.
         let! storedPicture = cacheAvatar blobs picture
@@ -115,9 +152,34 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
             let! _ = update.run()
             ()
 
+        // The account already belongs to another guest — this browser joins it.
+        // You get one anonymous self, not one per device: this machine's
+        // anonymous identity is folded into the adopted guest's (its comments
+        // reassigned, usually none or one) and then dropped. Everything else
+        // this guest holds moves across intact.
+        let adopt =
+            if isNull (box existing) || ownerGuestId = guestId then None
+            else Some ownerGuestId
+        // Merging two guests can leave duplicates — both machines may hold rows
+        // for the same provider account, and each will have its own anonymous
+        // identity. One pass collapses all of it.
+        let! landedId =
+            match adopt with
+            | None -> promise { return finalId }
+            | Some owner ->
+                promise {
+                    let! _ = (bind (db.prepare Sql.moveIdentitiesToGuest) [| box owner; box guestId |]).run()
+                    let! moved = mergeDuplicateIdentities db owner
+                    // The identity we're about to hand to the claim page may
+                    // itself have been folded away — follow it.
+                    return moved |> Map.tryFind finalId |> Option.defaultValue finalId
+                }
+
         // Redirect to claim page where user chooses merge/abandon
         let encodedReturnTo = JS.encodeURIComponent returnTo
-        return sprintf "/auth/claim?identity=%s&returnTo=%s" finalId encodedReturnTo
+        return
+            { RedirectUrl = sprintf "/auth/claim?identity=%s&returnTo=%s" landedId encodedReturnTo
+              AdoptGuestId = adopt }
     }
 
 /// Switch the guest's active identity, optionally bringing attributed
@@ -145,6 +207,62 @@ let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<Work
             | _ -> ()
 
         do! Identity.setActive env.DB identityId now
+        return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
+    }
+
+/// Abandon a credentialed identity: it's parked on a fresh, cookieless guest
+/// with its comments still attached, so it sits waiting. Signing in with that
+/// provider again — from any browser — finds it by provider account and adopts
+/// it back, history intact. Nothing is deleted and nothing is re-attributed.
+///
+/// Refuses the anonymous identity (it's the fallback, not a connection). The
+/// guest is left with an anonymous identity to be, created here if they never
+/// had one — which happens when someone signed in before ever commenting.
+let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let guest = resolveGuest request
+        let! bodyText = request.text()
+        let parsed = JS.JSON.parse bodyText
+        let identityId : string = parsed?identityId
+        let fallbackName =
+            let n : string = parsed?name
+            if isNull n || n = "" then "Anonymous" else n
+        let now = epochNow ()
+
+        let! all = Identity.listFor env.DB guest.GuestId
+        match all |> Array.tryFind (fun i -> i.Id = identityId) with
+        | None -> return unauthorized ()
+        | Some target ->
+
+        if target.Provider = "anonymous" then
+            return badRequest "The anonymous identity is the fallback and can't be disconnected"
+        else
+
+        let! active = Identity.activeFor env.DB guest.GuestId
+        let wasActive = active |> Option.map (fun i -> i.Id) |> Option.defaultValue "" = identityId
+
+        // Whatever happens, the guest needs an identity to post as afterwards
+        let! anonId =
+            match all |> Array.tryFind (fun i -> i.Provider = "anonymous") with
+            | Some anon -> promise { return anon.Id }
+            | None ->
+                promise {
+                    let created = newId ()
+                    let! _ =
+                        (bind
+                            (env.DB.prepare Sql.insertAnonymousIdentity)
+                            [| box created; box guest.GuestId; box fallbackName; jsNull; box now |]).run()
+                    return created
+                }
+
+        // Park it on a guest nobody holds a cookie for
+        let orphanGuest = newId ()
+        let! _ = (Identity.ensureGuestStmt env.DB orphanGuest now).run()
+        let! _ = (bind (env.DB.prepare Sql.moveIdentityToGuest) [| box orphanGuest; box identityId |]).run()
+
+        if wasActive then
+            do! Identity.setActive env.DB anonId now
+
         return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
     }
 
