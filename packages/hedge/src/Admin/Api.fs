@@ -67,6 +67,13 @@ let getRecord (key: string) (typeName: string) (id: string) : JS.Promise<Result<
         return Decode.fromString (Decode.field "record" Decode.value) text
     }
 
+/// POST /api/admin/:type — create a record.
+let createRecord (key: string) (typeName: string) (body: string) : JS.Promise<Result<obj, string>> =
+    promise {
+        let! text = adminFetch (sprintf "/api/admin/%s" typeName) HttpMethod.POST key (Some body)
+        return Decode.fromString (Decode.field "record" Decode.value) text
+    }
+
 /// PUT /api/admin/:type/:id — update a record.
 let updateRecord (key: string) (typeName: string) (id: string) (body: string) : JS.Promise<Result<obj, string>> =
     promise {

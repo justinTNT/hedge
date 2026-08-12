@@ -9,6 +9,8 @@ type AdminTable = {
     Schema: TypeSchema
     SelectAll: string
     SelectOne: string
+    Insert: string
+    HasCreateTs: bool
     Update: string
     Delete: string
     MutableFields: string list
@@ -26,6 +28,8 @@ let guest : AdminTable =
         ]
       SelectAll = "SELECT id, session_id, created_at, deleted_at FROM guests ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ?"
+      Insert = "INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"
+      HasCreateTs = true
       Update = "UPDATE guests SET session_id = ? WHERE id = ?"
       Delete = "DELETE FROM guests WHERE id = ?"
       MutableFields = ["SessionId"] }
@@ -47,6 +51,8 @@ let identity : AdminTable =
         ]
       SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?"
+      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
       Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
       Delete = "DELETE FROM identities WHERE id = ?"
       MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
@@ -70,6 +76,8 @@ let microblogItem : AdminTable =
         ]
       SelectAll = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
+      Insert = "INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
       Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ? WHERE id = ?"
       Delete = "DELETE FROM items WHERE id = ?"
       MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "Slug"; "ViewCount"] }
@@ -91,6 +99,8 @@ let itemComment : AdminTable =
         ]
       SelectAll = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE id = ?"
+      Insert = "INSERT INTO comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
       Update = "UPDATE comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
       Delete = "DELETE FROM comments WHERE id = ?"
       MutableFields = ["ItemId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
@@ -107,6 +117,8 @@ let tag : AdminTable =
         ]
       SelectAll = "SELECT id, name, created_at, deleted_at FROM tags ORDER BY created_at DESC LIMIT 100"
       SelectOne = "SELECT id, name, created_at, deleted_at FROM tags WHERE id = ?"
+      Insert = "INSERT INTO tags (id, name, created_at) VALUES (?, ?, ?)"
+      HasCreateTs = true
       Update = "UPDATE tags SET name = ? WHERE id = ?"
       Delete = "DELETE FROM tags WHERE id = ?"
       MutableFields = ["Name"] }
@@ -122,6 +134,8 @@ let itemTag : AdminTable =
         ]
       SelectAll = "SELECT item_id, tag_id, deleted_at FROM item_tags LIMIT 100"
       SelectOne = "SELECT item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ?"
+      Insert = ""
+      HasCreateTs = false
       Update = "UPDATE item_tags SET item_id = ?, tag_id = ? WHERE item_id = ?"
       Delete = "DELETE FROM item_tags WHERE item_id = ?"
       MutableFields = ["ItemId"; "TagId"] }

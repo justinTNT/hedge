@@ -228,6 +228,7 @@ type TableMeta = {
     FkFields: FieldSchema list
     SelectAll: string
     SelectOne: string
+    Insert: string
     Update: string
     Delete: string
 }
@@ -266,11 +267,21 @@ let computeMeta (parsed: ParsedType) : TableMeta =
     let update = sprintf "UPDATE %s SET %s WHERE %s = ?" tableName updateSetClause pkCol
     let delete = sprintf "DELETE FROM %s WHERE %s = ?" tableName pkCol
 
+    // Admin create is only meaningful for a table with a real primary key —
+    // without one, pkCol is just the first column and we'd write a generated id
+    // into a data column (e.g. item_tags.item_id). Those tables get no INSERT.
+    let insert =
+        if not hasPk then ""
+        else
+            let insertCols = [ pkCol ] @ mutableCols @ (if hasCreateTs then [ "created_at" ] else [])
+            let placeholders = insertCols |> List.map (fun _ -> "?") |> String.concat ", "
+            sprintf "INSERT INTO %s (%s) VALUES (%s)" tableName (String.concat ", " insertCols) placeholders
+
     { DisplayName = displayName; TableName = tableName; Schema = schema
       DbFields = dbFields; Cols = cols; ColStr = colStr
       PkCol = pkCol; HasPk = hasPk; HasCreateTs = hasCreateTs; HasUpdateTs = hasUpdateTs
       MutableFields = mutableFields; MutableCols = mutableCols; FkFields = fkFields
-      SelectAll = selectAll; SelectOne = selectOne; Update = update; Delete = delete }
+      SelectAll = selectAll; SelectOne = selectOne; Insert = insert; Update = update; Delete = delete }
 
 // ============================================================
 // FieldType / FieldAttr -> DSL expression string (for AdminGen)
@@ -331,6 +342,8 @@ let generateAdminTable (m: TableMeta) : string list =
     @ [ "        ]"
         sprintf "      SelectAll = \"%s\"" m.SelectAll
         sprintf "      SelectOne = \"%s\"" m.SelectOne
+        sprintf "      Insert = \"%s\"" m.Insert
+        sprintf "      HasCreateTs = %s" (if m.HasCreateTs then "true" else "false")
         sprintf "      Update = \"%s\"" m.Update
         sprintf "      Delete = \"%s\"" m.Delete
         sprintf "      MutableFields = [%s] }" mutableFieldsStr ]
@@ -350,6 +363,8 @@ let generateAdminFs (metas: TableMeta list) : string =
     emit "    Schema: TypeSchema"
     emit "    SelectAll: string"
     emit "    SelectOne: string"
+    emit "    Insert: string"
+    emit "    HasCreateTs: bool"
     emit "    Update: string"
     emit "    Delete: string"
     emit "    MutableFields: string list"

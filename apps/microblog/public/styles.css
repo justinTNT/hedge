@@ -370,3 +370,301 @@ html.dark .btn-abandon { background: #444; color: #ddd; }
     .login-options { flex-wrap: wrap; }
     .claim-actions { flex-direction: column; }
 }
+
+/* ============================================================
+   Admin — record table
+   Scoped to .admin-app; nothing here reaches the public site.
+   ============================================================ */
+
+.admin-app {
+    --adm-bg: #fff;
+    --adm-surface: #f9fafb;
+    --adm-border: #e5e7eb;
+    --adm-divider: #f1f3f5;
+    --adm-text: #111827;
+    --adm-muted: #6b7280;
+    --adm-accent: #2563eb;
+    --adm-danger: #dc2626;
+    --adm-on: #16a34a;
+    max-width: 1200px;
+}
+
+html.dark .admin-app {
+    --adm-bg: #1f1f1f;
+    --adm-surface: #262626;
+    --adm-border: #3a3a3a;
+    --adm-divider: #2f2f2f;
+    --adm-text: #e5e5e5;
+    --adm-muted: #9ca3af;
+    --adm-accent: #6cb4ee;
+    --adm-danger: #f87171;
+    --adm-on: #4ade80;
+}
+
+/* Type nav */
+.admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    /* the site's global `nav` rule spreads children edge to edge */
+    justify-content: flex-start;
+    gap: 0.25rem;
+    margin: 0.25rem 0 1.25rem;
+}
+
+/* No rule under the header — the cards below already delineate the content,
+   and the site's global `header` border would double up with it. */
+.admin-app > header { border-bottom: none; }
+.admin-nav a {
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--adm-muted);
+    text-decoration: none;
+    cursor: pointer;
+}
+.admin-nav a:hover { background: var(--adm-surface); color: var(--adm-text); }
+.admin-nav a.active { background: var(--adm-accent); color: #fff; }
+.admin-nav .admin-brand {
+    font-weight: 700;
+    color: var(--adm-text);
+    padding-left: 0;
+    margin-right: 0.5rem;
+}
+.admin-nav .admin-brand:hover { background: none; }
+
+.admin-record-list h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+}
+
+.admin-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Square icon button — the + that opens the create form */
+.admin-btn-add {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    margin-left: 0;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Wide tables scroll inside their own card, never the page */
+.admin-table-wrap {
+    overflow-x: auto;
+    background: var(--adm-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--adm-text);
+}
+
+.admin-table thead th {
+    background: var(--adm-surface);
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--adm-muted);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--adm-border);
+    white-space: nowrap;
+}
+
+.admin-table tbody tr:hover { background: var(--adm-surface); }
+.admin-table tbody tr:last-child .admin-cell { border-bottom: none; }
+
+.admin-cell {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--adm-divider);
+    vertical-align: middle;
+    white-space: nowrap;
+    max-width: 22rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Identifiers and dates read as data, not prose */
+.admin-cell-id,
+.admin-cell-time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    color: var(--adm-muted);
+}
+
+.admin-cell-empty { color: var(--adm-border); }
+.admin-cell-link a { color: var(--adm-accent); text-decoration: none; }
+.admin-cell-link a:hover { text-decoration: underline; }
+
+.admin-cell-bool { text-align: center; color: var(--adm-border); }
+.admin-cell-bool.on { color: var(--adm-on); }
+
+.admin-cell-actions {
+    text-align: right;
+    white-space: nowrap;
+    padding-left: 1.25rem;
+}
+
+/* The whole row opens the editor */
+.admin-table tbody tr { cursor: pointer; }
+
+.admin-btn {
+    padding: 0.25rem 0.6rem;
+    margin-left: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--adm-text);
+    background: var(--adm-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.admin-btn:hover { background: var(--adm-surface); }
+.admin-btn-danger {
+    color: var(--adm-danger);
+    background: transparent;
+    border-color: transparent;
+}
+.admin-btn-danger:hover { background: rgba(220, 38, 38, 0.08); }
+
+@media (max-width: 700px) {
+    .admin-cell { max-width: 12rem; }
+}
+
+/* Admin — edit form and key entry */
+
+.admin-record-list,
+.admin-edit-form { max-width: 100%; }
+
+.admin-edit-form h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.admin-edit-form,
+.admin-key-input {
+    background: var(--adm-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 1.25rem;
+}
+
+.admin-edit-form { max-width: 46rem; }
+
+.admin-field { margin-bottom: 0.875rem; }
+
+.admin-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--adm-muted);
+}
+
+.admin-field input,
+.admin-key-input input {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--adm-text);
+    background: var(--adm-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 6px;
+}
+
+.admin-field input:focus,
+.admin-key-input input:focus {
+    outline: none;
+    border-color: var(--adm-accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Read-only fields (primary keys, timestamps) shouldn't invite typing */
+.admin-field input:disabled {
+    background: var(--adm-surface);
+    color: var(--adm-muted);
+    cursor: not-allowed;
+}
+
+.admin-editor {
+    border: 1px solid var(--adm-border);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    background: var(--adm-bg);
+}
+
+.admin-form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--adm-divider);
+}
+.admin-form-actions .admin-btn { margin-left: 0; }
+
+.admin-btn-primary {
+    background: var(--adm-accent);
+    border-color: var(--adm-accent);
+    color: #fff;
+}
+.admin-btn-primary:hover { filter: brightness(1.08); background: var(--adm-accent); }
+.admin-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.admin-key-input { max-width: 22rem; }
+.admin-key-input h2 { font-size: 1.0625rem; margin-bottom: 0.75rem; }
+
+/* Admin — home */
+
+.admin-home {
+    background: var(--adm-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    max-width: 34rem;
+}
+
+.admin-home-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--adm-divider);
+}
+.admin-home-row:last-child { border-bottom: none; }
+.admin-home-row:hover { background: var(--adm-surface); }
+
+.admin-home-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--adm-text);
+    text-decoration: none;
+    cursor: pointer;
+    flex: 1;
+}
+.admin-home-name:hover { color: var(--adm-accent); }
+
+.admin-home-note { color: var(--adm-border); font-size: 0.8125rem; }

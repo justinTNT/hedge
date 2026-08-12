@@ -51,6 +51,18 @@ let private updateResponse (entity: AdminEntity) (id: string) (request: WorkerRe
         return okJson body
     }
 
+let private createResponse (entity: AdminEntity) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match entity.Create with
+        | None ->
+            return badRequest (sprintf "%s cannot be created from the admin (no primary key)" entity.Name)
+        | Some create ->
+            let! bodyText = request.text()
+            let! json = create bodyText env
+            let body = sprintf """{"record":%s}""" json
+            return okJson body
+    }
+
 let private deleteResponse (entity: AdminEntity) (id: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         do! entity.Delete id env
@@ -92,6 +104,19 @@ let handleRequest (request: WorkerRequest) (env: Env) (route: Route) : JS.Promis
         | _ -> None
 
     // PUT /api/admin/:type/:id — update record
+    // POST /api/admin/:type — create a record
+    | POST path ->
+        match matchPath "/api/admin/:id" path with
+        | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
+            match findEntity entityName with
+            | Some entity ->
+                Some (promise {
+                    if not (checkAdmin request env) then return unauthorized ()
+                    else return! createResponse entity request env
+                })
+            | None -> None
+        | _ -> None
+
     | PUT path ->
         match matchPath "/api/admin/:id" path with
         | Some (WithParam (_, rest)) ->
