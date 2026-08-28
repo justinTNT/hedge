@@ -127,7 +127,12 @@ let private genericUpdate (table: AdminTable) (id: string) (body: string) (env: 
         | Error err -> return sprintf """{"error":"%s"}""" err
         | Ok pairs ->
             let args = mutableArgs table (Map.ofList pairs)
-            let allArgs = args @ [box id] |> List.toArray
+            // Matches the generated SET clause: mutables, then updated_at
+            let allArgs =
+                args
+                @ (if table.HasUpdateTs then [ box (epochNow ()) ] else [])
+                @ [ box id ]
+                |> List.toArray
             let stmt = bind (env.DB.prepare(table.Update)) allArgs
             let! _ = stmt.run()
             let! result = genericGet table id env

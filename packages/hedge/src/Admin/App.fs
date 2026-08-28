@@ -396,7 +396,14 @@ module View =
         let text = if isNull raw then "" else string raw
         let hasAttr a = field.Attrs |> List.contains a
         let isForeignKey = field.Attrs |> List.exists (function ForeignKey _ -> true | _ -> false)
-        let isTimestamp = hasAttr CreateTimestamp || hasAttr UpdateTimestamp || hasAttr SoftDelete
+        // Attributed timestamps, plus the naming convention: an integer field
+        // called SomethingAt (ActivatedAt, PublishedAt) is an epoch too, even
+        // though it carries no timestamp attribute.
+        let isTimestamp =
+            hasAttr CreateTimestamp || hasAttr UpdateTimestamp || hasAttr SoftDelete
+            || (match underlying field.Type with
+                | FInt -> field.Name.EndsWith "At"
+                | _ -> false)
         if text = "" then
             Html.td [ prop.className "admin-cell admin-cell-empty"; prop.text "—" ]
         elif hasAttr PrimaryKey || isForeignKey then

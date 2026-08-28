@@ -29,6 +29,10 @@ nav img { width: 100%; }
   min-width: 0;
 }
 
+.extract p {
+  margin: 0.2em;
+}
+
 .extract img {
   margin-left: 1em;
   width: 20%;

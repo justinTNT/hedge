@@ -263,7 +263,13 @@ let computeMeta (parsed: ParsedType) : TableMeta =
         else
             sprintf "SELECT %s FROM %s LIMIT 100" colStr tableName
     let selectOne = sprintf "SELECT %s FROM %s WHERE %s = ?" colStr tableName pkCol
-    let updateSetClause = mutableCols |> List.map (fun c -> sprintf "%s = ?" c) |> String.concat ", "
+    // updated_at is auto-managed, so it isn't a mutable column — but the admin
+    // still has to stamp it, or editing through the admin silently leaves it
+    // null while the typed Db update sets it.
+    let updateSetClause =
+        (mutableCols @ (if hasUpdateTs then [ "updated_at" ] else []))
+        |> List.map (fun c -> sprintf "%s = ?" c)
+        |> String.concat ", "
     let update = sprintf "UPDATE %s SET %s WHERE %s = ?" tableName updateSetClause pkCol
     let delete = sprintf "DELETE FROM %s WHERE %s = ?" tableName pkCol
 
@@ -344,6 +350,7 @@ let generateAdminTable (m: TableMeta) : string list =
         sprintf "      SelectOne = \"%s\"" m.SelectOne
         sprintf "      Insert = \"%s\"" m.Insert
         sprintf "      HasCreateTs = %s" (if m.HasCreateTs then "true" else "false")
+        sprintf "      HasUpdateTs = %s" (if m.HasUpdateTs then "true" else "false")
         sprintf "      Update = \"%s\"" m.Update
         sprintf "      Delete = \"%s\"" m.Delete
         sprintf "      MutableFields = [%s] }" mutableFieldsStr ]
@@ -365,6 +372,7 @@ let generateAdminFs (metas: TableMeta list) : string =
     emit "    SelectOne: string"
     emit "    Insert: string"
     emit "    HasCreateTs: bool"
+    emit "    HasUpdateTs: bool"
     emit "    Update: string"
     emit "    Delete: string"
     emit "    MutableFields: string list"
