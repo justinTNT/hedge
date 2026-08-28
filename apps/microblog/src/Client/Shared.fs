@@ -2,9 +2,42 @@ module Client.Shared
 
 open Feliz
 open Feliz.Router
+open Fable.Core
 open Hedge.Interface
 open Models.Api
 open Client.Types
+
+// -- Deployment configuration --
+// Injected into the page at build time (see vite.config.js). Defaults keep a
+// root-mounted darwin.news build behaving exactly as before.
+
+/// Sub-path this deployment is served under, e.g. "/st". Empty when at the root.
+[<Emit("window.BASE_PATH || ''")>]
+let basePath : string = jsNative
+
+[<Emit("window.SITE_LOGO || '/public/darwinnews.png'")>]
+let private siteLogo : string = jsNative
+
+let private baseSegments =
+    basePath.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
+
+/// Drop the deployment prefix from router segments, so route matching is
+/// written as though the app were always mounted at the root.
+let stripBase (segments: string list) =
+    let rec strip prefix rest =
+        match prefix, rest with
+        | [], remaining -> remaining
+        | p :: ps, r :: rs when p = r -> strip ps rs
+        | _ -> segments
+    strip baseSegments segments
+
+/// Navigate to app-relative segments, re-applying the deployment prefix.
+let navigateTo (segments: string list) =
+    Router.navigatePath (List.toArray (baseSegments @ segments))
+
+/// Navigate to an app-relative path string, e.g. "/" or "/some-slug".
+let navigateToPath (path: string) =
+    navigateTo (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList)
 
 let private tagColors = [| "#e74c3c"; "#3498db"; "#2ecc71"; "#9b59b6"; "#f39c12"; "#1abc9c"; "#e91e63"; "#00bcd4" |]
 
@@ -23,7 +56,7 @@ let tagPill (tag: string) =
         prop.text tag
         prop.onClick (fun e ->
             e.stopPropagation ()
-            Router.navigatePath ("tag", tag)
+            navigateTo [ "tag"; tag ]
         )
     ]
 
@@ -50,7 +83,7 @@ let feedItem (item: GetFeed.FeedItem) =
     Html.article [
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
-        prop.onClick (fun _ -> Router.navigatePath itemPath)
+        prop.onClick (fun _ -> navigateTo [ itemPath ])
         prop.children [
             Html.h2 [ prop.text item.Title ]
             match item.Extract with
@@ -197,10 +230,10 @@ let navWithSession (model: Model) dispatch =
         prop.children [
             Html.a [
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> Router.navigatePath "")
+                prop.onClick (fun _ -> navigateTo [])
                 prop.children [
                   Html.img [
-                    prop.src "/public/darwinnews.png"
+                    prop.src (basePath + siteLogo)
                   ]
                 ]
             ]
@@ -214,10 +247,10 @@ let nav =
             Html.a [
                 prop.text "Hedge"
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> Router.navigatePath "")
+                prop.onClick (fun _ -> navigateTo [])
                 prop.children [
                   Html.img [
-                    prop.src "/public/darwinnews.png"
+                    prop.src (basePath + siteLogo)
                   ]
                 ]
             ]

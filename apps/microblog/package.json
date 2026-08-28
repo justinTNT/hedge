@@ -11,7 +11,7 @@
     "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
     "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
-    "build:site": "vite build && mkdir -p _site/public _site/lib && cp -r public/* _site/public/ && cp lib/guest-session.js _site/lib/",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
     "deploy": "npm run build && wrangler deploy",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
@@ -22,7 +22,9 @@
     "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run",
     "build:extension": "cd extension && node build.js chrome",
     "build:extension:firefox": "cd extension && node build.js firefox",
-    "build:extension:all": "npm run build:extension && npm run build:extension:firefox"
+    "build:extension:all": "npm run build:extension && npm run build:extension:firefox",
+    "deploy:wtfail": "SITE_TITLE=\"WT.Fail\" ADMIN_TITLE=\"WT.Fail Admin\" SITE_LOGO=\"/public/wtfail.png\" npm run build && wrangler deploy --env wtfail",
+    "deploy:idealist": "BASE_PATH=/st SITE_TITLE=\"id-ea.li/st\" ADMIN_TITLE=\"id-eAdmin\" SITE_LOGO=\"/public/idealist.jpg\" npm run build && wrangler deploy --env idealist"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

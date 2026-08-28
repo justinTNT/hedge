@@ -92,7 +92,7 @@ let init () : Model * Cmd<Msg> =
             // PendingClaimFocus to open the switcher pre-selected
             Cmd.batch [
                 loadIdentitiesCmd
-                Cmd.ofEffect (fun _ -> Router.navigatePath claimReturnTo)
+                Cmd.ofEffect (fun _ -> Shared.navigateToPath claimReturnTo)
             ]
         | ["tag"; name] -> Cmd.ofMsg (LoadTagItems name)
         | ["new"] -> Cmd.batch [ Cmd.ofMsg LoadFeed; NewItem.initOwnerCommentEditorCmd ]
@@ -131,7 +131,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             Cmd.batch [
                 cleanupCmd
                 loadIdentitiesCmd
-                Cmd.ofEffect (fun _ -> Router.navigatePath claimReturnTo)
+                Cmd.ofEffect (fun _ -> Shared.navigateToPath claimReturnTo)
             ]
         | _ ->
         // An OAuth return sets PendingClaimFocus; consume it here so the
@@ -273,7 +273,7 @@ open Elmish.React
 let view model dispatch =
     React.router [
         router.pathMode
-        router.onUrlChanged (UrlChanged >> dispatch)
+        router.onUrlChanged (Shared.stripBase >> UrlChanged >> dispatch)
         router.children [ appView model dispatch ]
     ]
 

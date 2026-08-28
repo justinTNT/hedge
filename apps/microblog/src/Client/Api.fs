@@ -7,16 +7,21 @@ open Thoth.Json
 
 /// Framework HTTP helpers — typed API functions are in generated/ClientGen.fs.
 
+/// Sub-path this deployment is served under, e.g. "/st". Empty when at the
+/// root. Every request is prefixed so the app works mounted anywhere.
+[<Emit("window.BASE_PATH || ''")>]
+let basePath : string = jsNative
+
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch url []
+        let! response = fetch (basePath + url) []
         let! text = response.text()
         return Decode.fromString decoder text
     }
 
 let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch url [
+        let! response = fetch (basePath + url) [
             Method HttpMethod.POST
             requestHeaders [ ContentType "application/json" ]
             Body (BodyInit.Case3 body)
@@ -27,7 +32,7 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
 
 let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> =
     promise {
-        let! response = fetch url [
+        let! response = fetch (basePath + url) [
             Method HttpMethod.POST
             requestHeaders [ ContentType "application/json" ]
             Body (BodyInit.Case3 body)
@@ -40,14 +45,14 @@ let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> 
 
 let fetchJsonRaw (url: string) : JS.Promise<obj> =
     promise {
-        let! response = fetch url []
+        let! response = fetch (basePath + url) []
         let! text = response.text()
         return JS.JSON.parse text
     }
 
 // -- WebSocket --
 
-[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host")>]
+[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
 let wsBase () : string = jsNative
 
 [<Emit("""

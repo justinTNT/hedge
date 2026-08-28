@@ -21,6 +21,10 @@ let private decodeAdminType : Decoder<AdminType> =
 let private decodeTypesResponse : Decoder<AdminType list> =
     Decode.field "types" (Decode.list decodeAdminType)
 
+/// Sub-path this admin is served under, e.g. "/st". Empty when at the root.
+[<Emit("window.BASE_PATH || ''")>]
+let private basePath : string = jsNative
+
 /// Fetch with admin key header.
 let private adminFetch (url: string) (method: HttpMethod) (key: string) (body: string option) : JS.Promise<string> =
     promise {
@@ -35,14 +39,14 @@ let private adminFetch (url: string) (method: HttpMethod) (key: string) (body: s
             match body with
             | Some b -> Body (BodyInit.Case3 b) :: headers
             | None -> headers
-        let! response = fetch url props
+        let! response = fetch (basePath + url) props
         return! response.text()
     }
 
 /// Simple GET (no auth needed for types endpoint).
 let private fetchJson (url: string) : JS.Promise<string> =
     promise {
-        let! response = fetch url []
+        let! response = fetch (basePath + url) []
         return! response.text()
     }
 

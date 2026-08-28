@@ -42,5 +42,75 @@ html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
 # Environment variables
+# ADMIN_KEY is deliberately absent: a plain-text var here would override a
+# secret of the same name on deploy. Local dev reads it from .dev.vars,
+# every deployed environment from its own dashboard secret.
 [vars]
 ENVIRONMENT = "production"
+
+# ============================================================
+# Tenant deployments
+#
+# The branch decides *which code*; --env decides *where it goes*:
+#   npm run deploy            -> hedge     darwin.news    (from main)
+#   npm run deploy:wtfail     -> fail      wt.fail        (from main)
+#   npm run deploy:idealist   -> idealist  id-ea.li/st    (from alerts)
+#
+# Bindings are NOT inherited by environments, so each block repeats them.
+# Branding and BASE_PATH are build-time settings — see the npm scripts.
+# ============================================================
+
+# -- wt.fail (worker "fail") --
+[env.wtfail]
+name = "fail"
+
+[env.wtfail.vars]
+ENVIRONMENT = "production"
+
+[[env.wtfail.d1_databases]]
+binding = "DB"
+database_name = "wt-fail-db"
+database_id = "bfa6ed44-c70a-4f5f-b578-7c4dbd1515b7"
+
+[[env.wtfail.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "wt-fail-blobs"
+
+[env.wtfail.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.wtfail.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# -- id-ea.li/st (worker "idealist"), served under a sub-path --
+[env.idealist]
+name = "idealist"
+
+[env.idealist.vars]
+ENVIRONMENT = "production"
+BASE_PATH = "/st"
+
+[[env.idealist.d1_databases]]
+binding = "DB"
+database_name = "idealist-db"
+database_id = "1e9f8d42-1785-4780-befa-d955a895dba7"
+
+[[env.idealist.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "idealist-blobs"
+
+[env.idealist.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.idealist.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
