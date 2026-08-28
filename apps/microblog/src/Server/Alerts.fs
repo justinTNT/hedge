@@ -34,8 +34,20 @@ type FeedEntry =
       Snippet: string }
 
 let private stripTags (s: string) : string = Regex.Replace(s, "<[^>]*>", "")
-let private clean (s: string) : string = (s |> decodeEntities |> stripTags |> decodeEntities).Trim()
+/// Strip twice: entity-encoded markup (`&lt;p&gt;`) only becomes real tags on
+/// the *second* decode, so a single decode→strip pass leaves it behind as
+/// literal text that would later render as visible HTML.
+let private clean (s: string) : string =
+    (s |> decodeEntities |> stripTags |> decodeEntities |> stripTags).Trim()
 let private truncate (n: int) (s: string) : string = if s.Length > n then s.[.. n - 1] else s
+
+/// Wrap plain text as a TipTap document — the shape every other RichContent
+/// value in the database has.
+let private asRichText (text: string) : string =
+    if text = "" then """{"type":"doc","content":[{"type":"paragraph"}]}"""
+    else
+        sprintf """{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":%s}]}]}"""
+            (JS.JSON.stringify (box text))
 
 let private group1 (pattern: string) (input: string) : string option =
     let m = Regex.Match(input, pattern)
@@ -118,7 +130,7 @@ let promoteApproved (env: Env) : JS.Promise<unit> =
                     let topic = rowStr row "topic"
                     let create : MicroblogItemCreate =
                         { Title = p.Title; Link = Some p.Link; Image = None
-                          Extract = Some p.Snippet; OwnerComment = p.OwnerComment
+                          Extract = Some (asRichText p.Snippet); OwnerComment = p.OwnerComment
                           Slug = None; ViewCount = 0; OriginEntryKey = Some p.EntryKey }
                     let it = Items.createItemStmts env.DB create [ topic ]
                     let! _ = env.DB.batch(it.Stmts)
