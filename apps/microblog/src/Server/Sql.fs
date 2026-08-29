@@ -108,6 +108,11 @@ let reassignComments = """
 let itemBySlug =
     "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, origin_entry_key, deleted_at FROM items WHERE slug = ?"
 
+/// Just the columns social previews need. Deliberately narrow (and not
+/// SELECT *) so it stays valid on branches that add item columns.
+let itemMetaBySlugOrId =
+    "SELECT id, title, image, extract, slug FROM items WHERE (slug = ? OR id = ?) AND deleted_at IS NULL"
+
 let tagsForItem =
     "SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"
 
