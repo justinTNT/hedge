@@ -13,6 +13,7 @@
     <Compile Include="AdminConfig.fs" />
     <Compile Include="Admin.fs" />
     <Compile Include="generated/Routes.fs" />
+    <Compile Include="Meta.fs" />
     <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>

@@ -25,7 +25,12 @@ let exports = createWorker {
         let e = env :?> Env
         match authRoutes request e with
         | Some p -> Some p
-        | None -> Server.Routes.dispatch request e ctx
+        | None ->
+        // After the API routes, before the framework's SPA fallback: item URLs
+        // get the shell with Open Graph tags, everything else falls through.
+        match Server.Routes.dispatch request e ctx with
+        | Some p -> Some p
+        | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->
         Server.Admin.handleRequest request (env :?> Env) route)
     OAuth = Some (fun env ->
