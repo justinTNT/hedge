@@ -273,7 +273,7 @@ open Elmish.React
 let view model dispatch =
     React.router [
         router.pathMode
-        router.onUrlChanged (Shared.stripBase >> UrlChanged >> dispatch)
+        router.onUrlChanged (Shared.routeOf >> UrlChanged >> dispatch)
         router.children [ appView model dispatch ]
     ]
 
