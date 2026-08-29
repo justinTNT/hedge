@@ -31,6 +31,18 @@ let stripBase (segments: string list) =
         | _ -> segments
     strip baseSegments segments
 
+/// Route segments as the app should match them.
+///
+/// Feliz.Router appends a query string as its own segment, so
+/// `/some-slug?fbclid=...` arrives as [ "some-slug"; "?fbclid=..." ] and misses
+/// every single-segment route — shared links land on the feed instead of the
+/// item. Query params are read from window.location.search, never from the
+/// segments, so dropping it here is lossless.
+let routeOf (segments: string list) =
+    segments
+    |> List.filter (fun s -> not (s.StartsWith "?"))
+    |> stripBase
+
 /// Navigate to app-relative segments, re-applying the deployment prefix.
 let navigateTo (segments: string list) =
     Router.navigatePath (List.toArray (baseSegments @ segments))
