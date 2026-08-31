@@ -32,6 +32,15 @@ let private esc (s: string) : string = jsNative
 [<Emit("$0.BASE_PATH || ''")>]
 let private basePathOf (env: obj) : string = jsNative
 
+/// Facebook Page attribution, per tenant — unlike og:site_name this can't be
+/// derived from the host, since each site would need its own Page. Absent on
+/// sites without one, which then emit no attribution tags at all.
+[<Emit("$0.FB_PAGE_URL || ''")>]
+let private fbPageUrlOf (env: obj) : string = jsNative
+
+[<Emit("$0.FB_PAGE_ID || ''")>]
+let private fbPageIdOf (env: obj) : string = jsNative
+
 [<Emit("new URL($0).origin")>]
 let private originOf (url: string) : string = jsNative
 
@@ -63,7 +72,7 @@ let private truncate (n: int) (s: string) =
 /// already refuses to mint a slug colliding with any of these.
 let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin" ]
 
-let private metaTags (siteName: string) (title: string) (description: string) (image: string option) (url: string) =
+let private metaTags (siteName: string) (fbPageUrl: string) (fbPageId: string) (title: string) (description: string) (image: string option) (url: string) =
     let tag prop content = sprintf """<meta property="%s" content="%s">""" prop (esc content)
     [ yield tag "og:type" "article"
       yield tag "og:site_name" siteName
@@ -77,6 +86,11 @@ let private metaTags (siteName: string) (title: string) (description: string) (i
           yield """<meta name="twitter:card" content="summary_large_image">"""
       | None ->
           yield """<meta name="twitter:card" content="summary">"""
+      // Facebook resolves the domain to a Page for its "About this content"
+      // panel. A Page that later vanishes degrades to today's behaviour: the
+      // panel reports it couldn't find one. Nothing user-facing breaks.
+      if fbPageUrl <> "" then yield tag "article:publisher" fbPageUrl
+      if fbPageId <> "" then yield sprintf """<meta property="fb:pages" content="%s">""" (esc fbPageId)
       yield sprintf """<meta name="twitter:title" content="%s">""" (esc title)
       if description <> "" then
           yield sprintf """<meta name="twitter:description" content="%s">""" (esc description) ]
@@ -114,7 +128,8 @@ let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
                     let canonical =
                         sprintf "%s%s/%s" (originOf request.url) (basePathOf (box env)) slug
                     return rewriteHead shell title
-                            (metaTags (hostOf request.url) title description image canonical)
+                            (metaTags (hostOf request.url) (fbPageUrlOf (box env)) (fbPageIdOf (box env))
+                                      title description image canonical)
             })
         | _ -> None
     | _ -> None
