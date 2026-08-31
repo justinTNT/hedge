@@ -66,6 +66,10 @@ name = "fail"
 
 [env.wtfail.vars]
 ENVIRONMENT = "production"
+# Facebook Page attribution, for the "About this content" panel. Only this
+# tenant has a Page; the other envs omit these and emit no attribution tags.
+FB_PAGE_URL = "https://www.facebook.com/profile.php?id=61594154963067"
+FB_PAGE_ID = "61594154963067"
 
 [[env.wtfail.d1_databases]]
 binding = "DB"
