@@ -72,6 +72,7 @@ let init () : Model * Cmd<Msg> =
     let model =
         { Route = route
           Feed = None
+          FeedLoadingMore = false
           CurrentItem = None
           TagItems = None
           IsLoading = false
@@ -152,7 +153,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | DismissError ->
         { model with Error = None }, Cmd.none
 
-    | LoadFeed | GotFeed _ ->
+    | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
         Feed.update msg model
 
     | LoadItem _ | GotItem _ | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _

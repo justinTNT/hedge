@@ -15,15 +15,15 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     | GET path when matchPath "/api/tags" path = Some (Exact "/api/tags") ->
         Some (Server.Handlers.getTags env)
 
-    | GET path when matchPath "/api/feed" path = Some (Exact "/api/feed") ->
-        Some (Server.Handlers.getFeed env)
-
     | GET path ->
         match matchPath "/api/tags/:id/items" path with
         | Some (WithParam (_, id)) -> Some (Server.Handlers.getItemsByTag id env)
         | _ ->
         match matchPath "/api/item/:id" path with
         | Some (WithParam (_, id)) -> Some (Server.Handlers.getItem id env)
+        | _ ->
+        match matchPath "/api/feed/:id" path with
+        | Some (WithParam (_, id)) -> Some (Server.Handlers.getFeed id env)
         | _ ->
         None
 

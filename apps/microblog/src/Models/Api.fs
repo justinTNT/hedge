@@ -15,9 +15,12 @@ module GetFeed =
 
     type Response = {
         Items: FeedItem list
+        NextCursor: string option
     }
 
-    let endpoint : Get<Response> = Get "/api/feed"
+    // Cursor-paginated (infinite scroll). Page 1 uses the sentinel "start";
+    // subsequent pages pass the previous response's NextCursor token.
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/feed/%s")
 
 module SubmitComment =
     type CommentItem = {

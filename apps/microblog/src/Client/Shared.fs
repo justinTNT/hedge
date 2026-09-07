@@ -18,6 +18,44 @@ let basePath : string = jsNative
 [<Emit("window.SITE_LOGO || '/public/darwinnews.png'")>]
 let private siteLogo : string = jsNative
 
+/// Short human date from a Unix-seconds timestamp (created_at is stored in seconds).
+[<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
+let formatDate (ts: int) : string = jsNative
+
+/// Install a global scroll/resize watcher (once) that calls `onNear` whenever the
+/// sentinel element sits within 600px of the viewport bottom. A scroll listener
+/// (unlike IntersectionObserver, which only fires on enter/exit transitions)
+/// re-checks on every scroll, so it keeps loading reliably even when a freshly
+/// appended page is still short. `onNear` (LoadMoreFeed) self-guards, so firing
+/// often is harmless. Idempotent via a window flag.
+[<Emit("""(function(id, cb){
+  if(window.__hedgeScrollWatch){ return; }
+  window.__hedgeScrollWatch = true;
+  function check(){
+    var el = document.getElementById(id);
+    if(!el){ return; }
+    if(el.getBoundingClientRect().top < window.innerHeight + 600){ cb(); }
+  }
+  window.addEventListener('scroll', check, { passive: true });
+  window.addEventListener('resize', check, { passive: true });
+})($0, $1)""")>]
+let watchScroll (elementId: string) (onNear: unit -> unit) : unit = jsNative
+
+/// After the next paint, if the sentinel sits within (viewport + 400px), call
+/// `onMore`. Drives "fill to viewport" so a short feed keeps loading pages
+/// without a scroll gesture (the IntersectionObserver above then takes over for
+/// subsequent scrolls). Runs post-paint so it measures the freshly-rendered DOM.
+[<Emit("""(function(id, cb){
+  var tries = 0;
+  function go(){
+    var el = document.getElementById(id);
+    if(!el){ if(tries++ < 20){ setTimeout(go, 50); } return; }  // wait out React commit
+    if(el.getBoundingClientRect().top < window.innerHeight + 400){ cb(); }
+  }
+  requestAnimationFrame(go);
+})($0, $1)""")>]
+let loadMoreIfSentinelVisible (elementId: string) (onMore: unit -> unit) : unit = jsNative
+
 let private baseSegments =
     basePath.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
@@ -93,6 +131,7 @@ let error (msg: string) dispatch =
 let feedItem (item: GetFeed.FeedItem) =
     let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
+        prop.key item.Id
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
         prop.onClick (fun _ -> navigateTo [ itemPath ])

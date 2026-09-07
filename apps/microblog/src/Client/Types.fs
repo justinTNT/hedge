@@ -22,6 +22,9 @@ type IdentityListItem = {
 type Model = {
     Route: string list
     Feed: GetFeed.Response option
+    /// True while a subsequent (infinite-scroll) page is in flight, so the
+    /// scroll sentinel can't fire overlapping requests.
+    FeedLoadingMore: bool
     CurrentItem: GetItem.Response option
     TagItems: GetItemsByTag.Response option
     IsLoading: bool
@@ -45,6 +48,8 @@ type Msg =
     | UrlChanged of string list
     | LoadFeed
     | GotFeed of Result<GetFeed.Response, string>
+    | LoadMoreFeed
+    | GotMoreFeed of Result<GetFeed.Response, string>
     | LoadItem of string
     | GotItem of Result<GetItem.Response, string>
     | DismissError

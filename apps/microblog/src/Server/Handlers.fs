@@ -331,13 +331,33 @@ let private toCommentItem (pictureOf: string -> string) (r: ItemCommentRow) : Su
       Content = RichContent r.Content
       Timestamp = r.CreatedAt }
 
-let getFeed (env: Env) : JS.Promise<WorkerResponse> =
+let private feedPageSize = 10
+
+let getFeed (cursor: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let! result = selectMicroblogItems(env.DB).all()
-        let items = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        // Fetch pageSize+1 to know whether a further page exists without a count query.
+        let stmt =
+            if cursor = "start" || cursor = "" then
+                bind (env.DB.prepare Sql.feedFirstPage) [| box (feedPageSize + 1) |]
+            else
+                let sep = cursor.IndexOf('_')
+                let ts = int (cursor.Substring(0, sep))
+                let id = cursor.Substring(sep + 1)
+                bind (env.DB.prepare Sql.feedAfterCursor) [| box ts; box ts; box id; box (feedPageSize + 1) |]
+        let! result = stmt.all()
+        let rows = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        let hasMore = List.length rows > feedPageSize
+        let pageItems = if hasMore then List.truncate feedPageSize rows else rows
+        let nextCursor =
+            if hasMore then
+                match List.tryLast pageItems with
+                | Some last -> Some (sprintf "%d_%s" last.Timestamp last.Id)
+                | None -> None
+            else None
         let body =
             Encode.object [
-                "items", Encode.list (List.map Encode.feedItem items)
+                "items", Encode.list (List.map Encode.feedItem pageItems)
+                "nextCursor", (match nextCursor with Some c -> Encode.string c | None -> Encode.nil)
             ] |> Encode.toString 0
         return okJson body
     }

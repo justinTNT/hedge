@@ -27,8 +27,8 @@ let submitComment (req: SubmitComment.Request) =
     let body = Encode.submitCommentReq req |> Encode.toString 0
     postJson "/api/comment" body Decode.submitCommentResponse
 
-let getFeed () =
-    fetchJson "/api/feed" Decode.getFeedResponse
+let getFeed (id: string) =
+    fetchJson (sprintf "/api/feed/%s" id) Decode.getFeedResponse
 
 // --- WebSocket Events ---
 
