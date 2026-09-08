@@ -124,14 +124,14 @@ body.tenant-justat .js-sidebar {
   /* lime masthead + floral (logo-back, 323px) layered over a cream fill so the
      lower sections stay on paper rather than the dark frame */
   background: url(/public/justat/logo-back.png) no-repeat top center, #e7e4cc;
-  min-height: 480px;
+  min-height: 100%;
 }
 body.tenant-justat .js-masthead { padding: 52px 0 0; height: 100px; }
 body.tenant-justat .js-masthead a {
   display: block; margin-left: 21px;
   font: bolder 24pt Arial, Helvetica, sans-serif; color: #edeabc;
 }
-body.tenant-justat .js-sections { padding: 22px 22px 22px 24px; }
+body.tenant-justat .js-sections { padding: 40px 22px 22px 24px; }
 body.tenant-justat .js-sections section {
   padding: 6px 8px 18px 0;
   background: url(/public/justat/sidebar-divider.gif) no-repeat bottom right;
