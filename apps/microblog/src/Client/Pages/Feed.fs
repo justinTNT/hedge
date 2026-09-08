@@ -19,6 +19,10 @@ let private fillCmd : Cmd<Msg> =
 let private continueCmd (next: bool) : Cmd<Msg> =
     if next then Cmd.batch [ watchCmd; fillCmd ] else Cmd.none
 
+// Fit headlines to column width (usba.se BigText gimmick; no-op for other tenants).
+let private fitCmd : Cmd<Msg> =
+    Cmd.ofEffect (fun _ -> fitHeadlines ())
+
 let update msg model =
     match msg with
     | LoadFeed ->
@@ -27,7 +31,7 @@ let update msg model =
 
     | GotFeed (Ok response) ->
         { model with Feed = Some response; IsLoading = false; Error = None },
-        continueCmd response.NextCursor.IsSome
+        Cmd.batch [ continueCmd response.NextCursor.IsSome; fitCmd ]
 
     | GotFeed (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -48,7 +52,7 @@ let update msg model =
             | Some existing -> { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
             | None -> response
         { model with Feed = Some merged; FeedLoadingMore = false },
-        continueCmd merged.NextCursor.IsSome
+        Cmd.batch [ continueCmd merged.NextCursor.IsSome; fitCmd ]
 
     | GotMoreFeed (Error _) ->
         // Leave the loaded items in place; a later scroll can retry.

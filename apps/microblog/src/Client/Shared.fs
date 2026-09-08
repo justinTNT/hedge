@@ -61,6 +61,30 @@ let loadMoreIfSentinelVisible (elementId: string) (onMore: unit -> unit) : unit 
 [<Emit("$0.target.style.display = 'none'")>]
 let private hideBrokenImg (e: obj) : unit = jsNative
 
+/// BigText-style headline fitting (usba.se only): scale each feed headline so it
+/// fills the column width, the way the old usba.se did with the jQuery BigText
+/// plugin. Re-fits all headlines (idempotent) and installs a one-time resize
+/// listener; a title too long to fit at the floor size is left to wrap.
+[<Emit("""(function(){
+  function fitOne(h){
+    h.style.whiteSpace='nowrap'; h.style.fontSize='';
+    var cw=h.clientWidth, base=parseFloat(getComputedStyle(h).fontSize)||32, tw=h.scrollWidth;
+    if(cw>0 && tw>0){ h.style.fontSize=Math.max(22, Math.min(base*cw/tw, 110))+'px'; }
+    if(h.scrollWidth > cw+2){ h.style.whiteSpace='normal'; }   // too long even scaled -> wrap
+  }
+  function fit(){
+    if(!document.body.classList.contains('tenant-usbase')) return;
+    var hs=document.querySelectorAll('.feed-item h2');
+    if(!hs.length) return;
+    if(hs[0].clientWidth===0){ setTimeout(fit,60); return; }   // wait for layout
+    hs.forEach(fitOne);
+  }
+  requestAnimationFrame(fit);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fit); }  // re-fit once League Gothic loads
+  if(!window.__hedgeFitResize){ window.__hedgeFitResize=true; window.addEventListener('resize', fit, {passive:true}); }
+})()""")>]
+let fitHeadlines () : unit = jsNative
+
 let private baseSegments =
     basePath.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
