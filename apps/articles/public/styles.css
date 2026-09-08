@@ -96,7 +96,7 @@ body.tenant-justat .fd-day { display: block; font: italic 1.5rem Georgia, serif;
    corner + drop shadow are baked in; stretched to each card's height. */
 body.tenant-justat .feed-item {
   position: relative;
-  margin: -2em -1em 1em -2.4em;
+  margin: -3em -1em 0em -2.4em;
   padding: 30px 46px 46px 34px;                            /* keep text off the baked-in curl + bottom shadow */
   border: none;
   background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
