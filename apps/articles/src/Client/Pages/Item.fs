@@ -211,12 +211,10 @@ let view (response: GetArticle.Response) (model: Model) dispatch =
         prop.className "item-detail article-detail"
         prop.children [
             Html.h1 [ prop.className "article-title"; prop.text article.Title ]
-            match article.Image with
-            | Some imgUrl -> Html.img [ prop.src imgUrl; prop.className "item-image" ]
-            | None -> Html.none
-            match article.Teaser with
-            | Some teaser -> richContent "teaser" teaser
-            | None -> Html.none
+            // The article body is self-contained (its own images). The hero Image
+            // is only for the feed thumbnail, and the teaser is the list preview —
+            // showing either here would double the body's opening/image (old
+            // showpost.htm rendered title + body alone).
             richContent "article-body" article.Body
             Html.div [
                 prop.className "comments"

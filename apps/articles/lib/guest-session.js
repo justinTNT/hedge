@@ -119,10 +119,12 @@
         return p;
       } catch(_) {}
     }
-    var c = pick(colors);
-    var e = pick(emojis);
-    var n = { guestId: 'guest-' + Math.random().toString(36).substring(2,10),
-              displayName: pick(adjectives) + ' ' + c.name + ' ' + e.n,
+    var guestId = 'guest-' + Math.random().toString(36).substring(2,10);
+    var h = hash(guestId);
+    var c = pickH(colors, h);
+    var e = pickH(emojis, h >>> 5);
+    var n = { guestId: guestId,
+              displayName: pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n,
               avatarHex: c.hex,
               avatarChar: e.c,
               avatarUrl: makeAvatar(c.hex, e.c),
@@ -130,5 +132,55 @@
     localStorage.setItem(KEY, JSON.stringify(n));
     return n;
   }
-  window.HedgeGuest = { getSession: getSession };
+  function avatarForAuthor(author) {
+    var parts = (author || '').split(' ');
+    if (parts.length >= 3) {
+      var colorName = parts[1];
+      var emojiName = parts.slice(2).join(' ');
+      var c = colors.find(function(x) { return x.name === colorName; });
+      var e = emojis.find(function(x) { return x.n === emojiName; });
+      if (c && e) return makeAvatar(c.hex, e.c);
+    }
+    var h = hash(author || '');
+    return makeAvatar(pickH(colors, h).hex, pickH(emojis, h >>> 5).c);
+  }
+  function syncSession() {
+    var basePath = window.BASE_PATH || '';
+    return fetch(basePath + '/api/auth/me', { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.guest) {
+          var current = getSession();
+          if (current.guestId !== data.guest.guestId) {
+            var h = hash(data.guest.guestId);
+            var c = pickH(colors, h);
+            var e = pickH(emojis, h >>> 5);
+            current = {
+              guestId: data.guest.guestId,
+              displayName: pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n,
+              avatarHex: c.hex,
+              avatarChar: e.c,
+              avatarUrl: makeAvatar(c.hex, e.c),
+              createdAt: Math.floor(Date.now() / 1000)
+            };
+          }
+          // Overlay identity if present
+          if (data.guest.identity) {
+            var id = data.guest.identity;
+            current.identity = id;
+            current.displayName = id.name;
+            // Don't fall back to the cached avatarUrl — it may belong to a
+            // previously active identity. Derive from the name like comments do.
+            current.avatarUrl = id.picture || avatarForAuthor(id.name);
+          } else {
+            current.identity = null;
+          }
+          localStorage.setItem(KEY, JSON.stringify(current));
+          return current;
+        }
+        return getSession();
+      })
+      .catch(function() { return getSession(); });
+  }
+  window.HedgeGuest = { getSession: getSession, avatarForAuthor: avatarForAuthor, syncSession: syncSession };
 })();
