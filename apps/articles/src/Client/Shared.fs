@@ -42,6 +42,9 @@ let formatMonth (ts: int) : string = jsNative
 [<Emit("new Date($0 * 1000).getDate()")>]
 let formatDay (ts: int) : int = jsNative
 
+[<Emit("new Date($0 * 1000).getFullYear()")>]
+let formatYear (ts: int) : int = jsNative
+
 /// Global scroll/resize watcher (once) firing `onNear` when the sentinel sits
 /// within 600px of the viewport bottom. `onNear` self-guards.
 [<Emit("""(function(id, cb){
@@ -165,6 +168,7 @@ let dayDivider (ts: int) =
                 prop.children [
                     Html.span [ prop.className "fd-month"; prop.text (formatMonth ts) ]
                     Html.span [ prop.className "fd-day"; prop.text (string (formatDay ts)) ]
+                    Html.span [ prop.className "fd-year"; prop.text (string (formatYear ts)) ]
                 ]
             ]
         ]
