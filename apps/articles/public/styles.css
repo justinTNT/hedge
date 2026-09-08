@@ -92,15 +92,15 @@ body.tenant-justat .feed-day-label {
 body.tenant-justat .fd-month { display: block; font: normal .72rem Georgia, serif; text-transform: uppercase; line-height: 1; }
 body.tenant-justat .fd-day { display: block; font: italic 1.5rem Georgia, serif; line-height: 1.1; }
 
-/* posts as cream crumpled-paper cards with a curled top-right corner + shadow */
+/* posts on the real crumpled-paper card (featured.png) — its curled top-right
+   corner + drop shadow are baked in; stretched to each card's height. */
 body.tenant-justat .feed-item {
   position: relative;
   margin: -2em -1em 1em -2.4em;
-  padding: 26px 34px 30px;
+  padding: 30px 46px 46px 34px;                            /* keep text off the baked-in curl + bottom shadow */
   border: none;
-  background: #e9e7cf;
-  border-radius: 0 90px 4px 4px / 0 0 4px 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.30), 0 0 40px rgba(0,0,0,0.05) inset;
+  background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
+  background-size: 100% 100%;
 }
 body.tenant-justat .feed-item h2 {
   font: bold 1.9rem/1.15 Georgia, "Times New Roman", Times, serif;
