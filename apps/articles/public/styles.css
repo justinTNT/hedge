@@ -1,0 +1,10 @@
+/* Base styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
+.app { max-width: 800px; margin: 0 auto; padding: 1rem; }
+header { border-bottom: 1px solid #eee; padding-bottom: 1rem; margin-bottom: 1rem; }
+h1 { font-size: 1.5rem; }
+.loading { color: #666; }
+.error { background: #fee; border: 1px solid #fcc; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+.feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
+.feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; }

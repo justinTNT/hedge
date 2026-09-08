@@ -1,0 +1,42 @@
+name = "articles"
+main = "worker-entry.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local development
+[dev]
+port = 8787
+local_protocol = "http"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "articles-db"
+database_id = "local"  # Replace with real ID after `wrangler d1 create articles-db`
+
+# Durable Objects
+[durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["EventHub"]
+
+# R2 blob storage
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "articles-blobs"
+
+# Static assets
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
+ADMIN_KEY = "dev-admin-key"
