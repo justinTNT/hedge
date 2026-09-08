@@ -28,7 +28,9 @@ function siteConfig() {
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)
         .replace('<head>', `<head>\n    ${injected}`)
-        .replace('<body>', siteSlug ? `<body class="tenant-${siteSlug}">` : '<body>');
+        // Tenant theme is for the public site only — never the shared admin tool,
+        // or the tenant's marketing CSS leaks onto every admin control.
+        .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
     }
   };
 }
