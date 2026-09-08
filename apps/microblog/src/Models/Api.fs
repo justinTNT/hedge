@@ -104,8 +104,10 @@ module GetItemsByTag =
     type Response = {
         Tag: string
         Items: GetFeed.FeedItem list
+        NextCursor: string option
     }
 
+    // Single param carries "tag" or "tag~<cursor>" (GetOne allows only one).
     let endpoint : GetOne<Response> = GetOne (sprintf "/api/tags/%s/items")
 
 module Events =

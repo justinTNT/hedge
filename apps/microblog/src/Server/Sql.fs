@@ -145,13 +145,24 @@ let insertComment = """
 let tagNames =
     "SELECT name FROM tags ORDER BY name"
 
+// Cursor-paginated tag feed (bind: [tag, limit]).
 let itemsByTag = """
     SELECT i.*
     FROM items i
     JOIN item_tags it ON i.id = it.item_id
     JOIN tags t ON it.tag_id = t.id
-    WHERE t.name = ?
-    ORDER BY i.created_at DESC LIMIT 50"""
+    WHERE t.name = ? AND i.deleted_at IS NULL
+    ORDER BY i.created_at DESC, i.id DESC LIMIT ?"""
+
+// Bind: [tag, cursorTs, cursorTs, cursorId, limit].
+let itemsByTagAfter = """
+    SELECT i.*
+    FROM items i
+    JOIN item_tags it ON i.id = it.item_id
+    JOIN tags t ON it.tag_id = t.id
+    WHERE t.name = ? AND i.deleted_at IS NULL
+      AND (i.created_at < ? OR (i.created_at = ? AND i.id < ?))
+    ORDER BY i.created_at DESC, i.id DESC LIMIT ?"""
 
 let insertTag =
     "INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?, ?, ?)"

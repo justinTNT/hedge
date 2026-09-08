@@ -75,6 +75,7 @@ let init () : Model * Cmd<Msg> =
           FeedLoadingMore = false
           CurrentItem = None
           TagItems = None
+          TagLoadingMore = false
           IsLoading = false
           Error = None
           GuestSession = GuestSession.getSession ()
@@ -163,7 +164,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SetNewItemTitle _ | SetNewItemLink _ | SetNewItemTags _ | SubmitItem | GotSubmitItem _ ->
         NewItem.update msg model
 
-    | LoadTagItems _ | GotTagItems _ ->
+    | LoadTagItems _ | GotTagItems _ | LoadMoreTagItems | GotMoreTagItems _ ->
         TagItems.update msg model
 
     | GotSessionSync session ->

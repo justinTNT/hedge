@@ -29,8 +29,9 @@ let formatDate (ts: int) : string = jsNative
 /// appended page is still short. `onNear` (LoadMoreFeed) self-guards, so firing
 /// often is harmless. Idempotent via a window flag.
 [<Emit("""(function(id, cb){
-  if(window.__hedgeScrollWatch){ return; }
-  window.__hedgeScrollWatch = true;
+  if(!window.__hedgeWatchers){ window.__hedgeWatchers = {}; }
+  if(window.__hedgeWatchers[id]){ return; }
+  window.__hedgeWatchers[id] = true;
   function check(){
     var el = document.getElementById(id);
     if(!el){ return; }

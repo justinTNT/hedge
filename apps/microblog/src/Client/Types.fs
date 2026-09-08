@@ -27,6 +27,7 @@ type Model = {
     FeedLoadingMore: bool
     CurrentItem: GetItem.Response option
     TagItems: GetItemsByTag.Response option
+    TagLoadingMore: bool
     IsLoading: bool
     Error: string option
     GuestSession: GuestSession.GuestSessionData
@@ -59,6 +60,8 @@ type Msg =
     | EventError of string
     | LoadTagItems of string
     | GotTagItems of Result<GetItemsByTag.Response, string>
+    | LoadMoreTagItems
+    | GotMoreTagItems of Result<GetItemsByTag.Response, string>
     | SubmitComment
     | GotSubmitComment of Result<SubmitComment.Response, string>
     | SetNewItemTitle of string

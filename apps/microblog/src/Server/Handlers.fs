@@ -331,23 +331,23 @@ let private toCommentItem (pictureOf: string -> string) (r: ItemCommentRow) : Su
       Content = RichContent r.Content
       Timestamp = r.CreatedAt }
 
-let private feedPageSize = 10
+let private pageSize = 6   // small: load less, reload more (feed + tag pages)
 
 let getFeed (cursor: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         // Fetch pageSize+1 to know whether a further page exists without a count query.
         let stmt =
             if cursor = "start" || cursor = "" then
-                bind (env.DB.prepare Sql.feedFirstPage) [| box (feedPageSize + 1) |]
+                bind (env.DB.prepare Sql.feedFirstPage) [| box (pageSize + 1) |]
             else
                 let sep = cursor.IndexOf('_')
                 let ts = int (cursor.Substring(0, sep))
                 let id = cursor.Substring(sep + 1)
-                bind (env.DB.prepare Sql.feedAfterCursor) [| box ts; box ts; box id; box (feedPageSize + 1) |]
+                bind (env.DB.prepare Sql.feedAfterCursor) [| box ts; box ts; box id; box (pageSize + 1) |]
         let! result = stmt.all()
         let rows = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
-        let hasMore = List.length rows > feedPageSize
-        let pageItems = if hasMore then List.truncate feedPageSize rows else rows
+        let hasMore = List.length rows > pageSize
+        let pageItems = if hasMore then List.truncate pageSize rows else rows
         let nextCursor =
             if hasMore then
                 match List.tryLast pageItems with
@@ -484,15 +484,36 @@ let getTags (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
-let getItemsByTag (tag: string) (env: Env) : JS.Promise<WorkerResponse> =
+// The single path param carries "tag" (page 1) or "tag~<cursor>" (later pages);
+// the framework's GetOne only allows one param, so tag+cursor share it.
+let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let stmt = bind (env.DB.prepare Sql.itemsByTag) [| box tag |]
+        let sep = param.IndexOf('~')
+        let tag = if sep >= 0 then param.Substring(0, sep) else param
+        let cursor = if sep >= 0 then param.Substring(sep + 1) else ""
+        let stmt =
+            if cursor = "" then
+                bind (env.DB.prepare Sql.itemsByTag) [| box tag; box (pageSize + 1) |]
+            else
+                let ci = cursor.IndexOf('_')
+                let ts = int (cursor.Substring(0, ci))
+                let id = cursor.Substring(ci + 1)
+                bind (env.DB.prepare Sql.itemsByTagAfter) [| box tag; box ts; box ts; box id; box (pageSize + 1) |]
         let! result = stmt.all()
-        let items = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        let rows = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        let hasMore = List.length rows > pageSize
+        let pageItems = if hasMore then List.truncate pageSize rows else rows
+        let nextCursor =
+            if hasMore then
+                match List.tryLast pageItems with
+                | Some last -> Some (sprintf "%d_%s" last.Timestamp last.Id)
+                | None -> None
+            else None
         let body =
             Encode.object [
                 "tag", Encode.string tag
-                "items", Encode.list (List.map Encode.feedItem items)
+                "items", Encode.list (List.map Encode.feedItem pageItems)
+                "nextCursor", (match nextCursor with Some c -> Encode.string c | None -> Encode.nil)
             ] |> Encode.toString 0
         return okJson body
     }
