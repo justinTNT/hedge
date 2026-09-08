@@ -122,6 +122,10 @@ not_found_handling = "single-page-application"
 # -- usba.se (worker "usbase") --
 [env.usbase]
 name = "usbase"
+routes = [
+    { pattern = "usba.se", custom_domain = true },
+    { pattern = "www.usba.se", custom_domain = true }
+]
 
 [env.usbase.vars]
 ENVIRONMENT = "production"
