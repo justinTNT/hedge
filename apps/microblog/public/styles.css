@@ -134,6 +134,15 @@ body.tenant-wtfail .feed-day-label { color: #111; }
 body.tenant-wtfail .feed-day::before { background: #111; }
 body.tenant-wtfail .feed-day::after { background: linear-gradient(to right, #111 0%, #d0d0d0 45%, transparent 100%); }
 
+/* idealist: dark mode of the red default — black ground, white text, red accents. */
+body.tenant-idealist { background: #111; color: #eee; }
+body.tenant-idealist a { color: #e08a8a; }
+body.tenant-idealist .feed-item h2 { color: #f5f5f5; }
+body.tenant-idealist .extract { background: #1c1414; }   /* keeps the #911/#500 red borders */
+body.tenant-idealist .feed-day { background: #111; }
+body.tenant-idealist .feed-day-label { color: #e06666; }
+body.tenant-idealist .feed-day::after { background: linear-gradient(to right, #e06666 0%, #5a1a1a 45%, transparent 100%); }
+
 
 
 .owner-comment {
