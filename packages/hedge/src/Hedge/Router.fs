@@ -111,6 +111,27 @@ let serverError msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
     jsonResponse body 500
 
+/// GET /admin/logout — clears the browser's stored admin key, then returns to
+/// the key prompt. The admin SPA is a static asset and the key lives in
+/// localStorage, so the worker can't clear it directly; instead it serves a
+/// tiny page that does, then redirects to /admin (which now shows the login
+/// field, the key being empty). This is the sign-out for tenants without the
+/// browser extension (articles, music) — there's no other way to swap keys.
+let logoutResponse () : WorkerResponse =
+    let body =
+        "<!doctype html><meta charset=\"utf-8\"><title>Signed out</title>"
+        + "<script>try{localStorage.removeItem('adminKey')}catch(e){}"
+        + "location.replace('/admin')</script>"
+        + "<noscript>Signed out. <a href=\"/admin\">Continue</a></noscript>"
+    let options = createObj [
+        "status" ==> 200
+        "headers" ==> createObj [
+            "Content-Type" ==> "text/html; charset=utf-8"
+            "Cache-Control" ==> "no-store"
+        ]
+    ]
+    WorkerResponse.create(body, options)
+
 let redirectResponse (url: string) (cookie: string) : WorkerResponse =
     let options = createObj [
         "status" ==> 302
@@ -179,6 +200,12 @@ let createWorker (config: WorkerConfig) =
             match route with
             | OPTIONS _ ->
                 return corsPreflightResponse ()
+            | _ ->
+
+            // 1b. Admin sign-out: clear the stored key, bounce to /admin.
+            match route with
+            | GET path when matchPath "/admin/logout" path = Some (Exact "/admin/logout") ->
+                return logoutResponse ()
             | _ ->
 
             // 2. Admin routes
