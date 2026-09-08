@@ -81,9 +81,14 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# -- nowdochemtrails.net (worker "ndct") — no custom domain yet, inspect via workers.dev --
+# -- nowdochemtrails.net (worker "ndct") — cut over to Cloudflare 2026-09-08 --
 [env.ndct]
 name = "ndct"
+workers_dev = true
+routes = [
+    { pattern = "nowdochemtrails.net", custom_domain = true },
+    { pattern = "www.nowdochemtrails.net", custom_domain = true }
+]
 
 [env.ndct.vars]
 ENVIRONMENT = "production"
