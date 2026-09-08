@@ -22,7 +22,7 @@ nav img { width: 100%; }
    and the tilted masthead. Scoped so no other tenant is affected.
    ============================================================ */
 body.tenant-usbase {
-  background: #eeeedd;                 /* cream (#eed) */
+  background: #eee8dd;                 /* cream (#eed) */
   font-family: 'Jost', system-ui, sans-serif;
   color: #33302a;
 }
@@ -44,7 +44,7 @@ body.tenant-usbase .feed-item .extract {
   box-shadow: 0 1px 4px rgba(0,0,0,0.27), 0 0 40px rgba(0,0,0,0.06) inset;
 }
 /* sticky day divider on cream, accent recoloured to the #bf2 yellow-green */
-body.tenant-usbase .feed-day { background: #eeeedd; }
+body.tenant-usbase .feed-day { background: #eee8dd; }
 body.tenant-usbase .feed-day::before { background: #99cc33; }
 body.tenant-usbase .feed-day::after {
   background: linear-gradient(to right, #99cc33 0%, #cabf8f 45%, transparent 100%);
@@ -285,6 +285,7 @@ body.tenant-wtfail .feed-day::after { background: linear-gradient(to right, #111
 
 .tag-header {
   margin-top: -1em;
+  margin-left: 80%;
 }
 
 /* Avatar */

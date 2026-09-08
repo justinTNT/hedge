@@ -108,23 +108,23 @@ let reassignComments = """
 let itemBySlug =
     "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE slug = ?"
 
-// Cursor-paginated feed (infinite scroll). Ordered by (created_at, id) so the
-// compound cursor is stable even when many items share a created_at (e.g. the
-// day-granular dates of the migrated archives). Bind: [limit].
+// Cursor-paginated feed (infinite scroll). Ordered by (article_date, id) so the
+// compound cursor is stable even when many items share a date, and so backdated
+// articles sort to their own date rather than their insert time. Bind: [limit].
 let feedFirstPage = """
-    SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at
+    SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at
     FROM items
     WHERE deleted_at IS NULL
-    ORDER BY created_at DESC, id DESC
+    ORDER BY article_date DESC, id DESC
     LIMIT ?"""
 
 // Bind: [cursorTs, cursorTs, cursorId, limit].
 let feedAfterCursor = """
-    SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at
+    SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at
     FROM items
     WHERE deleted_at IS NULL
-      AND (created_at < ? OR (created_at = ? AND id < ?))
-    ORDER BY created_at DESC, id DESC
+      AND (article_date < ? OR (article_date = ? AND id < ?))
+    ORDER BY article_date DESC, id DESC
     LIMIT ?"""
 
 /// Just the columns social previews need. Deliberately narrow (and not
@@ -152,7 +152,7 @@ let itemsByTag = """
     JOIN item_tags it ON i.id = it.item_id
     JOIN tags t ON it.tag_id = t.id
     WHERE t.name = ? AND i.deleted_at IS NULL
-    ORDER BY i.created_at DESC, i.id DESC LIMIT ?"""
+    ORDER BY i.article_date DESC, i.id DESC LIMIT ?"""
 
 // Bind: [tag, cursorTs, cursorTs, cursorId, limit].
 let itemsByTagAfter = """
@@ -161,8 +161,8 @@ let itemsByTagAfter = """
     JOIN item_tags it ON i.id = it.item_id
     JOIN tags t ON it.tag_id = t.id
     WHERE t.name = ? AND i.deleted_at IS NULL
-      AND (i.created_at < ? OR (i.created_at = ? AND i.id < ?))
-    ORDER BY i.created_at DESC, i.id DESC LIMIT ?"""
+      AND (i.article_date < ? OR (i.article_date = ? AND i.id < ?))
+    ORDER BY i.article_date DESC, i.id DESC LIMIT ?"""
 
 let insertTag =
     "INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?, ?, ?)"

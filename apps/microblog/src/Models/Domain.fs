@@ -29,6 +29,10 @@ type MicroblogItem = {
     Image: Link option
     Extract: RichContent option
     OwnerComment: RichContent
+    /// The article's own date (drives display, sort and day-grouping). Editable
+    /// and independent of CreatedAt/UpdatedAt, so imported/backdated articles sort
+    /// by when they were written, not when the row was added. Unix seconds.
+    ArticleDate: int
     Slug: string option
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option

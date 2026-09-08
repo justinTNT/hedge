@@ -296,7 +296,7 @@ let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
       Image = r.Image
       Extract = r.Extract |> Option.map RichContent
       OwnerComment = RichContent r.OwnerComment
-      Timestamp = r.CreatedAt }
+      Timestamp = r.ArticleDate }
 
 let private uuidPattern = System.Text.RegularExpressions.Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
 
@@ -399,7 +399,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
                   OwnerComment = RichContent r.OwnerComment
                   Tags = tags
                   Comments = comments
-                  Timestamp = r.CreatedAt }
+                  Timestamp = r.ArticleDate }
 
             let body =
                 Encode.object [
@@ -529,9 +529,12 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Error msg ->
             return validationErrorResponse [ { Field = "Slug"; Message = msg } ]
         | Ok validatedSlug ->
+        // New submissions default their article date to now; backdate later via admin.
+        let submittedAt = epochNow ()
         let ins = insertMicroblogItem env.DB
                     { Title = req.Title; Link = req.Link; Image = req.Image
                       Extract = req.Extract; OwnerComment = req.OwnerComment
+                      ArticleDate = submittedAt
                       Slug = validatedSlug; ViewCount = 0 }
 
         let tagStmts =
@@ -572,7 +575,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
               OwnerComment = RichContent req.OwnerComment
               Tags = req.Tags
               Comments = []
-              Timestamp = ins.CreatedAt }
+              Timestamp = submittedAt }
 
         let body =
             Encode.object [

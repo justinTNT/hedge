@@ -28,6 +28,7 @@ CREATE TABLE items (
     image TEXT,
     extract TEXT,
     owner_comment TEXT NOT NULL,
+    article_date INTEGER NOT NULL,
     slug TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER,

@@ -60,25 +60,6 @@ let update msg model =
 
     | _ -> model, Cmd.none
 
-/// Group consecutive items by their calendar day (the feed is date-descending,
-/// so same-day items are contiguous). Grouping over the full accumulated list
-/// means a day that straddles a pagination boundary still yields one heading.
-let private groupByDay (items: GetFeed.FeedItem list) : (string * GetFeed.FeedItem list) list =
-    ([], items)
-    ||> List.fold (fun groups item ->
-        let day = formatDate item.Timestamp
-        match groups with
-        | (d, dayItems) :: rest when d = day -> (d, dayItems @ [ item ]) :: rest
-        | _ -> (day, [ item ]) :: groups)
-    |> List.rev
-
-let private dayDivider (day: string) =
-    Html.div [
-        prop.key ("day-" + day)
-        prop.className "feed-day"
-        prop.children [ Html.span [ prop.className "feed-day-label"; prop.text day ] ]
-    ]
-
 let view (response: GetFeed.Response) =
     Html.div [
         prop.className "feed"

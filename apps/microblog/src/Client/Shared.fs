@@ -182,6 +182,26 @@ let feedItem (item: GetFeed.FeedItem) =
         ]
     ]
 
+/// Group consecutive items by calendar day (lists are date-descending, so
+/// same-day items are contiguous). Grouping over the full accumulated list means
+/// a day straddling a pagination boundary still yields a single heading. Shared
+/// by the feed and tag pages.
+let groupByDay (items: GetFeed.FeedItem list) : (string * GetFeed.FeedItem list) list =
+    ([], items)
+    ||> List.fold (fun groups item ->
+        let day = formatDate item.Timestamp
+        match groups with
+        | (d, dayItems) :: rest when d = day -> (d, dayItems @ [ item ]) :: rest
+        | _ -> (day, [ item ]) :: groups)
+    |> List.rev
+
+let dayDivider (day: string) =
+    Html.div [
+        prop.key ("day-" + day)
+        prop.className "feed-day"
+        prop.children [ Html.span [ prop.className "feed-day-label"; prop.text day ] ]
+    ]
+
 let avatar (url: string) =
     Html.img [
         prop.className "avatar"

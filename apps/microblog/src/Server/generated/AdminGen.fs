@@ -71,20 +71,21 @@ let microblogItem : AdminTable =
             fieldWith "Image" (FOption FString) [Link]
             fieldWith "Extract" (FOption FString) [RichContent]
             fieldWith "OwnerComment" FString [RichContent]
+            fieldWith "ArticleDate" FInt []
             fieldWith "Slug" (FOption FString) []
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "ViewCount" FInt []
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
-      Insert = "INSERT INTO items (id, title, link, image, extract, owner_comment, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      SelectAll = "SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM items ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE id = ?"
+      Insert = "INSERT INTO items (id, title, link, image, extract, owner_comment, article_date, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = true
-      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
+      Update = "UPDATE items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, article_date = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
       Delete = "DELETE FROM items WHERE id = ?"
-      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "Slug"; "ViewCount"] }
+      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "ArticleDate"; "Slug"; "ViewCount"] }
 
 let itemComment : AdminTable =
     { Name = "ItemComment"

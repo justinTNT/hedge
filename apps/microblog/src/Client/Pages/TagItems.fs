@@ -61,7 +61,9 @@ let view (response: GetItemsByTag.Response) =
                 prop.className "tag-header"
                 prop.children [ tagPill response.Tag ]
             ]
-            yield! response.Items |> List.map feedItem
+            for (day, items) in groupByDay response.Items do
+                dayDivider day
+                yield! (items |> List.map feedItem)
             Html.div [ prop.key "tag-sentinel"; prop.id "tag-sentinel"; prop.className "feed-sentinel" ]
         ]
     ]
