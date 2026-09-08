@@ -124,11 +124,12 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match model.PendingClaimFocus with
             | Some id -> true, Some id
             | None -> false, None
+        let resetTitleCmd = Cmd.ofEffect (fun _ -> Shared.setDocTitle "")
         let cmd =
             match route with
-            | [] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg LoadFeed ]
+            | [] -> Cmd.batch [ cleanupCmd; resetTitleCmd; Cmd.ofMsg LoadFeed ]
             | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
-            | _ -> cleanupCmd
+            | _ -> Cmd.batch [ cleanupCmd; resetTitleCmd ]
         { model with Route = route; CurrentItem = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
 
     | DismissError ->

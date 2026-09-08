@@ -81,6 +81,12 @@ body.tenant-justat main {
   min-height: 240px;
 }
 
+/* the single-article page uses the cleaner post.gif paper instead of content-back */
+body.tenant-justat main:has(.article-detail) {
+  background: #f3efe0 url(/public/justat/post.gif) no-repeat bottom center;
+  background-size: 100% 100%;
+}
+
 /* day divider styled as the old month/day date badge (two rows, on the date tab) */
 body.tenant-justat .feed-day { margin: 0 0 0 -5.5em; }
 body.tenant-justat .feed-day-label {
@@ -112,6 +118,7 @@ body.tenant-justat .feed-item .extract img { border-radius: 2px; }
 /* single article */
 body.tenant-justat .article-title { font: bold 2.5rem/1.1 Arial, Helvetica, sans-serif; color: #3b3632; margin-bottom: 1rem; }
 body.tenant-justat .body { font-size: 1.12rem; line-height: 1.85; color: #4a423a; }
+body.tenant-justat .article-body p { padding-top: 0.5em; }
 body.tenant-justat blockquote, body.tenant-justat .box {
   padding: 10px 20px; background: #f1eddb; border: 1px solid #e0d9b9; color: #928071;
 }

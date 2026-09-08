@@ -22,7 +22,8 @@ function siteConfig() {
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
         `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
-        `window.SITE_SLUG=${JSON.stringify(siteSlug)};</script>`;
+        `window.SITE_SLUG=${JSON.stringify(siteSlug)};` +
+        `window.SITE_TITLE=${JSON.stringify(siteTitle)};</script>`;
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)

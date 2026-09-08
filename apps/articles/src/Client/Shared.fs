@@ -19,6 +19,12 @@ let private siteLogo : string = jsNative
 [<Emit("window.SITE_SLUG || ''")>]
 let siteSlug : string = jsNative
 
+/// Set the browser tab title: "<article> · <site>" for an article, or just the
+/// site title when passed "". Uses SITE_TITLE as the base (the server pre-sets
+/// <title> to the article name for SEO, so we can't read it off document.title).
+[<Emit("(function(t){var b=window.SITE_TITLE||'';document.title=t?(t+' · '+b):b;})($0)")>]
+let setDocTitle (articleTitle: string) : unit = jsNative
+
 /// Short human date from a Unix-seconds timestamp.
 [<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
 let formatDate (ts: int) : string = jsNative

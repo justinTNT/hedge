@@ -48,7 +48,8 @@ let update msg model =
         Cmd.OfPromise.either Client.ClientGen.getArticle idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
-        { model with CurrentItem = Some response; IsLoading = false }, Cmd.none
+        { model with CurrentItem = Some response; IsLoading = false },
+        Cmd.ofEffect (fun _ -> setDocTitle response.Article.Title)
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
