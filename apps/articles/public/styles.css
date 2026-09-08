@@ -76,7 +76,7 @@ body.tenant-justat .identity-area { color: #cfcabf; }
 body.tenant-justat main {
   grid-area: main;
   margin-top: 0;
-  padding: 24px 30px 40px 38px;
+  padding: 4px 30px 40px 38px;
   background: #efe9d3 url(/public/justat/content-back.gif) repeat-y top center;
   min-height: 240px;
 }
@@ -97,7 +97,7 @@ body.tenant-justat .fd-day { display: block; font: italic 1.5rem Georgia, serif;
 body.tenant-justat .feed-item {
   position: relative;
   margin: -3em -1em 0em -2.4em;
-  padding: 30px 46px 46px 34px;                            /* keep text off the baked-in curl + bottom shadow */
+  padding: 3px 46px 46px 34px;                             /* keep text off the baked-in curl + bottom shadow */
   border: none;
   background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
   background-size: 100% 100%;
