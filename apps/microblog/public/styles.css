@@ -78,6 +78,10 @@ body.tenant-usbase nav img {
   flex-shrink: 0;
 }
 
+/* Feed extract pairs a teaser with a thumbnail side by side; item-detail
+   extract is flowing rich text, so flex only applies in the feed context. */
+.feed-item .extract { display: flex; }
+
 /* Date-grouped feed: one sticky divider per day, articles beneath it. */
 .feed-day {
   display: flex;
