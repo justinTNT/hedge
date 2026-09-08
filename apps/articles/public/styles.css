@@ -95,8 +95,8 @@ body.tenant-justat .feed-day-label {
   background: url(/public/justat/date.gif) no-repeat top center;
   color: #737852; text-align: center;
 }
-body.tenant-justat .fd-month { display: block; font: normal .7rem Georgia, serif; text-transform: uppercase; line-height: 1; }
-body.tenant-justat .fd-day { display: block; font: italic 1.35rem Georgia, serif; line-height: 1.05; }
+body.tenant-justat .fd-month { display: block; font: normal .7rem Georgia, serif; text-transform: uppercase; line-height: 1; margin-top: -0.4em; }
+body.tenant-justat .fd-day { display: block; font: italic 1.15rem Georgia, serif; line-height: 1.05; }
 body.tenant-justat .fd-year { display: block; font: normal .68rem Georgia, serif; line-height: 1; }
 
 /* posts on the real crumpled-paper card (featured.png) — its curled top-right

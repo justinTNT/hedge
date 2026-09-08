@@ -335,10 +335,15 @@ let justatSidebar =
                             Html.h5 "My sites"
                             Html.p [
                                 prop.children [
-                                    Html.text "For a few years now I have maintained a news archive, at "
-                                    sidebarLink "http://ntne.ws/" "ntne.ws"
+                                    Html.text "For a few years now I have maintained "
+                                    sidebarLink "http://darwin.news" "a"
+                                    sidebarLink "http://usba.se" "few"
+                                    sidebarLink "http://wt.fail" "web"
+                                    sidebarLink "http://mtmu.se" "logs, "
+                                    Html.text "I have kept alive an old nuclear news "
+                                    sidebarLink "http://ntne.ws/" "archive"
                                     Html.text " : and I have a music site : "
-                                    sidebarLink "http://www.hea.dphon.es" "hea.dphon.es"
+                                    sidebarLink "https://dont.saymay.be" "dont.saymay.be"
                                     Html.text "."
                                 ]
                             ]
@@ -350,10 +355,11 @@ let justatSidebar =
                             Html.p [
                                 prop.children [
                                     Html.text "I'm contactable on "
-                                    sidebarLink "http://www.facebook.com/justintutty" "facebook"
-                                    Html.text " (too often) and "
-                                    sidebarLink "http://twitter.com/justinTNT" "twitter"
-                                    Html.text " (rarely); via SMS (0424-028-741) or email (see above)."
+                                    sidebarLink "https://www.linkedin.com/in/justin-tutty-850b76301/" "linkedin"
+                                    Html.text "  and "
+                                    Html.text "via SMS (0424-028-741) or email (see above)."
+                                    Html.text " You can get your own "
+                                    sidebarLink "https://darwin.email" "darwin.email"
                                 ]
                             ]
                         ]
@@ -363,13 +369,13 @@ let justatSidebar =
                             Html.h5 "Links"
                             Html.p [
                                 prop.children [
-                                    sidebarLink "http://no-waste.org" "no-waste.org"
+                                    sidebarLink "https://nonewgasnt.org.au/" "nonewgasnt.org.au"
                                     Html.text " | "
-                                    sidebarLink "http://coolmob.org" "coolmob.org"
+                                    sidebarLink "https://nowdochemtrails.net/" "nowdochemtrails.net"
                                     Html.text " | "
-                                    sidebarLink "http://aivl.org.au" "aivl.org.au"
+                                    sidebarLink "https://edarwin.au/" "edarwin.au"
                                     Html.text " | "
-                                    sidebarLink "http://larrakia.com" "larrakia.com"
+                                    sidebarLink "https://ausbases.au/" "ausbases.au"
                                 ]
                             ]
                         ]
