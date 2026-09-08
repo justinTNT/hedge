@@ -151,7 +151,7 @@ body.tenant-justat .js-sections h5 {
   margin: 0 0 8px; font: 1.7rem Georgia, "Times New Roman", Times, serif; color: #453c2f; font-weight: normal;
 }
 body.tenant-justat .js-sections p { margin: 0; }
-body.tenant-justat .js-sections a { color: #706c65; font-weight: normal; }
+body.tenant-justat .js-sections a { color: #706cf5; font-weight: normal; }
 
 /* comments on the paper */
 body.tenant-justat .comments { border-top: 1px solid #d8d2b6; margin-top: 2rem; }

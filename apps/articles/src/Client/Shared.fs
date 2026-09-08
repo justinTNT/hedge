@@ -352,15 +352,16 @@ let justatSidebar =
                             Html.h5 "My sites"
                             Html.p [
                                 prop.children [
-                                    Html.text "For a few years now I have maintained "
-                                    sidebarLink "http://darwin.news" "a"
-                                    sidebarLink "http://usba.se" "few"
-                                    sidebarLink "http://wt.fail" "web"
+                                    Html.text "For some years now I have maintained "
+                                    sidebarLink "http://darwin.news" "a "
+                                    sidebarLink "http://usba.se" "few "
+                                    sidebarLink "http://wt.fail" "web "
                                     sidebarLink "http://mtmu.se" "logs, "
                                     Html.text "I have kept alive an old nuclear news "
                                     sidebarLink "http://ntne.ws/" "archive"
-                                    Html.text " : and I have a music site : "
-                                    sidebarLink "https://dont.saymay.be" "dont.saymay.be"
+                                    Html.text " : and I have a couple of "
+                                    sidebarLink "https://dont.saymay.be" "music "
+                                    sidebarLink "https://dont.saymay.be" "sites."
                                     Html.text "."
                                 ]
                             ]
