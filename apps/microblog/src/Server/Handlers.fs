@@ -484,12 +484,17 @@ let getTags (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
+[<Emit("decodeURIComponent($0)")>]
+let private decodeUri (s: string) : string = jsNative
+
 // The single path param carries "tag" (page 1) or "tag~<cursor>" (later pages);
-// the framework's GetOne only allows one param, so tag+cursor share it.
+// the framework's GetOne only allows one param, so tag+cursor share it. The tag
+// arrives percent-encoded (e.g. "lucas%20heights"), so decode it before querying
+// and echoing it back.
 let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         let sep = param.IndexOf('~')
-        let tag = if sep >= 0 then param.Substring(0, sep) else param
+        let tag = decodeUri (if sep >= 0 then param.Substring(0, sep) else param)
         let cursor = if sep >= 0 then param.Substring(sep + 1) else ""
         let stmt =
             if cursor = "" then
