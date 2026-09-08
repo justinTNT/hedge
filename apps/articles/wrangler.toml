@@ -48,8 +48,11 @@ ENVIRONMENT = "production"
 # ============================================================
 
 # -- justat.at (worker "justat") — cut over to Cloudflare 2026-09-08 --
+# workers_dev kept on so justat.justin-8ee.workers.dev stays reachable while the
+# .at NS propagate (harmless alongside the custom domain).
 [env.justat]
 name = "justat"
+workers_dev = true
 routes = [
     { pattern = "justat.at", custom_domain = true },
     { pattern = "www.justat.at", custom_domain = true }
