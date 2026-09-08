@@ -150,6 +150,37 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
+# -- mtmuse (worker "mtmuse") — mtmu.se on Cloudflare, cut over 2026-09-08 --
+[env.mtmuse]
+name = "mtmuse"
+routes = [
+    { pattern = "mtmu.se", custom_domain = true },
+    { pattern = "www.mtmu.se", custom_domain = true }
+]
+
+[env.mtmuse.vars]
+ENVIRONMENT = "production"
+
+[[env.mtmuse.d1_databases]]
+binding = "DB"
+database_name = "mtmuse-db"
+database_id = "17a7f1ce-b8ff-46ac-801d-2f55c0c0d51f"
+
+[[env.mtmuse.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "mtmuse-blobs"
+
+[env.mtmuse.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.mtmuse.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
 # -- nonukes (worker "nonukes") — no custom domain yet, inspect via workers.dev --
 [env.nonukes]
 name = "nonukes"

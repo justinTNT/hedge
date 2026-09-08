@@ -74,7 +74,7 @@ let private hideBrokenImg (e: obj) : unit = jsNative
     if(h.scrollWidth > cw+2){ h.style.whiteSpace='normal'; }   // too long even scaled -> wrap
   }
   function fit(){
-    if(!document.body.classList.contains('tenant-usbase')) return;
+    var b=document.body.classList; if(!(b.contains('tenant-usbase')||b.contains('tenant-mtmuse'))) return;
     var hs=document.querySelectorAll('.feed-item h2');
     if(!hs.length) return;
     if(hs[0].clientWidth===0){ setTimeout(fit,60); return; }   // wait for layout

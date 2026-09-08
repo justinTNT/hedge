@@ -26,7 +26,8 @@
     "deploy:wtfail": "SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" ADMIN_TITLE=\"WT.Fail Admin\" SITE_LOGO=\"/public/wtfail.png\" npm run build && wrangler deploy --env wtfail",
     "deploy:idealist": "SITE_SLUG=idealist BASE_PATH=/st SITE_TITLE=\"id-ea.li/st\" ADMIN_TITLE=\"id-eAdmin\" SITE_LOGO=\"/public/idealist.jpg\" npm run build && wrangler deploy --env idealist",
     "deploy:usbase": "SITE_SLUG=usbase SITE_TITLE=\"US Base\" ADMIN_TITLE=\"USBase Admin\" SITE_LOGO=\"/public/usbase.gif\" npm run build && wrangler deploy --env usbase",
-    "deploy:nonukes": "SITE_SLUG=nonukes SITE_TITLE=\"No Nukes\" ADMIN_TITLE=\"No Nukes Admin\" SITE_LOGO=\"/public/nonukes.gif\" npm run build && wrangler deploy --env nonukes"
+    "deploy:nonukes": "SITE_SLUG=nonukes SITE_TITLE=\"No Nukes\" ADMIN_TITLE=\"No Nukes Admin\" SITE_LOGO=\"/public/nonukes.gif\" npm run build && wrangler deploy --env nonukes",
+    "deploy:mtmuse": "SITE_SLUG=mtmuse SITE_TITLE=\"MT Muse\" ADMIN_TITLE=\"MT Muse Admin\" SITE_LOGO=\"/public/mtmuse.jpg\" npm run build && wrangler deploy --env mtmuse"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

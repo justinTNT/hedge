@@ -158,6 +158,8 @@ concerns — do these three together when scaffolding it:
    gates on a `features` flag (e.g. `features.bigText`) instead of the hardcoded
    `body.classList.contains('tenant-usbase')` check in `Client/Shared.fs`** — the
    behaviour stays app code, only its activation reads the framework signal.
+   (As of 2026-09-08 that hardcoded check has already grown to a two-tenant list —
+   `tenant-usbase || tenant-mtmuse` — which is exactly the smell this item removes.)
 
 2. **Multi-param (or query-string) GET endpoints.** `Hedge.Interface` only has
    `Get` (no param) and `GetOne` (one path param), which forced the `tag~cursor`
@@ -168,6 +170,15 @@ concerns — do these three together when scaffolding it:
 
 3. **Extract Admin.fs into the framework** (item 9 above) — saymay will want admin
    too, so do the extraction now rather than copy the 130-line dispatcher again.
+
+4. **Image as a generated admin field type** — the framework-shaped slice of image upload:
+   add a semantic `Blob`/`Image` type to `Interface.fs` so a model field typed that way is
+   *generated* by Gen + the generic Admin into an upload control wired to `/api/blobs`
+   (models → web-code — that's what makes this framework, not the fact that many apps want
+   uploads). A bespoke upload button in a hand-written client view is **app** code and does
+   not belong here. Batch the field-type work with the Admin extraction. See
+   `notes/IMAGES.md` (Workstream D); the other image workstreams (ingestImage, backfill,
+   auto-mirror-on-submit) are app/ETL work, independent of this batch, and can land earlier.
 
 Deliberately staying app-level (decision 2026-09-08): **cursor pagination** — the
 per-list SQL and cursor semantics are app-specific, and the client scroll helpers
