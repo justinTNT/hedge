@@ -309,8 +309,16 @@ let createWorker (config: WorkerConfig) =
             // 5. Blob routes
             match route with
             | POST path when matchPath "/api/blobs" path = Some (Exact "/api/blobs") ->
-                let blobs : R2Bucket = env?BLOBS
-                return! handleBlobUpload request blobs
+                // Uploads require the admin key — otherwise anyone could fill the
+                // bucket. The rich-text editor attaches it from localStorage.adminKey,
+                // which only the owner's browser has (after signing into /admin).
+                let adminKey : string = env?ADMIN_KEY
+                let provided = getHeader request "X-Admin-Key"
+                if provided <> "" && provided = adminKey then
+                    let blobs : R2Bucket = env?BLOBS
+                    return! handleBlobUpload request blobs
+                else
+                    return unauthorized ()
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
                 return! handleBlobServe (decodeUri (path.Substring(7))) blobs

@@ -115,6 +115,9 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
     })
 
     xhr.open('POST', endpoint)
+    // The blob endpoint requires the admin key; send it from localStorage (present
+    // only in the owner's browser after signing into /admin).
+    try { xhr.setRequestHeader('X-Admin-Key', (window.localStorage && localStorage.getItem('adminKey')) || '') } catch (e) {}
     xhr.send(formData)
 }
 
