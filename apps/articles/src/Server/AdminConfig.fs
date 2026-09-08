@@ -15,12 +15,15 @@ type AdminEntity = {
     Schema: TypeSchema
     List: Env -> JS.Promise<string>
     Get: string -> Env -> JS.Promise<string option>
+    /// None for tables without a real primary key — there'd be nowhere to put
+    /// a generated id (see the Insert guard in Gen/Program.fs).
+    Create: (string -> Env -> JS.Promise<string>) option
     Update: string -> string -> Env -> JS.Promise<string>
     Delete: string -> Env -> JS.Promise<unit>
 }
 
 // ============================================================
-// PascalCase -> camelCase (for JSON keys)
+// PascalCase → camelCase (for JSON keys)
 // ============================================================
 
 let private camelCase (s: string) =
@@ -28,7 +31,7 @@ let private camelCase (s: string) =
     else string (System.Char.ToLowerInvariant s.[0]) + s.[1..]
 
 // ============================================================
-// PascalCase -> snake_case (for DB column names)
+// PascalCase → snake_case (for DB column names)
 // ============================================================
 
 let private toSnakeCase (s: string) =
@@ -41,7 +44,7 @@ let private toSnakeCase (s: string) =
     |> String.concat ""
 
 // ============================================================
-// Row -> JSON (generic, driven by schema)
+// Row → JSON (generic, driven by schema)
 // ============================================================
 
 let private rowToJson (schema: TypeSchema) (row: obj) : JsonValue =
@@ -85,25 +88,51 @@ let private genericGet (table: AdminTable) (id: string) (env: Env) : JS.Promise<
             return Some (Encode.toString 0 json)
     }
 
+/// The mutable-field values from a decoded body, in MutableFields order —
+/// shared by update and create so both bind columns the same way.
+let private mutableArgs (table: AdminTable) (pairMap: Map<string, JsonValue>) =
+    table.MutableFields |> List.map (fun fieldName ->
+        let jsonKey = camelCase fieldName
+        match Map.tryFind jsonKey pairMap with
+        | Some v ->
+            match Decode.fromValue "" Decode.string v with
+            | Ok s -> box s
+            | _ ->
+                let s = Encode.toString 0 v
+                if s = "null" then jsNull
+                else box s
+        | None -> jsNull)
+
+let private genericCreate (table: AdminTable) (body: string) (env: Env) : JS.Promise<string> =
+    promise {
+        match Decode.fromString (Decode.keyValuePairs Decode.value) body with
+        | Error err -> return sprintf """{"error":"%s"}""" err
+        | Ok pairs ->
+            let id = newId ()
+            let now = epochNow ()
+            // Column order matches the generated INSERT: pk, mutables, created_at
+            let allArgs =
+                [ box id ] @ mutableArgs table (Map.ofList pairs)
+                @ (if table.HasCreateTs then [ box now ] else [])
+                |> List.toArray
+            let stmt = bind (env.DB.prepare(table.Insert)) allArgs
+            let! _ = stmt.run()
+            let! result = genericGet table id env
+            return result |> Option.defaultValue """{"error":"Not found after create"}"""
+    }
+
 let private genericUpdate (table: AdminTable) (id: string) (body: string) (env: Env) : JS.Promise<string> =
     promise {
         match Decode.fromString (Decode.keyValuePairs Decode.value) body with
         | Error err -> return sprintf """{"error":"%s"}""" err
         | Ok pairs ->
-            let pairMap = pairs |> Map.ofList
-            let args =
-                table.MutableFields |> List.map (fun fieldName ->
-                    let jsonKey = camelCase fieldName
-                    match Map.tryFind jsonKey pairMap with
-                    | Some v ->
-                        let s = Encode.toString 0 v
-                        if s = "null" then jsNull
-                        else
-                            // Strip quotes from string values
-                            let trimmed = s.Trim('"')
-                            box trimmed
-                    | None -> jsNull)
-            let allArgs = args @ [box id] |> List.toArray
+            let args = mutableArgs table (Map.ofList pairs)
+            // Matches the generated SET clause: mutables, then updated_at
+            let allArgs =
+                args
+                @ (if table.HasUpdateTs then [ box (epochNow ()) ] else [])
+                @ [ box id ]
+                |> List.toArray
             let stmt = bind (env.DB.prepare(table.Update)) allArgs
             let! _ = stmt.run()
             let! result = genericGet table id env
@@ -127,5 +156,6 @@ let entities : AdminEntity list =
           Schema = table.Schema
           List = genericList table
           Get = genericGet table
+          Create = (if table.Insert = "" then None else Some (genericCreate table))
           Update = genericUpdate table
           Delete = genericDelete table })

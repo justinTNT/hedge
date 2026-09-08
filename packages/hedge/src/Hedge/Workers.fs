@@ -189,6 +189,17 @@ let optIntToDb (v: int option) : obj =
 
 let private allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/svg+xml" ]
 
+/// put with the content type recorded, so handleBlobServe can serve it back with
+/// the right Content-Type (an <img> won't render an application/octet-stream).
+[<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
+let private r2PutTyped (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) : JS.Promise<obj> = jsNative
+
+/// Filenames become part of a URL path, so strip anything that would need
+/// percent-encoding (spaces especially) — keeps the stored key and the served
+/// URL identical, with no decode round-trip to get wrong.
+[<Emit("$0.replace(/[^A-Za-z0-9._-]/g, '-')")>]
+let private safeName (s: string) : string = jsNative
+
 let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
     promise {
         let! fd = request.formData()
@@ -202,13 +213,18 @@ let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<Wor
                 let options = createObj [ "status" ==> 400; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
                 return WorkerResponse.create("""{"error":"Unsupported image type"}""", options)
             else
-                let name = fileName file
+                let name = safeName (fileName file)
                 let key = sprintf "%s/%s" (newId ()) name
-                let! _ = blobs.put(key, file)
+                let! _ = r2PutTyped blobs key file mime
                 let body = sprintf """{"url":"/blobs/%s"}""" key
                 let options = createObj [ "status" ==> 200; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
                 return WorkerResponse.create(body, options)
     }
+
+/// Fallback content type from the key's extension, for objects stored without
+/// httpMetadata (e.g. uploads from before the type was recorded).
+[<Emit("(function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml'})[e]||'application/octet-stream';})($0)")>]
+let private contentTypeFromKey (key: string) : string = jsNative
 
 let handleBlobServe (key: string) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
     promise {
@@ -219,7 +235,7 @@ let handleBlobServe (key: string) (blobs: R2Bucket) : JS.Promise<WorkerResponse>
             return WorkerResponse.create("""{"error":"Not found"}""", options)
         | Some obj ->
             let contentType = getProp obj.httpMetadata "contentType"
-            let ct = if isNull contentType then box "application/octet-stream" else contentType
+            let ct = if isNull contentType then box (contentTypeFromKey key) else contentType
             let options = createObj [
                 "status" ==> 200
                 "headers" ==> createObj [

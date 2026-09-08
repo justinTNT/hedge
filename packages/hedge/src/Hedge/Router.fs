@@ -10,6 +10,11 @@ open Hedge.OAuth
 /// Minimal router for Workers.
 /// Pattern matches on method + path to dispatch to handlers.
 
+/// The URL pathname keeps percent-encoding (e.g. %20 for a space), but R2 keys
+/// are stored decoded — decode before looking a blob up so they match.
+[<Emit("decodeURIComponent($0)")>]
+let private decodeUri (s: string) : string = jsNative
+
 type Route =
     | GET of string
     | POST of string
@@ -308,7 +313,7 @@ let createWorker (config: WorkerConfig) =
                 return! handleBlobUpload request blobs
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
-                return! handleBlobServe (path.Substring(7)) blobs
+                return! handleBlobServe (decodeUri (path.Substring(7))) blobs
             | _ ->
 
             // 6. App routes (generated)
