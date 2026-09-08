@@ -1,0 +1,38 @@
+{
+  "name": "music",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
+    "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",
+    "dev:server": "concurrently -n fable-server,wrangler -c green,yellow \"npm run fable:watch:server\" \"wrangler dev\"",
+    "build": "npm run build:client && npm run build:admin && npm run build:server && npm run build:site",
+    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
+    "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:dont": "SITE_SLUG=dont SITE_TITLE=\"dont.saymay.be\" ADMIN_TITLE=\"dont admin\" SITE_LOGO=\"/public/dont.png\" npm run build && wrangler deploy --env dont",
+    "deploy:just": "SITE_SLUG=just SITE_TITLE=\"just.saymay.be\" ADMIN_TITLE=\"just admin\" SITE_LOGO=\"/public/just.png\" npm run build && wrangler deploy --env just",
+    "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
+    "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
+    "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "gen": "dotnet run --project src/Gen/Gen.fsproj",
+    "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
+    "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
+    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.24.0",
+    "vite": "^5.4.0",
+    "vite-plugin-fable": "0.0.31",
+    "wrangler": "^4.67.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

@@ -1,0 +1,72 @@
+/* ===== saymay.be music player ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --accent: #1db954; --bg: #121212; --panel: #181818; --line: #282828; --text: #eaeaea; --dim: #9a9a9a; }
+body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.4; }
+.app { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.25rem 7rem; }
+.loading, .error { color: var(--dim); padding: 2rem 0; }
+.error { color: #f7768e; }
+.cover-blank { background: linear-gradient(135deg, #333, #1a1a1a); }
+
+/* ===== HOME — grid of album covers ===== */
+.cover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1.4rem 1.1rem;
+}
+.cover-cell { text-decoration: none; color: var(--text); display: flex; flex-direction: column; gap: .55rem; }
+.grid-cover {
+  width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: transform .12s ease;
+}
+.cover-cell:hover .grid-cover { transform: translateY(-3px); }
+.grid-title { font-size: .92rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== ALBUM PAGE ===== */
+.back { display: inline-block; color: var(--dim); text-decoration: none; font-size: .9rem; margin-bottom: 1.4rem; }
+.back:hover { color: var(--text); }
+.album-page { padding-bottom: 1rem; }
+.album-head { display: flex; align-items: flex-end; gap: 1.3rem; margin-bottom: 1.6rem; }
+.album-cover {
+  width: 180px; height: 180px; object-fit: cover; border-radius: 8px; flex-shrink: 0;
+  box-shadow: 0 6px 22px rgba(0,0,0,.55);
+}
+.album-cover.cover-blank { width: 180px; height: 180px; }
+.album-title { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+
+/* -- tracks -- */
+.track-list { margin: 0 0 1rem; }
+.track {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .55rem .7rem; border-radius: 6px; cursor: pointer; user-select: none;
+}
+.track:hover { background: var(--line); }
+.track-num { width: 1.6rem; text-align: right; color: var(--dim); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.track:hover .track-num { visibility: hidden; }
+.track-play { width: 1.6rem; text-align: right; color: var(--text); font-size: .8rem; display: none; margin-left: -2.4rem; }
+.track:hover .track-play { display: inline; }
+.track-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the currently-playing track */
+.track.amplitude-active-song-container { color: var(--accent); }
+.track.amplitude-active-song-container .track-num { color: var(--accent); }
+
+/* ===== sticky player bar (album page only) ===== */
+.player-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; align-items: center; gap: .8rem;
+  background: var(--panel); border-top: 1px solid var(--line);
+  padding: .7rem 1.1rem; box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+}
+.pb-btn { cursor: pointer; color: var(--dim); font-size: 1.1rem; user-select: none; }
+.pb-btn:hover { color: var(--text); }
+.pb-play {
+  width: 42px; height: 42px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+.pb-play::before { content: "▶"; color: #000; font-size: .95rem; margin-left: 2px; }
+.pb-play.amplitude-playing::before { content: "❚❚"; font-size: .8rem; margin: 0; letter-spacing: -1px; }
+.pb-now { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pb-song { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-album { color: var(--dim); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-time { color: var(--dim); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.pb-slider { flex: 2; min-width: 80px; max-width: 320px; accent-color: var(--accent); cursor: pointer; }

@@ -1,0 +1,106 @@
+name = "music"
+main = "worker-entry.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Default binding (= dont); each tenant overrides below.
+[[d1_databases]]
+binding = "DB"
+database_name = "dont-db"
+database_id = "1cb13b28-fa7f-4431-b354-f6bced92fff4"
+
+[durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["EventHub"]
+
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "dont-blobs"
+
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# ADMIN_KEY is deliberately absent — set per tenant via `wrangler secret put`.
+[vars]
+ENVIRONMENT = "production"
+
+# ============================================================
+# Tenants — dont.saymay.be (mixtapes) and just.saymay.be (homebrew).
+# Same app, different store + art. Deploy with --env <name>.
+# ============================================================
+
+# -- dont.saymay.be (mixtapes) — cut over to Cloudflare 2026-09-08 --
+# workers_dev kept on so dont.justin-8ee.workers.dev stays reachable while the
+# saymay.be NS propagate (harmless alongside the custom domain).
+[env.dont]
+name = "dont"
+workers_dev = true
+routes = [
+    { pattern = "dont.saymay.be", custom_domain = true }
+]
+
+[env.dont.vars]
+ENVIRONMENT = "production"
+
+[[env.dont.d1_databases]]
+binding = "DB"
+database_name = "dont-db"
+database_id = "1cb13b28-fa7f-4431-b354-f6bced92fff4"
+
+[[env.dont.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "dont-blobs"
+
+[env.dont.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.dont.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# -- just.saymay.be (homebrew) — cut over to Cloudflare 2026-09-08 --
+[env.just]
+name = "just"
+workers_dev = true
+routes = [
+    { pattern = "just.saymay.be", custom_domain = true }
+]
+
+[env.just.vars]
+ENVIRONMENT = "production"
+
+[[env.just.d1_databases]]
+binding = "DB"
+database_name = "just-db"
+database_id = "a083875c-bd77-46df-95df-df8284feb85d"
+
+[[env.just.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "just-blobs"
+
+[env.just.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.just.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
