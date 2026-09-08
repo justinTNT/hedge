@@ -23,6 +23,13 @@ let siteSlug : string = jsNative
 [<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
 let formatDate (ts: int) : string = jsNative
 
+/// Month abbreviation + day-of-month, for the two-row date badge.
+[<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { month: 'short' })")>]
+let formatMonth (ts: int) : string = jsNative
+
+[<Emit("new Date($0 * 1000).getDate()")>]
+let formatDay (ts: int) : int = jsNative
+
 /// Global scroll/resize watcher (once) firing `onNear` when the sentinel sits
 /// within 600px of the viewport bottom. `onNear` self-guards.
 [<Emit("""(function(id, cb){
@@ -119,21 +126,31 @@ let feedItem (item: GetArticles.ArticleItem) =
         ]
     ]
 
-/// Group consecutive items by calendar day (lists are date-descending).
-let groupByDay (items: GetArticles.ArticleItem list) : (string * GetArticles.ArticleItem list) list =
+/// Group consecutive items by calendar day (lists are date-descending). Carries a
+/// representative timestamp so the divider can format the badge (month + day).
+let groupByDay (items: GetArticles.ArticleItem list) : (int * GetArticles.ArticleItem list) list =
     ([], items)
     ||> List.fold (fun groups item ->
         let day = formatDate item.Timestamp
         match groups with
-        | (d, dayItems) :: rest when d = day -> (d, dayItems @ [ item ]) :: rest
-        | _ -> (day, [ item ]) :: groups)
+        | (ts, dayItems) :: rest when formatDate ts = day -> (ts, dayItems @ [ item ]) :: rest
+        | _ -> (item.Timestamp, [ item ]) :: groups)
     |> List.rev
 
-let dayDivider (day: string) =
+/// Date badge: month abbreviation over the day number (two rows, to fit the tab).
+let dayDivider (ts: int) =
     Html.div [
-        prop.key ("day-" + day)
+        prop.key ("day-" + string ts)
         prop.className "feed-day"
-        prop.children [ Html.span [ prop.className "feed-day-label"; prop.text day ] ]
+        prop.children [
+            Html.span [
+                prop.className "feed-day-label"
+                prop.children [
+                    Html.span [ prop.className "fd-month"; prop.text (formatMonth ts) ]
+                    Html.span [ prop.className "fd-day"; prop.text (string (formatDay ts)) ]
+                ]
+            ]
+        ]
     ]
 
 let avatar (url: string) =

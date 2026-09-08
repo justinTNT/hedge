@@ -75,27 +75,27 @@ body.tenant-justat .identity-area { color: #cfcabf; }
 /* left column: aged-paper content */
 body.tenant-justat main {
   grid-area: main;
-  margin-top: 118px;                                        /* clear the framed header art */
+  margin-top: 0;
   padding: 24px 30px 40px 38px;
   background: #efe9d3 url(/public/justat/content-back.gif) repeat-y top center;
   min-height: 240px;
 }
 
-/* day divider styled as the old month/day date badge */
-body.tenant-justat .feed-day { margin: 1.4rem 0 .3rem -74px; }
+/* day divider styled as the old month/day date badge (two rows, on the date tab) */
+body.tenant-justat .feed-day { margin: 0rem -2rem .3rem -120px; }
 body.tenant-justat .feed-day-label {
   display: inline-block;
-  min-width: 53px; padding: 6px 8px 8px;
+  width: 53px; min-height: 45px; padding: 4px 0 0;
   background: url(/public/justat/date.gif) no-repeat top center;
-  font: italic 1.05rem Georgia, serif; color: #737852;
-  text-transform: none; letter-spacing: 0;
-  text-align: center;
+  color: #737852; text-align: center;
 }
+body.tenant-justat .fd-month { display: block; font: normal .72rem Georgia, serif; text-transform: uppercase; line-height: 1; }
+body.tenant-justat .fd-day { display: block; font: italic 1.5rem Georgia, serif; line-height: 1.1; }
 
 /* posts as cream crumpled-paper cards with a curled top-right corner + shadow */
 body.tenant-justat .feed-item {
   position: relative;
-  margin: 0 0 22px 0;
+  margin: -2em -1em 1em -2.4em;
   padding: 26px 34px 30px;
   border: none;
   background: #e9e7cf;
@@ -119,7 +119,7 @@ body.tenant-justat blockquote, body.tenant-justat .box {
 /* right column: lime masthead + cream sidebar */
 body.tenant-justat .js-sidebar {
   grid-area: side;
-  margin-top: 118px;                                        /* line the masthead up with the paper column */
+  margin-top: 0;
   font: 1rem/1.35 Arial, Helvetica, sans-serif; color: #797a67;
   /* lime masthead + floral (logo-back, 323px) layered over a cream fill so the
      lower sections stay on paper rather than the dark frame */

@@ -55,8 +55,8 @@ let view (response: GetArticles.Response) =
     Html.div [
         prop.className "feed"
         prop.children [
-            for (day, items) in groupByDay response.Items do
-                dayDivider day
+            for (ts, items) in groupByDay response.Items do
+                dayDivider ts
                 yield! (items |> List.map feedItem)
             Html.div [ prop.key "feed-sentinel"; prop.id "feed-sentinel"; prop.className "feed-sentinel" ]
         ]
