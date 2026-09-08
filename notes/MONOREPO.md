@@ -139,3 +139,37 @@ Steps 1-7 are complete. Two remain and can be tackled together:
 7. ~~Verify: `npm run gen && dotnet build` all projects from `apps/microblog/`~~
 8. **Add golden model snapshot test** — `test.sh` currently does build verification only. Add diffing generated files against checked-in expected output to catch generator regressions.
 9. **Extract Admin.fs dispatcher into framework** — Admin.fs is 100% generic (dispatches CRUD via entity list from AdminConfig.fs). Move into `packages/hedge/src/Hedge/` as a function parameterized over entities and admin key extraction, eliminating the 130-line copy in every scaffolded app.
+
+## Framework work — trigger: the second app (saymay music player)
+
+Building saymay is the first genuinely *different* hedge app (music player, not a
+news/blog tenant of microblog). That's the validation point for extracting shared
+concerns — do these three together when scaffolding it:
+
+1. **First-class per-tenant config/identity.** Tenant identity is currently
+   scattered and half-built: `SITE_SLUG`/`SITE_LOGO` are injected ad hoc by the app's
+   `vite.config.js`, and `Models.Config.GlobalConfig`/`FeatureFlags` is *defined but
+   never wired to the client*. Consolidate into ONE framework capability: the
+   framework stamps `body.tenant-<slug>` and delivers a typed per-tenant config
+   `{ slug; title; logo; features }` to the client via an accessor; apps just declare
+   each tenant's values (wrangler `[env.*]` + build env stay app-level — those are the
+   tenant *list*, not the mechanism). Consequences: per-tenant CSS keys off the
+   framework-owned `body.tenant-*`; **`fitHeadlines` (and any per-tenant behaviour)
+   gates on a `features` flag (e.g. `features.bigText`) instead of the hardcoded
+   `body.classList.contains('tenant-usbase')` check in `Client/Shared.fs`** — the
+   behaviour stays app code, only its activation reads the framework signal.
+
+2. **Multi-param (or query-string) GET endpoints.** `Hedge.Interface` only has
+   `Get` (no param) and `GetOne` (one path param), which forced the `tag~cursor`
+   encoding hack in `getItemsByTag`/`itemsByTag` (tag + cursor packed into one param,
+   split in the handler). Add a two-param / query-string GET type to `Interface.fs`
+   and teach Gen to emit its route + client wrapper; then the tag cursor is a clean
+   separate param and the encoding hack is removed.
+
+3. **Extract Admin.fs into the framework** (item 9 above) — saymay will want admin
+   too, so do the extraction now rather than copy the 130-line dispatcher again.
+
+Deliberately staying app-level (decision 2026-09-08): **cursor pagination** — the
+per-list SQL and cursor semantics are app-specific, and the client scroll helpers
+(`watchScroll`, `loadMoreIfSentinelVisible`) are thin list-UI, so they live with the
+app rather than the framework.
