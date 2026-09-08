@@ -7,10 +7,13 @@
     "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
     "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",
     "dev:server": "concurrently -n fable-server,wrangler -c green,yellow \"npm run fable:watch:server\" \"wrangler dev\"",
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client && vite build",
+    "build": "npm run build:client && npm run build:admin && npm run build:server && npm run build:site",
+    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
+    "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:justat": "SITE_SLUG=justat SITE_TITLE=\"just@justat.at\" ADMIN_TITLE=\"just@justat.at admin\" SITE_LOGO=\"/public/justat.png\" npm run build && wrangler deploy --env justat",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
     "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
@@ -28,6 +31,15 @@
     "wrangler": "^4.67.0"
   },
   "dependencies": {
+    "@tiptap/core": "^2.11.0",
+    "@tiptap/extension-color": "^2.11.0",
+    "@tiptap/extension-highlight": "^2.11.0",
+    "@tiptap/extension-image": "^2.11.0",
+    "@tiptap/extension-link": "^2.11.0",
+    "@tiptap/extension-text-align": "^2.11.0",
+    "@tiptap/extension-text-style": "^2.11.0",
+    "@tiptap/pm": "^2.11.0",
+    "@tiptap/starter-kit": "^2.11.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

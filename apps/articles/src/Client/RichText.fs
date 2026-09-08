@@ -11,6 +11,9 @@ let ownerCommentEditorId = "owner-comment-editor"
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null }); })")>]
 let createEditorWhenReady (elementId: string) (initialContent: string) : unit = jsNative
 
+[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2 }); })")>]
+let createEditorWithClose (elementId: string) (initialContent: string) (onClose: unit -> unit) : unit = jsNative
+
 [<Emit("window.HedgeRT.destroyRichTextEditor($0)")>]
 let destroyEditor (elementId: string) : unit = jsNative
 
@@ -19,6 +22,11 @@ let getEditorContent (elementId: string) : string = jsNative
 
 [<Emit("(function(){ var e = window.HedgeRT.getEditor($0); if(e) e.commands.clearContent(); })()")>]
 let clearEditor (elementId: string) : unit = jsNative
+
+// Rendering — pure content -> HTML, for declarative views.
+
+[<Emit("window.HedgeRT.renderRichTextHtml($0)")>]
+let toHtml (content: string) : string = jsNative
 
 // Viewer lifecycle (deferred — waits for DOM element to appear)
 

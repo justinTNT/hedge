@@ -8,11 +8,11 @@ compatibility_flags = ["nodejs_compat"]
 port = 8787
 local_protocol = "http"
 
-# D1 Database binding
+# D1 Database binding (default = justat, the first tenant)
 [[d1_databases]]
 binding = "DB"
-database_name = "articles-db"
-database_id = "local"  # Replace with real ID after `wrangler d1 create articles-db`
+database_name = "justat-db"
+database_id = "95b46981-c09e-4f80-89a5-3574c81c83ad"
 
 # Durable Objects
 [durable_objects]
@@ -22,12 +22,12 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["EventHub"]
+new_sqlite_classes = ["EventHub"]
 
 # R2 blob storage
 [[r2_buckets]]
 binding = "BLOBS"
-bucket_name = "articles-blobs"
+bucket_name = "justat-blobs"
 
 # Static assets
 [assets]
@@ -36,7 +36,40 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# Environment variables
+# ADMIN_KEY is deliberately absent from [vars]: a plain-text var here would
+# override a same-named dashboard secret on deploy. Local dev reads it from
+# .dev.vars; every deployed tenant from its own `wrangler secret put ADMIN_KEY`.
 [vars]
-ENVIRONMENT = "development"
-ADMIN_KEY = "dev-admin-key"
+ENVIRONMENT = "production"
+
+# ============================================================
+# Tenants (one articles app, many sites). Deploy with --env <name>.
+# Bindings are NOT inherited by environments, so each block repeats them.
+# ============================================================
+
+# -- justat.at (worker "justat") — no custom domain yet, inspect via workers.dev --
+[env.justat]
+name = "justat"
+
+[env.justat.vars]
+ENVIRONMENT = "production"
+
+[[env.justat.d1_databases]]
+binding = "DB"
+database_name = "justat-db"
+database_id = "95b46981-c09e-4f80-89a5-3574c81c83ad"
+
+[[env.justat.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "justat-blobs"
+
+[env.justat.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.justat.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
