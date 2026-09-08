@@ -61,10 +61,10 @@ body.tenant-usbase nav img {
 
 .extract {
   padding: 1em;
-  border-left: 4px solid #bbb;
-  border-bottom: 4px solid #bbb;
+  border-left: 4px solid #911;
+  border-bottom: 4px solid #500;
   border-radius: 9px;
-  background: #fafafa;
+  background: #f8f0f0;
 }
 
 .extract span {
@@ -106,7 +106,7 @@ body.tenant-usbase nav img {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #111;
+  background: #f00;
   flex-shrink: 0;
 }
 .feed-day::after {
@@ -114,14 +114,14 @@ body.tenant-usbase nav img {
   flex: 1;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(to right, #111 0%, #d0d0d0 45%, transparent 100%);
+  background: linear-gradient(to right, #911 0%, #d0d0d0 45%, transparent 100%);
 }
 .feed-day-label {
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: #111;
+  color: #911;
   white-space: nowrap;
 }
 /* Non-zero height so IntersectionObserver reliably reports the sentinel as
