@@ -1,0 +1,18 @@
+# pa.thna.me — the "Jimi, Luca and Jericho" comic (static; URL path = page number).
+# Pure static assets, no server code. SPA fallback makes /<n> serve the reader,
+# which reads the page number from the path. Salvaged from the old iojs box.
+name = "pathname"
+compatibility_date = "2024-09-01"
+
+# pa.thna.me — cut over to Cloudflare 2026-09-09. workers_dev kept on while the
+# thna.me NS propagate. thna.me email (MX mx3-8.name.com + SPF) preserved in the
+# Cloudflare zone before the switch.
+workers_dev = true
+routes = [
+    { pattern = "pa.thna.me", custom_domain = true }
+]
+
+[assets]
+directory = "./public"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"

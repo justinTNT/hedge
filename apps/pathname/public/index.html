@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jimi, Luca and Jericho</title>
+<link rel="shortcut icon" href="/favicon.ico">
+<style>
+  /* ===== pa.thna.me — the comic where the URL path is the page ===== */
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background-color: #45fbfd;            /* daytime sky */
+    font: 16px/1.5 "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif;
+    overflow-x: hidden;
+    min-height: 100%;
+  }
+
+  /* nightfall: a slow day->night->day wash over the sky (not the comic) */
+  #nightfall {
+    position: fixed; inset: 0; z-index: 2;
+    background: #000; opacity: 0; pointer-events: none;
+    animation: nightandday 300s linear 30s infinite;
+  }
+  @keyframes nightandday {
+    0%   { opacity: 0; }
+    35%  { opacity: .45; }
+    50%  { opacity: .8; }
+    65%  { opacity: .45; }
+    100% { opacity: 0; }
+  }
+
+  /* drifting clouds */
+  .cloud { position: fixed; z-index: 1; animation: floatright linear infinite; }
+  .cloud img { display: block; width: 100%; }
+  @keyframes floatright { 0% { left: -25%; } 100% { left: 125%; } }
+  .cloud1 { width: 50px;  top: 180px; animation-duration: 87s; }
+  .cloud2 { width: 100px; top: 130px; animation-duration: 50s; }
+  .cloud3 { width: 100px; top: 320px; animation-duration: 50s; }
+  .cloud4 { width: 125px; top: 333px; animation-duration: 44s; animation-delay: 5s; }
+  .cloud5 { width: 125px; top: 99px;  animation-duration: 50s; }
+  .cloud6 { width: 200px; top: 190px; animation-duration: 40s; animation-delay: 5s; }
+
+  /* the green horizon */
+  #lucasbottom {
+    position: fixed; left: 0; bottom: 0; width: 100%; height: 234px;
+    background: #5fff59 url("/images/lucasbottom.jpg") repeat-x bottom;
+    background-size: auto 100%; z-index: 1; pointer-events: none;
+  }
+
+  /* everything you interact with rides above nightfall */
+  #stage { position: relative; z-index: 3; }
+
+  /* top nav — circled arrows + home, echoing the original */
+  #nav {
+    display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    padding: 1rem 0 .5rem;
+  }
+  .navbtn {
+    width: 3rem; height: 3rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; color: #222; text-decoration: none;
+    background: rgba(255,255,255,.55); border: 3px solid #222;
+    cursor: pointer; user-select: none; transition: transform .1s, background .1s;
+  }
+  .navbtn:hover { background: #fff; transform: scale(1.08); }
+  .navbtn[aria-disabled="true"] { opacity: .25; pointer-events: none; }
+
+  /* the comic spread */
+  #book { text-align: center; padding: .5rem 2% 260px; }
+  #spread {
+    display: inline-flex; justify-content: center; align-items: flex-start;
+    gap: 8%; max-width: 96%;
+  }
+  #spread img {
+    width: 100%; height: auto; border-radius: 3px;
+    box-shadow: 0 0 5px 5px rgba(90,90,90,.55);
+    cursor: pointer; background: #fff;
+  }
+  #spread.two img { max-width: 46%; }
+  #spread.one img { max-width: 62%; }
+
+  #title { text-align: center; color: #145a15; font-weight: bold; margin: .2rem 0 0; }
+</style>
+</head>
+<body>
+  <div id="nightfall"></div>
+  <div class="cloud cloud1"><img src="/images/cloud.gif" alt=""></div>
+  <div class="cloud cloud2"><img src="/images/cloud.gif" alt=""></div>
+  <div class="cloud cloud3"><img src="/images/cloud.gif" alt=""></div>
+  <div class="cloud cloud4"><img src="/images/cloud.gif" alt=""></div>
+  <div class="cloud cloud5"><img src="/images/cloud.gif" alt=""></div>
+  <div class="cloud cloud6"><img src="/images/cloud.gif" alt=""></div>
+  <div id="lucasbottom"></div>
+
+  <div id="stage">
+    <nav id="nav">
+      <a class="navbtn" id="prev" title="Previous">&#8249;</a>
+      <a class="navbtn" id="home" title="Cover">&#8962;</a>
+      <a class="navbtn" id="next" title="Next">&#8250;</a>
+    </nav>
+    <div id="book"><div id="spread"></div></div>
+  </div>
+
+<script>
+  var LAST = 75;               // comic/1.jpg .. comic/75.jpg
+  var img = function (n) { return "/images/comic/" + n + ".jpg"; };
+
+  // URL path is the page. "/" or "/front" = the cover (page 1).
+  function pageFromPath() {
+    var p = location.pathname.replace(/^\/+|\/+$/g, "");
+    if (p === "" || p === "front" || p === "index.html") return 1;
+    var n = parseInt(p, 10);
+    if (isNaN(n)) return 1;
+    return Math.max(1, Math.min(LAST, n));
+  }
+
+  // page N -> {images, prev, next}. Cover(1) alone; 75 alone; else N,N+1 spread.
+  function layout(n) {
+    if (n <= 1)    return { imgs: [1],        prev: null,           next: 3 };
+    if (n >= LAST) return { imgs: [LAST],      prev: LAST - 2,       next: null };
+    var right = n + 1 <= LAST ? n + 1 : null;
+    return {
+      imgs: right ? [n, right] : [n],
+      prev: n - 2 < 1 ? 1 : n - 2,
+      next: n + 2 > LAST ? LAST : n + 2
+    };
+  }
+
+  var spread = document.getElementById("spread");
+  var prevBtn = document.getElementById("prev");
+  var nextBtn = document.getElementById("next");
+  var homeBtn = document.getElementById("home");
+
+  function go(n) {
+    if (n == null) return;
+    history.pushState({}, "", n <= 1 ? "/" : "/" + n);
+    render();
+  }
+
+  function wire(btn, target) {
+    btn.setAttribute("aria-disabled", target == null ? "true" : "false");
+    btn.onclick = function (e) { e.preventDefault(); go(target); };
+  }
+
+  function preload(n) {
+    [n, n + 1, n - 1, n - 2].forEach(function (m) {
+      if (m >= 1 && m <= LAST) { var i = new Image(); i.src = img(m); }
+    });
+  }
+
+  function render() {
+    var n = pageFromPath();
+    var L = layout(n);
+    spread.className = L.imgs.length === 2 ? "two" : "one";
+    spread.innerHTML = "";
+    L.imgs.forEach(function (m) {
+      var el = document.createElement("img");
+      el.src = img(m);
+      el.alt = "page " + m;
+      el.onclick = function () { go(L.next != null ? L.next : 1); };
+      spread.appendChild(el);
+    });
+    wire(prevBtn, L.prev);
+    wire(nextBtn, L.next);
+    document.title = n <= 1 ? "Jimi, Luca and Jericho" : "pa.thna.me / " + n;
+    preload(n);
+    window.scrollTo(0, 0);
+  }
+
+  homeBtn.onclick = function (e) { e.preventDefault(); go(1); };
+  window.onpopstate = render;
+  render();
+</script>
+</body>
+</html>
