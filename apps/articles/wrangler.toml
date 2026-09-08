@@ -47,9 +47,13 @@ ENVIRONMENT = "production"
 # Bindings are NOT inherited by environments, so each block repeats them.
 # ============================================================
 
-# -- justat.at (worker "justat") — no custom domain yet, inspect via workers.dev --
+# -- justat.at (worker "justat") — cut over to Cloudflare 2026-09-08 --
 [env.justat]
 name = "justat"
+routes = [
+    { pattern = "justat.at", custom_domain = true },
+    { pattern = "www.justat.at", custom_domain = true }
+]
 
 [env.justat.vars]
 ENVIRONMENT = "production"
