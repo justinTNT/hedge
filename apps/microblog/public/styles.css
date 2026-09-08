@@ -45,9 +45,9 @@ body.tenant-usbase .feed-item .extract {
 }
 /* sticky day divider on cream, accent recoloured to the #bf2 yellow-green */
 body.tenant-usbase .feed-day { background: #eeeedd; }
-body.tenant-usbase .feed-day::before { background: #bbff22; }
+body.tenant-usbase .feed-day::before { background: #99cc33; }
 body.tenant-usbase .feed-day::after {
-  background: linear-gradient(to right, #bbff22 0%, #cabf8f 45%, transparent 100%);
+  background: linear-gradient(to right, #99cc33 0%, #cabf8f 45%, transparent 100%);
 }
 body.tenant-usbase .feed-day-label { color: #607890; }
 /* tilted masthead (perspective gives the rotate3d real depth) */
