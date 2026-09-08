@@ -284,6 +284,18 @@ let private deleteResponse (entity: AdminEntity) (id: string) (env: Env) : JS.Pr
         return okJson TQTQ{"ok":true}TQTQ
     }
 
+let private createResponse (entity: AdminEntity) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match entity.Create with
+        | None ->
+            return badRequest (sprintf "%s cannot be created from the admin (no primary key)" entity.Name)
+        | Some create ->
+            let! bodyText = request.text()
+            let! json = create bodyText env
+            let body = sprintf TQTQ{"record":%s}TQTQ json
+            return okJson body
+    }
+
 /// Try to handle an admin route. Returns Some promise if matched, None otherwise.
 let handleRequest (request: WorkerRequest) (env: Env) (route: Route) : JS.Promise<WorkerResponse> option =
     match route with
@@ -316,6 +328,19 @@ let handleRequest (request: WorkerRequest) (env: Env) (route: Route) : JS.Promis
                     })
                 | None -> None
             else None
+        | _ -> None
+
+    // POST /api/admin/:type — create a record
+    | POST path ->
+        match matchPath "/api/admin/:id" path with
+        | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
+            match findEntity entityName with
+            | Some entity ->
+                Some (promise {
+                    if not (checkAdmin request env) then return unauthorized ()
+                    else return! createResponse entity request env
+                })
+            | None -> None
         | _ -> None
 
     // PUT /api/admin/:type/:id — update record
@@ -374,6 +399,9 @@ type AdminEntity = {
     Schema: TypeSchema
     List: Env -> JS.Promise<string>
     Get: string -> Env -> JS.Promise<string option>
+    /// None for tables without a real primary key — there'd be nowhere to put
+    /// a generated id (see the Insert guard in Gen/Program.fs).
+    Create: (string -> Env -> JS.Promise<string>) option
     Update: string -> string -> Env -> JS.Promise<string>
     Delete: string -> Env -> JS.Promise<unit>
 }
@@ -469,6 +497,34 @@ let private genericUpdate (table: AdminTable) (id: string) (body: string) (env: 
             return result |> Option.defaultValue TQTQ{"error":"Not found after update"}TQTQ
     }
 
+let private genericCreate (table: AdminTable) (body: string) (env: Env) : JS.Promise<string> =
+    promise {
+        match Decode.fromString (Decode.keyValuePairs Decode.value) body with
+        | Error err -> return sprintf TQTQ{"error":"%s"}TQTQ err
+        | Ok pairs ->
+            let pairMap = pairs |> Map.ofList
+            let id = newId ()
+            let now = epochNow ()
+            let args =
+                table.MutableFields |> List.map (fun fieldName ->
+                    let jsonKey = camelCase fieldName
+                    match Map.tryFind jsonKey pairMap with
+                    | Some v ->
+                        let s = Encode.toString 0 v
+                        if s = "null" then jsNull
+                        else box (s.Trim('"'))
+                    | None -> jsNull)
+            // Column order matches the generated INSERT: pk, mutables, created_at
+            let allArgs =
+                [ box id ] @ args
+                @ (if table.HasCreateTs then [ box now ] else [])
+                |> List.toArray
+            let stmt = bind (env.DB.prepare(table.Insert)) allArgs
+            let! _ = stmt.run()
+            let! result = genericGet table id env
+            return result |> Option.defaultValue TQTQ{"error":"Not found after create"}TQTQ
+    }
+
 let private genericDelete (table: AdminTable) (id: string) (env: Env) : JS.Promise<unit> =
     promise {
         let stmt = bind (env.DB.prepare(table.Delete)) [| box id |]
@@ -486,6 +542,7 @@ let entities : AdminEntity list =
           Schema = table.Schema
           List = genericList table
           Get = genericGet table
+          Create = (if table.Insert = "" then None else Some (genericCreate table))
           Update = genericUpdate table
           Delete = genericDelete table })
 """
