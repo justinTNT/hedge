@@ -149,3 +149,30 @@ directory = "./_site"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+
+# -- nonukes (worker "nonukes") — no custom domain yet, inspect via workers.dev --
+[env.nonukes]
+name = "nonukes"
+
+[env.nonukes.vars]
+ENVIRONMENT = "production"
+
+[[env.nonukes.d1_databases]]
+binding = "DB"
+database_name = "nonukes-db"
+database_id = "3d047b89-a532-48ca-afc2-9140a0f80110"
+
+[[env.nonukes.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "nonukes-blobs"
+
+[env.nonukes.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.nonukes.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
