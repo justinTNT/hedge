@@ -222,6 +222,7 @@ let appView (model: Model) dispatch =
                         | Some response -> Feed.view response
                         | None -> Html.p [ prop.text "No articles yet." ]
             ]
+            if Shared.siteSlug = "justat" then Shared.justatSidebar else Html.none
         ]
     ]
 

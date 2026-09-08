@@ -16,6 +16,9 @@ let basePath : string = jsNative
 [<Emit("window.SITE_LOGO || '/public/darwinnews.png'")>]
 let private siteLogo : string = jsNative
 
+[<Emit("window.SITE_SLUG || ''")>]
+let siteSlug : string = jsNative
+
 /// Short human date from a Unix-seconds timestamp.
 [<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
 let formatDate (ts: int) : string = jsNative
@@ -255,5 +258,85 @@ let navWithSession (model: Model) dispatch =
                 ]
             ]
             identityView model dispatch
+        ]
+    ]
+
+/// justat.at's static sidebar, ported verbatim from the old app's baseplate
+/// (lime "just@justat.at" masthead + About / My sites / Contact / Links).
+/// Tenant-specific for now; a later per-tenant config would generalise it.
+let private sidebarLink (href: string) (text: string) =
+    Html.a [ prop.href href; prop.text text ]
+
+let justatSidebar =
+    Html.aside [
+        prop.className "js-sidebar"
+        prop.children [
+            Html.div [
+                prop.className "js-masthead"
+                prop.children [
+                    Html.a [ prop.href "mailto:just@justat.at"; prop.text "just@justat.at" ]
+                ]
+            ]
+            Html.div [
+                prop.className "js-sections"
+                prop.children [
+                    Html.section [
+                        prop.children [
+                            Html.h5 "About"
+                            Html.p [
+                                prop.children [
+                                    Html.text "Yeah, I admit, it's a vanity blog. I never had one, til "
+                                    sidebarLink "http://hipstrider.com" "hipstrider"
+                                    Html.text " beat me to it. I do a bit of webdev work, and I've found this a useful place to test out new ideas in the wild."
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "My sites"
+                            Html.p [
+                                prop.children [
+                                    Html.text "For a few years now I have maintained a news archive, at "
+                                    sidebarLink "http://ntne.ws/" "ntne.ws"
+                                    Html.text " : and I have a music site : "
+                                    sidebarLink "http://www.hea.dphon.es" "hea.dphon.es"
+                                    Html.text "."
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "Contact me"
+                            Html.p [
+                                prop.children [
+                                    Html.text "I'm contactable on "
+                                    sidebarLink "http://www.facebook.com/justintutty" "facebook"
+                                    Html.text " (too often) and "
+                                    sidebarLink "http://twitter.com/justinTNT" "twitter"
+                                    Html.text " (rarely); via SMS (0424-028-741) or email (see above)."
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "Links"
+                            Html.p [
+                                prop.children [
+                                    sidebarLink "http://no-waste.org" "no-waste.org"
+                                    Html.text " | "
+                                    sidebarLink "http://coolmob.org" "coolmob.org"
+                                    Html.text " | "
+                                    sidebarLink "http://aivl.org.au" "aivl.org.au"
+                                    Html.text " | "
+                                    sidebarLink "http://larrakia.com" "larrakia.com"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ]
     ]

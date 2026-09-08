@@ -21,7 +21,8 @@ function siteConfig() {
       const isAdmin = ctx.filename.endsWith('admin.html');
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
-        `window.SITE_LOGO=${JSON.stringify(siteLogo)};</script>`;
+        `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
+        `window.SITE_SLUG=${JSON.stringify(siteSlug)};</script>`;
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)
