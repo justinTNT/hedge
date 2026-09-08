@@ -37,6 +37,12 @@ body.tenant-usbase .feed-item h2 {                     /* the big-text gimmick *
   margin-left: 0;
 }
 body.tenant-usbase .extract { background: #f6f4e6; border-color: #cabf8f; }
+/* Old usba.se "curled corner": drop + inset shadow with an asymmetric radius. */
+body.tenant-usbase .feed-item .extract {
+  border: none;
+  border-radius: 0 120px 120px / 0 0 6px 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.27), 0 0 40px rgba(0,0,0,0.06) inset;
+}
 /* sticky day divider on cream, accent recoloured to the #bf2 yellow-green */
 body.tenant-usbase .feed-day { background: #eeeedd; }
 body.tenant-usbase .feed-day::before { background: #bbff22; }

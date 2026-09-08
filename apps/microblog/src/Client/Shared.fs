@@ -56,6 +56,11 @@ let watchScroll (elementId: string) (onNear: unit -> unit) : unit = jsNative
 })($0, $1)""")>]
 let loadMoreIfSentinelVisible (elementId: string) (onMore: unit -> unit) : unit = jsNative
 
+/// Hide an <img> that failed to load (dead external hotlink), so a rotted link
+/// collapses cleanly instead of showing a broken-image icon.
+[<Emit("$0.target.style.display = 'none'")>]
+let private hideBrokenImg (e: obj) : unit = jsNative
+
 let private baseSegments =
     basePath.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
@@ -144,7 +149,7 @@ let feedItem (item: GetFeed.FeedItem) =
                                    Html.span [ prop.text (RichText.extractPlainText text) ];
                                    match item.Image with
                                    | Some url ->
-                                       Html.img [ prop.src url ]
+                                       Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
                                    | None -> Html.none
                                ]
                 ]
