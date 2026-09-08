@@ -118,3 +118,30 @@ directory = "./_site"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+
+# -- usba.se (worker "usbase") --
+[env.usbase]
+name = "usbase"
+
+[env.usbase.vars]
+ENVIRONMENT = "production"
+
+[[env.usbase.d1_databases]]
+binding = "DB"
+database_name = "usbase-db"
+database_id = "61d3cb98-c800-4b2f-a8c6-bd9c57afc7f2"
+
+[[env.usbase.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "usbase-blobs"
+
+[env.usbase.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.usbase.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
