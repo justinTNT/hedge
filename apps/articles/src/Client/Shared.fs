@@ -25,6 +25,12 @@ let siteSlug : string = jsNative
 [<Emit("(function(t){var b=window.SITE_TITLE||'';document.title=t?(t+' · '+b):b;})($0)")>]
 let setDocTitle (articleTitle: string) : unit = jsNative
 
+/// First image src inside a RichContent (TipTap) doc, or "" if none. Lets the feed
+/// derive a thumbnail from the teaser itself, so an authored article shows its
+/// image without a separately-set hero.
+[<Emit("(function(s){try{var d=JSON.parse(s);var f=function(n){if(!n)return null;if(n.type==='image'&&n.attrs&&n.attrs.src)return n.attrs.src;var c=n.content;if(c)for(var i=0;i<c.length;i++){var r=f(c[i]);if(r)return r;}return null;};return f(d)||'';}catch(e){return '';}})($0)")>]
+let firstImageSrc (richJson: string) : string = jsNative
+
 /// Short human date from a Unix-seconds timestamp.
 [<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
 let formatDate (ts: int) : string = jsNative
@@ -118,11 +124,16 @@ let feedItem (item: GetArticles.ArticleItem) =
             Html.h2 [ prop.text item.Title ]
             match item.Teaser with
             | Some (RichContent text) ->
+                // Thumbnail: prefer the teaser's own first image (works for authored
+                // articles too), fall back to the Image field.
+                let thumb =
+                    let t = firstImageSrc text
+                    if t <> "" then Some t else item.Image
                 Html.p [
                     prop.className "extract"
                     prop.children [
                         Html.span [ prop.text (RichText.extractPlainText text) ]
-                        match item.Image with
+                        match thumb with
                         | Some url ->
                             Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
                         | None -> Html.none
