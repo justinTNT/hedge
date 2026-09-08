@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,700;1,300;1,700&family=Source+Sans+3:wght@400;900&display=swap');
+
 /* ===================================================================
    Base styles — shared by every articles tenant (kept plain/neutral).
    =================================================================== */
@@ -161,4 +163,85 @@ body.tenant-justat .comment-author { color: #002; font-style: italic; }
   body.tenant-justat main { margin-top: 90px; }
   body.tenant-justat .feed-day { margin-left: 0; }
   body.tenant-justat .js-sidebar { margin-top: 1rem; }
+}
+
+/* ===================================================================
+   Per-tenant theme: nowdochemtrails.net (tenant-ndct).
+   Recreates the Ghost site's HTML5UP "Massively" look: fixed contrails
+   hero background, full-screen intro banner, Source Sans / Merriweather,
+   #18bfef cyan accent, posts on a centred white panel. Assets in /public/ndct/.
+   =================================================================== */
+body.tenant-ndct {
+  margin: 0;
+  color: #212931;
+  font: 300 16px/1.85 "Merriweather", Georgia, serif;
+  background:
+    url(/public/ndct/overlay.png),
+    linear-gradient(rgba(30,37,45,0.45), rgba(30,37,45,0.45)),
+    url(/public/ndct/hero.jpg);
+  background-size: 256px 256px, cover, cover;
+  background-position: top left, center, center;
+  background-attachment: fixed;
+  background-repeat: repeat, no-repeat, no-repeat;
+}
+body.tenant-ndct a { color: #18bfef; text-decoration: none; }
+body.tenant-ndct a:hover { text-decoration: underline; }
+body.tenant-ndct .app { max-width: none; margin: 0; padding: 0; display: block; }
+
+/* full-screen intro banner */
+body.tenant-ndct .ndct-hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: #fff; position: relative; padding: 2rem;
+}
+body.tenant-ndct .ndct-hero-title {
+  font-family: "Source Sans 3", Helvetica, sans-serif; font-weight: 900; text-transform: uppercase;
+  font-size: clamp(2.8rem, 8vw, 6rem); line-height: 1.05; letter-spacing: 0.12em; margin: 0;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.25);
+}
+body.tenant-ndct .ndct-hero-sub { font-style: italic; font-size: clamp(1.1rem, 2.5vw, 1.6rem); margin: 1.2rem 0 0; }
+body.tenant-ndct .ndct-hero-more {
+  position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+  width: 3rem; height: 3rem; border: 2px solid rgba(255,255,255,0.7); border-radius: 50%;
+  color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+}
+
+/* the content sits on a centred white panel over the fixed background */
+body.tenant-ndct header {
+  background: #fff; margin: 0 auto; max-width: 1000px; padding: 1rem 3.5rem; border-bottom: 1px solid #efefef;
+}
+body.tenant-ndct nav > a img { display: none; }
+body.tenant-ndct .identity-area { color: #7f888f; }
+body.tenant-ndct main { background: #fff; margin: 0 auto; max-width: 1000px; padding: 2.5rem 3.5rem 4rem; }
+
+/* date label */
+body.tenant-ndct .feed-day { margin: 1.4rem 0 .2rem; }
+body.tenant-ndct .feed-day-label {
+  font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.2em; font-size: 0.7rem; color: #18bfef;
+}
+
+/* posts as Massively cards: heavy caps title, serif excerpt, full-width feature image */
+body.tenant-ndct .feed-item { display: block; border: none; border-top: 1px solid #efefef; padding: 2.5rem 0; margin: 0; }
+body.tenant-ndct .feed-item h2 {
+  font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; font-size: 1.9rem; line-height: 1.15; color: #212931; margin: 0 0 .6rem;
+}
+body.tenant-ndct .feed-item .extract { display: block; color: #212931; }
+body.tenant-ndct .feed-item .extract span { display: block; }
+body.tenant-ndct .feed-item .extract img {
+  width: 100%; height: auto; max-height: 420px; object-fit: cover;
+  margin-top: 1.4rem; border-radius: 0; float: none; display: block;
+}
+
+/* article detail */
+body.tenant-ndct .article-title {
+  font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.06em; font-size: 2.3rem; line-height: 1.1; color: #212931; margin-bottom: 1.2rem;
+}
+body.tenant-ndct .article-body { font-size: 1.05rem; line-height: 1.9; }
+body.tenant-ndct .comments { border-top: 1px solid #efefef; }
+
+@media (max-width: 760px) {
+  body.tenant-ndct header, body.tenant-ndct main { padding-left: 1.4rem; padding-right: 1.4rem; }
 }

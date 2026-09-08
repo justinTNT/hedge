@@ -299,6 +299,23 @@ let navWithSession (model: Model) dispatch =
         ]
     ]
 
+/// ndct's full-screen intro banner (HTML5UP "Massively" look): the contrails
+/// hero with the title + subtitle. Shown on the home feed only.
+let ndctHero =
+    Html.section [
+        prop.className "ndct-hero"
+        prop.children [
+            Html.div [
+                prop.className "ndct-hero-inner"
+                prop.children [
+                    Html.h1 [ prop.className "ndct-hero-title"; prop.text "Now Do Chemtrails" ]
+                    Html.p [ prop.className "ndct-hero-sub"; prop.text "theories > news" ]
+                ]
+            ]
+            Html.a [ prop.className "ndct-hero-more"; prop.href "#feed"; prop.text "↓" ]
+        ]
+    ]
+
 /// justat.at's static sidebar, ported verbatim from the old app's baseplate
 /// (lime "just@justat.at" masthead + About / My sites / Contact / Links).
 /// Tenant-specific for now; a later per-tenant config would generalise it.

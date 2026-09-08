@@ -202,6 +202,7 @@ let appView (model: Model) dispatch =
     Html.div [
         prop.className "app"
         prop.children [
+            if Shared.siteSlug = "ndct" && List.isEmpty model.Route then Shared.ndctHero else Html.none
             Html.header [ Shared.navWithSession model dispatch ]
             Html.main [
                 match model.Error with
