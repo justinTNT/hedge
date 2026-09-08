@@ -14,6 +14,7 @@
     "build:site": "vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
     "deploy": "npm run build && wrangler deploy",
     "deploy:justat": "SITE_SLUG=justat SITE_TITLE=\"just@justat.at\" ADMIN_TITLE=\"just@justat.at admin\" SITE_LOGO=\"/public/justat.png\" npm run build && wrangler deploy --env justat",
+    "deploy:ndct": "SITE_SLUG=ndct SITE_TITLE=\"Now Do Chemtrails\" ADMIN_TITLE=\"NDCT admin\" SITE_LOGO=\"/public/ndct.png\" npm run build && wrangler deploy --env ndct",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
     "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",

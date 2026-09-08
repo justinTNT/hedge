@@ -77,3 +77,30 @@ directory = "./_site"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+
+# -- nowdochemtrails.net (worker "ndct") — no custom domain yet, inspect via workers.dev --
+[env.ndct]
+name = "ndct"
+
+[env.ndct.vars]
+ENVIRONMENT = "production"
+
+[[env.ndct.d1_databases]]
+binding = "DB"
+database_name = "ndct-db"
+database_id = "6995e8ca-652a-4686-af23-c06e93af42f3"
+
+[[env.ndct.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "ndct-blobs"
+
+[env.ndct.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.ndct.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
