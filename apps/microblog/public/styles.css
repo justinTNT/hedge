@@ -12,6 +12,9 @@ h1 { font-size: 1.5rem; }
 .item-detail h2 { margin-bottom: 1rem; margin-top: 1rem; }
 .item-image { max-width: 100%; }
 nav img { width: 100%; }
+
+/* Per-tenant overrides (body gets a `tenant-<slug>` class at build time). */
+body.tenant-usbase nav img { width: 50%; }
 .tags { margin-top: 0.5rem; }
 .main-link { text-decoration: none; }
 
@@ -20,7 +23,6 @@ nav img { width: 100%; }
   border-left: 4px solid #bbb;
   border-bottom: 4px solid #bbb;
   border-radius: 9px;
-  display: flex;
   background: #fafafa;
 }
 

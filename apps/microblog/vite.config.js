@@ -9,6 +9,9 @@ const basePath = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const siteTitle = process.env.SITE_TITLE || 'Darwin News';
 const adminTitle = process.env.ADMIN_TITLE || 'DNews Admin';
 const siteLogo = process.env.SITE_LOGO || '/public/darwinnews.png';
+// Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
+// deploy-specific rules (e.g. body.tenant-usbase nav img { width: 50% }).
+const siteSlug = process.env.SITE_SLUG || '';
 
 /// Resolves the __BASE__ / __SITE_TITLE__ placeholders in the HTML entry
 /// points and hands the client its runtime config on window.
@@ -23,7 +26,8 @@ function siteConfig() {
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)
-        .replace('<head>', `<head>\n    ${injected}`);
+        .replace('<head>', `<head>\n    ${injected}`)
+        .replace('<body>', siteSlug ? `<body class="tenant-${siteSlug}">` : '<body>');
     }
   };
 }
