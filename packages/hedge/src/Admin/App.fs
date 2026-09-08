@@ -25,6 +25,14 @@ let private isNull (v: obj) : bool = jsNative
 [<Emit("(function(v){ var n = Number(v); return (isFinite(n) && n > 0) ? new Date(n * 1000).toISOString().slice(2, 10) : String(v); })($0)")>]
 let private shortDate (raw: string) : string = jsNative
 
+/// Epoch seconds -> "YYYY-MM-DD" for an <input type=date> value ("" if not an epoch).
+[<Emit("(function(v){ var n = Number(v); return (isFinite(n) && n > 0) ? new Date(n * 1000).toISOString().slice(0, 10) : ''; })($0)")>]
+let private isoDate (raw: string) : string = jsNative
+
+/// "YYYY-MM-DD" (from a date input) -> epoch seconds string ("" if unparseable).
+[<Emit("(function(v){ if(!v) return ''; var t = Date.parse(v + 'T00:00:00Z'); return isNaN(t) ? '' : String(Math.floor(t/1000)); })($0)")>]
+let private dateToEpoch (v: string) : string = jsNative
+
 // ============================================================
 // PascalCase → camelCase (matches server JSON keys)
 // ============================================================
@@ -402,7 +410,7 @@ module View =
         let isTimestamp =
             hasAttr CreateTimestamp || hasAttr UpdateTimestamp || hasAttr SoftDelete
             || (match underlying field.Type with
-                | FInt -> field.Name.EndsWith "At"
+                | FInt -> field.Name.EndsWith "At" || field.Name.EndsWith "Date"
                 | _ -> false)
         if text = "" then
             Html.td [ prop.className "admin-cell admin-cell-empty"; prop.text "—" ]
@@ -560,6 +568,21 @@ module View =
                         prop.value (if raw = "" then "" else shortDate raw)
                         prop.title raw
                         prop.disabled true
+                    ]
+                ]
+            ]
+        // Editable date fields (e.g. ArticleDate): a native date picker over the
+        // stored epoch seconds, so you edit a date, not a raw timestamp.
+        | FInt when field.Name.EndsWith "Date" && not isReadOnly ->
+            let raw = values |> Map.tryFind field.Name |> Option.defaultValue ""
+            Html.div [
+                prop.className "admin-field"
+                prop.children [
+                    Html.label [ prop.text field.Name ]
+                    Html.input [
+                        prop.type' "date"
+                        prop.value (isoDate raw)
+                        prop.onChange (fun (v: string) -> dispatch (FieldChanged (field.Name, dateToEpoch v)))
                     ]
                 ]
             ]
