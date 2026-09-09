@@ -184,3 +184,57 @@ Deliberately staying app-level (decision 2026-09-08): **cursor pagination** — 
 per-list SQL and cursor semantics are app-specific, and the client scroll helpers
 (`watchScroll`, `loadMoreIfSentinelVisible`) are thin list-UI, so they live with the
 app rather than the framework.
+
+## Reflection & north star (2026-09-09) — after five apps
+
+The framework held up across five apps: microblog (golden), articles (justat/ndct),
+music (dont/just.saymay.be), pathname (static comic), archive (ntne.ws, D1 + FTS5).
+`packages/hedge` stayed clean (Gen + Hedge runtime + generic Admin); all the
+duplication is in the apps. Grounded sweep + the emerging direction:
+
+### North star: apps as mountable modules; a site is a composition
+
+Endgame (user, 2026-09-09): stop treating microblog / pages / articles / music as
+monolithic deploys. Each becomes a self-contained **module** — a feature package with
+the standard shape (`Domain` + `Api` + `Handlers` + a `Client` component + its admin
+entities) exposing a mount point. A **site** = one deploy, one D1, that imports the
+modules it wants and mounts them under routes (e.g. an org-site with the microblog
+mounted at `/blog`). "Make a new app by merging the microblog with the org-site" is
+the motivating case. (basewatch itself is NOT this — it's just pages/menus; this is
+the horizon it should be *shaped* for, not built into.)
+
+hedge is already most of the way there: Gen reflects over `Models` and emits the
+combined Db/Routes/Admin/Codecs, so pointing it at two modules' domain types already
+produces merged plumbing; the Router dispatches; the generic Admin lists whatever
+tables exist. What the framework must add to compose cleanly (all in-boundary —
+generic runtime + codegen):
+- **Route prefixing / mounting** in Router (a module's routes under a mount point).
+- **Client-side module registry** so the shell renders the right module's component.
+- **Table / type namespacing** so two modules' `comments` tables don't collide.
+- Gen composing **multiple modules'** models into one schema/admin/codecs.
+
+Design this against the FIRST real merge (org-site + blog), not speculatively.
+
+### Framework candidates (model→codegen / generic runtime — in boundary)
+- **Generic Admin → framework** — item 9 above; still the safe warm-up.
+- **Per-tenant config** — "second app" item 1 above (still unbuilt).
+- **Multi-param / query GET endpoints** — item 2 above (archive worked around it again for section + search).
+- **`features` capability system in Gen** — NEW. Apps/models declare capabilities (comments, guests, tags, search, admin); Gen emits only those. Kills the "scaffold everything, then strip" tax (archive was copy-articles-then-delete-the-comment-stack). This is the framework half of "modules"; the app half is the guest-comments library.
+- **`[<Searchable>]` models → FTS** — NEW (archive). Mark a model searchable; Gen emits the FTS5 virtual table + migration + `/api/search` endpoint + codec. Hand-rolled in archive `Server/{Sql,Handlers}.fs`.
+- **Image field type** — item 4 above (unbuilt).
+
+### App-library candidates (reused features/presentation — NOT framework)
+- **`guest-comments`** — the identity/comment/attribution/OAuth-avatar/live-events stack (`Server/{Identity,Attribution,EventHub}.fs`, comment bits of `Handlers`/`Sql`, `Client/GuestSession.fs`, `lib/guest-session.js`, comment UI). Copied byte-for-byte between microblog + articles; archive dropped it; music copied-but-unused. Extract as a **mountable module** — design constraint from the north star: a pages app must be able to add it as a sub-section. This IS what the microblog-as-a-module becomes.
+- **`rich-text`** — `Client/RichText.fs` + `lib/rich-text/` (TipTap).
+- **presentation helpers** — day-grouping, date formatting, teaser/HTML-entity extraction (archive `deriveTeaser`), feed/detail Elmish patterns.
+- **`etl` tools** — mongo→D1 pipeline (bson parse, de-mojibake, chunked seeding, cover/URL derivation), currently ad-hoc in scratch.
+
+### Sequencing (discipline)
+- **Now:** build **basewatch** as the first deliberately *module-shaped* app — pages/menus only, minimal (no comments), clean seams. Not to compose it today, but so it's the first clean module and a third concrete data point.
+- **After basewatch, one deliberate consolidation pass** (never rewire the *live* microblog/articles under build pressure): (1) Admin → framework; (2) extract `guest-comments` as a mountable module, migrate the live apps onto it, prune dead EventHub + music vestigial files; (3) the codegen work — `features` + `[<Searchable>]` — now informed by three apps.
+- **Design the mount/compose runtime against the first real merge**, not in the abstract.
+- **Rule of three** throughout: don't promote an abstraction until a third app has voted. basewatch is that vote for the pages shape.
+
+### Prune (dead code, batch into the consolidation)
+- `EventHub.fs` (live WS comments) — copied into microblog/articles/music, dead everywhere (broadcast dropped).
+- music's vestigial `GuestSession.fs`/`RichText.fs`/`Ws.fs`/`EventHub.fs` (scaffold copy, unused).
