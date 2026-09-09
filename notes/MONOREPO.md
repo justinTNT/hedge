@@ -137,7 +137,7 @@ Steps 1-7 are complete. Two remain and can be tackled together:
 5. ~~Update `package.json` scripts (gen uses `dotnet run`, fable, vite, wrangler)~~
 6. ~~Update `vite.config.js` and `wrangler.toml` paths~~
 7. ~~Verify: `npm run gen && dotnet build` all projects from `apps/microblog/`~~
-8. **Add golden model snapshot test** — `test.sh` currently does build verification only. Add diffing generated files against checked-in expected output to catch generator regressions.
+8. **Add golden model snapshot test** — `test.sh` currently does build verification only. Add diffing generated files against checked-in expected output to catch generator regressions. **Must also cover the scaffold's hand-written template strings** (`Gen/Scaffold.fs`), not just generated files: the 2026-09-10 admin-CRUD episode was exactly this gap — microblog got a `genericUpdate` fix (`c0ce931`) that was never back-ported into the scaffold template, so music (the one truly scaffolded app) was born with a broken update (param-count mismatch on `updated_at`) and nothing flagged it because both compiled. Diff scaffold-emitted files against the golden model, or (better) shrink templates to near-nothing by pushing their bodies into the framework — as done for Admin, which makes this class of drift impossible for admin.
 9. **Extract Admin.fs dispatcher into framework** — Admin.fs is 100% generic (dispatches CRUD via entity list from AdminConfig.fs). Move into `packages/hedge/src/Hedge/` as a function parameterized over entities and admin key extraction, eliminating the 130-line copy in every scaffolded app.
 
 ## Framework work — trigger: the second app (saymay music player)

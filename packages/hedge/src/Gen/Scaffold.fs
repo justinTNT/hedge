@@ -56,7 +56,7 @@ export default defineConfig({
 """
 
 let workerEntryJs = """export { default } from "./dist/server/Worker.js";
-export { EventHub } from "./dist/server/EventHub.js";
+export { EventHub } from "./dist/server/packages/hedge/src/Hedge/EventHub.js";
 """
 
 let guestSessionJs = """(function () {
@@ -241,34 +241,6 @@ let adminConfig : AdminConfig<Env> =
       CheckKey = fun request env ->
         let key = getHeader request "X-Admin-Key"
         key <> "" && key = env.ADMIN_KEY }
-"""
-
-let eventHubFs = """module Server.EventHub
-
-open Fable.Core
-open Fable.Core.JsInterop
-open Hedge.Workers
-open Server.Env
-
-[<AttachMembers>]
-type EventHub(state: DurableObjectState, _env: Env) =
-
-    member _.fetch(request: WorkerRequest) : JS.Promise<WorkerResponse> =
-        promise {
-            if isWebSocketUpgrade request then
-                let pair = createWebSocketPair ()
-                state.acceptWebSocket pair.[1]
-                return upgradeResponse pair.[0]
-            else
-                let! body = request.text()
-                for ws in state.getWebSockets() do
-                    try ws.send body with _ -> ()
-                let options = createObj [ "status" ==> 200 ]
-                return WorkerResponse.create(TQTQ{"ok":true}TQTQ, options)
-        }
-
-    member _.webSocketMessage(_ws: WebSocket, _msg: string) : unit = ()
-    member _.webSocketClose(_ws: WebSocket, _code: int, _reason: string, _wasClean: bool) : unit = ()
 """
 
 let clientApiFs = """module Client.Api
@@ -689,7 +661,6 @@ let serverFsproj = """<Project Sdk="Microsoft.NET.Sdk">
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" />
-    <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -765,7 +736,6 @@ let main (argv: string array) =
             writeFile root "src/Server/Worker.fs" workerFs
             writeFile root "src/Server/Env.fs" envFs
             writeFile root "src/Server/AdminConfig.fs" (fixTQ adminConfigFs)
-            writeFile root "src/Server/EventHub.fs" (fixTQ eventHubFs)
 
             // Client static
             writeFile root "src/Client/Api.fs" (fixTQ clientApiFs)

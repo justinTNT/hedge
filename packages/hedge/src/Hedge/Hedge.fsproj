@@ -11,6 +11,8 @@
     <Compile Include="Workers.fs" />
     <Compile Include="OAuth.fs" />
     <Compile Include="Router.fs" />
+    <Compile Include="EventHub.fs" />
+    <Compile Include="Events.fs" />
     <Compile Include="Admin.fs" />
   </ItemGroup>
   <ItemGroup>

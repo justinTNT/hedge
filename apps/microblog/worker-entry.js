@@ -1,5 +1,5 @@
 import Worker from "./dist/server/Worker.js";
-export { EventHub } from "./dist/server/EventHub.js";
+export { EventHub } from "./dist/server/packages/hedge/src/Hedge/EventHub.js";
 
 // When the deployment is mounted under a sub-path (BASE_PATH, e.g. "/st"),
 // strip it before dispatch so the app's routes stay root-relative.

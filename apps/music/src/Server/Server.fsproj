@@ -9,7 +9,6 @@
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" />
-    <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>

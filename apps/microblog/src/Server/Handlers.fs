@@ -454,16 +454,7 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               ParentId = req.ParentId; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
-        let eventJson =
-            Encode.object [
-                "type", Encode.string "NewComment"
-                "payload", Codecs.Encode.newCommentEvent event
-            ] |> Encode.toString 0
-
-        let doId = env.EVENTS.idFromName(req.ItemId)
-        let stub = env.EVENTS.get(doId)
-        let broadcastReq = createRequest "https://do/broadcast" "POST" eventJson
-        ctx.waitUntil(stub.fetch(broadcastReq) |> unbox<JS.Promise<obj>>)
+        Hedge.Events.broadcast env.EVENTS ctx req.ItemId "NewComment" (Codecs.Encode.newCommentEvent event)
 
         let body =
             Encode.object [
