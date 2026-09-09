@@ -47,7 +47,10 @@ let private camelCase (s: string) =
 
 type Model = {
     Route: string list
+    /// The applied admin key (sent with requests). Only set on submit.
     Key: string
+    /// The key-input buffer — accumulates keystrokes; applied to Key on submit.
+    KeyDraft: string
     Types: Api.AdminType list option
     CurrentType: string option
     Records: obj list option
@@ -61,6 +64,7 @@ type Model = {
 type Msg =
     | UrlChanged of string list
     | KeyChanged of string
+    | SubmitKey
     | LoadTypes
     | GotTypes of Result<Api.AdminType list, string>
     | SelectType of string
@@ -177,6 +181,7 @@ let init () : Model * Cmd<Msg> =
     let model =
         { Route = route
           Key = key
+          KeyDraft = key
           Types = None
           CurrentType = None
           Records = None
@@ -203,8 +208,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with Route = route; EditRecord = None; EditingId = None; EditFields = Map.empty }, cmd
 
     | KeyChanged key ->
-        lsSet "adminKey" key
-        { model with Key = key }, Cmd.none
+        // Accumulate keystrokes in the draft only — applying per keystroke would
+        // set Key on the first char and unmount the input (the "one char then it
+        // submits" bug). The key is applied on SubmitKey.
+        { model with KeyDraft = key }, Cmd.none
+
+    | SubmitKey ->
+        lsSet "adminKey" model.KeyDraft
+        { model with Key = model.KeyDraft; Error = None }, Cmd.ofMsg LoadTypes
 
     | LoadTypes ->
         { model with IsLoading = true },
@@ -348,8 +359,14 @@ module View =
                 Html.input [
                     prop.placeholder "Admin Key"
                     prop.type'.password
-                    prop.value model.Key
+                    prop.value model.KeyDraft
                     prop.onChange (KeyChanged >> dispatch)
+                    prop.onKeyDown (fun e -> if e.key = "Enter" then dispatch SubmitKey)
+                ]
+                Html.button [
+                    prop.className "admin-btn admin-btn-primary"
+                    prop.text "Continue"
+                    prop.onClick (fun _ -> dispatch SubmitKey)
                 ]
             ]
         ]
