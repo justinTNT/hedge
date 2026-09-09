@@ -1,0 +1,27 @@
+name = "basewatch"
+main = "worker-entry.js"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 8787
+local_protocol = "http"
+
+# basewatch.org — a structured pages site. Read-only public + hedge admin.
+[[d1_databases]]
+binding = "DB"
+database_name = "basewatch-db"
+database_id = "a1a76bc5-4678-4266-8cce-b13ae02de49a"
+
+# Static assets (the SPA + admin). No R2, no Durable Objects.
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# ADMIN_KEY is deliberately absent from [vars]; set via `wrangler secret put`.
+[vars]
+ENVIRONMENT = "production"
+
+# Custom domain (basewatch.org) added at cutover.

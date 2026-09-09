@@ -1,0 +1,33 @@
+{
+  "name": "basewatch",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n server,vite,gen -c green,blue,yellow \"npm run dev:server\" \"vite\" \"npm run gen:watch\"",
+    "dev:server": "concurrently -n fable-server,wrangler -c green,yellow \"npm run fable:watch:server\" \"wrangler dev\"",
+    "build": "npm run build:admin && npm run build:server && npm run build:site",
+    "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH} && cp -r public/* _site${BASE_PATH}/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
+    "deploy": "SITE_SLUG=basewatch SITE_TITLE=\"BaseWatch\" ADMIN_TITLE=\"BaseWatch admin\" npm run build && wrangler deploy",
+    "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
+    "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "gen": "dotnet run --project src/Gen/Gen.fsproj",
+    "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
+    "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
+    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.24.0",
+    "vite": "^5.4.0",
+    "vite-plugin-fable": "0.0.31",
+    "wrangler": "^4.67.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
