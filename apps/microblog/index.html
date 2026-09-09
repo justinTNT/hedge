@@ -6,9 +6,61 @@
     <title>__SITE_TITLE__</title>
     <link rel="stylesheet" href="__BASE__/public/styles.css">
     <script src="__BASE__/lib/guest-session.js"></script>
+    <style>
+      /* nonukes (archive.ntne.ws) archive notice — shown only on that tenant.
+         Banner gated purely in CSS so it appears with no flash; the modal is
+         gated in JS below (it needs localStorage for one-time dismissal). */
+      .nu-banner { display: none; }
+      body.tenant-nonukes .nu-banner {
+        display: block; background: #7a1414; color: #fff; text-align: center;
+        font: 13px/1.45 Arial, Helvetica, sans-serif; padding: 6px 14px; border-bottom: 2px solid #000;
+      }
+      .nu-banner a { color: #ffd; }
+      .nu-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6);
+        display: flex; align-items: center; justify-content: center; padding: 1rem; }
+      .nu-modal[hidden] { display: none; }
+      .nu-modal-box { background: #fff; max-width: 460px; border: 3px solid #7a1414;
+        box-shadow: 0 8px 40px rgba(0,0,0,.5); padding: 1.6rem 1.8rem;
+        font: 15px/1.5 Georgia, serif; color: #222; }
+      .nu-modal-box h2 { margin: 0 0 .1em; font: bold 22px Georgia, serif; color: #7a1414; }
+      .nu-modal-box .nu-sub { color: #7a1414; font: bold 12px Arial, sans-serif;
+        text-transform: uppercase; letter-spacing: .04em; margin-bottom: .9rem; }
+      .nu-modal-box p { margin: .6rem 0; }
+      .nu-modal-box button { margin-top: .8rem; background: #7a1414; color: #fff; border: 0;
+        padding: .55rem 1.2rem; font: bold 14px Arial, sans-serif; cursor: pointer; border-radius: 3px; }
+      .nu-modal-box button:hover { background: #601010; }
+    </style>
 </head>
 <body>
+    <div class="nu-banner">☢ <b>ARCHIVE ONLY</b> — a preserved record of international anti-nuclear news (2012–2019). Companion to <a href="https://ntne.ws">ntne.ws</a>, the NT uranium &amp; waste archive.</div>
+
+    <div id="nu-archive-modal" class="nu-modal" hidden>
+      <div class="nu-modal-box">
+        <h2>nonukes</h2>
+        <div class="nu-sub">Archive · anti-nuclear news</div>
+        <p>A preserved archive of international anti-nuclear news — Fukushima, Sellafield, Hiroshima and beyond, 2012–2019.</p>
+        <p>It's the companion to <b>Nuclear Territory News</b>, the NT uranium &amp; waste archive at <a href="https://ntne.ws"><b>ntne.ws</b></a>.</p>
+        <button id="nu-archive-enter" type="button">Enter the archive</button>
+      </div>
+    </div>
+
     <div id="app"></div>
+    <script>
+      // Show the archive modal once (per browser), nonukes tenant only.
+      (function () {
+        if (document.body.className.indexOf('tenant-nonukes') === -1) return;
+        var modal = document.getElementById('nu-archive-modal');
+        if (!modal) return;
+        var seen = null;
+        try { seen = localStorage.getItem('nonukesArchiveSeen'); } catch (e) {}
+        if (!seen) modal.hidden = false;
+        var btn = document.getElementById('nu-archive-enter');
+        if (btn) btn.onclick = function () {
+          modal.hidden = true;
+          try { localStorage.setItem('nonukesArchiveSeen', '1'); } catch (e) {}
+        };
+      })();
+    </script>
     <script type="module" src="/lib/rich-text/bootstrap.js"></script>
     <script type="module" src="/dist/client/App.js"></script>
 </body>

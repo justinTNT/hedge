@@ -181,9 +181,13 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# -- nonukes (worker "nonukes") — no custom domain yet, inspect via workers.dev --
+# -- nonukes (worker "nonukes") — archive.ntne.ws, co-hosted on the ntne.ws zone --
 [env.nonukes]
 name = "nonukes"
+workers_dev = true
+routes = [
+    { pattern = "archive.ntne.ws", custom_domain = true }
+]
 
 [env.nonukes.vars]
 ENVIRONMENT = "production"
