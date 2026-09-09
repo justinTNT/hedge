@@ -207,7 +207,7 @@ let exports = createWorker {
     Routes = fun request env ctx ->
         Server.Routes.dispatch request (env :?> Env) ctx
     Admin = Some (fun request env route ->
-        Server.Admin.handleRequest request (env :?> Env) route)
+        Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = None
 }
 """
@@ -225,163 +225,6 @@ type Env = {
 }
 """
 
-let adminFs = """module Server.Admin
-
-open Fable.Core
-open Thoth.Json
-open Hedge.Workers
-open Hedge.Router
-open Hedge.SchemaCodec
-open Server.Env
-open Server.AdminConfig
-
-let checkAdmin (request: WorkerRequest) (env: Env) : bool =
-    let key = getHeader request "X-Admin-Key"
-    key <> "" && key = env.ADMIN_KEY
-
-let private findEntity (name: string) =
-    entities |> List.tryFind (fun e -> e.Name = name)
-
-let private typesResponse () : WorkerResponse =
-    let body =
-        Encode.object [
-            "types", Encode.list (entities |> List.map (fun e ->
-                Encode.object [
-                    "name", Encode.string e.Name
-                    "schema", encodeTypeSchema e.Schema
-                ]))
-        ] |> Encode.toString 0
-    okJson body
-
-let private listResponse (entity: AdminEntity) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! json = entity.List env
-        let body = sprintf TQTQ{"records":%s}TQTQ json
-        return okJson body
-    }
-
-let private getResponse (entity: AdminEntity) (id: string) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! result = entity.Get id env
-        match result with
-        | None -> return notFound ()
-        | Some json ->
-            let body = sprintf TQTQ{"record":%s}TQTQ json
-            return okJson body
-    }
-
-let private updateResponse (entity: AdminEntity) (id: string) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        let! bodyText = request.text()
-        let! json = entity.Update id bodyText env
-        let body = sprintf TQTQ{"record":%s}TQTQ json
-        return okJson body
-    }
-
-let private deleteResponse (entity: AdminEntity) (id: string) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        do! entity.Delete id env
-        return okJson TQTQ{"ok":true}TQTQ
-    }
-
-let private createResponse (entity: AdminEntity) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
-    promise {
-        match entity.Create with
-        | None ->
-            return badRequest (sprintf "%s cannot be created from the admin (no primary key)" entity.Name)
-        | Some create ->
-            let! bodyText = request.text()
-            let! json = create bodyText env
-            let body = sprintf TQTQ{"record":%s}TQTQ json
-            return okJson body
-    }
-
-/// Try to handle an admin route. Returns Some promise if matched, None otherwise.
-let handleRequest (request: WorkerRequest) (env: Env) (route: Route) : JS.Promise<WorkerResponse> option =
-    match route with
-    // GET /api/admin/types — list available schemas
-    | GET path when matchPath "/api/admin/types" path = Some (Exact "/api/admin/types") ->
-        Some (promise { return typesResponse () })
-
-    // GET /api/admin/:type — list records
-    | GET path ->
-        match matchPath "/api/admin/:id" path with
-        | Some (WithParam (_, typeName)) ->
-            // Check for /:type/:id pattern (path has extra segment)
-            let parts = typeName.Split('/')
-            if parts.Length = 1 then
-                match findEntity typeName with
-                | Some entity ->
-                    Some (promise {
-                        if not (checkAdmin request env) then return unauthorized ()
-                        else return! listResponse entity env
-                    })
-                | None -> None
-            elif parts.Length = 2 then
-                let entityName = parts.[0]
-                let recordId = parts.[1]
-                match findEntity entityName with
-                | Some entity ->
-                    Some (promise {
-                        if not (checkAdmin request env) then return unauthorized ()
-                        else return! getResponse entity recordId env
-                    })
-                | None -> None
-            else None
-        | _ -> None
-
-    // POST /api/admin/:type — create a record
-    | POST path ->
-        match matchPath "/api/admin/:id" path with
-        | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
-            match findEntity entityName with
-            | Some entity ->
-                Some (promise {
-                    if not (checkAdmin request env) then return unauthorized ()
-                    else return! createResponse entity request env
-                })
-            | None -> None
-        | _ -> None
-
-    // PUT /api/admin/:type/:id — update record
-    | PUT path ->
-        match matchPath "/api/admin/:id" path with
-        | Some (WithParam (_, rest)) ->
-            let parts = rest.Split('/')
-            if parts.Length = 2 then
-                let entityName = parts.[0]
-                let recordId = parts.[1]
-                match findEntity entityName with
-                | Some entity ->
-                    Some (promise {
-                        if not (checkAdmin request env) then return unauthorized ()
-                        else return! updateResponse entity recordId request env
-                    })
-                | None -> None
-            else None
-        | _ -> None
-
-    // DELETE /api/admin/:type/:id — delete record
-    | DELETE path ->
-        match matchPath "/api/admin/:id" path with
-        | Some (WithParam (_, rest)) ->
-            let parts = rest.Split('/')
-            if parts.Length = 2 then
-                let entityName = parts.[0]
-                let recordId = parts.[1]
-                match findEntity entityName with
-                | Some entity ->
-                    Some (promise {
-                        if not (checkAdmin request env) then return unauthorized ()
-                        else return! deleteResponse entity recordId env
-                    })
-                | None -> None
-            else None
-        | _ -> None
-
-    | _ -> None
-"""
-
 let adminConfigFs = """module Server.AdminConfig
 
 open Fable.Core
@@ -391,20 +234,11 @@ open Hedge.Workers
 open Hedge.Schema
 open Server.Env
 open Server.AdminGen
+open Hedge.Admin
 
-/// An admin-manageable entity. Each entity provides a schema
-/// and handler functions for CRUD operations.
-type AdminEntity = {
-    Name: string
-    Schema: TypeSchema
-    List: Env -> JS.Promise<string>
-    Get: string -> Env -> JS.Promise<string option>
-    /// None for tables without a real primary key — there'd be nowhere to put
-    /// a generated id (see the Insert guard in Gen/Program.fs).
-    Create: (string -> Env -> JS.Promise<string>) option
-    Update: string -> string -> Env -> JS.Promise<string>
-    Delete: string -> Env -> JS.Promise<unit>
-}
+// The generic AdminEntity<'env> / AdminConfig<'env> types + the dispatcher live
+// in Hedge.Admin. This file builds the entity registry (from generated AdminGen
+// tables) and the config the framework dispatcher consumes.
 
 // ============================================================
 // PascalCase -> camelCase (for JSON keys)
@@ -536,7 +370,7 @@ let private genericDelete (table: AdminTable) (id: string) (env: Env) : JS.Promi
 // Entity registry — built from AdminGen.tables
 // ============================================================
 
-let entities : AdminEntity list =
+let entities : AdminEntity<Env> list =
     AdminGen.tables |> List.map (fun table ->
         { Name = table.Name
           Schema = table.Schema
@@ -545,6 +379,14 @@ let entities : AdminEntity list =
           Create = (if table.Insert = "" then None else Some (genericCreate table))
           Update = genericUpdate table
           Delete = genericDelete table })
+
+/// What the framework's admin dispatcher consumes: the entity registry plus
+/// how to authorise a request (our admin key off our own env).
+let adminConfig : AdminConfig<Env> =
+    { Entities = entities
+      CheckKey = fun request env ->
+        let key = getHeader request "X-Admin-Key"
+        key <> "" && key = env.ADMIN_KEY }
 """
 
 let eventHubFs = """module Server.EventHub
@@ -992,7 +834,6 @@ let serverFsproj = """<Project Sdk="Microsoft.NET.Sdk">
     <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
-    <Compile Include="Admin.fs" />
     <Compile Include="generated/Routes.fs" />
     <Compile Include="EventHub.fs" />
     <Compile Include="Worker.fs" />
@@ -1069,7 +910,6 @@ let main (argv: string array) =
             // Server static
             writeFile root "src/Server/Worker.fs" workerFs
             writeFile root "src/Server/Env.fs" envFs
-            writeFile root "src/Server/Admin.fs" (fixTQ adminFs)
             writeFile root "src/Server/AdminConfig.fs" (fixTQ adminConfigFs)
             writeFile root "src/Server/EventHub.fs" (fixTQ eventHubFs)
 

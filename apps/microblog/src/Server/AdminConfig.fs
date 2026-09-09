@@ -7,20 +7,11 @@ open Hedge.Workers
 open Hedge.Schema
 open Server.Env
 open Server.AdminGen
+open Hedge.Admin
 
-/// An admin-manageable entity. Each entity provides a schema
-/// and handler functions for CRUD operations.
-type AdminEntity = {
-    Name: string
-    Schema: TypeSchema
-    List: Env -> JS.Promise<string>
-    Get: string -> Env -> JS.Promise<string option>
-    /// None for tables without a real primary key — there'd be nowhere to put
-    /// a generated id (see the Insert guard in Gen/Program.fs).
-    Create: (string -> Env -> JS.Promise<string>) option
-    Update: string -> string -> Env -> JS.Promise<string>
-    Delete: string -> Env -> JS.Promise<unit>
-}
+// The generic AdminEntity<'env> / AdminConfig<'env> types + the dispatcher now
+// live in Hedge.Admin. This file just builds the entity registry (from the
+// generated AdminGen tables) and the config the framework dispatcher consumes.
 
 // ============================================================
 // PascalCase → camelCase (for JSON keys)
@@ -150,7 +141,7 @@ let private genericDelete (table: AdminTable) (id: string) (env: Env) : JS.Promi
 // Entity registry — built from AdminGen.tables
 // ============================================================
 
-let entities : AdminEntity list =
+let entities : AdminEntity<Env> list =
     AdminGen.tables |> List.map (fun table ->
         { Name = table.Name
           Schema = table.Schema
@@ -159,3 +150,11 @@ let entities : AdminEntity list =
           Create = (if table.Insert = "" then None else Some (genericCreate table))
           Update = genericUpdate table
           Delete = genericDelete table })
+
+/// What the framework's admin dispatcher consumes: the entity registry plus
+/// how to authorise a request (our admin key off our own env).
+let adminConfig : AdminConfig<Env> =
+    { Entities = entities
+      CheckKey = fun request env ->
+        let key = getHeader request "X-Admin-Key"
+        key <> "" && key = env.ADMIN_KEY }

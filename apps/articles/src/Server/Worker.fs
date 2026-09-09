@@ -30,7 +30,7 @@ let exports = createWorker {
         | Some p -> Some p
         | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->
-        Server.Admin.handleRequest request (env :?> Env) route)
+        Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = Some (fun env ->
         let e = env :?> Env
         { Secret = e.OAUTH_SECRET
