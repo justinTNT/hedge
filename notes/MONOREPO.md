@@ -236,9 +236,34 @@ Design this against the FIRST real merge (org-site + blog), not speculatively.
 - **`features` capability system in Gen** — NEW. Apps/models declare capabilities (comments, guests, tags, search, admin); Gen emits only those. Kills the "scaffold everything, then strip" tax (archive was copy-articles-then-delete-the-comment-stack). This is the framework half of "modules"; the app half is the guest-comments library.
 - **`[<Searchable>]` models → FTS** — NEW (archive). Mark a model searchable; Gen emits the FTS5 virtual table + migration + `/api/search` endpoint + codec. Hand-rolled in archive `Server/{Sql,Handlers}.fs`.
 - **Image field type** — item 4 above (unbuilt).
+- **Live-events transport (EventHub) → framework** — NEW (2026-09-09, corrected — it
+  was previously mis-filed under guest-comments/prune). The `EventHub` Durable Object
+  is a *generic, payload-agnostic* real-time broadcast primitive: keyed per topic
+  (`idFromName(itemId)`), the server POSTs an opaque `{type,payload}` envelope and the
+  DO fans it out to every WebSocket connected to that topic. It is **not**
+  comment-specific — comments is one consumer; stars / reactions / votes / presence /
+  live view-counts all fit the same per-topic shape. The framework already owns the
+  WS-upgrade route (`Router.fs` `/api/events`) and the DO/WS primitives (`Workers.fs`);
+  the only reason `EventHub.fs` is *copied* per app is Cloudflare's rule that a DO
+  class exports from the deploying worker. **Promotion** = relocate the byte-identical
+  `EventHub.fs` into the framework (keep the class name `EventHub` **stable** — renaming
+  forces a DO migration across every tenant) + two thin helpers: server
+  `Events.broadcast topic type payload ctx` (the Encode-envelope / `idFromName` /
+  `waitUntil` mechanics) and client `Events.connectCmd`/`disconnectCmd` (the
+  `openWebSocket`/`wsBase` + close-previous lifecycle). The app-facing surface then
+  shrinks to: declare an event type in `Ws.fs` (Gen already emits its codec + `WsEvent`
+  DU + `decodeWsEvent`), one `broadcast` call, one client handler. This is **not
+  speculative abstraction** — the generic DO already exists and is already
+  payload-agnostic; it's de-dup + two helpers, same character as the Admin move, so it
+  belongs in the safe *warm-up*, decoupled from the guest-comments/merge tranche. (The
+  per-tenant `[durable_objects]` + `[[migrations]]` wrangler stanza stays — Cloudflare
+  needs it declared per worker.) **Consumers** live in features/modules: guest-comments
+  (`NewCommentEvent` + broadcast-on-create + client append — live in microblog + justat
+  + ndct as of 2026-09-09); any future reactions/votes each add their own event +
+  broadcast + handler, reusing the transport untouched.
 
 ### App-library candidates (reused features/presentation — NOT framework)
-- **`guest-comments`** — the identity/comment/attribution/OAuth-avatar/live-events stack (`Server/{Identity,Attribution,EventHub}.fs`, comment bits of `Handlers`/`Sql`, `Client/GuestSession.fs`, `lib/guest-session.js`, comment UI). Copied byte-for-byte between microblog + articles; archive dropped it; music copied-but-unused. Extract as a **mountable module** — design constraint from the north star: a pages app must be able to add it as a sub-section. This IS what the microblog-as-a-module becomes.
+- **`guest-comments`** — the identity/comment/attribution/OAuth-avatar stack (`Server/{Identity,Attribution}.fs`, comment bits of `Handlers`/`Sql`, `Client/GuestSession.fs`, `lib/guest-session.js`, comment UI), **plus its live layer as a *consumer* of the framework live-events transport** — `NewCommentEvent` in `Ws.fs`, the broadcast-on-create in `submitComment`, the client append. The transport (`EventHub` + `Events.broadcast`/`connectCmd`) is framework, not part of this module (see the framework candidate above). Copied byte-for-byte between microblog + articles; archive dropped it; music copied-but-unused. Extract as a **mountable module** — design constraint from the north star: a pages app must be able to add it as a sub-section. This IS what the microblog-as-a-module becomes.
 - **`rich-text`** — `Client/RichText.fs` + `lib/rich-text/` (TipTap).
 - **presentation helpers** — day-grouping, date formatting, teaser/HTML-entity extraction (archive `deriveTeaser`), feed/detail Elmish patterns.
 - **`etl` tools** — mongo→D1 pipeline (bson parse, de-mojibake, chunked seeding, cover/URL derivation), currently ad-hoc in scratch. NEW required step
@@ -252,7 +277,7 @@ Design this against the FIRST real merge (org-site + blog), not speculatively.
 
 ### Sequencing (discipline)
 - **Now:** build **basewatch** as the first deliberately *module-shaped* app — pages/menus only, minimal (no comments), clean seams. Not to compose it today, but so it's the first clean module and a third concrete data point. (2026-09-09: **done**, and its client is now **Feliz/Elmish** — the first *pages* Client component and the first Feliz client for a *non-feed* shape (hierarchical nav tree + page-by-name), replacing the throwaway vanilla client. The framework had already generated the whole server/codec/typed-client path; only the Client project was missing. So basewatch is now a complete module-shaped data point — Domain + Api + Handlers + Feliz Client + admin — which is what the future "pages" module extracts from. The nav-tree builder (flat menu → tree, in `App.fs navTree`) is the first F# version of the reusable nav presentation.)
-- **After basewatch, one deliberate consolidation pass** (never rewire the *live* microblog/articles under build pressure): (1) Admin → framework; (2) extract `guest-comments` as a mountable module, migrate the live apps onto it, prune dead EventHub + music vestigial files; (3) the codegen work — `features` + `[<Searchable>]` — now informed by three apps.
+- **After basewatch, one deliberate consolidation pass** (never rewire the *live* microblog/articles under build pressure): **(1, warm-up)** Admin → framework **+ the live-events transport (EventHub) → framework** — both are safe de-dup of byte-identical boilerplate, protected by a golden-model build/snapshot test done first; **(2)** extract `guest-comments` as a mountable module (its live layer *consuming* the transport from step 1), migrate the live apps onto it, prune music's vestigial scaffold copies; **(3)** the codegen work — `features` + `[<Searchable>]` — now informed by three apps.
 - **Design the mount/compose runtime against the first real merge**, not in the abstract.
 - **Rule of three** throughout: don't promote an abstraction until a third app has voted. basewatch is that vote for the pages shape.
 
@@ -273,5 +298,5 @@ Design this against the FIRST real merge (org-site + blog), not speculatively.
   dependency each time — worth doing before retiring the old Netlify sites.
 
 ### Prune (dead code, batch into the consolidation)
-- `EventHub.fs` (live WS comments) — copied into microblog/articles/music, dead everywhere (broadcast dropped).
-- music's vestigial `GuestSession.fs`/`RichText.fs`/`Ws.fs`/`EventHub.fs` (scaffold copy, unused).
+- music's vestigial `GuestSession.fs`/`RichText.fs`/`Ws.fs`/`EventHub.fs` (scaffold copy, genuinely unused — music has no comments).
+  - **Corrected 2026-09-09:** `EventHub.fs` is NOT dead in general — it's the live-events transport, LIVE in microblog + justat + ndct (see the framework candidate above). Only *music's* copy is unused, and even that is ~free to leave (an idle DO doesn't bill; deleting a DO class costs a `deleted_classes` migration). Once the transport is framework-owned, music simply won't import it — no prune needed.
