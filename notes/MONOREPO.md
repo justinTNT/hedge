@@ -216,7 +216,21 @@ generic runtime + codegen):
 Design this against the FIRST real merge (org-site + blog), not speculatively.
 
 ### Framework candidates (model→codegen / generic runtime — in boundary)
-- **Generic Admin → framework** — item 9 above; still the safe warm-up.
+- **Generic Admin → framework** — item 9 above; still the safe warm-up. NEW
+  dimension (rule-of-three confirmed, basewatch 2026-09-09): the admin's **baseline
+  stylesheet** belongs here too, not in each app. "App provides the generic admin's
+  CSS" is an antipattern across four apps and it *broke* in two — archive and
+  basewatch render the admin as raw HTML because those read-only apps carry no
+  app stylesheet to piggyback on (microblog/articles only worked by accident, via
+  their own `styles.css`). Fix: ship `public/admin.css` from the framework's Admin
+  package as a token-driven baseline — a `:root` of `--admin-*` tokens (accent,
+  ink, bg, panel, line, danger, radius, maxw) styling every `admin-*` class; apps
+  re-skin by overriding the tokens (or loading a sheet after it). The baseline
+  already exists (written for basewatch; copied into archive) — the work is to
+  *own* it in `packages/hedge/src/Admin` and have scaffold wire the
+  `<link rel="stylesheet" href="/admin.css">` + build-copy, so no app ships its own
+  copy. Content-heavy admins (org-site, articles — where you *live*) customise more;
+  touch-up admins (microblog) take the baseline as-is.
 - **Per-tenant config** — "second app" item 1 above (still unbuilt).
 - **Multi-param / query GET endpoints** — item 2 above (archive worked around it again for section + search).
 - **`features` capability system in Gen** — NEW. Apps/models declare capabilities (comments, guests, tags, search, admin); Gen emits only those. Kills the "scaffold everything, then strip" tax (archive was copy-articles-then-delete-the-comment-stack). This is the framework half of "modules"; the app half is the guest-comments library.
@@ -227,13 +241,36 @@ Design this against the FIRST real merge (org-site + blog), not speculatively.
 - **`guest-comments`** — the identity/comment/attribution/OAuth-avatar/live-events stack (`Server/{Identity,Attribution,EventHub}.fs`, comment bits of `Handlers`/`Sql`, `Client/GuestSession.fs`, `lib/guest-session.js`, comment UI). Copied byte-for-byte between microblog + articles; archive dropped it; music copied-but-unused. Extract as a **mountable module** — design constraint from the north star: a pages app must be able to add it as a sub-section. This IS what the microblog-as-a-module becomes.
 - **`rich-text`** — `Client/RichText.fs` + `lib/rich-text/` (TipTap).
 - **presentation helpers** — day-grouping, date formatting, teaser/HTML-entity extraction (archive `deriveTeaser`), feed/detail Elmish patterns.
-- **`etl` tools** — mongo→D1 pipeline (bson parse, de-mojibake, chunked seeding, cover/URL derivation), currently ad-hoc in scratch.
+- **`etl` tools** — mongo→D1 pipeline (bson parse, de-mojibake, chunked seeding, cover/URL derivation), currently ad-hoc in scratch. NEW required step
+  (rule-of-three confirmed: justat, basewatch, ndct): an **asset-mirror pass** —
+  scan migrated content bodies for external asset refs (dead/moved hosts:
+  `larak.in`, `saymay.be`, Ghost `/content/images/…`, Netlify), download each,
+  upload to the app's R2 bucket, and rewrite the body paths to `/blobs/<key>`
+  (served by the framework's existing `/blobs/` route). Pair it with a **verify
+  step** (see operational learnings) — after mirroring, fetch every referenced
+  asset and assert its `content-type`, because the SPA fallback hides 404s.
 
 ### Sequencing (discipline)
 - **Now:** build **basewatch** as the first deliberately *module-shaped* app — pages/menus only, minimal (no comments), clean seams. Not to compose it today, but so it's the first clean module and a third concrete data point.
 - **After basewatch, one deliberate consolidation pass** (never rewire the *live* microblog/articles under build pressure): (1) Admin → framework; (2) extract `guest-comments` as a mountable module, migrate the live apps onto it, prune dead EventHub + music vestigial files; (3) the codegen work — `features` + `[<Searchable>]` — now informed by three apps.
 - **Design the mount/compose runtime against the first real merge**, not in the abstract.
 - **Rule of three** throughout: don't promote an abstraction until a third app has voted. basewatch is that vote for the pages shape.
+
+### Operational learnings (basewatch + ndct, 2026-09-09)
+- **The SPA fallback silently masks missing assets.** With
+  `not_found_handling = "single-page-application"`, a request for a missing
+  `/content/images/x.webp` returns `index.html` — `200 text/html`, not `404`. So a
+  broken image *looks present* (200) and only fails when the browser tries to decode
+  HTML as an image. This hid the ndct missing-images bug until after cutover.
+  **Status codes lie under an SPA fallback; verify `content-type`.** → migration
+  verification (the ETL verify step above) must fetch each referenced asset and
+  assert its content-type, never trust the status code. Also a reason to prefer
+  narrow asset routes over a blanket SPA fallback where feasible.
+- **R2 + `/blobs/<key>` is the settled content-asset home** (justat, ndct). Content
+  images migrated off dead hosts land in the app's R2 bucket and are served by the
+  framework `/blobs/` route (content-type derived from the key extension when R2
+  httpMetadata is absent). Removing these external refs also cuts a Netlify
+  dependency each time — worth doing before retiring the old Netlify sites.
 
 ### Prune (dead code, batch into the consolidation)
 - `EventHub.fs` (live WS comments) — copied into microblog/articles/music, dead everywhere (broadcast dropped).
