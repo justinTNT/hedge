@@ -21,3 +21,14 @@ let getArticles (id: string) =
     fetchJson (sprintf "/api/articles/%s" id) Decode.getArticlesResponse
 
 // --- WebSocket Events ---
+
+type WsEvent =
+    | NewComment of NewCommentEvent
+
+let decodeWsEvent (text: string) : Result<WsEvent, string> =
+    match Decode.fromString (Decode.field "type" Decode.string) text with
+    | Ok "NewComment" ->
+        Decode.fromString (Decode.field "payload" Decode.newCommentEvent) text
+        |> Result.map NewComment
+    | Ok t -> Error (sprintf "Unknown event: %s" t)
+    | Error e -> Error e

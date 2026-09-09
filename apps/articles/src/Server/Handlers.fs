@@ -374,6 +374,28 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               Content = RichContent req.Content
               Timestamp = now }
 
+        // Broadcast to everyone else viewing this article, so the comment
+        // appears live without a refresh (the submitter appends it locally
+        // from the response below; the WS echo is deduped client-side).
+        let event : Models.Ws.NewCommentEvent =
+            { Id = commentId
+              ArticleId = req.ArticleId
+              IdentityId = activeIdentityId
+              ParentId = req.ParentId
+              Author = author
+              Picture = activePicture
+              Content = req.Content
+              Timestamp = now }
+        let eventJson =
+            Encode.object [
+                "type", Encode.string "NewComment"
+                "payload", Codecs.Encode.newCommentEvent event
+            ] |> Encode.toString 0
+        let doId = env.EVENTS.idFromName(req.ArticleId)
+        let stub = env.EVENTS.get(doId)
+        let broadcastReq = createRequest "https://do/broadcast" "POST" eventJson
+        ctx.waitUntil(stub.fetch(broadcastReq) |> unbox<JS.Promise<obj>>)
+
         let body =
             Encode.object [ "comment", Encode.commentItem newComment ] |> Encode.toString 0
 

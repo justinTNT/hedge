@@ -34,6 +34,7 @@ module Encode =
     let inline submitCommentReq (v: SubmitComment.Request) = encode v
 
     // -- WebSocket event encoders --
+    let inline newCommentEvent (e: Models.Ws.NewCommentEvent) = encode e
 
 module Decode =
 
@@ -57,6 +58,7 @@ module Decode =
     let submitCommentReq : Decoder<SubmitComment.Request> = decode<SubmitComment.Request>()
 
     // -- WebSocket event decoders --
+    let newCommentEvent : Decoder<Models.Ws.NewCommentEvent> = decode<Models.Ws.NewCommentEvent>()
 
 module Validate =
 

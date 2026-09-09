@@ -10,6 +10,37 @@ open Client.ClientGen
 open Client.Types
 open Client.Shared
 
+// --- WebSocket management ---
+
+let mutable private currentWsClose : (unit -> unit) option = None
+
+let connectEventsCmd (articleId: string) : Cmd<Msg> =
+    Cmd.ofEffect (fun dispatch ->
+        match currentWsClose with
+        | Some close -> close ()
+        | None -> ()
+        let url = sprintf "%s/api/events?itemId=%s" (Client.Api.wsBase()) articleId
+        let close =
+            Client.Api.openWebSocket
+                url
+                (fun e ->
+                    let text : string = e?data |> string
+                    match decodeWsEvent text with
+                    | Ok (NewComment event) -> dispatch (GotEvent event)
+                    | Error err -> dispatch (EventError err))
+                (fun _ -> dispatch (EventError "WebSocket error"))
+        currentWsClose <- Some close
+    )
+
+let disconnectEventsCmd () : Cmd<Msg> =
+    Cmd.ofEffect (fun _dispatch ->
+        match currentWsClose with
+        | Some close ->
+            close ()
+            currentWsClose <- None
+        | None -> ()
+    )
+
 // --- Rich text editor lifecycle ---
 
 let mutable private commentEditorActive = false
@@ -49,7 +80,10 @@ let update msg model =
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
-        Cmd.ofEffect (fun _ -> setDocTitle response.Article.Title)
+        Cmd.batch [
+            Cmd.ofEffect (fun _ -> setDocTitle response.Article.Title)
+            connectEventsCmd response.Article.Id
+        ]
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -95,6 +129,34 @@ let update msg model =
 
     | CancelReply ->
         { model with ReplyingTo = None }, destroyCommentEditorCmd
+
+    | ConnectEvents articleId ->
+        model, connectEventsCmd articleId
+
+    | DisconnectEvents ->
+        model, disconnectEventsCmd ()
+
+    | GotEvent event ->
+        match model.CurrentItem with
+        | Some response when response.Article.Id = event.ArticleId ->
+            let existingIds = response.Article.Comments |> List.map (fun c -> c.Id) |> Set.ofList
+            if Set.contains event.Id existingIds then
+                model, Cmd.none
+            else
+                let newComment : SubmitComment.CommentItem =
+                    { Id = event.Id
+                      ArticleId = event.ArticleId
+                      IdentityId = event.IdentityId
+                      ParentId = event.ParentId
+                      Author = event.Author
+                      Picture = event.Picture
+                      Content = RichContent event.Content
+                      Timestamp = event.Timestamp }
+                { model with CurrentItem = Some { response with Article = { response.Article with Comments = response.Article.Comments @ [ newComment ] } } }, Cmd.none
+        | _ -> model, Cmd.none
+
+    | EventError _ ->
+        model, Cmd.none
 
     | _ -> model, Cmd.none
 

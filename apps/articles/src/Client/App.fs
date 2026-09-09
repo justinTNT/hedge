@@ -100,7 +100,7 @@ let init () : Model * Cmd<Msg> =
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | UrlChanged route ->
-        let cleanupCmd = Cmd.batch [ Item.destroyCommentEditorCmd; Item.destroyAllViewersCmd ]
+        let cleanupCmd = Cmd.batch [ Item.destroyCommentEditorCmd; Item.destroyAllViewersCmd; Item.disconnectEventsCmd () ]
         match route with
         | ["auth"; "claim"] | ["auth"; "claim"; _] ->
             let claimFocus, claimReturnTo = parseClaimFromRoute ()
@@ -138,7 +138,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
         Feed.update msg model
 
-    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply ->
+    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply
+    | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
         Item.update msg model
 
     | GotSessionSync session ->

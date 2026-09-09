@@ -46,6 +46,10 @@ type Msg =
     | ToggleCollapse of string
     | SetReplyTo of articleId: string * parentId: string option
     | CancelReply
+    | ConnectEvents of string
+    | DisconnectEvents
+    | GotEvent of Models.Ws.NewCommentEvent
+    | EventError of string
     | GotSessionSync of GuestSession.GuestSessionData
     | RevertIdentity of identityId: string * merge: bool
     | GotRevertIdentity of Result<unit, string>
