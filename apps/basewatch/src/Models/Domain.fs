@@ -12,10 +12,12 @@ type Page = {
     Id: PrimaryKey<string>
     Name: string
     Title: string
-    /// Short standfirst (often empty in the source).
-    Teaser: string
-    /// The page body — original archived HTML, rendered as-is.
-    Body: string
+    /// Short standfirst (often empty in the source). Rich text (admin TipTap);
+    /// stored as HTML like Body, though it isn't rendered on the public page.
+    Teaser: RichContent
+    /// The page body — archived HTML, edited via the admin's rich-text editor
+    /// and rendered as-is on the page.
+    Body: RichContent
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option
     DeletedAt: SoftDelete option
