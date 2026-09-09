@@ -210,8 +210,21 @@ body.tenant-ndct .ndct-hero-more {
 body.tenant-ndct header {
   background: #fff; margin: 0 auto; max-width: 1000px; padding: 1rem 3.5rem; border-bottom: 1px solid #efefef;
 }
+/* No logo image (the old Ghost "Massively" header used a text wordmark). Hide
+   the shared nav <img> and render the site name as the clickable home link. */
 body.tenant-ndct nav > a img { display: none; }
+body.tenant-ndct nav > a { display: inline-block; }
+body.tenant-ndct nav > a::after {
+  content: "Now Do Chemtrails";
+  font-family: "Source Sans 3", Helvetica, sans-serif;
+  font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 1.15rem; color: #212931;
+}
+body.tenant-ndct nav > a:hover::after { color: #18bfef; }
 body.tenant-ndct .identity-area { color: #7f888f; }
+
+/* article body: give paragraphs breathing room */
+body.tenant-ndct .article-body p { padding: 1em; }
 body.tenant-ndct main { background: #fff; margin: 0 auto; max-width: 1000px; padding: 2.5rem 3.5rem 4rem; }
 
 /* date label */
