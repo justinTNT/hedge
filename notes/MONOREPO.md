@@ -264,7 +264,33 @@ Design this against the FIRST real merge (org-site + blog), not speculatively.
 
 ### App-library candidates (reused features/presentation — NOT framework)
 - **`guest-comments`** — the identity/comment/attribution/OAuth-avatar stack (`Server/{Identity,Attribution}.fs`, comment bits of `Handlers`/`Sql`, `Client/GuestSession.fs`, `lib/guest-session.js`, comment UI), **plus its live layer as a *consumer* of the framework live-events transport** — `NewCommentEvent` in `Ws.fs`, the broadcast-on-create in `submitComment`, the client append. The transport (`EventHub` + `Events.broadcast`/`connectCmd`) is framework, not part of this module (see the framework candidate above). Copied byte-for-byte between microblog + articles; archive dropped it; music copied-but-unused. Extract as a **mountable module** — design constraint from the north star: a pages app must be able to add it as a sub-section. This IS what the microblog-as-a-module becomes.
-- **`rich-text`** — `Client/RichText.fs` + `lib/rich-text/` (TipTap).
+- **`rich-text`** — `Client/RichText.fs` + `lib/rich-text/` (TipTap). **Rule-of-three
+  confirmed 2026-09-10** (microblog, articles, basewatch all carry a byte-copied
+  `lib/rich-text/`). Single-source it. Key insight from the basewatch migration: the
+  editor's **extension set (`VIEWER_EXTENSIONS`) is the canonical content schema** —
+  three things must agree on it exactly (the editor, the JSON→HTML viewer
+  `renderRichTextHtml`, and an HTML→JSON converter), so it's the lib's center of
+  gravity, not an implementation detail buried in a per-app `tiptap-editor.js` copy.
+  Two facts the lib must own/document:
+  - **`RichContent` is a storage-format contract, not a display flag.** A field typed
+    `RichContent` (framework: Interface + Gen emit the `richContent` schema attr) *means*
+    the column stores **ProseMirror JSON**, edited by TipTap, rendered by HedgeRT. The
+    type is framework; its meaning is app-lib — a field-type whose semantics span the
+    boundary must publish its storage contract. Adopting it on a field holding anything
+    else (e.g. basewatch's raw archived HTML) is a **migration**, not a flag flip: the
+    editor's `JSON.parse` fails silently and every edit box loads empty (basewatch bug,
+    2026-09-10). Document this on the `RichContent` type.
+  - **HTML→JSON converter is reusable tooling** (belongs here or in `etl`): the faithful
+    recipe is **jsdom + `@tiptap/core` `generateJSON` against the shared extension set**
+    (the real-browser parse path). NOT `@tiptap/html` — its zeed-dom doesn't parse inline
+    `style`, so `text-align`/colour are silently dropped. This is the content-*format*
+    sibling of the ETL asset-mirror step below (adopting a rich-text field on legacy data
+    needs it). Verified round-trip on basewatch's 29 pages.
+  - **Cost note (decision input, not a task):** `RichContent` pulls the full TipTap
+    bundle onto the *public* page (basewatch 140→480 KB). Fine for feed apps; a real tax
+    on read-heavy content sites. A *possible* future framework capability — build-time or
+    edge JSON→HTML pre-render so static-ish public pages don't ship the editor — but no
+    consumer demands it yet.
 - **presentation helpers** — day-grouping, date formatting, teaser/HTML-entity extraction (archive `deriveTeaser`), feed/detail Elmish patterns.
 - **`etl` tools** — mongo→D1 pipeline (bson parse, de-mojibake, chunked seeding, cover/URL derivation), currently ad-hoc in scratch. NEW required step
   (rule-of-three confirmed: justat, basewatch, ndct): an **asset-mirror pass** —
