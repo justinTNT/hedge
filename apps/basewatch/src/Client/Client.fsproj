@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Api.fs" />
+    <Compile Include="RichText.fs" />
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

@@ -180,7 +180,8 @@ let private pageView (page: GetPage.PageView) =
         prop.className "wrap page"
         prop.children [
             Html.h1 page.Title
-            Html.div [ prop.className "body"; prop.dangerouslySetInnerHTML page.Body ]
+            // Body is stored as rich-text (ProseMirror JSON); render it to HTML.
+            Html.div [ prop.className "body hamlet-rt-viewer"; prop.dangerouslySetInnerHTML (RichText.toHtml page.Body) ]
         ]
     ]
 
