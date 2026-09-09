@@ -9,7 +9,7 @@
     "build": "npm run build:admin && npm run build:server && npm run build:site",
     "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
-    "build:site": "vite build && mkdir -p _site${BASE_PATH} && cp -r public/* _site${BASE_PATH}/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH} && cp -r public/* _site${BASE_PATH}/ && cp ../../packages/hedge/src/Admin/admin.css _site${BASE_PATH}/admin.css && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
     "deploy": "SITE_SLUG=ntnews SITE_TITLE=\"Nuclear Territory News\" ADMIN_TITLE=\"ntne.ws admin\" npm run build && wrangler deploy",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
     "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",

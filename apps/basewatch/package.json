@@ -10,7 +10,7 @@
     "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
     "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
-    "build:site": "vite build && mkdir -p _site${BASE_PATH} && cp -r public/* _site${BASE_PATH}/ && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
+    "build:site": "vite build && mkdir -p _site${BASE_PATH} && cp -r public/* _site${BASE_PATH}/ && cp ../../packages/hedge/src/Admin/admin.css _site${BASE_PATH}/admin.css && { [ -z \"${BASE_PATH}\" ] || cp _site${BASE_PATH}/index.html _site/index.html; }",
     "deploy": "SITE_SLUG=basewatch SITE_TITLE=\"BaseWatch\" ADMIN_TITLE=\"BaseWatch admin\" npm run build && wrangler deploy",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",

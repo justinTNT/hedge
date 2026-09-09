@@ -1,7 +1,8 @@
-/* ===== hedge admin — baseline stylesheet =====
-   Variable-driven so an app can re-skin it by overriding the --admin-* tokens
-   (or loading its own sheet after this one). Destined for the framework's Admin
-   package as the consolidated default; apps that "live" in admin customise it. */
+/* ===== hedge admin — baseline stylesheet (framework single source) =====
+   The canonical admin styling, owned by the Admin package. Apps serve it at
+   /admin.css (their build copies it from here) and re-skin by overriding the
+   --admin-* tokens, or loading their own sheet after this one. Apps that "live"
+   in admin (org-site, articles) customise more; touch-up admins take it as-is. */
 :root {
   --admin-accent: #2563eb;
   --admin-accent-ink: #ffffff;
