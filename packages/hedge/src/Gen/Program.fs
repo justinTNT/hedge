@@ -363,20 +363,10 @@ let generateAdminFs (metas: TableMeta list) : string =
     emit "module Server.AdminGen"
     emit ""
     emit "open Hedge.Schema"
+    emit "open Hedge.Admin"
     emit ""
-    emit "type AdminTable = {"
-    emit "    Name: string"
-    emit "    Table: string"
-    emit "    Schema: TypeSchema"
-    emit "    SelectAll: string"
-    emit "    SelectOne: string"
-    emit "    Insert: string"
-    emit "    HasCreateTs: bool"
-    emit "    HasUpdateTs: bool"
-    emit "    Update: string"
-    emit "    Delete: string"
-    emit "    MutableFields: string list"
-    emit "}"
+    emit "// The AdminTable type + the schema-driven CRUD live in Hedge.Admin; this"
+    emit "// file only emits the table descriptors."
 
     metas |> List.iter (fun m ->
         let tableLines = generateAdminTable m

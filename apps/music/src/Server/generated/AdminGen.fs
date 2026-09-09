@@ -2,20 +2,10 @@
 module Server.AdminGen
 
 open Hedge.Schema
+open Hedge.Admin
 
-type AdminTable = {
-    Name: string
-    Table: string
-    Schema: TypeSchema
-    SelectAll: string
-    SelectOne: string
-    Insert: string
-    HasCreateTs: bool
-    HasUpdateTs: bool
-    Update: string
-    Delete: string
-    MutableFields: string list
-}
+// The AdminTable type + the schema-driven CRUD live in Hedge.Admin; this
+// file only emits the table descriptors.
 
 let album : AdminTable =
     { Name = "Album"

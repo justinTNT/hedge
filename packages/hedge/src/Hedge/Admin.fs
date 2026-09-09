@@ -1,80 +1,207 @@
 module Hedge.Admin
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Thoth.Json
 open Hedge.Workers
 open Hedge.Schema
 open Hedge.SchemaCodec
 open Hedge.Router
 
-/// An admin-manageable entity: a schema plus CRUD handlers over the app's env.
-/// The env is generic so this dispatcher stays app-agnostic — apps build the
-/// list (from generated AdminGen tables) in their own AdminConfig.
-type AdminEntity<'env> = {
+/// A generated admin table descriptor. Gen emits values of this type into each
+/// app's Server/generated/AdminGen.fs; the schema-driven CRUD below runs off it,
+/// so there is ONE copy of the handlers (here) instead of one per app.
+type AdminTable = {
     Name: string
+    Table: string
     Schema: TypeSchema
-    List: 'env -> JS.Promise<string>
-    Get: string -> 'env -> JS.Promise<string option>
-    /// None for tables without a real primary key — there'd be nowhere to put
-    /// a generated id (see the Insert guard in Gen/Program.fs).
-    Create: (string -> 'env -> JS.Promise<string>) option
-    Update: string -> string -> 'env -> JS.Promise<string>
-    Delete: string -> 'env -> JS.Promise<unit>
+    SelectAll: string
+    SelectOne: string
+    Insert: string
+    HasCreateTs: bool
+    HasUpdateTs: bool
+    Update: string
+    Delete: string
+    MutableFields: string list
 }
 
-/// What an app hands the dispatcher: its entities, and how to authorise a
-/// request (the app reads its own admin key off its own env).
+/// What an app hands the dispatcher: its generated tables, how to reach the D1
+/// database from its env, and how to authorise a request (its own admin key).
 type AdminConfig<'env> = {
-    Entities: AdminEntity<'env> list
+    Tables: AdminTable list
+    GetDb: 'env -> D1Database
     CheckKey: WorkerRequest -> 'env -> bool
 }
+
+// ============================================================
+// PascalCase → camelCase (JSON keys) / snake_case (DB columns)
+// ============================================================
+
+let private camelCase (s: string) =
+    if s.Length = 0 then s
+    else string (System.Char.ToLowerInvariant s.[0]) + s.[1..]
+
+let private toSnakeCase (s: string) =
+    s.ToCharArray()
+    |> Array.mapi (fun i c ->
+        if i > 0 && System.Char.IsUpper c then
+            sprintf "_%c" (System.Char.ToLower c)
+        else
+            string (System.Char.ToLower c))
+    |> String.concat ""
+
+// ============================================================
+// Row → JSON (generic, driven by schema)
+// ============================================================
+
+let private rowToJson (schema: TypeSchema) (row: obj) : JsonValue =
+    let pairs =
+        schema.Fields |> List.map (fun field ->
+            let col = toSnakeCase field.Name
+            let jsonKey = camelCase field.Name
+            let v = getProp row col
+            let encoded =
+                match field.Type with
+                | FInt -> if isNull v then Encode.nil else Encode.int (unbox v)
+                | FBool -> if isNull v then Encode.nil else Encode.bool (unbox v)
+                | FOption _ -> if isNull v then Encode.nil else Encode.string (unbox v)
+                | FList FString -> Encode.list []
+                | _ -> if isNull v then Encode.nil else Encode.string (unbox v)
+            jsonKey, encoded)
+    Encode.object pairs
+
+// ============================================================
+// Generic CRUD handlers (over a D1Database + a generated AdminTable)
+// ============================================================
+
+let private genericList (db: D1Database) (table: AdminTable) : JS.Promise<string> =
+    promise {
+        let! result = db.prepare(table.SelectAll).all()
+        let items =
+            result.results
+            |> Array.map (rowToJson table.Schema)
+            |> Array.toList
+        return Encode.list items |> Encode.toString 0
+    }
+
+let private genericGet (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<string option> =
+    promise {
+        let stmt = bind (db.prepare(table.SelectOne)) [| box id |]
+        let! result = stmt.all()
+        if result.results.Length = 0 then
+            return None
+        else
+            let json = rowToJson table.Schema result.results.[0]
+            return Some (Encode.toString 0 json)
+    }
+
+/// The mutable-field values from a decoded body, in MutableFields order —
+/// shared by update and create so both bind columns the same way.
+let private mutableArgs (table: AdminTable) (pairMap: Map<string, JsonValue>) =
+    table.MutableFields |> List.map (fun fieldName ->
+        let jsonKey = camelCase fieldName
+        match Map.tryFind jsonKey pairMap with
+        | Some v ->
+            match Decode.fromValue "" Decode.string v with
+            | Ok s -> box s
+            | _ ->
+                let s = Encode.toString 0 v
+                if s = "null" then jsNull
+                else box s
+        | None -> jsNull)
+
+let private genericCreate (db: D1Database) (table: AdminTable) (body: string) : JS.Promise<string> =
+    promise {
+        match Decode.fromString (Decode.keyValuePairs Decode.value) body with
+        | Error err -> return sprintf """{"error":"%s"}""" err
+        | Ok pairs ->
+            let id = newId ()
+            let now = epochNow ()
+            // Column order matches the generated INSERT: pk, mutables, created_at
+            let allArgs =
+                [ box id ] @ mutableArgs table (Map.ofList pairs)
+                @ (if table.HasCreateTs then [ box now ] else [])
+                |> List.toArray
+            let stmt = bind (db.prepare(table.Insert)) allArgs
+            let! _ = stmt.run()
+            let! result = genericGet db table id
+            return result |> Option.defaultValue """{"error":"Not found after create"}"""
+    }
+
+let private genericUpdate (db: D1Database) (table: AdminTable) (id: string) (body: string) : JS.Promise<string> =
+    promise {
+        match Decode.fromString (Decode.keyValuePairs Decode.value) body with
+        | Error err -> return sprintf """{"error":"%s"}""" err
+        | Ok pairs ->
+            let args = mutableArgs table (Map.ofList pairs)
+            // Matches the generated SET clause: mutables, then updated_at
+            let allArgs =
+                args
+                @ (if table.HasUpdateTs then [ box (epochNow ()) ] else [])
+                @ [ box id ]
+                |> List.toArray
+            let stmt = bind (db.prepare(table.Update)) allArgs
+            let! _ = stmt.run()
+            let! result = genericGet db table id
+            return result |> Option.defaultValue """{"error":"Not found after update"}"""
+    }
+
+let private genericDelete (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<unit> =
+    promise {
+        let stmt = bind (db.prepare(table.Delete)) [| box id |]
+        let! _ = stmt.run()
+        ()
+    }
+
+// ============================================================
+// Response wrappers + route dispatch
+// ============================================================
 
 let private typesResponse (config: AdminConfig<'env>) : WorkerResponse =
     let body =
         Encode.object [
-            "types", Encode.list (config.Entities |> List.map (fun e ->
+            "types", Encode.list (config.Tables |> List.map (fun t ->
                 Encode.object [
-                    "name", Encode.string e.Name
-                    "schema", encodeTypeSchema e.Schema
+                    "name", Encode.string t.Name
+                    "schema", encodeTypeSchema t.Schema
                 ]))
         ] |> Encode.toString 0
     okJson body
 
-let private listResponse (entity: AdminEntity<'env>) (env: 'env) : JS.Promise<WorkerResponse> =
+let private listResponse (db: D1Database) (table: AdminTable) : JS.Promise<WorkerResponse> =
     promise {
-        let! json = entity.List env
+        let! json = genericList db table
         return okJson (sprintf """{"records":%s}""" json)
     }
 
-let private getResponse (entity: AdminEntity<'env>) (id: string) (env: 'env) : JS.Promise<WorkerResponse> =
+let private getResponse (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<WorkerResponse> =
     promise {
-        let! result = entity.Get id env
+        let! result = genericGet db table id
         match result with
         | None -> return notFound ()
         | Some json -> return okJson (sprintf """{"record":%s}""" json)
     }
 
-let private updateResponse (entity: AdminEntity<'env>) (id: string) (request: WorkerRequest) (env: 'env) : JS.Promise<WorkerResponse> =
+let private createResponse (db: D1Database) (table: AdminTable) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
     promise {
-        let! bodyText = request.text()
-        let! json = entity.Update id bodyText env
-        return okJson (sprintf """{"record":%s}""" json)
-    }
-
-let private createResponse (entity: AdminEntity<'env>) (request: WorkerRequest) (env: 'env) : JS.Promise<WorkerResponse> =
-    promise {
-        match entity.Create with
-        | None ->
-            return badRequest (sprintf "%s cannot be created from the admin (no primary key)" entity.Name)
-        | Some create ->
+        if table.Insert = "" then
+            return badRequest (sprintf "%s cannot be created from the admin (no primary key)" table.Name)
+        else
             let! bodyText = request.text()
-            let! json = create bodyText env
+            let! json = genericCreate db table bodyText
             return okJson (sprintf """{"record":%s}""" json)
     }
 
-let private deleteResponse (entity: AdminEntity<'env>) (id: string) (env: 'env) : JS.Promise<WorkerResponse> =
+let private updateResponse (db: D1Database) (table: AdminTable) (id: string) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
     promise {
-        do! entity.Delete id env
+        let! bodyText = request.text()
+        let! json = genericUpdate db table id bodyText
+        return okJson (sprintf """{"record":%s}""" json)
+    }
+
+let private deleteResponse (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<WorkerResponse> =
+    promise {
+        do! genericDelete db table id
         return okJson """{"ok":true}"""
     }
 
@@ -82,7 +209,8 @@ let private deleteResponse (entity: AdminEntity<'env>) (id: string) (env: 'env) 
 /// Wire from Worker.fs: `Admin = Some (fun req env route ->
 ///   Hedge.Admin.handleRequest AdminConfig.adminConfig req (env :?> Env) route)`.
 let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'env) (route: Route) : JS.Promise<WorkerResponse> option =
-    let findEntity (name: string) = config.Entities |> List.tryFind (fun e -> e.Name = name)
+    let db = config.GetDb env
+    let findTable (name: string) = config.Tables |> List.tryFind (fun t -> t.Name = name)
     let authed () = config.CheckKey request env
     match route with
     // GET /api/admin/types — list available schemas
@@ -95,19 +223,19 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
         | Some (WithParam (_, typeName)) ->
             let parts = typeName.Split('/')
             if parts.Length = 1 then
-                match findEntity typeName with
-                | Some entity ->
+                match findTable typeName with
+                | Some table ->
                     Some (promise {
                         if not (authed ()) then return unauthorized ()
-                        else return! listResponse entity env
+                        else return! listResponse db table
                     })
                 | None -> None
             elif parts.Length = 2 then
-                match findEntity parts.[0] with
-                | Some entity ->
+                match findTable parts.[0] with
+                | Some table ->
                     Some (promise {
                         if not (authed ()) then return unauthorized ()
-                        else return! getResponse entity parts.[1] env
+                        else return! getResponse db table parts.[1]
                     })
                 | None -> None
             else None
@@ -117,11 +245,11 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
     | POST path ->
         match matchPath "/api/admin/:id" path with
         | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
-            match findEntity entityName with
-            | Some entity ->
+            match findTable entityName with
+            | Some table ->
                 Some (promise {
                     if not (authed ()) then return unauthorized ()
-                    else return! createResponse entity request env
+                    else return! createResponse db table request
                 })
             | None -> None
         | _ -> None
@@ -132,11 +260,11 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
         | Some (WithParam (_, rest)) ->
             let parts = rest.Split('/')
             if parts.Length = 2 then
-                match findEntity parts.[0] with
-                | Some entity ->
+                match findTable parts.[0] with
+                | Some table ->
                     Some (promise {
                         if not (authed ()) then return unauthorized ()
-                        else return! updateResponse entity parts.[1] request env
+                        else return! updateResponse db table parts.[1] request
                     })
                 | None -> None
             else None
@@ -148,11 +276,11 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
         | Some (WithParam (_, rest)) ->
             let parts = rest.Split('/')
             if parts.Length = 2 then
-                match findEntity parts.[0] with
-                | Some entity ->
+                match findTable parts.[0] with
+                | Some table ->
                     Some (promise {
                         if not (authed ()) then return unauthorized ()
-                        else return! deleteResponse entity parts.[1] env
+                        else return! deleteResponse db table parts.[1]
                     })
                 | None -> None
             else None
