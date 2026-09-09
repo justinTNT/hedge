@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__SITE_TITLE__</title>
+    <link rel="stylesheet" href="/ntnews.css">
+    <style>
+      /* small archive-only helpers layered over the original ntnews.css */
+      #ntsearch input { width: 96px; font-size: 11px; padding: 2px; }
+      #ntsearch button { font-size: 11px; }
+      .yearhead { margin: 1.2em 0 .3em; font: bold 16px Georgia, serif; color: #5f0b48;
+                  border-bottom: 1px solid #cc6600; }
+      .idxrow { margin: .15em 0; }
+      .idxrow .idxdate { color: #888; font-size: 11px; }
+      .article-body { font: 15px/1.5 Georgia, serif; color: #222; }
+      .article-body img { max-width: 100%; height: auto; }
+      .article-meta { color: #888; font-size: 12px; margin: .3em 0 1em; }
+      .cite { color: #555; font-size: 12px; margin-top: 1.5em; border-top: 1px solid #ddd; padding-top: .5em; }
+      .loading { color: #888; padding: 2em 0; }
+      /* article/section/search render full width (no frontcolumn wrapper) */
+
+      /* ---- archive notice: banner + one-time modal ---- */
+      .archive-banner {
+        background: #cc6600; color: #fff; text-align: center;
+        font: 13px/1.45 Arial, Helvetica, sans-serif; padding: 6px 14px;
+        border-bottom: 2px solid #000;
+      }
+      .archive-banner b { color: #fff; }
+      .archive-modal {
+        position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6);
+        display: flex; align-items: center; justify-content: center; padding: 1rem;
+      }
+      .archive-modal[hidden] { display: none; }
+      .archive-modal-box {
+        background: #fff; max-width: 460px; border: 3px solid #cc6600;
+        box-shadow: 0 8px 40px rgba(0,0,0,.5); padding: 1.6rem 1.8rem;
+        font: 15px/1.5 Georgia, serif; color: #222;
+      }
+      .archive-modal-box h2 {
+        margin: 0 0 .1em; font: bold 22px Georgia, serif; color: #5f0b48;
+      }
+      .archive-modal-box .sub { color: #cc6600; font: bold 12px Arial, sans-serif;
+        text-transform: uppercase; letter-spacing: .04em; margin-bottom: .9rem; }
+      .archive-modal-box p { margin: .6rem 0; }
+      .archive-modal-box button {
+        margin-top: .8rem; background: #cc6600; color: #fff; border: 0;
+        padding: .55rem 1.2rem; font: bold 14px Arial, sans-serif; cursor: pointer; border-radius: 3px;
+      }
+      .archive-modal-box button:hover { background: #b35900; }
+    </style>
+</head>
+<body>
+  <div class="archive-banner">📰 <b>ARCHIVE ONLY</b> — a preserved record of <i>Nuclear Territory News</i>, the NT anti-nuclear news archive (2007–2015). No longer updated; the contact, feedback &amp; “breaking news” links are part of the historical page.</div>
+
+  <div id="archive-modal" class="archive-modal" hidden>
+    <div class="archive-modal-box">
+      <h2>Nuclear Territory News</h2>
+      <div class="sub">Archive · read only</div>
+      <p>You're viewing a preserved archive of the Northern Territory's anti-nuclear news record — waste dumps, uranium mining, Ranger, Rum Jungle and the Intervention. Around <b>3,500 articles</b> from 2007–2015, fully searchable.</p>
+      <p>The site is no longer updated, and its feedback, contact and “breaking news” elements are part of the original page — kept as they were.</p>
+      <p>International anti-nuclear news — Fukushima, Sellafield, Hiroshima and beyond — is archived separately at <a href="https://archive.ntne.ws"><b>archive.ntne.ws</b></a>.</p>
+      <button id="archive-enter" type="button">Enter the archive</button>
+    </div>
+  </div>
+
+  <div id="boilerplate-container">
+    <table border="0" cellpadding="0" cellspacing="3" width="94%"><tbody>
+      <tr>
+        <td rowspan="4" background="/browser/images/side.gif" width="20"><img src="/browser/images/blank.gif" height="1" width="20"></td>
+
+        <!-- ===== left column: masthead + nav ===== -->
+        <td rowspan="4" class="mainnav" align="center" valign="top" width="123">
+          <img src="/browser/images/blank.gif" height="4" width="1">
+          <br><span class="current-date">Nuclear Territory<br>News<br></span><br>
+          <table bgcolor="#000000" border="0" cellpadding="0" cellspacing="0" width="123"><tbody>
+            <tr><td bgcolor="#cc6600">
+              <table class="navtab" bgcolor="#000000" border="0" cellpadding="2" cellspacing="1" width="123"><tbody>
+                <tr><td class="mainnav" align="right"><a href="/" class="mainnav"><span class="white12">Home</span></a>&nbsp;</td></tr>
+                <tr><td class="mainnav-heading" align="right"><span class="white12">NEWS SECTIONS</span>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/" class="mainnav">Breaking news</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/waste" class="mainnav">Waste Dump</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/rumjungle" class="mainnav">Rum Jungle</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/uranium" class="mainnav">Uranium Mining</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/ranger" class="mainnav">Ranger Mine</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="/intervention" class="mainnav">NT Intervention</a>&nbsp;</td></tr>
+                <tr><td class="mainnav-heading" align="right"><span class="white12">SEARCH</span>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right">
+                  <form id="ntsearch" onsubmit="return ntSearch(event)">
+                    <input type="text" id="q" placeholder="search…"><button type="submit">go</button>
+                  </form>&nbsp;</td></tr>
+                <tr><td class="mainnav-heading" align="right"><span class="white12">LINKS</span>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="http://ecnt.org/" target="_blank" rel="noopener" class="mainnav">ECNT</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="http://mapw.org.au/" target="_blank" rel="noopener" class="mainnav">MAPW</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="http://acfonline.org.au/" target="_blank" rel="noopener" class="mainnav">ACF</a>&nbsp;</td></tr>
+                <tr><td class="mainnav" align="right"><a href="http://nirs.org/" target="_blank" rel="noopener" class="mainnav">WISE/NIRS</a>&nbsp;</td></tr>
+              </tbody></table>
+            </td></tr>
+          </tbody></table>
+        </td>
+
+        <!-- ===== centre column: content ===== -->
+        <td valign="top">
+          <div align="center"><a href="/">Nuclear Territory News</a></div>
+          <div id="maintab"><div class="frontpage item_welded_on">
+            <div id="content"><div class="loading">Loading…</div></div>
+          </div></div>
+        </td>
+      </tr>
+    </tbody></table>
+  </div>
+
+<script>
+  var SECTIONS = {
+    waste: "Nuclear Waste Dump", uranium: "Uranium Mining", ranger: "Ranger Mine",
+    rumjungle: "Rum Jungle", intervention: "NT Intervention"
+  };
+  var content = document.getElementById('content');
+  var esc = function (s) { return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var api = function (p) { return fetch('/api' + p).then(function (r) { return r.json(); }); };
+  var fmtDate = function (ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getUTCDate() + ' ' + m[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  };
+  var yearOf = function (ts) { return new Date(ts * 1000).getUTCFullYear(); };
+
+  // client-side nav (SPA fallback serves index.html for every path)
+  function go(path) { history.pushState({}, '', path); route(); window.scrollTo(0, 0); }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href || a.target === '_blank' || /^https?:\/\//.test(href) || href[0] !== '/') return;
+    e.preventDefault(); go(href);
+  });
+  window.addEventListener('popstate', route);
+
+  function ntSearch(e) {
+    e.preventDefault();
+    var q = document.getElementById('q').value.trim();
+    if (q) go('/search/' + encodeURIComponent(q));
+    return false;
+  }
+
+  // ---- render: front ----
+  function teaserBlock(section, items) {
+    if (!items || !items.length) return '';
+    var h = '<p></p><table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody><tr>' +
+            '<td class="thinborder" valign="middle"><span class="crosshead">&nbsp;' +
+            esc(SECTIONS[section]) + ' news</span></td></tr></tbody></table>';
+    items.forEach(function (a) {
+      h += '<span class="mediumheadline"><a class="waste_link" href="/article/' + esc(a.id) +
+           '"><strong class="waste_title">' + esc(a.title) + '</strong></a></span><br>' +
+           '<span class="waste_teaser"><p>' + esc(a.teaser) + '</p></span><br>';
+    });
+    h += '<div align="right"><span class="bodytext"><img src="/browser/images/arrow.gif" height="9" width="14"> ' +
+         '<a href="/' + section + '">More ' + esc(SECTIONS[section]) + ' news</a></span><p><br></p></div>';
+    return h;
+  }
+
+  // --- front column 2: other publications + feedback (static) ---
+  var COL2 =
+    '<table width="100%"><tbody>' +
+    '<tr><td class="rightpanel-heading"><span class="rightpanel-heading"><center>Other publications</center></span></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://da.r-w.in" target="_blank" rel="noopener" class="mainnav">da.r-w.in today</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://no-waste.org" target="_blank" rel="noopener" class="mainnav">No Waste Alliance</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://ecnt.org" target="_blank" rel="noopener" class="mainnav">Environment Center of the NT</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://www.melbourne.foe.org.au/documents.htm" target="_blank" rel="noopener" class="mainnav">Friends of the Earth</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://acfonline.org.au/" target="_blank" rel="noopener" class="mainnav">ACF</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://mapw.org.au/" target="_blank" rel="noopener" class="mainnav">MAPW</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://nirs.org/" target="_blank" rel="noopener" class="mainnav">WISE / NIRS</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://sea-us.org.au/wastenot.html" target="_blank" rel="noopener" class="mainnav">Sustainable Energy / Anti-Uranium Service</a></td></tr>' +
+    '<tr><td class="mainnav" align="center"><a href="http://nuclearfree.com.au/" target="_blank" rel="noopener" class="mainnav">People for a Nuclear Free Australia</a></td></tr>' +
+    '</tbody></table><p><br></p>' +
+    '<table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody><tr><td class="thinborder" valign="middle">' +
+    '<span class="crosshead">&nbsp;Got something to say?</span></td></tr></tbody></table>' +
+    '<img src="/browser/images/letter.gif" align="left" border="0" height="20" width="30"> ' +
+    '<span class="bodytext"><a href="mailto:editor@ntne.ws"><b>Reader feedback</b></a></span><br clear="all">' +
+    '<img src="/browser/images/letter.gif" align="left" border="0" height="20" width="30"> ' +
+    '<span class="bodytext"><a href="mailto:editor@ntne.ws"><b>Send a letter to the editor</b></a></span><br clear="all">';
+
+  // --- front column 3: home delivery + breaking news (data) + contact ---
+  function breakingNews(latest) {
+    var h = '<center><a href="mailto:send_me_some@ntne.ws"><img src="/browser/images/homedelivery130.gif" border="0" height="43" width="130"></a></center>' +
+            '<table border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>' +
+            '<tr><td class="rightpanel-border"><table border="0" cellpadding="3" cellspacing="1" width="100%"><tbody>' +
+            '<tr><td class="rightpanel-heading"><span class="rightpanel-heading">BREAKING NEWS</span></td></tr>' +
+            '<tr><td class="rightpanel-news">' +
+            '<a href="http://www.news.com.au/" target="_blank" rel="noopener"><img src="/browser/images/newscomlogo2.gif" align="middle" border="0" height="23" width="120"></a><br>';
+    (latest || []).slice(0, 6).forEach(function (a, i) {
+      var n = i + 1;
+      h += '<img src="/browser/images/bulletpoint.gif"> <a class="link' + n + '" href="/article/' + esc(a.id) +
+           '"><span class="title' + n + '">' + esc(a.title) + '</span></a><br>';
+    });
+    h += '</td></tr></tbody></table></td></tr>' +
+         '<tr><td class="rightpanel-border"><table border="0" cellpadding="3" cellspacing="1" width="100%"><tbody>' +
+         '<tr><td class="rightpanel-heading"><span class="rightpanel-heading">TELL US YOUR NEWS</span></td></tr>' +
+         '<tr><td class="rightpanel"><span class="rightpanel-text">If there\'s news you think we should know about, ' +
+         'let us know:<br><b>Email:</b> <a href="mailto:editor@ntne.ws">editor@ntne.ws</a></span></td></tr>' +
+         '</tbody></table></td></tr></tbody></table>';
+    return h;
+  }
+
+  function renderFront(d) {
+    var c1 = '';
+    var lead = d.latest && d.latest[0];
+    if (lead) {
+      c1 += '<a class="top_link" href="/article/' + esc(lead.id) + '"><span class="top_title">' +
+           esc(lead.title) + '</span></a><br><span class="top_teaser"><p>' + esc(lead.teaser) +
+           '</p></span><div align="right"><span class="bodytext"><br>' +
+           '<img src="/browser/images/arrow.gif" height="9" width="14"> ' +
+           '<a class="top_link" href="/article/' + esc(lead.id) + '">read the full article</a></span><p><br></p></div>';
+    }
+    c1 += teaserBlock('waste', d.waste);
+    c1 += teaserBlock('uranium', d.uranium);
+    c1 += teaserBlock('ranger', d.ranger);
+    c1 += teaserBlock('rumjungle', d.rumjungle);
+    c1 += teaserBlock('intervention', d.intervention);
+    c1 += '<p><br></p><table cellpadding="3" width="100%"><tbody><tr><td class="divide" height="3"></td></tr>' +
+         '<tr><td><span class="body">Welcome to the <i>Nuclear Territory News</i> archive — the Northern ' +
+         'Territory anti-nuclear news record: waste dumps, uranium mining, Ranger, Rum Jungle and the ' +
+         'Intervention. Browse by section on the left, or search the full archive.</span></td></tr></tbody></table>';
+    content.innerHTML =
+      '<div class="frontcolumn1">' + c1 + '</div>' +
+      '<div class="frontcolumn2">' + COL2 + '</div>' +
+      '<div class="frontcolumn3">' + breakingNews(d.latest) + '</div>' +
+      '<div style="clear:both"></div>';
+    document.title = 'Nuclear Territory News';
+  }
+
+  // ---- render: section index (chronological, grouped by year) ----
+  // flat=true: no year grouping (for rank-ordered search), show section label.
+  function renderIndex(title, items, flat) {
+    var h = '<p></p><table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody><tr>' +
+            '<td class="thinborder" valign="middle"><span class="crosshead">&nbsp;' + esc(title) +
+            '</span></td></tr></tbody></table>';
+    if (!items.length) h += '<p class="bodytext">No articles.</p>';
+    var year = null;
+    items.forEach(function (a) {
+      if (!flat) {
+        var y = yearOf(a.timestamp);
+        if (y !== year) { year = y; h += '<div class="yearhead">' + y + '</div>'; }
+      }
+      var secLabel = flat ? ' <span class="idxdate">· ' + esc(SECTIONS[a.section] || a.section) + '</span>' : '';
+      h += '<div class="idxrow"><a class="waste_link" href="/article/' + esc(a.id) + '">' +
+           esc(a.title) + '</a> <span class="idxdate">— ' + fmtDate(a.timestamp) + '</span>' + secLabel + '</div>';
+    });
+    content.innerHTML = h;
+  }
+
+  function renderSection(section) {
+    content.innerHTML = '<div class="loading">Loading…</div>';
+    api('/section/' + section).then(function (d) {
+      renderIndex(SECTIONS[section] + ' — ' + d.items.length + ' articles', d.items);
+      document.title = SECTIONS[section] + ' — Nuclear Territory News';
+    });
+  }
+
+  function renderSearch(q) {
+    content.innerHTML = '<div class="loading">Searching…</div>';
+    api('/search/' + encodeURIComponent(q)).then(function (d) {
+      renderIndex('Search: “' + q + '” — ' + d.items.length + ' result' + (d.items.length === 1 ? '' : 's'), d.items, true);
+      document.title = 'Search: ' + q + ' — Nuclear Territory News';
+    });
+  }
+
+  // ---- render: article ----
+  function renderArticle(id) {
+    content.innerHTML = '<div class="loading">Loading…</div>';
+    api('/article/' + id).then(function (d) {
+      if (!d || !d.article) { content.innerHTML = '<p class="bodytext">Article not found.</p>'; return; }
+      var a = d.article;
+      var sec = SECTIONS[a.section] || a.section;
+      var cite = '';
+      if (a.source || a.attrib) cite = '<div class="cite">' +
+        (a.attrib ? esc(a.attrib) : '') + (a.attrib && a.source ? ' — ' : '') +
+        (a.source ? esc(a.source) : '') + '</div>';
+      content.innerHTML =
+        '<span class="top_title">' + esc(a.title) + '</span>' +
+        '<div class="article-meta"><a href="/' + a.section + '">' + esc(sec) + '</a> &nbsp;·&nbsp; ' +
+        fmtDate(a.timestamp) + '</div>' +
+        '<div class="article-body">' + a.body + '</div>' + cite +
+        '<div align="right"><span class="bodytext"><img src="/browser/images/arrow.gif" height="9" width="14"> ' +
+        '<a href="/' + a.section + '">More ' + esc(sec) + ' news</a></span></div>';
+      document.title = a.title + ' — Nuclear Territory News';
+    });
+  }
+
+  // ---- router ----
+  function route() {
+    var p = location.pathname.replace(/^\/+|\/+$/g, '');
+    if (p === '' || p === 'index.html') { content.innerHTML = '<div class="loading">Loading…</div>'; api('/front').then(renderFront); return; }
+    var parts = p.split('/');
+    if (parts[0] === 'article' && parts[1]) return renderArticle(parts[1]);
+    if (parts[0] === 'search' && parts[1]) return renderSearch(decodeURIComponent(parts.slice(1).join('/')));
+    if (SECTIONS[parts[0]]) return renderSection(parts[0]);
+    content.innerHTML = '<p class="bodytext">Page not found. <a href="/">Home</a></p>';
+  }
+
+  // one-time "you're viewing an archive" modal (dismissal remembered per browser)
+  (function () {
+    var modal = document.getElementById('archive-modal');
+    var seen = null;
+    try { seen = localStorage.getItem('ntnewsArchiveSeen'); } catch (e) {}
+    if (!seen) modal.hidden = false;
+    document.getElementById('archive-enter').onclick = function () {
+      modal.hidden = true;
+      try { localStorage.setItem('ntnewsArchiveSeen', '1'); } catch (e) {}
+    };
+  })();
+
+  route();
+</script>
+</body>
+</html>

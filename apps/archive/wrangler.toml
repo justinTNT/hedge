@@ -1,0 +1,38 @@
+name = "ntnews"
+main = "worker-entry.js"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ntne.ws cutover to Cloudflare 2026-09-09. workers_dev kept on while the .ws
+# NS propagate. Email (MX mx3-8.name.com + SPF) preserved in the CF zone.
+workers_dev = true
+routes = [
+    { pattern = "ntne.ws", custom_domain = true },
+    { pattern = "www.ntne.ws", custom_domain = true }
+]
+
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ntne.ws — the anti-nuclear news archive. Read-only public + hedge admin.
+# One tenant, so a single top-level config (no [env.*]).
+[[d1_databases]]
+binding = "DB"
+database_name = "ntnews-db"
+database_id = "9e8f0458-59a1-4ad5-9116-ba5abebbab12"
+
+# Static assets (the compiled SPA + admin). No R2, no Durable Objects — the
+# archive has no uploads and no live comments.
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# ADMIN_KEY is deliberately absent from [vars]; set via `wrangler secret put`.
+[vars]
+ENVIRONMENT = "production"
+
+# Custom domain (ntne.ws) added at cutover. Note: archive.ntne.ws is a SEPARATE
+# worker (the nonukes microblog), attached to the same zone at cutover time.
