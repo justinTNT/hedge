@@ -485,7 +485,8 @@ let getRhymes (env: Env) : JS.Promise<WorkerResponse> =
         for tag in tags do
             let! itemsRes = (bind (env.DB.prepare Sql.itemsByTag) [| box tag; box 12 |]).all()
             let items = itemsRes.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
-            groups.Add(tag, items)
+            // A rhyme needs at least a pair; skip empty/singleton tags.
+            if List.length items >= 2 then groups.Add(tag, items)
         let body =
             Encode.object [
                 "rhymes", Encode.list [
