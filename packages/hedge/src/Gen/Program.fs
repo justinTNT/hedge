@@ -1120,7 +1120,12 @@ let wranglerQuery (remote: bool) (dbName: string) (sql: string) : Text.Json.Json
     let args = sprintf "wrangler d1 execute %s %s --command \"%s\" --json" dbName target escaped
     let output = execProcess "npx" args
     let doc = Text.Json.JsonDocument.Parse(output)
-    let first = doc.RootElement.[0]
+    // wrangler's `d1 execute --json` shape varies by version/target: --local wraps
+    // the statement result in an array ([{ results, success, meta }]) while --remote
+    // returns the bare object ({ results, success, meta }). Accept both.
+    let root = doc.RootElement
+    let first =
+        if root.ValueKind = Text.Json.JsonValueKind.Array then root.[0] else root
     let results = first.GetProperty("results")
     [| for i in 0 .. results.GetArrayLength() - 1 -> results.[i] |]
 
