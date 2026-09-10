@@ -7,11 +7,23 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
 
 ## Decisions (locked)
 
-- **D1 — Composition = co-hosted, path-mounted client bundles.** Each module is its
-  own client bundle, mounted by path via the framework `Mount` (proven by rhyming):
-  root → articles client, `/blog` → blog client, `/admin` → shared admin. Section
-  switches are a page load (fine). **No unified Elmish shell** (defer sub-component
-  composition until seamless cross-module SPA nav is actually wanted).
+- **D1 — Two module-integration styles; use path-mount first, keep the door open to
+  composition.** There are two legitimate ways a module's client integrates, and the
+  framework should support **both**:
+  - **Path-mounted bundle** — a self-contained bundle at a path via the framework
+    `Mount` (proven by rhyming, and how `/admin` already works): root → articles,
+    `/blog` → blog. Coarse-grained, isolated; cross-module nav is a page load.
+  - **Integrated component** — an Elmish component composed into a unified shell
+    (`Msg`-nesting / `Cmd.map`): seamless SPA nav, chrome + identity rendered/loaded
+    once. Fine-grained, woven.
+  - **Non-throwaway sequencing:** shape every module's client as a **component**
+    (`init`/`update`/`view`), NOT a self-running `Program.run`. Path-mount wraps it in
+    a thin standalone entry that runs it; the shell (later) hosts the same component.
+    One module shape, two mounting adapters — so path-mount work carries into
+    composition unchanged.
+  - **First merge uses path-mount:** ship `/blog` as a bundle beside the *untouched*
+    live articles client (D4-consistent). The unified shell + articles-as-component is
+    the paired follow-up (see below), when we're not under first-merge pressure.
 - **D2 — One D1 (justat-db).** Shared identity + every module's content and comments
   in one database (see D3 — shared identity needs joinable comments; two DBs would
   force cross-DB joins).
@@ -62,8 +74,10 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
    real technical unknown.
 2. **Phase 2 — Extract the blog module** — microblog's Domain/Api/Handlers/Client →
    `packages/modules/blog/`, made prefix-aware (SQL via generated table-name
-   constants), identity delegated to the shared layer, comments kept. microblog
-   untouched (justat is the first consumer).
+   constants), identity delegated to the shared layer, comments kept. The client is
+   shaped as a **component** (`init`/`update`/`view`) with a thin standalone entry
+   for the path-mounted bundle — so composition can host the same component later.
+   microblog untouched (justat is the first consumer).
 3. **Phase 3 — Compose in the articles app / justat env** — reference articles(root) +
    blog module; Gen composes; justat-db migration adds `blog_*`; worker path-mounts
    the blog client at `/blog` and its API at `/api/blog`; add a "Blog" menu item.
@@ -75,6 +89,11 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
    - Physically extract **articles into `packages/modules/articles`** (moving justat +
      ndct onto it together) for full `packages/modules/*` symmetry — when a genuinely
      separate site wants articles, or we want the symmetric layout.
+   - **Unified Elmish shell (integrated-component style)** — paired with the articles
+     extraction: refactor the articles client into a component and stand up the shell
+     that hosts articles + blog components with seamless SPA nav, shared chrome, and
+     identity loaded once. The blog component (from Phase 2) is reused as-is; only the
+     mounting changes (standalone entry → hosted in the shell).
 
 ## Risks
 
