@@ -4,8 +4,6 @@ module Codecs
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Codec
-open Models.Domain
-open Models.Api
 
 /// Unwrap helpers — terse pattern matches used in Handlers.fs.
 let inline pk (PrimaryKey v) = v
@@ -20,69 +18,66 @@ let inline uq (Unique v) = v
 module Encode =
 
     // -- Domain types --
-    let inline guest (v: Guest) = encode v
-    let inline identity (v: Identity) = encode v
-    let inline microblogItem (v: MicroblogItem) = encode v
-    let inline itemComment (v: ItemComment) = encode v
-    let inline tag (v: Tag) = encode v
-    let inline itemTag (v: ItemTag) = encode v
+    let inline guest (v: Models.Domain.Guest) = encode v
+    let inline identity (v: Models.Domain.Identity) = encode v
+    let inline microblogItem (v: Blog.Domain.MicroblogItem) = encode v
+    let inline itemComment (v: Blog.Domain.ItemComment) = encode v
+    let inline tag (v: Blog.Domain.Tag) = encode v
+    let inline itemTag (v: Blog.Domain.ItemTag) = encode v
 
     // -- API view types --
-    let inline rhymeGroup (v: GetRhymes.RhymeGroup) = encode v
-    let inline microblogItemView (v: SubmitItem.MicroblogItem) = encode v
-    let inline commentItem (v: SubmitComment.CommentItem) = encode v
-    let inline feedItem (v: GetFeed.FeedItem) = encode v
+    let inline blogMicroblogItemView (v: Blog.Api.SubmitItem.MicroblogItem) = encode v
+    let inline blogCommentItem (v: Blog.Api.SubmitComment.CommentItem) = encode v
+    let inline blogFeedItem (v: Blog.Api.GetFeed.FeedItem) = encode v
 
     // -- API request encoders --
-    let inline submitItemReq (v: SubmitItem.Request) = encode v
-    let inline submitCommentReq (v: SubmitComment.Request) = encode v
+    let inline blogSubmitItemReq (v: Blog.Api.SubmitItem.Request) = encode v
+    let inline blogSubmitCommentReq (v: Blog.Api.SubmitComment.Request) = encode v
 
     // -- WebSocket event encoders --
-    let inline newCommentEvent (e: Models.Ws.NewCommentEvent) = encode e
-    let inline commentModeratedEvent (e: Models.Ws.CommentModeratedEvent) = encode e
-    let inline commentRemovedEvent (e: Models.Ws.CommentRemovedEvent) = encode e
+    let inline blogNewCommentEvent (e: Blog.Ws.NewCommentEvent) = encode e
+    let inline blogCommentModeratedEvent (e: Blog.Ws.CommentModeratedEvent) = encode e
+    let inline blogCommentRemovedEvent (e: Blog.Ws.CommentRemovedEvent) = encode e
 
 module Decode =
 
     // -- Domain types --
-    let guest : Decoder<Guest> = decode<Guest>()
-    let identity : Decoder<Identity> = decode<Identity>()
-    let microblogItem : Decoder<MicroblogItem> = decode<MicroblogItem>()
-    let itemComment : Decoder<ItemComment> = decode<ItemComment>()
-    let tag : Decoder<Tag> = decode<Tag>()
-    let itemTag : Decoder<ItemTag> = decode<ItemTag>()
+    let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
+    let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
+    let microblogItem : Decoder<Blog.Domain.MicroblogItem> = decode<Blog.Domain.MicroblogItem>()
+    let itemComment : Decoder<Blog.Domain.ItemComment> = decode<Blog.Domain.ItemComment>()
+    let tag : Decoder<Blog.Domain.Tag> = decode<Blog.Domain.Tag>()
+    let itemTag : Decoder<Blog.Domain.ItemTag> = decode<Blog.Domain.ItemTag>()
 
     // -- API view types --
-    let rhymeGroup : Decoder<GetRhymes.RhymeGroup> = decode<GetRhymes.RhymeGroup>()
-    let microblogItemView : Decoder<SubmitItem.MicroblogItem> = decode<SubmitItem.MicroblogItem>()
-    let commentItem : Decoder<SubmitComment.CommentItem> = decode<SubmitComment.CommentItem>()
-    let feedItem : Decoder<GetFeed.FeedItem> = decode<GetFeed.FeedItem>()
+    let blogMicroblogItemView : Decoder<Blog.Api.SubmitItem.MicroblogItem> = decode<Blog.Api.SubmitItem.MicroblogItem>()
+    let blogCommentItem : Decoder<Blog.Api.SubmitComment.CommentItem> = decode<Blog.Api.SubmitComment.CommentItem>()
+    let blogFeedItem : Decoder<Blog.Api.GetFeed.FeedItem> = decode<Blog.Api.GetFeed.FeedItem>()
 
     // -- API response decoders --
-    let getRhymesResponse : Decoder<GetRhymes.Response> = decode<GetRhymes.Response>()
-    let getItemsByTagResponse : Decoder<GetItemsByTag.Response> = decode<GetItemsByTag.Response>()
-    let getTagsResponse : Decoder<GetTags.Response> = decode<GetTags.Response>()
-    let getItemResponse : Decoder<GetItem.Response> = decode<GetItem.Response>()
-    let submitItemResponse : Decoder<SubmitItem.Response> = decode<SubmitItem.Response>()
-    let submitCommentResponse : Decoder<SubmitComment.Response> = decode<SubmitComment.Response>()
-    let getFeedResponse : Decoder<GetFeed.Response> = decode<GetFeed.Response>()
+    let blogGetItemsByTagResponse : Decoder<Blog.Api.GetItemsByTag.Response> = decode<Blog.Api.GetItemsByTag.Response>()
+    let blogGetTagsResponse : Decoder<Blog.Api.GetTags.Response> = decode<Blog.Api.GetTags.Response>()
+    let blogGetItemResponse : Decoder<Blog.Api.GetItem.Response> = decode<Blog.Api.GetItem.Response>()
+    let blogSubmitItemResponse : Decoder<Blog.Api.SubmitItem.Response> = decode<Blog.Api.SubmitItem.Response>()
+    let blogSubmitCommentResponse : Decoder<Blog.Api.SubmitComment.Response> = decode<Blog.Api.SubmitComment.Response>()
+    let blogGetFeedResponse : Decoder<Blog.Api.GetFeed.Response> = decode<Blog.Api.GetFeed.Response>()
 
     // -- API request decoders --
-    let submitItemReq : Decoder<SubmitItem.Request> = decode<SubmitItem.Request>()
-    let submitCommentReq : Decoder<SubmitComment.Request> = decode<SubmitComment.Request>()
+    let blogSubmitItemReq : Decoder<Blog.Api.SubmitItem.Request> = decode<Blog.Api.SubmitItem.Request>()
+    let blogSubmitCommentReq : Decoder<Blog.Api.SubmitComment.Request> = decode<Blog.Api.SubmitComment.Request>()
 
     // -- WebSocket event decoders --
-    let newCommentEvent : Decoder<Models.Ws.NewCommentEvent> = decode<Models.Ws.NewCommentEvent>()
-    let commentModeratedEvent : Decoder<Models.Ws.CommentModeratedEvent> = decode<Models.Ws.CommentModeratedEvent>()
-    let commentRemovedEvent : Decoder<Models.Ws.CommentRemovedEvent> = decode<Models.Ws.CommentRemovedEvent>()
+    let blogNewCommentEvent : Decoder<Blog.Ws.NewCommentEvent> = decode<Blog.Ws.NewCommentEvent>()
+    let blogCommentModeratedEvent : Decoder<Blog.Ws.CommentModeratedEvent> = decode<Blog.Ws.CommentModeratedEvent>()
+    let blogCommentRemovedEvent : Decoder<Blog.Ws.CommentRemovedEvent> = decode<Blog.Ws.CommentRemovedEvent>()
 
 module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
 
-    let submitItemSchema =
-        schema "SubmitItem.Request" [
+    let blogSubmitItemSchema =
+        schema "Blog.Api.SubmitItem.Request" [
             fieldWith "Title" FString [Required; Trim]
             fieldWith "Slug" (FOption FString) [Trim]
             fieldWith "Link" (FOption FString) [Trim]
@@ -92,14 +87,14 @@ module Validate =
             fieldWith "Tags" (FList FString) []
         ]
 
-    let inline submitItemReq (r: SubmitItem.Request) = validate submitItemSchema r
+    let inline blogSubmitItemReq (r: Blog.Api.SubmitItem.Request) = validate blogSubmitItemSchema r
 
-    let submitCommentSchema =
-        schema "SubmitComment.Request" [
+    let blogSubmitCommentSchema =
+        schema "Blog.Api.SubmitComment.Request" [
             fieldWith "ItemId" FString [Required; Trim]
             fieldWith "ParentId" (FOption FString) [Trim]
             fieldWith "Content" FString [Required; Trim]
             fieldWith "Author" (FOption FString) [Trim]
         ]
 
-    let inline submitCommentReq (r: SubmitComment.Request) = validate submitCommentSchema r
+    let inline blogSubmitCommentReq (r: Blog.Api.SubmitComment.Request) = validate blogSubmitCommentSchema r

@@ -1,9 +1,15 @@
 module Server.Sql
 
-/// Every hand-written SQL statement in the app, named and in one place.
-/// check-sql.sh EXPLAIN-prepares each of these against both a fresh
-/// schema.sql database and a migrations-built database at test time —
-/// keep statements as plain literals (no string concatenation).
+/// The app's hand-written SQL: the shared identity layer, plus the two darwin.news
+/// glue statements (rhyming + social-preview) that read the composed blog module's
+/// content tables. check-sql.sh EXPLAIN-prepares each of these against both a fresh
+/// schema.sql database and a migrations-built database at test time — keep statements
+/// as plain literals (no string concatenation).
+///
+/// Where identity/attribution touch comments, they name the app's own content table
+/// (blog_comments) directly: this app composes [identity, blog], so its comments live
+/// there. The blog *module* stays table-name-agnostic (Blog.Sql via generated Tables);
+/// this is the app's glue naming the app's own composition.
 
 // ---- Identity policy ----
 
@@ -45,7 +51,7 @@ let findIdentityByProviderGlobal = """
     SELECT i.id, i.guest_id
     FROM identities i
     WHERE i.provider = ? AND i.provider_user_id = ?
-    ORDER BY (SELECT COUNT(*) FROM comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
+    ORDER BY (SELECT COUNT(*) FROM blog_comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
     LIMIT 1"""
 
 /// Fold one guest's identities into another (their comments follow, since
@@ -54,7 +60,7 @@ let moveIdentitiesToGuest =
     "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
 
 let countCommentsForIdentity =
-    "SELECT COUNT(*) AS n FROM comments WHERE identity_id = ?"
+    "SELECT COUNT(*) AS n FROM blog_comments WHERE identity_id = ?"
 
 /// Park a single identity on another guest. Disconnect uses this to abandon a
 /// credentialed identity onto a fresh empty guest: its comments stay attached,
@@ -99,78 +105,17 @@ let setIdentityActive =
 // ---- Attribution (see Server.Attribution) ----
 
 let reassignComments = """
-    UPDATE comments
+    UPDATE blog_comments
     SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?)
     WHERE identity_id = ?"""
 
-// ---- Items / comments / tags ----
+// ---- darwin.news glue over the blog module's content tables ----
 
-let itemBySlug =
-    "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM items WHERE slug = ?"
-
-// Cursor-paginated feed (infinite scroll). Ordered by (article_date, id) so the
-// compound cursor is stable even when many items share a date, and so backdated
-// articles sort to their own date rather than their insert time. Bind: [limit].
-let feedFirstPage = """
-    SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at
-    FROM items
-    WHERE deleted_at IS NULL
-    ORDER BY article_date DESC, id DESC
-    LIMIT ?"""
-
-// Bind: [cursorTs, cursorTs, cursorId, limit].
-let feedAfterCursor = """
-    SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at
-    FROM items
-    WHERE deleted_at IS NULL
-      AND (article_date < ? OR (article_date = ? AND id < ?))
-    ORDER BY article_date DESC, id DESC
-    LIMIT ?"""
-
-/// Just the columns social previews need. Deliberately narrow (and not
-/// SELECT *) so it stays valid on branches that add item columns.
+/// Just the columns social previews need (Server.Meta). Deliberately narrow so it
+/// stays valid on branches that add item columns.
 let itemMetaBySlugOrId =
-    "SELECT id, title, image, extract, slug FROM items WHERE (slug = ? OR id = ?) AND deleted_at IS NULL"
-
-let tagsForItem =
-    "SELECT t.name FROM tags t JOIN item_tags it ON t.id = it.tag_id WHERE it.item_id = ?"
-
-let picturesForItemComments =
-    "SELECT DISTINCT i.id, i.picture FROM identities i JOIN comments c ON c.identity_id = i.id WHERE c.item_id = ?"
-
-let insertComment = """
-    INSERT INTO comments (id, item_id, identity_id, parent_id, author, content, removed, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
-
-let tagNames =
-    "SELECT name FROM tags ORDER BY name"
+    "SELECT id, title, image, extract, slug FROM blog_items WHERE (slug = ? OR id = ?) AND deleted_at IS NULL"
 
 // rhyme-* tags in numeric-ish order (rhyme-1, rhyme-2, ...) for rhyming.darwin.news.
 let rhymeTags =
-    "SELECT name FROM tags WHERE name LIKE 'rhyme-%' ORDER BY name"
-
-// Cursor-paginated tag feed (bind: [tag, limit]).
-let itemsByTag = """
-    SELECT i.*
-    FROM items i
-    JOIN item_tags it ON i.id = it.item_id
-    JOIN tags t ON it.tag_id = t.id
-    WHERE t.name = ? AND i.deleted_at IS NULL
-    ORDER BY i.article_date DESC, i.id DESC LIMIT ?"""
-
-// Bind: [tag, cursorTs, cursorTs, cursorId, limit].
-let itemsByTagAfter = """
-    SELECT i.*
-    FROM items i
-    JOIN item_tags it ON i.id = it.item_id
-    JOIN tags t ON it.tag_id = t.id
-    WHERE t.name = ? AND i.deleted_at IS NULL
-      AND (i.article_date < ? OR (i.article_date = ? AND i.id < ?))
-    ORDER BY i.article_date DESC, i.id DESC LIMIT ?"""
-
-let insertTag =
-    "INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?, ?, ?)"
-
-// Bind: [linkId, itemId, tagName]. linkId is the surrogate PK (see ItemTag).
-let linkItemTag =
-    "INSERT INTO item_tags (id, item_id, tag_id) SELECT ?, ?, id FROM tags WHERE name = ?"
+    "SELECT name FROM blog_tags WHERE name LIKE 'rhyme-%' ORDER BY name"

@@ -8,6 +8,12 @@
     <Compile Include="generated/Db.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Attribution.fs" />
+  </ItemGroup>
+  <!-- Blog module server layer, composed via the module's .props. Placed before
+       Handlers.fs because the app's bespoke getRhymes reads Blog.Sql; it needs
+       Db/Identity above and dispatches (via Routes below) to Blog.Handlers. -->
+  <Import Project="../../../../packages/modules/blog/blog.server.props" />
+  <ItemGroup>
     <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
@@ -18,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

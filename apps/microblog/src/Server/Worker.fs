@@ -17,6 +17,10 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Handlers.disconnectIdentity request env)
     | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
         Some (Server.Handlers.getIdentities request env)
+    // darwin.news rhyming — a bespoke route over the composed blog module's tables,
+    // deliberately hand-written (not a reflected/gen endpoint).
+    | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
+        Some (Server.Handlers.getRhymes env)
     | _ -> None
 
 [<ExportDefault>]

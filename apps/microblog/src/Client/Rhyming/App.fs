@@ -2,14 +2,16 @@ module Client.Rhyming.App
 
 // rhyming.darwin.news — a second view over darwin.news's own items, pairing the
 // articles that share a `rhyme-*` tag and listing each pair side-by-side. Its own
-// tiny Elmish entry (mounted via the framework host-mount); reuses the generated
-// getRhymes client + the shared FeedItem shape.
+// tiny Elmish entry (mounted via the framework host-mount). Rhyming is bespoke
+// darwin.news glue: it hits the hand-written /api/rhymes route and decodes the
+// composed blog module's FeedItem shape with the generated blog codec.
 
 open Feliz
 open Elmish
 open Fable.Core
+open Thoth.Json
 open Hedge.Interface
-open Models.Api
+open Blog.Api
 
 /// Plain text from an Extract (ProseMirror JSON) — walks text nodes so we don't
 /// pull the TipTap bundle onto this page just for a teaser. Falls back to the raw
@@ -30,16 +32,28 @@ let private teaserOf (item: GetFeed.FeedItem) : string option =
         else Some t
     | None -> None
 
-type Model = { Rhymes: GetRhymes.RhymeGroup list; Loading: bool; Error: string option }
-type Msg = GotRhymes of Result<GetRhymes.Response, string>
+/// A rhyme: the items sharing one `rhyme-*` tag (local shape — rhyming isn't a
+/// reflected endpoint). Items are the blog module's FeedItem.
+type RhymeGroup = { Tag: string; Items: GetFeed.FeedItem list }
+
+let private rhymesDecoder : Decoder<RhymeGroup list> =
+    Decode.field "rhymes"
+        (Decode.list
+            (Decode.map2
+                (fun t i -> { Tag = t; Items = i })
+                (Decode.field "tag" Decode.string)
+                (Decode.field "items" (Decode.list Codecs.Decode.blogFeedItem))))
+
+type Model = { Rhymes: RhymeGroup list; Loading: bool; Error: string option }
+type Msg = GotRhymes of Result<RhymeGroup list, string>
 
 let init () =
     { Rhymes = []; Loading = true; Error = None },
-    Cmd.OfPromise.either Client.ClientGen.getRhymes () GotRhymes (fun ex -> GotRhymes (Error ex.Message))
+    Cmd.OfPromise.either (fun () -> Client.Api.fetchJson "/api/rhymes" rhymesDecoder) () GotRhymes (fun ex -> GotRhymes (Error ex.Message))
 
 let update msg model =
     match msg with
-    | GotRhymes (Ok r) -> { model with Rhymes = r.Rhymes; Loading = false; Error = None }, Cmd.none
+    | GotRhymes (Ok rhymes) -> { model with Rhymes = rhymes; Loading = false; Error = None }, Cmd.none
     | GotRhymes (Error e) -> { model with Loading = false; Error = Some e }, Cmd.none
 
 /// The full articles live on darwin.news; each card links across to its post.
@@ -67,7 +81,7 @@ let private card (item: GetFeed.FeedItem) =
         ]
     ]
 
-let private groupView (g: GetRhymes.RhymeGroup) =
+let private groupView (g: RhymeGroup) =
     Html.div [
         prop.key g.Tag
         prop.className "rhyme-row"

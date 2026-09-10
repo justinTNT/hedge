@@ -3,53 +3,48 @@ module Client.ClientGen
 
 open Fable.Core
 open Thoth.Json
-open Models.Api
-open Models.Ws
 open Codecs
 open Client.Api
 
 // --- HTTP API ---
 
-let getRhymes () =
-    fetchJson "/api/rhymes" Decode.getRhymesResponse
+let blogGetItemsByTag (id: string) =
+    fetchJson (sprintf "/api/blog/tags/%s/items" id) Decode.blogGetItemsByTagResponse
 
-let getItemsByTag (id: string) =
-    fetchJson (sprintf "/api/tags/%s/items" id) Decode.getItemsByTagResponse
+let blogGetTags () =
+    fetchJson "/api/blog/tags" Decode.blogGetTagsResponse
 
-let getTags () =
-    fetchJson "/api/tags" Decode.getTagsResponse
+let blogGetItem (id: string) =
+    fetchJson (sprintf "/api/blog/item/%s" id) Decode.blogGetItemResponse
 
-let getItem (id: string) =
-    fetchJson (sprintf "/api/item/%s" id) Decode.getItemResponse
+let blogSubmitItem (req: Blog.Api.SubmitItem.Request) =
+    let body = Encode.blogSubmitItemReq req |> Encode.toString 0
+    postJson "/api/blog/item" body Decode.blogSubmitItemResponse
 
-let submitItem (req: SubmitItem.Request) =
-    let body = Encode.submitItemReq req |> Encode.toString 0
-    postJson "/api/item" body Decode.submitItemResponse
+let blogSubmitComment (req: Blog.Api.SubmitComment.Request) =
+    let body = Encode.blogSubmitCommentReq req |> Encode.toString 0
+    postJson "/api/blog/comment" body Decode.blogSubmitCommentResponse
 
-let submitComment (req: SubmitComment.Request) =
-    let body = Encode.submitCommentReq req |> Encode.toString 0
-    postJson "/api/comment" body Decode.submitCommentResponse
-
-let getFeed (id: string) =
-    fetchJson (sprintf "/api/feed/%s" id) Decode.getFeedResponse
+let blogGetFeed (id: string) =
+    fetchJson (sprintf "/api/blog/feed/%s" id) Decode.blogGetFeedResponse
 
 // --- WebSocket Events ---
 
-type WsEvent =
-    | NewComment of NewCommentEvent
-    | CommentModerated of CommentModeratedEvent
-    | CommentRemoved of CommentRemovedEvent
+type BlogWsEvent =
+    | BlogNewComment of Blog.Ws.NewCommentEvent
+    | BlogCommentModerated of Blog.Ws.CommentModeratedEvent
+    | BlogCommentRemoved of Blog.Ws.CommentRemovedEvent
 
-let decodeWsEvent (text: string) : Result<WsEvent, string> =
+let blogDecodeWsEvent (text: string) : Result<BlogWsEvent, string> =
     match Decode.fromString (Decode.field "type" Decode.string) text with
     | Ok "NewComment" ->
-        Decode.fromString (Decode.field "payload" Decode.newCommentEvent) text
-        |> Result.map NewComment
+        Decode.fromString (Decode.field "payload" Decode.blogNewCommentEvent) text
+        |> Result.map BlogNewComment
     | Ok "CommentModerated" ->
-        Decode.fromString (Decode.field "payload" Decode.commentModeratedEvent) text
-        |> Result.map CommentModerated
+        Decode.fromString (Decode.field "payload" Decode.blogCommentModeratedEvent) text
+        |> Result.map BlogCommentModerated
     | Ok "CommentRemoved" ->
-        Decode.fromString (Decode.field "payload" Decode.commentRemovedEvent) text
-        |> Result.map CommentRemoved
+        Decode.fromString (Decode.field "payload" Decode.blogCommentRemovedEvent) text
+        |> Result.map BlogCommentRemoved
     | Ok t -> Error (sprintf "Unknown event: %s" t)
     | Error e -> Error e
