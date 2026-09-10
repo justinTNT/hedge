@@ -110,3 +110,7 @@ let updateMenuItem (id: string) (create: MenuItemCreate) (db: D1Database) : D1Pr
 
 let deleteMenuItem (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM menu_items WHERE id = ?")) [| box id |]
+
+module Tables =
+    let page = "pages"
+    let menuItem = "menu_items"

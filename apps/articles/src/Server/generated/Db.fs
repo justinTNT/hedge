@@ -231,3 +231,9 @@ let selectArticleCommentsByArticleId (articleId: string) (db: D1Database) : D1Pr
 
 let selectArticleCommentsByIdentityId (identityId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, article_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE identity_id = ? ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
+
+module Tables =
+    let guest = "guests"
+    let identity = "identities"
+    let article = "articles"
+    let articleComment = "comments"

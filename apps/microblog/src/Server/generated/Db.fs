@@ -324,3 +324,11 @@ let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStateme
 
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
+
+module Tables =
+    let guest = "guests"
+    let identity = "identities"
+    let microblogItem = "items"
+    let itemComment = "comments"
+    let tag = "tags"
+    let itemTag = "item_tags"

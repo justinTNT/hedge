@@ -113,3 +113,7 @@ let deleteTrack (id: string) (db: D1Database) : D1PreparedStatement =
 
 let selectTracksByAlbumId (albumId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE album_id = ? ORDER BY created_at DESC LIMIT 100")) [| box albumId |]
+
+module Tables =
+    let album = "albums"
+    let track = "tracks"

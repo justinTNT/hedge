@@ -68,3 +68,6 @@ let updateArticle (id: string) (create: ArticleCreate) (db: D1Database) : D1Prep
 
 let deleteArticle (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM articles WHERE id = ?")) [| box id |]
+
+module Tables =
+    let article = "articles"

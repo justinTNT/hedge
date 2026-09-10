@@ -568,6 +568,12 @@ let generateDbFs (metas: TableMeta list) : string =
         tableLines |> List.iter emit)
 
     emit ""
+    // Table names (namespace-aware) for hand-written SQL — reference these instead
+    // of hardcoding a literal, so a module's SQL works whether its tables are
+    // `items` (standalone) or `blog_items` (mounted with a prefix).
+    emit "module Tables ="
+    if metas.IsEmpty then emit "    ()"
+    else metas |> List.iter (fun m -> emit (sprintf "    let %s = \"%s\"" (toCamelCase m.DisplayName) m.TableName))
 
     lines |> String.concat "\n"
 
