@@ -40,8 +40,37 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
   own copy.** justat's blog is brand-new (no data to break) = the safe first
   consumer. Repoint the 6-tenant microblog onto the shared blog module later,
   deliberately (rule-of-three vote #2). Temporary duplication, retired in follow-up.
+- **D5 — No privileged "root module"; uniform prefixing + a `primary` mount (ACTIVE —
+  see "Convergence plan" below; locked 2026-09-10).** "Root module" isn't a real
+  concept — it bundles two unrelated things:
+  1. *Unprefixed* paths/tables/generated names (`/api/item`, `items`, `getFeed`).
+     This is pure backward-compat scaffolding: it exists only so single-module apps
+     regenerate **byte-identically** and we avoid migrating live data. No design
+     justification beyond that.
+  2. *Answers the naked URL* (`/`). This is the only irreducible part — and it's just
+     a routing choice: a `Mount` with `OnPath "/"` (or a `primary`/first-in-order flag
+     in `gen-modules.json`) pointing at some module's shell. Independent of prefixing.
+  **Target end-state:** every module is uniform — `/api/<m>/*`, `<m>_*` tables, `<m>*`
+  generated names — with *no* special root. A `primary` flag (or `OnPath "/"` mount)
+  decides who serves the naked URL, fully decoupled from paths/tables/names.
+  Consequences:
+  - The generator gets **simpler**: the `qualify`/byte-identical branch (emit
+    unprefixed for the root, prefixed otherwise) collapses to *always* prefix +
+    *always* qualify. The root special-case is complexity that only pays for
+    not-migrating-yet.
+  - The per-site "where's the content API" wart disappears: clients (e.g. the hedge
+    extension) post to `/api/blog/item` **uniformly** on every site — no per-site
+    `apiPrefix` needed. (Today the extension compiles the microblog's root-mounted
+    `ClientGen` → `/api/item`; against justat's mounted blog at `/api/blog/item` it
+    404s — the concrete symptom that surfaced this decision.)
+  - Adding/removing a module never shifts another module's paths.
+  **Gate:** requires migrating the live data off the unprefixed shape (darwin.news's
+  `items`/`comments`/`tags` at `/api/item` → `blog_*` at `/api/blog/*`) — which *is*
+  the D4 microblog convergence. So uniform prefixing isn't a retrofit we bolt on; it's
+  the shape we adopt *when* we converge, and it makes that step cleaner. No change to
+  justat today: its blog is a *secondary* module → prefixed under both models already.
 
-## Namespacing (one D1)
+## Namespacing (one D1 — the transitional scheme; superseded by D5 at convergence)
 
 - **Shared, unprefixed:** `guests`, `identities` (justat's existing).
 - **Root module = articles, in place, prefix `""`:** `articles`, `comments` — untouched
@@ -139,6 +168,61 @@ So the composed Codecs/Routes/ClientGen/AdminGen/Validate would emit duplicate
      that hosts articles + blog components with seamless SPA nav, shared chrome, and
      identity loaded once. The blog component (from Phase 2) is reused as-is; only the
      mounting changes (standalone entry → hosted in the shell).
+
+## Convergence plan (active — locked 2026-09-10)
+
+Realise D5 across the live estate. **Code the target once; migrate + deploy + test
+one site fully before the next.**
+
+**End state.** No root module. Every module is uniform — `/api/<m>/*`, `<m>_*`
+tables, `<m>*` generated names, client mounted at a path. A per-site manifest lists
+the site's modules and marks the **primary** (its client mounts at `OnPath "/"` —
+the naked URL); primary is decoupled from prefixing. `guests`/`identities` stay
+**app-level and unprefixed** (shared identity, not a module — D3).
+
+**Module names/tables (locked).**
+- `articles` — base tables renamed for parity + to avoid `articles_articles`:
+  `Article` → `posts`, `ArticleComment` → `comments` ⇒ **`articles_posts`**,
+  **`articles_comments`**. `ArticleComment.IdentityId` → `IdentityRef` (decouple, like blog).
+- `blog` — keep the name (not "weblog"); `blog_items`/`blog_comments`/`blog_tags`/
+  `blog_item_tags` (justat already migrated).
+
+**Mechanism.**
+- **`HEDGE_SITE`** build flag drives *both* the gen manifest (which modules) *and*
+  the compiled file-set.
+- **Module-owned `.props`** (not app fsproj reaching into module files): each module
+  ships `<m>.server.props` / `<m>.client.props` listing its own `<Compile>` items
+  (paths via `$(MSBuildThisFileDirectory)`). The app compares by conditional
+  `<Import … Condition="'$(HEDGE_SITE)' == '<site>'">`. Module owns its files; app
+  owns the composition. Shared layer (generated `Db`/`Tables`, `Server.Identity`,
+  `RichText`) stays app-level, compiled **once**, referenced by all modules — never
+  re-linked per module. (Module source *is* recompiled per *site* that mounts it —
+  the compile-in-consumer consequence, until split-gen makes modules libraries.)
+- **Generator** drops the root special-case: *always* prefix + *always* qualify (the
+  `qualify`-on-compose branch collapses — simpler).
+- **Client** — generalize the routing/API split done for blog: each mounted module's
+  client gets `routingBase` (its mount path; `""` when primary at `/`) + `apiPrefix`
+  (its module's `/api/<m>` prefix). So a primary module routes at `/` but still calls
+  `/api/<m>/*`.
+
+**Rollout order** (each: migrate + deploy + test fully before the next):
+1. **darwin.news `[blog]`** — proves the machinery on the *already-proven* blog module
+   + the microblog→module migration (`items`→`blog_items`, paths → `/api/blog`, client
+   primary at `/`). `apps/microblog` consumes the shared blog module (`.props` +
+   manifest `[blog]`); darwin.news stays hosted there — no app-unification now.
+2. **Remaining ~5 microblog tenants `[blog]`** — mechanical repeats of #1.
+3. **justat `[articles, blog]`** — introduces the articles module + two-module case;
+   migrate `articles`→`articles_posts`, `comments`→`articles_comments`.
+4. **ndct `[articles]`** — articles-only; same articles machinery, now proven.
+
+**Coding sequence** (target coded in rollout order): generator no-root/uniform +
+blog `.props` + `apps/microblog` composes `[blog]` + client routing/api decoupling →
+prove darwin.news → *then* extract `articles` into `packages/modules/articles` for
+justat/ndct.
+
+**Guardrail:** no `deploy:ndct` (and no forced redeploy of any running site) until
+that site's migration is ready — running deployments stay on current code until their
+rollout turn.
 
 ## Risks
 
