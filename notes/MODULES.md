@@ -81,6 +81,24 @@ A module's parts relate differently to *generated* code, so wiring is a mix:
   bits (`Tables`, `schema`, `Routes`, admin registry) *per-site*; then modules become
   clean ProjectReference libraries. Companion to the articles-extraction/shell work.
 
+## Composed codegen — naming rule (the remaining Gen unknown, now designed)
+
+Composing articles + blog collides on both **generated names** and **type refs**:
+both apps have API modules `SubmitComment`/`Events` and a WS `NewCommentEvent`.
+So the composed Codecs/Routes/ClientGen/AdminGen/Validate would emit duplicate
+`submitCommentReq` etc. and ambiguous `SubmitComment.Request`. The rule:
+- **Type references → fully namespace-qualified** by the type's own namespace
+  (`Models.Api.SubmitComment` vs `Blog.Api.SubmitComment`; `t.FullName.Replace("+",".")`).
+- **Generated identifiers → root module unprefixed, non-root modules prefixed** by a
+  per-module discriminator (e.g. `blogSubmitCommentReq`, client `blogGetFeed`). This
+  keeps single-module output byte-identical (root only) AND leaves every app's
+  hand-written refs (`ClientGen.getArticles`) intact; only the *extracted* blog client
+  (which we control) uses the prefixed names.
+- Drive the implementation against a **real composed compile** (justat), protecting
+  the live articles generated files (scratch/temp gen), so real errors — not guesses —
+  shape it. Pervasive but mechanical across the 5 generators; single-module stays
+  identical (verified via the gen-stability test).
+
 ## The reusable machinery (the "modules build")
 
 - **Multi-module Gen** — Gen reflects over a **list of modules** (articles as the
