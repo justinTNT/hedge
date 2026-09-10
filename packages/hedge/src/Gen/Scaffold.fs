@@ -315,41 +315,6 @@ let getSession () : GuestSessionData =
       AvatarUrl = orEmpty raw?avatarUrl }
 """
 
-let richTextFs = """module Client.RichText
-
-open Fable.Core
-
-// Element ID constants
-let commentEditorId = "comment-editor"
-let ownerCommentEditorId = "owner-comment-editor"
-
-// Editor lifecycle (deferred — waits for DOM element to appear)
-
-[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null }); })")>]
-let createEditorWhenReady (elementId: string) (initialContent: string) : unit = jsNative
-
-[<Emit("window.HedgeRT.destroyRichTextEditor($0)")>]
-let destroyEditor (elementId: string) : unit = jsNative
-
-[<Emit("window.HedgeRT.getEditorContentJSON($0)")>]
-let getEditorContent (elementId: string) : string = jsNative
-
-[<Emit("(function(){ var e = window.HedgeRT.getEditor($0); if(e) e.commands.clearContent(); })()")>]
-let clearEditor (elementId: string) : unit = jsNative
-
-// Viewer lifecycle (deferred — waits for DOM element to appear)
-
-[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextViewer({ elementId: $0, content: $1 }); })")>]
-let createViewerWhenReady (elementId: string) (content: string) : unit = jsNative
-
-[<Emit("window.HedgeRT.destroyRichTextViewer($0)")>]
-let destroyViewer (elementId: string) : unit = jsNative
-
-// Plain text extraction
-
-[<Emit("window.HedgeRT.extractPlainText($0)")>]
-let extractPlainText (jsonString: string) : string = jsNative
-"""
 
 // ============================================================
 // Parameterized files (app name substitution)
@@ -403,11 +368,13 @@ let private packageJsonTmpl = """{
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prep:richtext": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/",
+    "predev": "npm run prep:richtext",
     "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
     "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",
     "dev:server": "concurrently -n fable-server,wrangler -c green,yellow \"npm run fable:watch:server\" \"wrangler dev\"",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client && vite build",
+    "build:client": "npm run prep:richtext && dotnet fable src/Client/Client.fsproj -o dist/client && vite build",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
     "deploy": "npm run build && wrangler deploy",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
@@ -687,7 +654,7 @@ let clientFsproj = """<Project Sdk="Microsoft.NET.Sdk">
     <Compile Include="GuestSession.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="generated/ClientGen.fs" />
-    <Compile Include="RichText.fs" />
+    <Compile Include="../../../../packages/rich-text/RichText.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -743,7 +710,6 @@ let main (argv: string array) =
             // Client static
             writeFile root "src/Client/Api.fs" (fixTQ clientApiFs)
             writeFile root "src/Client/GuestSession.fs" guestSessionFs
-            writeFile root "src/Client/RichText.fs" richTextFs
 
             // Parameterized files
             writeFile root "index.html" (indexHtml appName)

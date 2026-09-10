@@ -6,7 +6,7 @@
     <Compile Include="GuestSession.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="generated/ClientGen.fs" />
-    <Compile Include="RichText.fs" />
+    <Compile Include="../../../../packages/rich-text/RichText.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Shared.fs" />
     <Compile Include="Pages/Feed.fs" />

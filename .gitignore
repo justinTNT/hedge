@@ -40,3 +40,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# rich-text lib is copied from packages/rich-text at build time
+apps/*/lib/rich-text/
