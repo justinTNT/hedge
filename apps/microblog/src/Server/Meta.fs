@@ -70,7 +70,7 @@ let private truncate (n: int) (s: string) =
 
 /// Paths the SPA owns that are not items. Mirrors Handlers.reservedSlugs, which
 /// already refuses to mint a slug colliding with any of these.
-let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin" ]
+let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin"; "rhymes" ]
 
 let private metaTags (siteName: string) (fbPageUrl: string) (fbPageId: string) (title: string) (description: string) (image: string option) (url: string) =
     let tag prop content = sprintf """<meta property="%s" content="%s">""" prop (esc content)
@@ -102,10 +102,6 @@ let private metaTags (siteName: string) (fbPageUrl: string) (fbPageId: string) (
 /// that resolves to an item. Returns None for everything else so the framework's
 /// SPA fallback handles it unchanged — only item URLs pay for the lookup.
 let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> option =
-    // The rhyming host is served its own shell by the framework mount; Meta is
-    // main-site unfurl policy and must not claim URLs there.
-    if (hostOf request.url).StartsWith "rhyming." then None
-    else
     match parseRoute request with
     | GET path ->
         let segments =

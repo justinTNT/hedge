@@ -77,11 +77,17 @@ let guestCookieValue (guest: GuestContext) : string =
 [<Emit("$0.ASSETS.fetch($1)")>]
 let private fetchFromAssets (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
 
-/// A mounted view: requests to `Host` are served the `Shell` HTML asset (its own
-/// client entry) from ASSETS, instead of the default index.html. One deploy, one
-/// D1, multiple client views — the composition primitive (host-matched for now;
-/// generalises to path-prefix mounts).
-type Mount = { Host: string; Shell: string }
+/// Where a mounted view lives: on its own host, or under a path prefix of the
+/// main host. Path mounts are the composition primitive for merged sites
+/// (e.g. a blog module at /blog); host mounts for a distinct subdomain.
+type MountOn =
+    | OnHost of string
+    | OnPath of string
+
+/// A mounted view: matching requests are served the `Shell` HTML asset (its own
+/// client entry) from ASSETS instead of index.html. One deploy, one D1, multiple
+/// client views — the composition primitive.
+type Mount = { On: MountOn; Shell: string }
 
 [<Emit("new URL($0.url).hostname")>]
 let private requestHost (request: WorkerRequest) : string = jsNative
@@ -374,8 +380,12 @@ let createWorker (config: WorkerConfig) =
             // 7. SPA fallback — delegate to Cloudflare Assets for non-API GET.
             //    A mounted host is served its own shell; everything else the default.
             match route with
-            | GET _ ->
-                match config.Mounts |> List.tryFind (fun m -> m.Host = requestHost request) with
+            | GET path ->
+                let matches (m: Mount) =
+                    match m.On with
+                    | OnHost h -> requestHost request = h
+                    | OnPath p -> path = p || path.StartsWith(p + "/")
+                match config.Mounts |> List.tryFind matches with
                 | Some m -> return! fetchShell env request m.Shell
                 | None -> return! fetchFromAssets env request
             | _ ->

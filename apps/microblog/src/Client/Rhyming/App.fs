@@ -54,6 +54,13 @@ let private view model _dispatch =
                 prop.children [
                     Html.h1 "Rhyming"
                     Html.p [ prop.className "rhyme-tag"; prop.text "darwin.news, in pairs" ]
+                    Html.blockquote [
+                        prop.className "rhyme-epigraph"
+                        prop.children [
+                            Html.span [ prop.text "“History never repeats itself, but the kaleidoscopic combinations of the pictured present often seem to be constructed out of the broken fragments of antique legends.”" ]
+                            Html.cite [ prop.text "Mark Twain" ]
+                        ]
+                    ]
                 ]
             ]
             if model.Loading then Html.div [ prop.className "loading"; prop.text "Loading…" ]
