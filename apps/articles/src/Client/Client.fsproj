@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

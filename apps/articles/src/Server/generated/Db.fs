@@ -232,8 +232,231 @@ let selectArticleCommentsByArticleId (articleId: string) (db: D1Database) : D1Pr
 let selectArticleCommentsByIdentityId (identityId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, article_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM comments WHERE identity_id = ? ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
 
+// ============================================================
+// MicroblogItem (blog_items)
+// ============================================================
+
+type MicroblogItemRow = {
+    Id: string
+    Title: string
+    Link: string option
+    Image: string option
+    Extract: string option
+    OwnerComment: string
+    ArticleDate: int
+    Slug: string option
+    CreatedAt: int
+    UpdatedAt: int option
+    ViewCount: int
+    DeletedAt: int option
+}
+
+type MicroblogItemCreate = {
+    Title: string
+    Link: string option
+    Image: string option
+    Extract: string option
+    OwnerComment: string
+    ArticleDate: int
+    Slug: string option
+    ViewCount: int
+}
+
+let parseMicroblogItemRow (row: obj) : MicroblogItemRow =
+    { Id = rowStr row "id"
+      Title = rowStr row "title"
+      Link = rowStrOpt row "link"
+      Image = rowStrOpt row "image"
+      Extract = rowStrOpt row "extract"
+      OwnerComment = rowStr row "owner_comment"
+      ArticleDate = rowInt row "article_date"
+      Slug = rowStrOpt row "slug"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      ViewCount = rowInt row "view_count"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectMicroblogItems (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM blog_items ORDER BY created_at DESC LIMIT 100")
+
+let selectMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM blog_items WHERE id = ?")) [| box id |]
+
+let insertMicroblogItem (db: D1Database) (create: MicroblogItemCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO blog_items (id, title, link, image, extract, owner_comment, article_date, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; box create.ArticleDate; optToDb create.Slug; box create.ViewCount; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateMicroblogItem (id: string) (create: MicroblogItemCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE blog_items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, article_date = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"))
+         [| box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; box create.ArticleDate; optToDb create.Slug; box create.ViewCount; box now; box id |]
+
+let deleteMicroblogItem (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM blog_items WHERE id = ?")) [| box id |]
+
+// ============================================================
+// ItemComment (blog_comments)
+// ============================================================
+
+type ItemCommentRow = {
+    Id: string
+    ItemId: string
+    IdentityId: string
+    ParentId: string option
+    Author: string
+    Content: string
+    Removed: bool
+    CreatedAt: int
+    DeletedAt: int option
+}
+
+type ItemCommentCreate = {
+    ItemId: string
+    IdentityId: string
+    ParentId: string option
+    Author: string
+    Content: string
+    Removed: bool
+}
+
+let parseItemCommentRow (row: obj) : ItemCommentRow =
+    { Id = rowStr row "id"
+      ItemId = rowStr row "item_id"
+      IdentityId = rowStr row "identity_id"
+      ParentId = rowStrOpt row "parent_id"
+      Author = rowStr row "author"
+      Content = rowStr row "content"
+      Removed = rowBool row "removed"
+      CreatedAt = rowInt row "created_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectItemComments (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments ORDER BY created_at DESC LIMIT 100")
+
+let selectItemComment (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE id = ?")) [| box id |]
+
+let insertItemComment (db: D1Database) (create: ItemCommentCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO blog_comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.ItemId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateItemComment (id: string) (create: ItemCommentCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE blog_comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"))
+         [| box create.ItemId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box id |]
+
+let deleteItemComment (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM blog_comments WHERE id = ?")) [| box id |]
+
+let selectItemCommentsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE item_id = ? ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
+
+let selectItemCommentsByIdentityId (identityId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE identity_id = ? ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
+
+// ============================================================
+// Tag (blog_tags)
+// ============================================================
+
+type TagRow = {
+    Id: string
+    Name: string
+    CreatedAt: int
+    DeletedAt: int option
+}
+
+type TagCreate = {
+    Name: string
+}
+
+let parseTagRow (row: obj) : TagRow =
+    { Id = rowStr row "id"
+      Name = rowStr row "name"
+      CreatedAt = rowInt row "created_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectTags (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, name, created_at, deleted_at FROM blog_tags ORDER BY created_at DESC LIMIT 100")
+
+let selectTag (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, name, created_at, deleted_at FROM blog_tags WHERE id = ?")) [| box id |]
+
+let insertTag (db: D1Database) (create: TagCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO blog_tags (id, name, created_at) VALUES (?, ?, ?)"))
+             [| box id; box create.Name; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateTag (id: string) (create: TagCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE blog_tags SET name = ? WHERE id = ?"))
+         [| box create.Name; box id |]
+
+let deleteTag (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM blog_tags WHERE id = ?")) [| box id |]
+
+// ============================================================
+// ItemTag (blog_item_tags)
+// ============================================================
+
+type ItemTagRow = {
+    Id: string
+    ItemId: string
+    TagId: string
+    DeletedAt: int option
+}
+
+type ItemTagCreate = {
+    ItemId: string
+    TagId: string
+}
+
+let parseItemTagRow (row: obj) : ItemTagRow =
+    { Id = rowStr row "id"
+      ItemId = rowStr row "item_id"
+      TagId = rowStr row "tag_id"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectItemTags (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags LIMIT 100")
+
+let selectItemTag (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE id = ?")) [| box id |]
+
+let insertItemTag (db: D1Database) (create: ItemTagCreate) =
+    let id = newId()
+    let stmt =
+        bind (db.prepare("INSERT INTO blog_item_tags (id, item_id, tag_id) VALUES (?, ?, ?)"))
+             [| box id; box create.ItemId; box create.TagId |]
+    {| Stmt = stmt; Id = id |}
+
+let updateItemTag (id: string) (create: ItemTagCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE blog_item_tags SET item_id = ?, tag_id = ? WHERE id = ?"))
+         [| box create.ItemId; box create.TagId; box id |]
+
+let deleteItemTag (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM blog_item_tags WHERE id = ?")) [| box id |]
+
+let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE item_id = ? LIMIT 100")) [| box itemId |]
+
+let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
+
 module Tables =
     let guest = "guests"
     let identity = "identities"
     let article = "articles"
     let articleComment = "comments"
+    let microblogItem = "blog_items"
+    let itemComment = "blog_comments"
+    let tag = "blog_tags"
+    let itemTag = "blog_item_tags"

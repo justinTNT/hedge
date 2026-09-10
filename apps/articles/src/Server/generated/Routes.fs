@@ -12,12 +12,24 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
+    | GET path when matchPath "/api/blog/tags" path = Some (Exact "/api/blog/tags") ->
+        Some (Blog.Handlers.getTags env)
+
     | GET path ->
         match matchPath "/api/article/:id" path with
         | Some (WithParam (_, id)) -> Some (Server.Handlers.getArticle id env)
         | _ ->
         match matchPath "/api/articles/:id" path with
         | Some (WithParam (_, id)) -> Some (Server.Handlers.getArticles id env)
+        | _ ->
+        match matchPath "/api/blog/tags/:id/items" path with
+        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItemsByTag id env)
+        | _ ->
+        match matchPath "/api/blog/item/:id" path with
+        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItem id env)
+        | _ ->
+        match matchPath "/api/blog/feed/:id" path with
+        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getFeed id env)
         | _ ->
         None
 
@@ -28,6 +40,24 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
             | Error err -> return badRequest err
             | Ok req ->
                 return! Server.Handlers.submitComment req request env ctx
+        })
+
+    | POST path when matchPath "/api/blog/item" path = Some (Exact "/api/blog/item") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.blogSubmitItemReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Blog.Handlers.submitItem req request env ctx
+        })
+
+    | POST path when matchPath "/api/blog/comment" path = Some (Exact "/api/blog/comment") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.blogSubmitCommentReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Blog.Handlers.submitComment req request env ctx
         })
 
     | _ -> None

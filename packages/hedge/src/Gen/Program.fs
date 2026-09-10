@@ -23,6 +23,9 @@ let toSnakeCase (s: string) =
 let toCamelCase (s: string) =
     (Char.ToLower s.[0] |> string) + s.[1..]
 
+let capitalize (s: string) =
+    if s.Length = 0 then s else (Char.ToUpper s.[0] |> string) + s.[1..]
+
 let pluralize (s: string) =
     if s.EndsWith("s") then s + "es"
     elif s.EndsWith("y") then s.[..s.Length-2] + "ies"
@@ -61,6 +64,7 @@ type GenModule = {
     TablePrefix: string   // e.g. "blog_" ; "" for the root module
     RoutePrefix: string   // e.g. "/api/blog" ; "" for the root module
     HandlerNs: string     // e.g. "Server.Handlers" | "Blog.Handlers"
+    NamePrefix: string    // generated-identifier discriminator: "" (root) | "blog" (a module)
 }
 
 /// Insert a module's route prefix after the shared "/api" segment:
@@ -135,6 +139,8 @@ type EndpointMethod = EGet | EGetOne | EPost
 
 type ParsedEndpoint = {
     ModuleName: string
+    Namespace: string     // the module's Models namespace, e.g. "Models" | "Blog"
+    NamePrefix: string     // generated-identifier discriminator ("" for root)
     Method: EndpointMethod
     Path: string
     HandlerNs: string
@@ -143,7 +149,7 @@ type ParsedEndpoint = {
     ViewTypes: Type list
 }
 
-let discoverApiModules (ns: string) (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
+let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
     // Api modules are nested types under <ns>.Api
     let apiType =
         assembly.GetTypes()
@@ -201,6 +207,8 @@ let discoverApiModules (ns: string) (assembly: Assembly) (routePrefix: string) (
 
                 Some {
                     ModuleName = moduleType.Name
+                    Namespace = ns
+                    NamePrefix = namePrefix
                     Method = method
                     Path = applyRoutePrefix routePrefix path
                     HandlerNs = handlerNs
@@ -693,12 +701,34 @@ let generateSchemaSql (metas: TableMeta list) : string =
 // Codecs.fs generation (Step 5)
 // ============================================================
 
-/// Compute a unique codec name for a view type, appending "View" if it collides with a domain type
-let viewCodecName (domainNames: Set<string>) (vt: Type) =
-    let base_ = toCamelCase vt.Name
-    if domainNames.Contains base_ then base_ + "View" else base_
+// -- Composed-codegen naming (root unprefixed = byte-identical; non-root prefixed) --
 
-let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (wsTypes: Type list) : string =
+/// Fully-qualified F# name of a (possibly nested) type, e.g. "Blog.Ws.NewCommentEvent".
+let qualifiedTypeName (t: Type) = t.FullName.Replace("+", ".")
+
+/// An API module's fully-qualified path: "<ns>.Api.<Module>".
+let apiRef (ep: ParsedEndpoint) = sprintf "%s.Api.%s" ep.Namespace ep.ModuleName
+
+/// A disambiguated generated identifier: root ("") keeps the plain camelCase name
+/// (byte-identical); a non-root module prefixes it (e.g. "blogSubmitComment").
+let genName (namePrefix: string) (pascalBase: string) =
+    if namePrefix = "" then toCamelCase pascalBase else namePrefix + pascalBase
+
+/// Type-reference emission. When `qualify` (a multi-module compose), every type ref
+/// is namespace-qualified so colliding module names (both apps have `SubmitComment`)
+/// disambiguate; when single-module, refs stay unqualified via `open` — byte-identical.
+let domainRef (qualify: bool) (t: Type) = if qualify then qualifiedTypeName t else t.Name
+let apiTypeRef (qualify: bool) (ep: ParsedEndpoint) (suffix: string) =
+    if qualify then sprintf "%s.Api.%s.%s" ep.Namespace ep.ModuleName suffix
+    else sprintf "%s.%s" ep.ModuleName suffix
+
+/// Compute a unique codec name for a view type, appending "View" if it collides with a domain type
+let viewCodecName (domainNames: Set<string>) (namePrefix: string) (vt: Type) =
+    let base_ = toCamelCase vt.Name
+    let disambiguated = if domainNames.Contains base_ then base_ + "View" else base_
+    if namePrefix = "" then disambiguated else namePrefix + (capitalize disambiguated)
+
+let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) : string =
     let domainNames = domainTypes |> List.map (fun t -> toCamelCase t.Name) |> Set.ofList
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
@@ -709,8 +739,11 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "open Thoth.Json"
     emit "open Hedge.Interface"
     emit "open Hedge.Codec"
-    emit "open Models.Domain"
-    emit "open Models.Api"
+    // Composing modules qualifies every type ref (colliding module names), so no
+    // opens; single-module keeps the opens for byte-identical output.
+    if not qualify then
+        emit "open Models.Domain"
+        emit "open Models.Api"
     emit ""
     emit "/// Unwrap helpers — terse pattern matches used in Handlers.fs."
     emit "let inline pk (PrimaryKey v) = v"
@@ -729,15 +762,15 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "    // -- Domain types --"
     for t in domainTypes do
         let name = toCamelCase t.Name
-        emit (sprintf "    let inline %s (v: %s) = encode v" name t.Name)
+        emit (sprintf "    let inline %s (v: %s) = encode v" name (domainRef qualify t))
     emit ""
 
     // API view types
     emit "    // -- API view types --"
     for ep in endpoints do
         for vt in ep.ViewTypes do
-            let name = viewCodecName domainNames vt
-            emit (sprintf "    let inline %s (v: %s.%s) = encode v" name ep.ModuleName vt.Name)
+            let name = viewCodecName domainNames ep.NamePrefix vt
+            emit (sprintf "    let inline %s (v: %s) = encode v" name (apiTypeRef qualify ep vt.Name))
     emit ""
 
     // API request encoders
@@ -745,16 +778,16 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     for ep in endpoints do
         match ep.RequestType with
         | Some _ ->
-            let name = toCamelCase ep.ModuleName + "Req"
-            emit (sprintf "    let inline %s (v: %s.Request) = encode v" name ep.ModuleName)
+            let name = genName ep.NamePrefix ep.ModuleName + "Req"
+            emit (sprintf "    let inline %s (v: %s) = encode v" name (apiTypeRef qualify ep "Request"))
         | None -> ()
     emit ""
 
     // WS event encoders
     emit "    // -- WebSocket event encoders --"
-    for t in wsTypes do
-        let name = toCamelCase t.Name
-        emit (sprintf "    let inline %s (e: Models.Ws.%s) = encode e" name t.Name)
+    for (t, np) in wsTypes do
+        let name = genName np t.Name
+        emit (sprintf "    let inline %s (e: %s) = encode e" name (qualifiedTypeName t))
     emit ""
 
     emit "module Decode ="
@@ -764,15 +797,17 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "    // -- Domain types --"
     for t in domainTypes do
         let name = toCamelCase t.Name
-        emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name t.Name t.Name)
+        let tref = domainRef qualify t
+        emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name tref tref)
     emit ""
 
     // API view types
     emit "    // -- API view types --"
     for ep in endpoints do
         for vt in ep.ViewTypes do
-            let name = viewCodecName domainNames vt
-            emit (sprintf "    let %s : Decoder<%s.%s> = decode<%s.%s>()" name ep.ModuleName vt.Name ep.ModuleName vt.Name)
+            let name = viewCodecName domainNames ep.NamePrefix vt
+            let tref = apiTypeRef qualify ep vt.Name
+            emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name tref tref)
     emit ""
 
     // API response decoders
@@ -780,8 +815,9 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     for ep in endpoints do
         match ep.ResponseType with
         | Some _ ->
-            let name = toCamelCase ep.ModuleName + "Response"
-            emit (sprintf "    let %s : Decoder<%s.Response> = decode<%s.Response>()" name ep.ModuleName ep.ModuleName)
+            let name = genName ep.NamePrefix ep.ModuleName + "Response"
+            let tref = apiTypeRef qualify ep "Response"
+            emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name tref tref)
         | None -> ()
     emit ""
 
@@ -790,16 +826,18 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     for ep in endpoints do
         match ep.RequestType with
         | Some _ ->
-            let name = toCamelCase ep.ModuleName + "Req"
-            emit (sprintf "    let %s : Decoder<%s.Request> = decode<%s.Request>()" name ep.ModuleName ep.ModuleName)
+            let name = genName ep.NamePrefix ep.ModuleName + "Req"
+            let tref = apiTypeRef qualify ep "Request"
+            emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name tref tref)
         | None -> ()
     emit ""
 
     // WS event decoders
     emit "    // -- WebSocket event decoders --"
-    for t in wsTypes do
-        let name = toCamelCase t.Name
-        emit (sprintf "    let %s : Decoder<Models.Ws.%s> = decode<Models.Ws.%s>()" name t.Name t.Name)
+    for (t, np) in wsTypes do
+        let name = genName np t.Name
+        let tref = qualifiedTypeName t
+        emit (sprintf "    let %s : Decoder<%s> = decode<%s>()" name tref tref)
     emit ""
 
     // Validate module
@@ -813,11 +851,12 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
         match ep.RequestType with
         | Some reqType ->
             let fields = getFieldSchemas reqType
-            let schemaName = toCamelCase ep.ModuleName + "Schema"
-            let valName = toCamelCase ep.ModuleName + "Req"
+            let schemaName = genName ep.NamePrefix ep.ModuleName + "Schema"
+            let valName = genName ep.NamePrefix ep.ModuleName + "Req"
+            let label = if qualify then sprintf "%s.Api.%s.Request" ep.Namespace ep.ModuleName else sprintf "%s.Request" ep.ModuleName
 
             emit (sprintf "    let %s =" schemaName)
-            emit (sprintf "        schema \"%s.Request\" [" ep.ModuleName)
+            emit (sprintf "        schema \"%s\" [" label)
 
             for f in fields do
                 // For request types, add sensible validation attrs
@@ -837,7 +876,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
 
             emit "        ]"
             emit ""
-            emit (sprintf "    let inline %s (r: %s.Request) = validate %s r" valName ep.ModuleName schemaName)
+            emit (sprintf "    let inline %s (r: %s) = validate %s r" valName (apiTypeRef qualify ep "Request") schemaName)
             emit ""
         | None -> ()
 
@@ -847,7 +886,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
 // ClientGen.fs generation (Step 6)
 // ============================================================
 
-let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: Type list) : string =
+let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) : string =
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
 
@@ -856,53 +895,70 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: Type list) : 
     emit ""
     emit "open Fable.Core"
     emit "open Thoth.Json"
-    emit "open Models.Api"
-    emit "open Models.Ws"
+    // Composed modules qualify type refs; single-module opens for byte-identical output.
+    if not qualify then
+        emit "open Models.Api"
+        emit "open Models.Ws"
     emit "open Codecs"
     emit "open Client.Api"
     emit ""
     emit "// --- HTTP API ---"
 
     for ep in endpoints do
-        let funcName = toCamelCase ep.ModuleName
+        // Function names are prefixed for non-root modules (both apps have
+        // `submitComment`/`events`); codec refs match the combined Codecs (also prefixed).
+        let funcName = genName ep.NamePrefix ep.ModuleName
+        let respName = genName ep.NamePrefix ep.ModuleName + "Response"
+        let reqName = genName ep.NamePrefix ep.ModuleName + "Req"
         match ep.Method with
         | EGet ->
             emit ""
             emit (sprintf "let %s () =" funcName)
-            emit (sprintf "    fetchJson \"%s\" Decode.%sResponse" ep.Path (toCamelCase ep.ModuleName))
+            emit (sprintf "    fetchJson \"%s\" Decode.%s" ep.Path respName)
         | EGetOne ->
             emit ""
             emit (sprintf "let %s (id: string) =" funcName)
             // Replace :id with %s in path for sprintf
             let pathTemplate = ep.Path.Replace(":id", "%s")
-            emit (sprintf "    fetchJson (sprintf \"%s\" id) Decode.%sResponse" pathTemplate (toCamelCase ep.ModuleName))
+            emit (sprintf "    fetchJson (sprintf \"%s\" id) Decode.%s" pathTemplate respName)
         | EPost ->
             emit ""
-            emit (sprintf "let %s (req: %s.Request) =" funcName ep.ModuleName)
-            emit (sprintf "    let body = Encode.%sReq req |> Encode.toString 0" (toCamelCase ep.ModuleName))
-            emit (sprintf "    postJson \"%s\" body Decode.%sResponse" ep.Path (toCamelCase ep.ModuleName))
+            emit (sprintf "let %s (req: %s) =" funcName (apiTypeRef qualify ep "Request"))
+            emit (sprintf "    let body = Encode.%s req |> Encode.toString 0" reqName)
+            emit (sprintf "    postJson \"%s\" body Decode.%s" ep.Path respName)
 
     emit ""
     emit "// --- WebSocket Events ---"
     emit ""
 
-    if not wsTypes.IsEmpty then
-        // WsEvent DU
-        emit "type WsEvent ="
-        for t in wsTypes do
-            let caseName = t.Name.Replace("Event", "")
-            emit (sprintf "    | %s of %s" caseName t.Name)
+    // One WsEvent DU + decode fn PER module: both apps emit wire-type "NewComment",
+    // so a single combined decode would have duplicate match arms. Root keeps the
+    // plain `WsEvent`/`decodeWsEvent` names (byte-identical); non-root is prefixed.
+    let wsByModule = wsTypes |> List.groupBy snd
+    for (np, group) in wsByModule do
+        let duName = if np = "" then "WsEvent" else capitalize np + "WsEvent"
+        let decodeName = genName np "DecodeWsEvent"
+        let tref (t: Type) = if qualify then qualifiedTypeName t else t.Name
+        // Case names are prefixed for non-root modules too: both apps' DUs are
+        // opened together in a composed client, so an unprefixed `NewComment`
+        // would shadow across DUs. The wire "type" value stays unprefixed.
+        let caseName (t: Type) =
+            let bare = t.Name.Replace("Event", "")
+            if np = "" then bare else capitalize np + bare
+        emit (sprintf "type %s =" duName)
+        for (t, _) in group do
+            emit (sprintf "    | %s of %s" (caseName t) (tref t))
         emit ""
 
-        emit "let decodeWsEvent (text: string) : Result<WsEvent, string> ="
+        emit (sprintf "let %s (text: string) : Result<%s, string> =" decodeName duName)
         emit "    match Decode.fromString (Decode.field \"type\" Decode.string) text with"
-        for t in wsTypes do
-            let caseName = t.Name.Replace("Event", "")
-            // The type field in the JSON is the case name (e.g. "NewComment")
-            let decoderName = toCamelCase t.Name
-            emit (sprintf "    | Ok \"%s\" ->" caseName)
+        for (t, _) in group do
+            // The type field in the JSON is the bare event name (e.g. "NewComment")
+            let wireName = t.Name.Replace("Event", "")
+            let decoderName = genName np t.Name
+            emit (sprintf "    | Ok \"%s\" ->" wireName)
             emit (sprintf "        Decode.fromString (Decode.field \"payload\" Decode.%s) text" decoderName)
-            emit (sprintf "        |> Result.map %s" caseName)
+            emit (sprintf "        |> Result.map %s" (caseName t))
         emit "    | Ok t -> Error (sprintf \"Unknown event: %s\" t)"
         emit "    | Error e -> Error e"
         emit ""
@@ -959,7 +1015,7 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
     let posts = endpoints |> List.filter (fun ep -> ep.Method = EPost)
     for ep in posts do
         let handlerName = toCamelCase ep.ModuleName
-        let decoderName = toCamelCase ep.ModuleName + "Req"
+        let decoderName = genName ep.NamePrefix ep.ModuleName + "Req"
         emit (sprintf "    | POST path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
         emit "        Some (promise {"
         emit "            let! bodyText = request.text()"
@@ -1309,7 +1365,7 @@ let writeIfChanged (path: string) (content: string) =
 /// The root module — the app's own Models. Always present; other modules are
 /// mounted alongside it via gen-modules.json.
 let rootModule =
-    { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
+    { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers"; NamePrefix = "" }
 
 /// Read the site's module list from gen-modules.json (in the app dir) if present,
 /// else just the root module (byte-identical to the pre-modules single-app path).
@@ -1328,7 +1384,8 @@ let readModules () : GenModule list =
               Namespace = str "namespace" "Models"
               TablePrefix = str "tablePrefix" ""
               RoutePrefix = str "routePrefix" ""
-              HandlerNs = str "handlerNs" "Server.Handlers" } ]
+              HandlerNs = str "handlerNs" "Server.Handlers"
+              NamePrefix = str "namePrefix" "" } ]
 
 // ============================================================
 // Main
@@ -1344,8 +1401,10 @@ let main (argv: string array) =
         modules |> List.map (fun m ->
             let asm = Assembly.Load(m.Assembly)
             let domainTypes = discoverDomainTypes m.Namespace asm
-            let wsTypes = discoverWsTypes m.Namespace asm
-            let endpoints = discoverApiModules m.Namespace asm m.RoutePrefix m.HandlerNs
+            // WS types collide across modules (both have NewCommentEvent), so carry
+            // each module's NamePrefix for identifier disambiguation.
+            let wsTypes = discoverWsTypes m.Namespace asm |> List.map (fun t -> t, m.NamePrefix)
+            let endpoints = discoverApiModules m.Namespace m.NamePrefix asm m.RoutePrefix m.HandlerNs
             let metas = domainTypes |> List.map reflectToParsedType |> List.map (computeMeta m.TablePrefix)
             domainTypes, wsTypes, endpoints, metas)
 
@@ -1353,6 +1412,10 @@ let main (argv: string array) =
     let wsTypes = perModule |> List.collect (fun (_, w, _, _) -> w)
     let endpoints = perModule |> List.collect (fun (_, _, e, _) -> e)
     let metas = perModule |> List.collect (fun (_, _, _, m) -> m)
+
+    // Composing >1 module forces namespace-qualified type refs (colliding module
+    // names) and per-module identifier prefixes; single-module stays byte-identical.
+    let qualify = List.length modules > 1
 
     // Generate existing files (Db, AdminGen, schema.sql)
     let admin = generateAdminFs metas
@@ -1365,11 +1428,11 @@ let main (argv: string array) =
     writeIfChanged "schema.sql" schemaSql
 
     // Step 5: Generate Codecs.fs
-    let codecs = generateCodecsFs domainTypes endpoints wsTypes
+    let codecs = generateCodecsFs domainTypes endpoints wsTypes qualify
     writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
     // Step 6: Generate ClientGen.fs
-    let clientGen = generateClientGenFs endpoints wsTypes
+    let clientGen = generateClientGenFs endpoints wsTypes qualify
     writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
 
     // Step 7: Generate Routes.fs

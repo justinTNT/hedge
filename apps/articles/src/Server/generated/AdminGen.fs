@@ -100,9 +100,102 @@ let articleComment : AdminTable =
       Delete = "DELETE FROM comments WHERE id = ?"
       MutableFields = ["ArticleId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
 
+let microblogItem : AdminTable =
+    { Name = "MicroblogItem"
+      Table = "blog_items"
+      Schema =
+        schema "MicroblogItem" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Title" FString []
+            fieldWith "Link" (FOption FString) [Link]
+            fieldWith "Image" (FOption FString) [Link]
+            fieldWith "Extract" (FOption FString) [RichContent]
+            fieldWith "OwnerComment" FString [RichContent]
+            fieldWith "ArticleDate" FInt []
+            fieldWith "Slug" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "ViewCount" FInt []
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM blog_items ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM blog_items WHERE id = ?"
+      Insert = "INSERT INTO blog_items (id, title, link, image, extract, owner_comment, article_date, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE blog_items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, article_date = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
+      Delete = "DELETE FROM blog_items WHERE id = ?"
+      MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "ArticleDate"; "Slug"; "ViewCount"] }
+
+let itemComment : AdminTable =
+    { Name = "ItemComment"
+      Table = "blog_comments"
+      Schema =
+        schema "ItemComment" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "ItemId" FString [ForeignKey "MicroblogItem"]
+            fieldWith "IdentityId" FString [ForeignKey "Identity"]
+            fieldWith "ParentId" (FOption FString) []
+            fieldWith "Author" FString []
+            fieldWith "Content" FString [RichContent]
+            fieldWith "Removed" FBool []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE id = ?"
+      Insert = "INSERT INTO blog_comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE blog_comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
+      Delete = "DELETE FROM blog_comments WHERE id = ?"
+      MutableFields = ["ItemId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
+
+let tag : AdminTable =
+    { Name = "Tag"
+      Table = "blog_tags"
+      Schema =
+        schema "Tag" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Name" FString [Unique]
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, name, created_at, deleted_at FROM blog_tags ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, name, created_at, deleted_at FROM blog_tags WHERE id = ?"
+      Insert = "INSERT INTO blog_tags (id, name, created_at) VALUES (?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE blog_tags SET name = ? WHERE id = ?"
+      Delete = "DELETE FROM blog_tags WHERE id = ?"
+      MutableFields = ["Name"] }
+
+let itemTag : AdminTable =
+    { Name = "ItemTag"
+      Table = "blog_item_tags"
+      Schema =
+        schema "ItemTag" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "ItemId" FString [ForeignKey "MicroblogItem"]
+            fieldWith "TagId" FString [ForeignKey "Tag"]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags LIMIT 100"
+      SelectOne = "SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE id = ?"
+      Insert = "INSERT INTO blog_item_tags (id, item_id, tag_id) VALUES (?, ?, ?)"
+      HasCreateTs = false
+      HasUpdateTs = false
+      Update = "UPDATE blog_item_tags SET item_id = ?, tag_id = ? WHERE id = ?"
+      Delete = "DELETE FROM blog_item_tags WHERE id = ?"
+      MutableFields = ["ItemId"; "TagId"] }
+
 let tables : AdminTable list = [
     guest
     identity
     article
     articleComment
+    microblogItem
+    itemComment
+    tag
+    itemTag
 ]
