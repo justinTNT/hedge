@@ -102,6 +102,10 @@ let private metaTags (siteName: string) (fbPageUrl: string) (fbPageId: string) (
 /// that resolves to an item. Returns None for everything else so the framework's
 /// SPA fallback handles it unchanged — only item URLs pay for the lookup.
 let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> option =
+    // The rhyming host is served its own shell by the framework mount; Meta is
+    // main-site unfurl policy and must not claim URLs there.
+    if (hostOf request.url).StartsWith "rhyming." then None
+    else
     match parseRoute request with
     | GET path ->
         let segments =

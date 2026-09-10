@@ -1,0 +1,72 @@
+module Client.Rhyming.App
+
+// rhyming.darwin.news — a second view over darwin.news's own items, pairing the
+// articles that share a `rhyme-*` tag and listing each pair side-by-side. Its own
+// tiny Elmish entry (mounted via the framework host-mount); reuses the generated
+// getRhymes client + the shared FeedItem shape.
+
+open Feliz
+open Elmish
+open Models.Api
+
+type Model = { Rhymes: GetRhymes.RhymeGroup list; Loading: bool; Error: string option }
+type Msg = GotRhymes of Result<GetRhymes.Response, string>
+
+let init () =
+    { Rhymes = []; Loading = true; Error = None },
+    Cmd.OfPromise.either Client.ClientGen.getRhymes () GotRhymes (fun ex -> GotRhymes (Error ex.Message))
+
+let update msg model =
+    match msg with
+    | GotRhymes (Ok r) -> { model with Rhymes = r.Rhymes; Loading = false; Error = None }, Cmd.none
+    | GotRhymes (Error e) -> { model with Loading = false; Error = Some e }, Cmd.none
+
+/// The full articles live on darwin.news; each card links across to its post.
+let private articleUrl (item: GetFeed.FeedItem) =
+    "https://darwin.news/" + (item.Slug |> Option.defaultValue item.Id)
+
+let private card (item: GetFeed.FeedItem) =
+    Html.a [
+        prop.key item.Id
+        prop.className "rhyme-card"
+        prop.href (articleUrl item)
+        prop.children [
+            match item.Image with
+            | Some src -> Html.img [ prop.className "rhyme-img"; prop.src src ]
+            | None -> Html.none
+            Html.h3 [ prop.className "rhyme-title"; prop.text item.Title ]
+        ]
+    ]
+
+let private groupView (g: GetRhymes.RhymeGroup) =
+    Html.div [
+        prop.key g.Tag
+        prop.className "rhyme-row"
+        prop.children [ for item in g.Items -> card item ]
+    ]
+
+let private view model _dispatch =
+    Html.div [
+        prop.className "rhyme-app"
+        prop.children [
+            Html.header [
+                prop.className "rhyme-head"
+                prop.children [
+                    Html.h1 "Rhyming"
+                    Html.p [ prop.className "rhyme-tag"; prop.text "darwin.news, in pairs" ]
+                ]
+            ]
+            if model.Loading then Html.div [ prop.className "loading"; prop.text "Loading…" ]
+            else
+                match model.Error with
+                | Some e -> Html.div [ prop.className "error"; prop.text e ]
+                | None when List.isEmpty model.Rhymes -> Html.p [ prop.className "empty"; prop.text "No rhymes yet." ]
+                | None -> Html.div [ prop.className "rhyme-list"; prop.children [ for g in model.Rhymes -> groupView g ] ]
+        ]
+    ]
+
+open Elmish.React
+
+Program.mkProgram init update view
+|> Program.withReactSynchronous "app"
+|> Program.run

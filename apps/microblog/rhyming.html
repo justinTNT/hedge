@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhyming — Darwin News</title>
+    <style>
+      :root { --ink:#1c1f23; --muted:#5c6670; --line:#e3e6ea; --accent:#0a4d8c; --bg:#fbfbfc; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink);
+        font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      a { color: inherit; text-decoration: none; }
+      .rhyme-app { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+      .rhyme-head { text-align: center; padding: 2.5rem 0 1.5rem; border-bottom: 3px solid var(--ink); margin-bottom: 2rem; }
+      .rhyme-head h1 { margin: 0; font-size: 2.6rem; letter-spacing: -.01em; }
+      .rhyme-tag { margin: .3rem 0 0; color: var(--muted); font-style: italic; }
+      .rhyme-list { display: flex; flex-direction: column; gap: 2.5rem; }
+      /* a rhyme = its items side by side */
+      .rhyme-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;
+        position: relative; }
+      .rhyme-row::after { content: "≈"; position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%,-50%); color: var(--muted); font-size: 1.6rem;
+        background: var(--bg); padding: .2rem .3rem; }
+      .rhyme-card { display: block; border: 1px solid var(--line); border-radius: 10px;
+        overflow: hidden; background: #fff; transition: box-shadow .12s ease, transform .12s ease; }
+      .rhyme-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.09); transform: translateY(-2px); }
+      .rhyme-img { display: block; width: 100%; height: 190px; object-fit: cover; background: #eef1f4; }
+      .rhyme-title { margin: 0; padding: .9rem 1rem 1.1rem; font-size: 1.15rem; line-height: 1.3; }
+      .rhyme-card:hover .rhyme-title { color: var(--accent); }
+      .loading, .empty, .error { text-align: center; color: var(--muted); padding: 2rem 0; }
+      .error { color: #c1272d; }
+      @media (max-width: 640px) {
+        .rhyme-row { grid-template-columns: 1fr; gap: 1rem; }
+        .rhyme-row::after { display: none; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/dist/client/Rhyming/App.js"></script>
+</body>
+</html>

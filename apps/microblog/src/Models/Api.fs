@@ -110,5 +110,17 @@ module GetItemsByTag =
     // Single param carries "tag" or "tag~<cursor>" (GetOne allows only one).
     let endpoint : GetOne<Response> = GetOne (sprintf "/api/tags/%s/items")
 
+module GetRhymes =
+    /// One rhyme: the articles sharing a `rhyme-*` tag (usually two), shown
+    /// side-by-side on rhyming.darwin.news.
+    type RhymeGroup = {
+        Tag: string
+        Items: GetFeed.FeedItem list
+    }
+    type Response = {
+        Rhymes: RhymeGroup list
+    }
+    let endpoint : Get<Response> = Get "/api/rhymes"
+
 module Events =
     let endpoint : Get<unit> = Get "/api/events"

@@ -10,6 +10,9 @@ open Client.Api
 
 // --- HTTP API ---
 
+let getRhymes () =
+    fetchJson "/api/rhymes" Decode.getRhymesResponse
+
 let getItemsByTag (id: string) =
     fetchJson (sprintf "/api/tags/%s/items" id) Decode.getItemsByTagResponse
 

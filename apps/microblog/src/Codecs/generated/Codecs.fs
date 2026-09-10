@@ -28,6 +28,7 @@ module Encode =
     let inline itemTag (v: ItemTag) = encode v
 
     // -- API view types --
+    let inline rhymeGroup (v: GetRhymes.RhymeGroup) = encode v
     let inline microblogItemView (v: SubmitItem.MicroblogItem) = encode v
     let inline commentItem (v: SubmitComment.CommentItem) = encode v
     let inline feedItem (v: GetFeed.FeedItem) = encode v
@@ -52,11 +53,13 @@ module Decode =
     let itemTag : Decoder<ItemTag> = decode<ItemTag>()
 
     // -- API view types --
+    let rhymeGroup : Decoder<GetRhymes.RhymeGroup> = decode<GetRhymes.RhymeGroup>()
     let microblogItemView : Decoder<SubmitItem.MicroblogItem> = decode<SubmitItem.MicroblogItem>()
     let commentItem : Decoder<SubmitComment.CommentItem> = decode<SubmitComment.CommentItem>()
     let feedItem : Decoder<GetFeed.FeedItem> = decode<GetFeed.FeedItem>()
 
     // -- API response decoders --
+    let getRhymesResponse : Decoder<GetRhymes.Response> = decode<GetRhymes.Response>()
     let getItemsByTagResponse : Decoder<GetItemsByTag.Response> = decode<GetItemsByTag.Response>()
     let getTagsResponse : Decoder<GetTags.Response> = decode<GetTags.Response>()
     let getItemResponse : Decoder<GetItem.Response> = decode<GetItem.Response>()

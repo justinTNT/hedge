@@ -475,6 +475,30 @@ let getTags (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
+/// GET /api/rhymes — every `rhyme-*` tag with the items sharing it, for
+/// rhyming.darwin.news. A rhyme is usually a pair; the view lists them side-by-side.
+let getRhymes (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! tagRes = env.DB.prepare(Sql.rhymeTags).all()
+        let tags = tagRes.results |> Array.map (fun r -> rowStr r "name") |> Array.toList
+        let groups = ResizeArray<string * GetFeed.FeedItem list>()
+        for tag in tags do
+            let! itemsRes = (bind (env.DB.prepare Sql.itemsByTag) [| box tag; box 12 |]).all()
+            let items = itemsRes.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+            groups.Add(tag, items)
+        let body =
+            Encode.object [
+                "rhymes", Encode.list [
+                    for (tag, items) in groups ->
+                        Encode.object [
+                            "tag", Encode.string tag
+                            "items", Encode.list (List.map Encode.feedItem items)
+                        ]
+                ]
+            ] |> Encode.toString 0
+        return okJson body
+    }
+
 [<Emit("decodeURIComponent($0)")>]
 let private decodeUri (s: string) : string = jsNative
 

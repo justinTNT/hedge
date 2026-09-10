@@ -12,4 +12,5 @@ let exports = createWorker {
     Admin = Some (fun request env route ->
         Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = None
+    Mounts = []
 }

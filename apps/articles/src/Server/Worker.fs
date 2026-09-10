@@ -40,4 +40,5 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
+    Mounts = []
 }

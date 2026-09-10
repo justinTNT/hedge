@@ -145,6 +145,10 @@ let insertComment = """
 let tagNames =
     "SELECT name FROM tags ORDER BY name"
 
+// rhyme-* tags in numeric-ish order (rhyme-1, rhyme-2, ...) for rhyming.darwin.news.
+let rhymeTags =
+    "SELECT name FROM tags WHERE name LIKE 'rhyme-%' ORDER BY name"
+
 // Cursor-paginated tag feed (bind: [tag, limit]).
 let itemsByTag = """
     SELECT i.*

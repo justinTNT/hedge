@@ -77,6 +77,19 @@ let guestCookieValue (guest: GuestContext) : string =
 [<Emit("$0.ASSETS.fetch($1)")>]
 let private fetchFromAssets (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
 
+/// A mounted view: requests to `Host` are served the `Shell` HTML asset (its own
+/// client entry) from ASSETS, instead of the default index.html. One deploy, one
+/// D1, multiple client views — the composition primitive (host-matched for now;
+/// generalises to path-prefix mounts).
+type Mount = { Host: string; Shell: string }
+
+[<Emit("new URL($0.url).hostname")>]
+let private requestHost (request: WorkerRequest) : string = jsNative
+
+/// Serve a specific shell asset (e.g. "/rhyming.html") for this request's origin.
+[<Emit("$0.ASSETS.fetch(new Request(new URL($2, $1.url)))")>]
+let private fetchShell (env: obj) (request: WorkerRequest) (shell: string) : JS.Promise<WorkerResponse> = jsNative
+
 /// Response helpers
 let jsonResponse (body: string) (status: int) : WorkerResponse =
     let options = createObj [
@@ -189,6 +202,8 @@ type WorkerConfig = {
     Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
     Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
     OAuth: (obj -> OAuthConfig) option
+    /// Extra client views mounted on other hosts of this same deploy (default []).
+    Mounts: Mount list
 }
 
 let createWorker (config: WorkerConfig) =
@@ -356,10 +371,13 @@ let createWorker (config: WorkerConfig) =
             | Some p -> return! p
             | None ->
 
-            // 7. SPA fallback — delegate to Cloudflare Assets for non-API GET
+            // 7. SPA fallback — delegate to Cloudflare Assets for non-API GET.
+            //    A mounted host is served its own shell; everything else the default.
             match route with
             | GET _ ->
-                return! fetchFromAssets env request
+                match config.Mounts |> List.tryFind (fun m -> m.Host = requestHost request) with
+                | Some m -> return! fetchShell env request m.Shell
+                | None -> return! fetchFromAssets env request
             | _ ->
                 return notFound ()
         }

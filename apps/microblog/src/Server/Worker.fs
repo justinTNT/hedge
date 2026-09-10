@@ -42,4 +42,6 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
+    // rhyming.darwin.news: a second view over the same items, paired by rhyme-* tags.
+    Mounts = [ { Host = "rhyming.darwin.news"; Shell = "/rhyming.html" } ]
 }

@@ -12,6 +12,9 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
+    | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
+        Some (Server.Handlers.getRhymes env)
+
     | GET path when matchPath "/api/tags" path = Some (Exact "/api/tags") ->
         Some (Server.Handlers.getTags env)
 
