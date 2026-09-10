@@ -19,9 +19,10 @@ let private fillCmd : Cmd<Msg> =
 let private continueCmd (next: bool) : Cmd<Msg> =
     if next then Cmd.batch [ watchCmd; fillCmd ] else Cmd.none
 
-// Fit headlines to column width (usba.se BigText gimmick; no-op for other tenants).
+// Fit headlines to column width — the BigText gimmick, gated on the tenant's
+// `bigText` feature flag rather than a hardcoded slug list.
 let private fitCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _ -> fitHeadlines ())
+    Cmd.ofEffect (fun _ -> if Hedge.Tenant.hasFeature "bigText" then fitHeadlines ())
 
 let update msg model =
     match msg with

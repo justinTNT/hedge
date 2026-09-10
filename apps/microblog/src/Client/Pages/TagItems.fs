@@ -12,7 +12,7 @@ let private watchCmd : Cmd<Msg> =
 let private fillCmd : Cmd<Msg> =
     Cmd.ofEffect (fun dispatch -> loadMoreIfSentinelVisible "tag-sentinel" (fun () -> dispatch LoadMoreTagItems))
 let private fitCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _ -> fitHeadlines ())
+    Cmd.ofEffect (fun _ -> if Hedge.Tenant.hasFeature "bigText" then fitHeadlines ())
 let private continueCmd (next: bool) : Cmd<Msg> =
     if next then Cmd.batch [ watchCmd; fillCmd; fitCmd ] else fitCmd
 

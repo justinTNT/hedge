@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Interface.fs" />
+    <Compile Include="Tenant.fs" />
     <Compile Include="Schema.fs" />
     <Compile Include="SchemaCodec.fs" />
     <Compile Include="Validate.fs" />

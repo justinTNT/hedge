@@ -12,6 +12,8 @@ const siteLogo = process.env.SITE_LOGO || '/public/darwinnews.png';
 // Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
 // deploy-specific rules (e.g. body.tenant-usbase nav img { width: 50% }).
 const siteSlug = process.env.SITE_SLUG || '';
+// Per-tenant feature flags (comma list, e.g. "bigText") — read via Hedge.Tenant.
+const siteFeatures = process.env.SITE_FEATURES || '';
 
 /// Resolves the __BASE__ / __SITE_TITLE__ placeholders in the HTML entry
 /// points and hands the client its runtime config on window.
@@ -22,7 +24,10 @@ function siteConfig() {
       const isAdmin = ctx.filename.endsWith('admin.html');
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
-        `window.SITE_LOGO=${JSON.stringify(siteLogo)};</script>`;
+        `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
+        `window.SITE_SLUG=${JSON.stringify(siteSlug)};` +
+        `window.SITE_TITLE=${JSON.stringify(siteTitle)};` +
+        `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};</script>`;
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)

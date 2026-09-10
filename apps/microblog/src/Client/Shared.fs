@@ -15,8 +15,9 @@ open Client.Types
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
 
-[<Emit("window.SITE_LOGO || '/public/darwinnews.png'")>]
-let private siteLogo : string = jsNative
+/// Tenant logo from the framework accessor, with the darwin.news default.
+let private siteLogo : string =
+    if Hedge.Tenant.config.Logo = "" then "/public/darwinnews.png" else Hedge.Tenant.config.Logo
 
 /// Short human date from a Unix-seconds timestamp (created_at is stored in seconds).
 [<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
@@ -74,7 +75,6 @@ let private hideBrokenImg (e: obj) : unit = jsNative
     if(h.scrollWidth > cw+2){ h.style.whiteSpace='normal'; }   // too long even scaled -> wrap
   }
   function fit(){
-    var b=document.body.classList; if(!(b.contains('tenant-usbase')||b.contains('tenant-mtmuse'))) return;
     var hs=document.querySelectorAll('.feed-item h2');
     if(!hs.length) return;
     if(hs[0].clientWidth===0){ setTimeout(fit,60); return; }   // wait for layout
