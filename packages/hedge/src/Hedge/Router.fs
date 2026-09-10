@@ -96,6 +96,16 @@ let private requestHost (request: WorkerRequest) : string = jsNative
 [<Emit("$0.ASSETS.fetch(new Request(new URL($2, $1.url)))")>]
 let private fetchShell (env: obj) (request: WorkerRequest) (shell: string) : JS.Promise<WorkerResponse> = jsNative
 
+/// True when this request arrived over plain http (Cloudflare custom domains
+/// serve http too). Checks the request URL scheme and the CF-Visitor header
+/// (belt and braces — availability varies by how the domain is attached).
+[<Emit("(new URL($0.url).protocol === 'http:') || ($0.headers.get('CF-Visitor') === '{\"scheme\":\"http\"}')")>]
+let private isPlainHttp (request: WorkerRequest) : bool = jsNative
+
+/// 301 to the https:// form of this request's URL.
+[<Emit("(function(u){var url=new URL(u); url.protocol='https:'; return new Response(null,{status:301,headers:{Location:url.toString()}});})($0.url)")>]
+let private httpsRedirect (request: WorkerRequest) : WorkerResponse = jsNative
+
 /// Response helpers
 let jsonResponse (body: string) (status: int) : WorkerResponse =
     let options = createObj [
@@ -216,6 +226,13 @@ let createWorker (config: WorkerConfig) =
     {| fetch = fun (request: WorkerRequest) (env: obj) (ctx: ExecutionContext) ->
         promise {
             let route = parseRoute request
+
+            // 0. Force HTTPS. Cloudflare custom domains serve http too, and the
+            //    per-zone "Always Use HTTPS" is not something we rely on — redirect
+            //    here so every deploy enforces it.
+            if isPlainHttp request then
+                return httpsRedirect request
+            else
 
             // 1. CORS preflight
             match route with

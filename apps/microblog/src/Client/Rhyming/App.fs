@@ -53,7 +53,13 @@ let private view model _dispatch =
                 prop.className "rhyme-head"
                 prop.children [
                     Html.h1 "Rhyming"
-                    Html.p [ prop.className "rhyme-tag"; prop.text "darwin.news, in pairs" ]
+                    Html.p [
+                        prop.className "rhyme-tag"
+                        prop.children [
+                            Html.a [ prop.href "/"; prop.text "darwin.news" ]
+                            Html.text ", in pairs"
+                        ]
+                    ]
                     Html.blockquote [
                         prop.className "rhyme-epigraph"
                         prop.children [
