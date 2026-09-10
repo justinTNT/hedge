@@ -62,6 +62,11 @@ let private loadPageCmd (site: GetSite.Response) (route: string list) : Cmd<Msg>
 [<Emit("""(function (s) { try { return (function walk(n){ if(!n) return ''; if(n.type==='text') return n.text||''; if(Array.isArray(n.content)) return n.content.map(walk).join(' '); return ''; })(JSON.parse(s)).replace(/\s+/g,' ').trim(); } catch (e) { return (s||'').replace(/\s+/g,' ').trim(); } })($0)""")>]
 let private plainText (json: string) : string = jsNative
 
+/// Hide an <img> whose (external) URL failed to load, so a dead hotlink
+/// collapses cleanly instead of showing a broken-image icon.
+[<Emit("$0.target.style.display = 'none'")>]
+let private hideBrokenImg (e: Browser.Types.Event) : unit = jsNative
+
 let private newsUrl = "https://usba.se/api/feed/start"
 
 let private decodeNews : Decoder<NewsItem list> =
@@ -261,7 +266,7 @@ let private newsCard (it: NewsItem) =
         prop.href it.Href
         prop.children [
             match it.Image with
-            | Some src -> Html.img [ prop.className "news-img"; prop.src src ]
+            | Some src -> Html.img [ prop.className "news-img"; prop.src src; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
             | None -> Html.none
             Html.div [
                 prop.className "news-body"
