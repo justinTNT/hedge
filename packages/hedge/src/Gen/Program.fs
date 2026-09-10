@@ -728,7 +728,7 @@ let viewCodecName (domainNames: Set<string>) (namePrefix: string) (vt: Type) =
     let disambiguated = if domainNames.Contains base_ then base_ + "View" else base_
     if namePrefix = "" then disambiguated else namePrefix + (capitalize disambiguated)
 
-let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) : string =
+let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) (singleNs: string) : string =
     let domainNames = domainTypes |> List.map (fun t -> toCamelCase t.Name) |> Set.ofList
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
@@ -740,10 +740,11 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "open Hedge.Interface"
     emit "open Hedge.Codec"
     // Composing modules qualifies every type ref (colliding module names), so no
-    // opens; single-module keeps the opens for byte-identical output.
+    // opens; single-module opens its own namespace (`singleNs`) for byte-identical
+    // output — `Models` for the current apps, but any module's ns (e.g. `Blog`).
     if not qualify then
-        emit "open Models.Domain"
-        emit "open Models.Api"
+        emit (sprintf "open %s.Domain" singleNs)
+        emit (sprintf "open %s.Api" singleNs)
     emit ""
     emit "/// Unwrap helpers — terse pattern matches used in Handlers.fs."
     emit "let inline pk (PrimaryKey v) = v"
@@ -886,7 +887,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
 // ClientGen.fs generation (Step 6)
 // ============================================================
 
-let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) : string =
+let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * string) list) (qualify: bool) (singleNs: string) : string =
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
 
@@ -895,10 +896,11 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
     emit ""
     emit "open Fable.Core"
     emit "open Thoth.Json"
-    // Composed modules qualify type refs; single-module opens for byte-identical output.
+    // Composed modules qualify type refs; single-module opens its own namespace
+    // (`singleNs`) for byte-identical output.
     if not qualify then
-        emit "open Models.Api"
-        emit "open Models.Ws"
+        emit (sprintf "open %s.Api" singleNs)
+        emit (sprintf "open %s.Ws" singleNs)
     emit "open Codecs"
     emit "open Client.Api"
     emit ""
@@ -1421,6 +1423,10 @@ let main (argv: string array) =
     // Composing >1 module forces namespace-qualified type refs (colliding module
     // names) and per-module identifier prefixes; single-module stays byte-identical.
     let qualify = List.length modules > 1
+    // When not qualifying (single module), the codec/client opens use that module's
+    // own namespace — "Models" for the current apps, but any module's ns (e.g. "Blog"
+    // for a standalone blog site). Harmless when qualifying (opens aren't emitted).
+    let singleNs = match modules with [ m ] -> m.Namespace | _ -> "Models"
 
     // Generate existing files (Db, AdminGen, schema.sql)
     let admin = generateAdminFs metas
@@ -1433,11 +1439,11 @@ let main (argv: string array) =
     writeIfChanged "schema.sql" schemaSql
 
     // Step 5: Generate Codecs.fs
-    let codecs = generateCodecsFs domainTypes endpoints wsTypes qualify
+    let codecs = generateCodecsFs domainTypes endpoints wsTypes qualify singleNs
     writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
     // Step 6: Generate ClientGen.fs
-    let clientGen = generateClientGenFs endpoints wsTypes qualify
+    let clientGen = generateClientGenFs endpoints wsTypes qualify singleNs
     writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
 
     // Step 7: Generate Routes.fs
