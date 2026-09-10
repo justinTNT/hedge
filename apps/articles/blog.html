@@ -6,6 +6,9 @@
     <title>__SITE_TITLE__</title>
     <link rel="stylesheet" href="__BASE__/public/styles.css">
     <script src="__BASE__/lib/guest-session.js"></script>
+    <!-- The blog module is mounted at /blog here (secondary). Its client bases its
+         routing on this; API + assets use BASE_PATH. A primary blog site omits it. -->
+    <script>window.MOUNT_BASE = "/blog";</script>
 </head>
 <body>
     <div id="app"></div>

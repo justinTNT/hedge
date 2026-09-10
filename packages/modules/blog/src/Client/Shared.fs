@@ -15,8 +15,16 @@ open Blog.Client.Types
 // root-mounted darwin.news build behaving exactly as before.
 
 /// Sub-path this deployment is served under, e.g. "/st". Empty when at the root.
+/// Used for API + asset URLs.
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
+
+/// The path this module is mounted at: "/blog" when a secondary mount, "" when it's
+/// the site's primary module (served at the naked URL, e.g. darwin.news). ROUTING
+/// (nav + route-strip) is based here; API + assets keep the deployment base above.
+/// The mount's shell sets `window.MOUNT_BASE`; absent ⇒ "" (primary).
+[<Emit("window.MOUNT_BASE || ''")>]
+let private mountBase : string = jsNative
 
 /// Tenant logo from the framework accessor, with the darwin.news default.
 let private siteLogo : string =
@@ -90,7 +98,7 @@ let private hideBrokenImg (e: obj) : unit = jsNative
 let fitHeadlines () : unit = jsNative
 
 let private baseSegments =
-    (basePath + "/blog").Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
+    (basePath + mountBase).Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
 /// Drop the deployment prefix from router segments, so route matching is
 /// written as though the app were always mounted at the root.
