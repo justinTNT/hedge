@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    The blog module's client component, for a consuming app's Client project to
+    compose. Import this AFTER the app's generated ClientGen and the shared
+    RichText.fs; the app then runs the component via a thin entry (e.g. Blog/Main.fs)
+    imported after this. Paths are $(MSBuildThisFileDirectory)-rooted.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/GuestSession.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Api.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Types.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Shared.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Pages/Feed.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Pages/Item.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Pages/NewItem.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Pages/TagItems.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/App.fs" />
+  </ItemGroup>
+</Project>

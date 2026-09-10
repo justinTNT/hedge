@@ -6,12 +6,15 @@
     <Compile Include="Env.fs" />
     <Compile Include="Sql.fs" />
     <Compile Include="generated/Db.fs" />
-    <!-- Blog module server layer (file-linked: co-compiles with the host's generated Db/Tables + shared Identity) -->
-    <Compile Include="../../../../packages/modules/blog/src/Server/Sql.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Attribution.fs" />
     <Compile Include="Handlers.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Server/Handlers.fs" />
+  </ItemGroup>
+  <!-- Blog module server layer, composed via the module's own .props (it owns its
+       file list). Import sits between ItemGroups so its files land here in compile
+       order: after Db/Identity/Handlers, before Routes. -->
+  <Import Project="../../../../packages/modules/blog/blog.server.props" />
+  <ItemGroup>
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" />

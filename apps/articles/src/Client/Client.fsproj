@@ -12,17 +12,12 @@
     <Compile Include="Pages/Feed.fs" />
     <Compile Include="Pages/Item.fs" />
     <Compile Include="App.fs" />
-    <!-- Blog module client (file-linked component) + its path-mount entry.
-         References the composed Client.ClientGen (blog* fns) + shared RichText above. -->
-    <Compile Include="../../../../packages/modules/blog/src/Client/GuestSession.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Api.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Types.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Shared.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/Feed.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/Item.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/NewItem.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/TagItems.fs" />
-    <Compile Include="../../../../packages/modules/blog/src/Client/App.fs" />
+  </ItemGroup>
+  <!-- Blog module client, composed via the module's own .props (it owns its file
+       list). Import between ItemGroups so its files land after ClientGen/RichText;
+       then the app's thin path-mount entry runs the component. -->
+  <Import Project="../../../../packages/modules/blog/blog.client.props" />
+  <ItemGroup>
     <Compile Include="Blog/Main.fs" />
   </ItemGroup>
   <ItemGroup>
