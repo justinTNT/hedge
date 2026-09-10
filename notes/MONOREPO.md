@@ -160,20 +160,34 @@ are thin list-UI.
 
 ## Sequencing & discipline
 
-- **Next consolidation:** extract `guest-comments` as a mountable module (its live layer
-  consuming the framework transport), migrate the live apps onto it, prune music's
-  vestigial scaffold copies. Then the codegen work — `features` + `[<Searchable>]` —
-  now informed by three-plus apps.
-- **Design the mount/compose runtime against the first real merge**, not in the abstract.
+Decided 2026-09-10: the org-site+blog *merge* is not abstract any more — we'll
+**put the blog (microblog) module into justat.at**, deliberately, to *manufacture the
+demand* that drives the modules/compose build (rather than designing it in the abstract).
+But three non-speculative wins come first.
+
+- **Now — three wins, in order:**
+  1. **Single-source `rich-text`** — rule-of-three confirmed (microblog/articles/basewatch
+     each carry a byte-identical `lib/rich-text/`; the F# `Client/RichText.fs` too, modulo
+     basewatch's being a subset). First shared **app-library** package.
+  2. **Golden-model + scaffold snapshot test** — bitten twice recently (music admin-CRUD
+     scaffold drift; the migrate-tool bug). `test.sh` only checks *compiles*; add diffing
+     generated **and scaffold-emitted** output against the golden model.
+  3. **Per-tenant config** — real smell today: the hardcoded `tenant-usbase || tenant-mtmuse`
+     check in `Client/Shared.fs`, `SITE_LOGO`/`SITE_SLUG` injected ad hoc. One typed
+     per-tenant capability delivered to the client.
+- **Then — the deliberate first merge: the blog module in justat.at.** This is the driver
+  that re-activates the previously-deferred, now against a *real* consumer:
+  - **guest-comments as a mountable module** (justat's articles + the blog both want it).
+  - **compose/mount runtime** — path-prefix mounting (v0 proven by rhyming's mount),
+    client module registry, **table namespacing** (articles + blog tables coexist in
+    justat-db), Gen composing multiple modules into one schema/admin/codecs.
+  - **features capability system** (a site enables the modules/capabilities it wants).
+  - Design against THIS merge — concrete now, not speculative.
+  - Note: basewatch's usba.se-feed home is NOT this — it reads+links a *standalone* site
+    (no shared D1, no dueling guests). The module/compose path is for building a site
+    from scratch that hosts multiple modules in one deploy — which is justat.at.
 - **Rule of three**: don't promote an abstraction until a third app has voted.
-- **Golden-model test** (still open): `test.sh` does build verification only. Add
-  diffing generated files against checked-in expected output — and **cover the scaffold's
-  template strings** (`Gen/Scaffold.fs`), not just generated files. The music admin-CRUD
-  bug was exactly this gap: a golden-model fix never back-ported into the scaffold
-  template, invisible because both compiled. Better still, keep shrinking templates by
-  pushing their bodies into the framework (as done for Admin), which removes the drift
-  class entirely.
-- **Never rewire the live apps under build pressure.**
+- **Never rewire live apps under build pressure.**
 
 ## Operational learnings
 
