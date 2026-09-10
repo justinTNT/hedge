@@ -3,8 +3,10 @@ module Client.App
 open Feliz
 open Feliz.Router
 open Elmish
+open Fable.Core
 open Browser.Types
 open Browser.Dom
+open Thoth.Json
 open Models.Api
 
 // -- model --
@@ -14,10 +16,15 @@ type PageState =
     | PageLoaded of GetPage.PageView
     | PageMissing
 
+/// A story from the usba.se feed, surfaced on the home page. Its full article
+/// (and comments) live on usba.se — Href links across.
+type NewsItem = { Title: string; Href: string; Image: string option; Teaser: string }
+
 type Model = {
     Site: GetSite.Response option
     Route: string list
     Page: PageState
+    Feed: Result<NewsItem list, string> option   // None = loading
     MenuOpen: bool
     Error: string option
 }
@@ -25,6 +32,7 @@ type Model = {
 type Msg =
     | GotSite of Result<GetSite.Response, string>
     | GotPage of string * Result<GetPage.Response, string>
+    | GotFeed of Result<NewsItem list, string>
     | UrlChanged of string list
     | ToggleMenu
 
@@ -46,9 +54,45 @@ let private loadPageCmd (site: GetSite.Response) (route: string list) : Cmd<Msg>
         (fun r -> GotPage(name, r))
         (fun ex -> GotPage(name, Error ex.Message))
 
+// -- usba.se news feed (home page). Fetched cross-origin; the feed API sets
+//    Access-Control-Allow-Origin *, so the browser can read it directly. --
+
+/// Plain text from an Extract (ProseMirror JSON) for the teaser — a tiny JSON
+/// walker, so we don't pull the TipTap bundle onto the home page.
+[<Emit("""(function (s) { try { return (function walk(n){ if(!n) return ''; if(n.type==='text') return n.text||''; if(Array.isArray(n.content)) return n.content.map(walk).join(' '); return ''; })(JSON.parse(s)).replace(/\s+/g,' ').trim(); } catch (e) { return (s||'').replace(/\s+/g,' ').trim(); } })($0)""")>]
+let private plainText (json: string) : string = jsNative
+
+let private newsUrl = "https://usba.se/api/feed/start"
+
+let private decodeNews : Decoder<NewsItem list> =
+    let item =
+        Decode.object (fun get ->
+            let id = get.Required.Field "id" Decode.string
+            let slug = get.Optional.Field "slug" Decode.string
+            let extract = get.Optional.Field "extract" Decode.string
+            let t = extract |> Option.map plainText |> Option.defaultValue ""
+            { Title = get.Required.Field "title" Decode.string
+              Href = "https://usba.se/" + (slug |> Option.defaultValue id)
+              Image = get.Optional.Field "image" Decode.string
+              Teaser = if t.Length > 200 then t.[..199].TrimEnd() + "…" else t })
+    Decode.field "items" (Decode.list item)
+
+let private fetchNewsCmd : Cmd<Msg> =
+    Cmd.OfPromise.either (fun () -> Client.Api.fetchJson newsUrl decodeNews) () GotFeed
+        (fun ex -> GotFeed (Error ex.Message))
+
+/// Home ([]) shows the news feed; any other route is a page.
+let private loadForRoute (site: GetSite.Response) (route: string list) : Cmd<Msg> =
+    match route with
+    | [] -> Cmd.ofEffect (fun _ -> document.title <- "BaseWatch")
+    | _ -> loadPageCmd site route
+
 let init () =
-    { Site = None; Route = routeOf (Router.currentUrl ()); Page = PageLoading; MenuOpen = false; Error = None },
-    Cmd.OfPromise.either Client.ClientGen.getSite () GotSite (fun ex -> GotSite(Error ex.Message))
+    { Site = None; Route = routeOf (Router.currentUrl ()); Page = PageLoading; Feed = None; MenuOpen = false; Error = None },
+    Cmd.batch [
+        Cmd.OfPromise.either Client.ClientGen.getSite () GotSite (fun ex -> GotSite(Error ex.Message))
+        fetchNewsCmd
+    ]
 
 let private setTitle (t: string) = Cmd.ofEffect (fun _ -> document.title <- t + " — BaseWatch")
 let private scrollTop = Cmd.ofEffect (fun _ -> window.scrollTo (0.0, 0.0))
@@ -57,7 +101,7 @@ let update msg model =
     match msg with
     | GotSite (Ok site) ->
         let m = { model with Site = Some site }
-        m, loadPageCmd site m.Route
+        m, loadForRoute site m.Route
     | GotSite (Error e) ->
         { model with Error = Some e }, Cmd.none
     | GotPage (name, result) ->
@@ -68,11 +112,13 @@ let update msg model =
             match result with
             | Ok resp -> { model with Page = PageLoaded resp.Page }, setTitle resp.Page.Title
             | Error _ -> { model with Page = PageMissing }, setTitle "Not found"
+    | GotFeed result ->
+        { model with Feed = Some result }, Cmd.none
     | UrlChanged route ->
         match model.Site with
         | Some site ->
-            { model with Route = route; Page = PageLoading; MenuOpen = false },
-            Cmd.batch [ loadPageCmd site route; scrollTop ]
+            { model with Route = route; Page = (if route = [] then model.Page else PageLoading); MenuOpen = false },
+            Cmd.batch [ loadForRoute site route; scrollTop ]
         | None ->
             { model with Route = route; MenuOpen = false }, scrollTop
     | ToggleMenu ->
@@ -208,15 +254,55 @@ let private loadingMain =
         prop.children [ Html.div [ prop.className "wrap"; prop.children [ Html.div [ prop.className "loading"; prop.text "Loading…" ] ] ] ]
     ]
 
+let private newsCard (it: NewsItem) =
+    Html.a [
+        prop.key it.Href
+        prop.className "news-card"
+        prop.href it.Href
+        prop.children [
+            match it.Image with
+            | Some src -> Html.img [ prop.className "news-img"; prop.src src ]
+            | None -> Html.none
+            Html.div [
+                prop.className "news-body"
+                prop.children [
+                    Html.h2 [ prop.className "news-title"; prop.text it.Title ]
+                    if it.Teaser <> "" then Html.p [ prop.className "news-teaser"; prop.text it.Teaser ] else Html.none
+                ]
+            ]
+        ]
+    ]
+
+/// Home page: the current news feed from usba.se. Full articles + comments live
+/// there; each card links across.
+let private feedView (model: Model) =
+    Html.div [
+        prop.className "wrap feed"
+        prop.children [
+            match model.Feed with
+            | None -> yield Html.div [ prop.className "loading"; prop.text "Loading news…" ]
+            | Some (Error _) ->
+                yield Html.p [ prop.className "loading"; prop.text "News is unavailable right now — try " ]
+                yield Html.a [ prop.href "https://usba.se/"; prop.text "usba.se" ]
+            | Some (Ok []) -> yield Html.p [ prop.className "loading"; prop.text "No news yet." ]
+            | Some (Ok items) ->
+                for it in items do yield newsCard it
+                yield Html.a [ prop.className "news-more"; prop.href "https://usba.se/"; prop.text "More at usba.se →" ]
+        ]
+    ]
+
 let private mainView (model: Model) =
     Html.main [
         prop.id "content"
         prop.tabIndex -1
         prop.children [
-            match model.Page with
-            | PageLoading -> Html.div [ prop.className "wrap"; prop.children [ Html.div [ prop.className "loading"; prop.text "Loading…" ] ] ]
-            | PageLoaded pg -> pageView pg
-            | PageMissing -> notFoundView
+            match model.Route with
+            | [] -> feedView model
+            | _ ->
+                match model.Page with
+                | PageLoading -> Html.div [ prop.className "wrap"; prop.children [ Html.div [ prop.className "loading"; prop.text "Loading…" ] ] ]
+                | PageLoaded pg -> pageView pg
+                | PageMissing -> notFoundView
         ]
     ]
 
@@ -231,7 +317,7 @@ let private footerView =
                     Html.text " — a community response to the US military presence in Darwin. Contact "
                     Html.a [ prop.href "mailto:contact@basewatch.org"; prop.text "contact@basewatch.org" ]
                     Html.text ". "
-                    Html.span [ prop.className "foot-note"; prop.text "Archived site; content preserved from the original." ]
+                    Html.span [ prop.className "foot-note"; prop.children [ Html.text "News from "; Html.a [ prop.href "https://usba.se/"; prop.text "usba.se" ]; Html.text "." ] ]
                 ]
             ]
         ]
