@@ -7,7 +7,28 @@ module Client.Rhyming.App
 
 open Feliz
 open Elmish
+open Fable.Core
+open Hedge.Interface
 open Models.Api
+
+/// Plain text from an Extract (ProseMirror JSON) — walks text nodes so we don't
+/// pull the TipTap bundle onto this page just for a teaser. Falls back to the raw
+/// value for legacy non-JSON content.
+[<Emit("""(function (s) {
+  try {
+    return (function walk(n){ if(!n) return ''; if(n.type==='text') return n.text||''; if(Array.isArray(n.content)) return n.content.map(walk).join(' '); return ''; })(JSON.parse(s)).replace(/\s+/g,' ').trim();
+  } catch (e) { return (s || '').replace(/\s+/g,' ').trim(); }
+})($0)""")>]
+let private plainText (json: string) : string = jsNative
+
+let private teaserOf (item: GetFeed.FeedItem) : string option =
+    match item.Extract with
+    | Some (RichContent json) ->
+        let t = plainText json
+        if t = "" then None
+        elif t.Length > 180 then Some (t.[..179].TrimEnd() + "…")
+        else Some t
+    | None -> None
 
 type Model = { Rhymes: GetRhymes.RhymeGroup list; Loading: bool; Error: string option }
 type Msg = GotRhymes of Result<GetRhymes.Response, string>
@@ -34,7 +55,15 @@ let private card (item: GetFeed.FeedItem) =
             match item.Image with
             | Some src -> Html.img [ prop.className "rhyme-img"; prop.src src ]
             | None -> Html.none
-            Html.h3 [ prop.className "rhyme-title"; prop.text item.Title ]
+            Html.div [
+                prop.className "rhyme-body"
+                prop.children [
+                    Html.h3 [ prop.className "rhyme-title"; prop.text item.Title ]
+                    match teaserOf item with
+                    | Some t -> Html.p [ prop.className "rhyme-teaser"; prop.text t ]
+                    | None -> Html.none
+                ]
+            ]
         ]
     ]
 
