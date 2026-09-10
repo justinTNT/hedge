@@ -41,6 +41,9 @@ not_found_handling = "single-page-application"
 # .dev.vars; every deployed tenant from its own `wrangler secret put ADMIN_KEY`.
 [vars]
 ENVIRONMENT = "production"
+# Which site this worker serves. Gates per-env mounts (the blog client mounts at
+# /blog only where SITE = "justat"). Default = justat (the first tenant).
+SITE = "justat"
 
 # ============================================================
 # Tenants (one articles app, many sites). Deploy with --env <name>.
@@ -60,6 +63,7 @@ routes = [
 
 [env.justat.vars]
 ENVIRONMENT = "production"
+SITE = "justat"
 
 [[env.justat.d1_databases]]
 binding = "DB"
@@ -92,6 +96,7 @@ routes = [
 
 [env.ndct.vars]
 ENVIRONMENT = "production"
+SITE = "ndct"
 
 [[env.ndct.d1_databases]]
 binding = "DB"

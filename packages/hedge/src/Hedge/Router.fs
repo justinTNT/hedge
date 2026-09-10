@@ -87,7 +87,11 @@ type MountOn =
 /// A mounted view: matching requests are served the `Shell` HTML asset (its own
 /// client entry) from ASSETS instead of index.html. One deploy, one D1, multiple
 /// client views — the composition primitive.
-type Mount = { On: MountOn; Shell: string }
+///
+/// `When` gates the mount per-request against the raw `env`, so one shared worker
+/// binary can mount a module for some deployments and not others (mounts are
+/// inherently per-env). Unconditional mounts pass `fun _ -> true`.
+type Mount = { On: MountOn; Shell: string; When: obj -> bool }
 
 [<Emit("new URL($0.url).hostname")>]
 let private requestHost (request: WorkerRequest) : string = jsNative
@@ -383,6 +387,7 @@ let createWorker (config: WorkerConfig) =
             match route with
             | GET path ->
                 let matches (m: Mount) =
+                    m.When env &&
                     match m.On with
                     | OnHost h -> requestHost request = h
                     | OnPath p -> path = p || path.StartsWith(p + "/")

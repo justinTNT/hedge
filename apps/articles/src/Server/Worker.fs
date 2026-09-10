@@ -40,5 +40,15 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
-    Mounts = []
+    // The blog module's path-mount: GET /blog[/*] is served the blog SPA shell
+    // (its own client bundle). /api/blog/* is dispatched by Server.Routes above;
+    // live comments ride the shared framework /api/events DO (keyed by itemId, so
+    // blog and article items never collide). The blog is compiled into every env
+    // of this app, but `When` mounts the client only where SITE = "justat" — ndct
+    // leaves it dormant (no /blog shell, no menu link, blog_* tables unmigrated).
+    Mounts = [
+        { On = OnPath "/blog"
+          Shell = "/blog.html"
+          When = fun env -> (env?SITE |> unbox<string>) = "justat" }
+    ]
 }

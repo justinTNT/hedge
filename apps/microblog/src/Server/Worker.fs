@@ -43,5 +43,5 @@ let exports = createWorker {
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
     // darwin.news/rhymes: a second view over the same items, paired by rhyme-* tags.
-    Mounts = [ { On = OnPath "/rhymes"; Shell = "/rhyming.html" } ]
+    Mounts = [ { On = OnPath "/rhymes"; Shell = "/rhyming.html"; When = fun _ -> true } ]
 }

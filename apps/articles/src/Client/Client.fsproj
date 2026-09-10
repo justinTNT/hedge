@@ -12,6 +12,18 @@
     <Compile Include="Pages/Feed.fs" />
     <Compile Include="Pages/Item.fs" />
     <Compile Include="App.fs" />
+    <!-- Blog module client (file-linked component) + its path-mount entry.
+         References the composed Client.ClientGen (blog* fns) + shared RichText above. -->
+    <Compile Include="../../../../packages/modules/blog/src/Client/GuestSession.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Api.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Types.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Shared.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/Feed.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/Item.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/NewItem.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/Pages/TagItems.fs" />
+    <Compile Include="../../../../packages/modules/blog/src/Client/App.fs" />
+    <Compile Include="Blog/Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />

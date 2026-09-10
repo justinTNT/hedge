@@ -295,6 +295,15 @@ let navWithSession (model: Model) dispatch =
                   Html.img [ prop.src (basePath + siteLogo) ]
                 ]
             ]
+            // The blog module's path-mount is a separate bundle, so this is a
+            // real navigation (href), not SPA routing. Shown only where the blog
+            // is mounted (justat), matching the worker's SITE="justat" gate.
+            if Hedge.Tenant.config.Slug = "justat" then
+                Html.a [
+                    prop.className "nav-blog"
+                    prop.href (basePath + "/blog")
+                    prop.text "Blog"
+                ]
             identityView model dispatch
         ]
     ]
