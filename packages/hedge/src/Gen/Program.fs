@@ -1303,17 +1303,40 @@ let writeIfChanged (path: string) (content: string) =
         printfn "  Created: %s" path
 
 // ============================================================
+// Module manifest (the site's composition)
+// ============================================================
+
+/// The root module — the app's own Models. Always present; other modules are
+/// mounted alongside it via gen-modules.json.
+let rootModule =
+    { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
+
+/// Read the site's module list from gen-modules.json (in the app dir) if present,
+/// else just the root module (byte-identical to the pre-modules single-app path).
+/// Each entry: { assembly, namespace, tablePrefix, routePrefix, handlerNs }.
+let readModules () : GenModule list =
+    let path = "gen-modules.json"
+    if not (File.Exists path) then [ rootModule ]
+    else
+        let doc = Text.Json.JsonDocument.Parse(File.ReadAllText path)
+        [ for el in doc.RootElement.EnumerateArray() ->
+            let str name dflt =
+                match el.TryGetProperty(name: string) with
+                | true, v -> v.GetString()
+                | _ -> dflt
+            { Assembly = str "assembly" "Models"
+              Namespace = str "namespace" "Models"
+              TablePrefix = str "tablePrefix" ""
+              RoutePrefix = str "routePrefix" ""
+              HandlerNs = str "handlerNs" "Server.Handlers" } ]
+
+// ============================================================
 // Main
 // ============================================================
 
 [<EntryPoint>]
 let main (argv: string array) =
-    // The site's composition. Single root module = byte-identical to the
-    // pre-modules single-app path. (Spike: hardcoded; a site manifest lands in
-    // Phase 3.)
-    let modules = [
-        { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
-    ]
+    let modules = readModules ()
 
     // Step 3+4: reflect each module over its own assembly, baking in its prefixes,
     // then concatenate into the combined lists the generators consume.
