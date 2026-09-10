@@ -416,7 +416,9 @@ let private packageJsonTmpl = """{
     "gen": "dotnet run --project src/Gen/Gen.fsproj",
     "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
     "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
-    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run"
+    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run",
+    "migrate:remote:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --remote --dry-run",
+    "migrate:remote": "dotnet run --project src/Gen/Gen.fsproj -- migrate --remote"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

@@ -1033,25 +1033,26 @@ let getDbName () : string =
         else None)
     |> Option.defaultValue ""
 
-let wranglerQuery (dbName: string) (sql: string) : Text.Json.JsonElement array =
+let wranglerQuery (remote: bool) (dbName: string) (sql: string) : Text.Json.JsonElement array =
     let escaped = sql.Replace("\"", "\\\"")
-    let args = sprintf "wrangler d1 execute %s --local --command \"%s\" --json" dbName escaped
+    let target = if remote then "--remote" else "--local"
+    let args = sprintf "wrangler d1 execute %s %s --command \"%s\" --json" dbName target escaped
     let output = execProcess "npx" args
     let doc = Text.Json.JsonDocument.Parse(output)
     let first = doc.RootElement.[0]
     let results = first.GetProperty("results")
     [| for i in 0 .. results.GetArrayLength() - 1 -> results.[i] |]
 
-let getCurrentTables (dbName: string) : string list =
-    let rows = wranglerQuery dbName "SELECT name FROM sqlite_master WHERE type='table'"
+let getCurrentTables (remote: bool) (dbName: string) : string list =
+    let rows = wranglerQuery remote dbName "SELECT name FROM sqlite_master WHERE type='table'"
     rows
     |> Array.map (fun r -> r.GetProperty("name").GetString())
     |> Array.filter (fun n ->
         not (n.StartsWith("d1_") || n.StartsWith("sqlite_") || n.StartsWith("_cf_")))
     |> Array.toList
 
-let getTableColumns (dbName: string) (tableName: string) : ColInfo list =
-    let rows = wranglerQuery dbName (sprintf "PRAGMA table_info(%s)" tableName)
+let getTableColumns (remote: bool) (dbName: string) (tableName: string) : ColInfo list =
+    let rows = wranglerQuery remote dbName (sprintf "PRAGMA table_info(%s)" tableName)
     rows
     |> Array.map (fun r ->
         { ColName = r.GetProperty("name").GetString()
@@ -1113,16 +1114,28 @@ let generateRecreateTableSql (m: TableMeta) (currentCols: ColInfo list) (metasBy
             sprintf "CREATE TABLE %s_new" m.TableName)
 
     let currentColNames = currentCols |> List.map (fun c -> c.ColName) |> Set.ofList
-    let survivingOrdered =
-        m.DbFields
-        |> List.map (fun f -> toSnakeCase f.Name)
-        |> List.filter (fun c -> currentColNames |> Set.contains c)
+    // For each schema column: copy it when the source table has it. If the schema
+    // ADDS a NOT NULL column the source lacks, seed a default in the SELECT (it
+    // can't be backfilled) so the populate INSERT never violates NOT NULL — the
+    // old code silently omitted such columns, producing a broken migration. New
+    // nullable/PK columns are omitted and default to NULL.
+    let insertCols = ResizeArray<string>()
+    let selectExprs = ResizeArray<string>()
+    for f in m.DbFields do
+        let col = toSnakeCase f.Name
+        if currentColNames |> Set.contains col then
+            insertCols.Add col
+            selectExprs.Add col
+        elif not (isNullable f) && not (isPrimaryKey f) then
+            insertCols.Add col
+            selectExprs.Add (if sqlType f.Type = "TEXT" then "''" else "0")
 
-    let colList = survivingOrdered |> String.concat ", "
+    let colList = insertCols |> String.concat ", "
+    let selList = selectExprs |> String.concat ", "
 
     let lines = ResizeArray<string>()
     lines.Add(newCreateSql)
-    lines.Add(sprintf "INSERT INTO %s_new (%s) SELECT %s FROM %s;" m.TableName colList colList m.TableName)
+    lines.Add(sprintf "INSERT INTO %s_new (%s) SELECT %s FROM %s;" m.TableName colList selList m.TableName)
     lines.Add(sprintf "DROP TABLE %s;" m.TableName)
     lines.Add(sprintf "ALTER TABLE %s_new RENAME TO %s;" m.TableName m.TableName)
 
@@ -1167,13 +1180,14 @@ let writeMigration (sql: string) : string =
 // Migrate command
 // ============================================================
 
-let runMigrate (metas: TableMeta list) (dryRun: bool) =
+let runMigrate (metas: TableMeta list) (dryRun: bool) (remote: bool) =
     let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
     let dbName = getDbName ()
     if dbName = "" then
         printfn "ERROR: Could not find database_name in wrangler.toml"
     else
-        let currentTables = getCurrentTables dbName
+        printfn "Diffing schema against the %s database (%s)." (if remote then "REMOTE" else "local") dbName
+        let currentTables = getCurrentTables remote dbName
         let currentTableSet = currentTables |> Set.ofList
 
         let migrationParts = ResizeArray<string>()
@@ -1194,7 +1208,7 @@ let runMigrate (metas: TableMeta list) (dryRun: bool) =
                     migrationParts.Add(idx)
                 migrationParts.Add("")
             else
-                let currentCols = getTableColumns dbName m.TableName
+                let currentCols = getTableColumns remote dbName m.TableName
                 let changes = diffTable m currentCols
 
                 if not changes.IsEmpty then
@@ -1229,13 +1243,18 @@ let runMigrate (metas: TableMeta list) (dryRun: bool) =
             let filename = writeMigration migrationSql
             printfn "Generated migration: %s" filename
 
-            if not dryRun then
+            if dryRun then
+                printfn "(dry-run: migration file written but not applied)"
+            elif remote then
+                // Remote is production — never auto-apply. Write the file, and let a
+                // human review it and apply deliberately.
+                printfn "Review the migration, then apply it yourself:"
+                printfn "  npx wrangler d1 migrations apply %s --remote" dbName
+            else
                 let args = sprintf "wrangler d1 migrations apply %s --local" dbName
                 let output = execProcess "npx" args
                 printfn "%s" output
                 printfn "Migration applied locally."
-            else
-                printfn "(dry-run: migration file written but not applied)"
 
 // ============================================================
 // File writing helpers
@@ -1306,8 +1325,9 @@ let main (argv: string array) =
     // Migration support
     let hasMigrate = argv |> Array.exists (fun a -> a = "migrate")
     let hasDryRun = argv |> Array.exists (fun a -> a = "--dry-run")
+    let hasRemote = argv |> Array.exists (fun a -> a = "--remote")
 
     if hasMigrate then
-        runMigrate metas hasDryRun
+        runMigrate metas hasDryRun hasRemote
 
     0
