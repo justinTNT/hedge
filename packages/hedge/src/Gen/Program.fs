@@ -57,6 +57,7 @@ let isForeignKey (f: FieldSchema) =
 /// app's own Server.Handlers (byte-identical to the pre-modules single-app path).
 type GenModule = {
     Assembly: string
+    Namespace: string     // Models root namespace: "Models" (root) | "Blog" (a module)
     TablePrefix: string   // e.g. "blog_" ; "" for the root module
     RoutePrefix: string   // e.g. "/api/blog" ; "" for the root module
     HandlerNs: string     // e.g. "Server.Handlers" | "Blog.Handlers"
@@ -94,6 +95,10 @@ let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
     elif propType = typeof<SoftDelete> then FInt, [SoftDelete]
     elif propType = typeof<RichContent> then FString, [RichContent]
     elif propType = typeof<Link> then FString, [Link]
+    // IdentityRef is a decoupled handle to the shared identity layer — treat it
+    // as a FK to the shared `identities` table (reusing ForeignKey machinery),
+    // without the module depending on any concrete Identity type.
+    elif propType = typeof<IdentityRef> then FString, [ForeignKey "Identity"]
     elif propType = typeof<string> then FString, []
     elif propType = typeof<int> then FInt, []
     elif propType = typeof<bool> then FBool, []
@@ -106,19 +111,19 @@ let getFieldSchemas (recordType: Type) : FieldSchema list =
         { Name = prop.Name; Type = ft; Attrs = attrs })
     |> Array.toList
 
-/// Discover all record types in Models.Domain module
-let discoverDomainTypes (assembly: Assembly) : Type list =
+/// Discover all record types in the module's <ns>.Domain module.
+let discoverDomainTypes (ns: string) (assembly: Assembly) : Type list =
     assembly.GetTypes()
     |> Array.filter (fun t ->
-        t.FullName.StartsWith("Models.Domain+")
+        t.FullName.StartsWith(ns + ".Domain+")
         && FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance))
     |> Array.toList
 
-/// Discover all WS event types in Models.Ws module
-let discoverWsTypes (assembly: Assembly) : Type list =
+/// Discover all WS event types in the module's <ns>.Ws module.
+let discoverWsTypes (ns: string) (assembly: Assembly) : Type list =
     assembly.GetTypes()
     |> Array.filter (fun t ->
-        t.FullName.StartsWith("Models.Ws+")
+        t.FullName.StartsWith(ns + ".Ws+")
         && FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance))
     |> Array.toList
 
@@ -138,11 +143,11 @@ type ParsedEndpoint = {
     ViewTypes: Type list
 }
 
-let discoverApiModules (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
-    // Api modules are nested types under Models.Api
+let discoverApiModules (ns: string) (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
+    // Api modules are nested types under <ns>.Api
     let apiType =
         assembly.GetTypes()
-        |> Array.tryFind (fun t -> t.FullName = "Models.Api")
+        |> Array.tryFind (fun t -> t.FullName = ns + ".Api")
     match apiType with
     | None -> []
     | Some apiParent ->
@@ -1307,7 +1312,7 @@ let main (argv: string array) =
     // pre-modules single-app path. (Spike: hardcoded; a site manifest lands in
     // Phase 3.)
     let modules = [
-        { Assembly = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
+        { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
     ]
 
     // Step 3+4: reflect each module over its own assembly, baking in its prefixes,
@@ -1315,9 +1320,9 @@ let main (argv: string array) =
     let perModule =
         modules |> List.map (fun m ->
             let asm = Assembly.Load(m.Assembly)
-            let domainTypes = discoverDomainTypes asm
-            let wsTypes = discoverWsTypes asm
-            let endpoints = discoverApiModules asm m.RoutePrefix m.HandlerNs
+            let domainTypes = discoverDomainTypes m.Namespace asm
+            let wsTypes = discoverWsTypes m.Namespace asm
+            let endpoints = discoverApiModules m.Namespace asm m.RoutePrefix m.HandlerNs
             let metas = domainTypes |> List.map reflectToParsedType |> List.map (computeMeta m.TablePrefix)
             domainTypes, wsTypes, endpoints, metas)
 

@@ -1,0 +1,117 @@
+module Blog.Api
+
+// The blog module's API surface. Paths are module-relative ("/api/...") — the
+// site's Gen composition applies the mount's route prefix (e.g. -> "/api/blog/...").
+// darwin.news-specific views (rhyming) stay in the microblog app, not the module.
+
+open Hedge.Interface
+
+module GetFeed =
+    type FeedItem = {
+        Id: string
+        Title: string
+        Slug: string option
+        Image: string option
+        Extract: RichContent option
+        OwnerComment: RichContent
+        Timestamp: int
+    }
+
+    type Response = {
+        Items: FeedItem list
+        NextCursor: string option
+    }
+
+    // Cursor-paginated (infinite scroll). Page 1 uses the sentinel "start".
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/feed/%s")
+
+module SubmitComment =
+    type CommentItem = {
+        Id: string
+        ItemId: string
+        IdentityId: string
+        ParentId: string option
+        Author: string
+        Picture: string
+        Content: RichContent
+        Timestamp: int
+    }
+
+    type Request = {
+        ItemId: string
+        ParentId: string option
+        Content: string
+        Author: string option
+    }
+
+    type ServerContext = {
+        FreshGuestId: string
+        FreshCommentId: string
+    }
+
+    type Response = {
+        Comment: CommentItem
+    }
+
+    let endpoint : Post<Request, Response> = Post "/api/comment"
+
+module SubmitItem =
+    type MicroblogItem = {
+        Id: string
+        Title: string
+        Slug: string option
+        Link: Link option
+        Image: Link option
+        Extract: RichContent option
+        OwnerComment: RichContent
+        Tags: string list
+        Comments: SubmitComment.CommentItem list
+        Timestamp: int
+    }
+
+    type Request = {
+        Title: string
+        Slug: string option
+        Link: string option
+        Image: string option
+        Extract: string option
+        OwnerComment: string
+        Tags: string list
+    }
+
+    type ServerContext = {
+        FreshTagIds: string list
+    }
+
+    type Response = {
+        Item: MicroblogItem
+    }
+
+    let endpoint : Post<Request, Response> = Post "/api/item"
+
+module GetItem =
+    type Response = {
+        Item: SubmitItem.MicroblogItem
+    }
+
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/item/%s")
+
+module GetTags =
+    type Response = {
+        Tags: string list
+    }
+
+    let endpoint : Get<Response> = Get "/api/tags"
+
+module GetItemsByTag =
+    type Response = {
+        Tag: string
+        Items: GetFeed.FeedItem list
+        NextCursor: string option
+    }
+
+    // Single param carries "tag" or "tag~<cursor>" (GetOne allows only one).
+    let endpoint : GetOne<Response> = GetOne (sprintf "/api/tags/%s/items")
+
+module Events =
+    let endpoint : Get<unit> = Get "/api/events"

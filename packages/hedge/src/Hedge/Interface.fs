@@ -30,6 +30,12 @@ type SoftDelete = SoftDelete of int
 /// referenced model for documentation; value is the ID string.
 type ForeignKey<'table> = ForeignKey of string
 
+/// Reference to the shared, app-level identity (the guest/identity layer).
+/// A typed handle that does NOT depend on any module's concrete Identity type,
+/// so a module can reference an identity without coupling to the host's Models.
+/// Gen treats it as a TEXT column with a FK to the shared `identities` table.
+type IdentityRef = IdentityRef of string
+
 /// Rich content (markdown, HTML, structured JSON).
 type RichContent = RichContent of string
 

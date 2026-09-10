@@ -51,8 +51,35 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
 - **Consequence / main technical cost:** a module's server code must not hardcode
   table names — Gen emits per-module **table-name constants** the module's SQL uses,
   so the same blog module works whether its tables are `items` (standalone microblog)
-  or `blog_items` (mounted in justat). This is the resurfaced landmine that D2's
-  earlier two-DB idea dodged; it's the crux of the Phase-1 spike.
+  or `blog_items` (mounted in justat). Delivered by the `Tables` module in generated
+  Db.fs (Phase 1.5, committed).
+
+## Identity reference — wrap, don't unwrap (locked)
+
+The blog `ItemComment` references the shared identity, but must NOT depend on the
+concrete `Identity` type (that would couple `BlogModels` → the host's Models).
+Solution: a framework wrapper **`IdentityRef`** in `Hedge.Interface` (alongside
+`PrimaryKey`/`ForeignKey`/`Unique`). `ItemComment.IdentityId : IdentityRef`.
+- Typed (not a naked string), decoupled (only depends on `Hedge`), Gen-aware:
+  Gen classifies `IdentityRef` → a `TEXT` column with a FK to the shared
+  `identities` table (by convention — identity is a framework-blessed shared
+  concept). Later, a natural hook for an admin identity-picker.
+
+## Module wiring — file-links now, split-generation later (locked)
+
+A module's parts relate differently to *generated* code, so wiring is a mix:
+- **Models** (Domain/Api/Ws) → a compiled **assembly** (distinct name, e.g.
+  `BlogModels`) so Gen can `Assembly.Load` + reflect → **ProjectReference**.
+- **Server** (Handlers/Sql) → references the *consumer's* generated `Db`/`Tables`
+  + shared `Server.Identity`, so it must co-compile with them → **F# file-links**
+  (`<Compile Include="../../packages/modules/blog/Server/Handlers.fs" />`, exactly
+  how shared `RichText.fs` is wired). NOT filesystem symlinks (npm-hostile), NOT a
+  standalone library (can't see code generated into its consumer).
+- **Client** → compiles into the `/blog` bundle (component + standalone entry).
+- **Later refinement — split generation:** generate prefix-agnostic bits
+  (row parsers, codecs, typed API client fns) *per-module* and only prefix-dependent
+  bits (`Tables`, `schema`, `Routes`, admin registry) *per-site*; then modules become
+  clean ProjectReference libraries. Companion to the articles-extraction/shell work.
 
 ## The reusable machinery (the "modules build")
 
