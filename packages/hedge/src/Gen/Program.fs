@@ -52,8 +52,23 @@ let isForeignKey (f: FieldSchema) =
 // Reflection-based type discovery (Step 3)
 // ============================================================
 
-let private modelsAssembly =
-    lazy (Assembly.Load("Models"))
+/// A module composed into the site: its Models assembly, and the prefixes that
+/// keep it from colliding with other modules. Root module = all-empty + the
+/// app's own Server.Handlers (byte-identical to the pre-modules single-app path).
+type GenModule = {
+    Assembly: string
+    TablePrefix: string   // e.g. "blog_" ; "" for the root module
+    RoutePrefix: string   // e.g. "/api/blog" ; "" for the root module
+    HandlerNs: string     // e.g. "Server.Handlers" | "Blog.Handlers"
+}
+
+/// Insert a module's route prefix after the shared "/api" segment:
+/// "/api/feed" + "/api/blog" -> "/api/blog/feed". "" (the WS/unit endpoint) and
+/// the root module (prefix "") are left untouched.
+let applyRoutePrefix (routePrefix: string) (path: string) : string =
+    if routePrefix = "" || path = "" then path
+    elif path.StartsWith("/api") then routePrefix + path.Substring(4)
+    else routePrefix + path
 
 let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
     if propType.IsGenericType then
@@ -92,8 +107,7 @@ let getFieldSchemas (recordType: Type) : FieldSchema list =
     |> Array.toList
 
 /// Discover all record types in Models.Domain module
-let discoverDomainTypes () : Type list =
-    let assembly = modelsAssembly.Value
+let discoverDomainTypes (assembly: Assembly) : Type list =
     assembly.GetTypes()
     |> Array.filter (fun t ->
         t.FullName.StartsWith("Models.Domain+")
@@ -101,8 +115,7 @@ let discoverDomainTypes () : Type list =
     |> Array.toList
 
 /// Discover all WS event types in Models.Ws module
-let discoverWsTypes () : Type list =
-    let assembly = modelsAssembly.Value
+let discoverWsTypes (assembly: Assembly) : Type list =
     assembly.GetTypes()
     |> Array.filter (fun t ->
         t.FullName.StartsWith("Models.Ws+")
@@ -119,13 +132,13 @@ type ParsedEndpoint = {
     ModuleName: string
     Method: EndpointMethod
     Path: string
+    HandlerNs: string
     RequestType: Type option
     ResponseType: Type option
     ViewTypes: Type list
 }
 
-let discoverApiModules () : ParsedEndpoint list =
-    let assembly = modelsAssembly.Value
+let discoverApiModules (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
     // Api modules are nested types under Models.Api
     let apiType =
         assembly.GetTypes()
@@ -184,7 +197,8 @@ let discoverApiModules () : ParsedEndpoint list =
                 Some {
                     ModuleName = moduleType.Name
                     Method = method
-                    Path = path
+                    Path = applyRoutePrefix routePrefix path
+                    HandlerNs = handlerNs
                     RequestType = requestType
                     ResponseType = responseType
                     ViewTypes = viewTypes
@@ -233,9 +247,9 @@ type TableMeta = {
     Delete: string
 }
 
-let computeMeta (parsed: ParsedType) : TableMeta =
+let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
     let displayName = parsed.Name
-    let tableName = parsed.Table |> Option.defaultValue (pluralize (toSnakeCase displayName))
+    let tableName = tablePrefix + (parsed.Table |> Option.defaultValue (pluralize (toSnakeCase displayName)))
     let schema : TypeSchema = { Name = displayName; Fields = parsed.Fields; Attrs = [] }
 
     let dbFields = schema.Fields |> List.filter (not << isSkippedField)
@@ -913,7 +927,7 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
     for ep in getExacts do
         let handlerName = toCamelCase ep.ModuleName
         emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
-        emit (sprintf "        Some (Server.Handlers.%s env)" handlerName)
+        emit (sprintf "        Some (%s.%s env)" ep.HandlerNs handlerName)
         emit ""
 
     // GetOne routes — collected into a single GET path branch
@@ -925,7 +939,7 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
             // Convert :id back to a match pattern
             let pattern = ep.Path.Replace(":id", ":id")
             emit (sprintf "        match matchPath \"%s\" path with" pattern)
-            emit (sprintf "        | Some (WithParam (_, id)) -> Some (Server.Handlers.%s id env)" handlerName)
+            emit (sprintf "        | Some (WithParam (_, id)) -> Some (%s.%s id env)" ep.HandlerNs handlerName)
             emit "        | _ ->"
         emit "        None"
         emit ""
@@ -941,7 +955,7 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
         emit (sprintf "            match Decode.fromString Decode.%s bodyText with" decoderName)
         emit "            | Error err -> return badRequest err"
         emit "            | Ok req ->"
-        emit (sprintf "                return! Server.Handlers.%s req request env ctx" handlerName)
+        emit (sprintf "                return! %s.%s req request env ctx" ep.HandlerNs handlerName)
         emit "        })"
         emit ""
 
@@ -1283,14 +1297,28 @@ let writeIfChanged (path: string) (content: string) =
 
 [<EntryPoint>]
 let main (argv: string array) =
-    // Step 3: Discover types via reflection
-    let domainTypes = discoverDomainTypes ()
-    let endpoints = discoverApiModules ()
-    let wsTypes = discoverWsTypes ()
+    // The site's composition. Single root module = byte-identical to the
+    // pre-modules single-app path. (Spike: hardcoded; a site manifest lands in
+    // Phase 3.)
+    let modules = [
+        { Assembly = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers" }
+    ]
 
-    // Step 4: Build table metadata from reflected types
-    let parsed = domainTypes |> List.map reflectToParsedType
-    let metas = parsed |> List.map computeMeta
+    // Step 3+4: reflect each module over its own assembly, baking in its prefixes,
+    // then concatenate into the combined lists the generators consume.
+    let perModule =
+        modules |> List.map (fun m ->
+            let asm = Assembly.Load(m.Assembly)
+            let domainTypes = discoverDomainTypes asm
+            let wsTypes = discoverWsTypes asm
+            let endpoints = discoverApiModules asm m.RoutePrefix m.HandlerNs
+            let metas = domainTypes |> List.map reflectToParsedType |> List.map (computeMeta m.TablePrefix)
+            domainTypes, wsTypes, endpoints, metas)
+
+    let domainTypes = perModule |> List.collect (fun (d, _, _, _) -> d)
+    let wsTypes = perModule |> List.collect (fun (_, w, _, _) -> w)
+    let endpoints = perModule |> List.collect (fun (_, _, e, _) -> e)
+    let metas = perModule |> List.collect (fun (_, _, _, m) -> m)
 
     // Generate existing files (Db, AdminGen, schema.sql)
     let admin = generateAdminFs metas
