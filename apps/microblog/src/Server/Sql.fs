@@ -171,5 +171,6 @@ let itemsByTagAfter = """
 let insertTag =
     "INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?, ?, ?)"
 
+// Bind: [linkId, itemId, tagName]. linkId is the surrogate PK (see ItemTag).
 let linkItemTag =
-    "INSERT INTO item_tags (item_id, tag_id) SELECT ?, id FROM tags WHERE name = ?"
+    "INSERT INTO item_tags (id, item_id, tag_id) SELECT ?, ?, id FROM tags WHERE name = ?"

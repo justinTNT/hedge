@@ -58,6 +58,7 @@ CREATE TABLE tags (
 );
 
 CREATE TABLE item_tags (
+    id TEXT PRIMARY KEY,
     item_id TEXT NOT NULL,
     tag_id TEXT NOT NULL,
     deleted_at INTEGER,

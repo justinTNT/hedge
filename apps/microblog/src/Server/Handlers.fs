@@ -567,7 +567,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
                 let linkTag =
                     bind
                         (env.DB.prepare Sql.linkItemTag)
-                        [| box ins.Id; box tagName |]
+                        [| box (newId ()); box ins.Id; box tagName |]
                 [ insertTag; linkTag ]
             )
 

@@ -282,6 +282,7 @@ let deleteTag (id: string) (db: D1Database) : D1PreparedStatement =
 // ============================================================
 
 type ItemTagRow = {
+    Id: string
     ItemId: string
     TagId: string
     DeletedAt: int option
@@ -293,31 +294,33 @@ type ItemTagCreate = {
 }
 
 let parseItemTagRow (row: obj) : ItemTagRow =
-    { ItemId = rowStr row "item_id"
+    { Id = rowStr row "id"
+      ItemId = rowStr row "item_id"
       TagId = rowStr row "tag_id"
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectItemTags (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags LIMIT 100")
+    db.prepare("SELECT id, item_id, tag_id, deleted_at FROM item_tags LIMIT 100")
 
 let selectItemTag (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM item_tags WHERE id = ?")) [| box id |]
 
 let insertItemTag (db: D1Database) (create: ItemTagCreate) =
+    let id = newId()
     let stmt =
-        bind (db.prepare("INSERT INTO item_tags (item_id, tag_id) VALUES (?, ?)"))
-             [| box create.ItemId; box create.TagId |]
-    {| Stmt = stmt |}
+        bind (db.prepare("INSERT INTO item_tags (id, item_id, tag_id) VALUES (?, ?, ?)"))
+             [| box id; box create.ItemId; box create.TagId |]
+    {| Stmt = stmt; Id = id |}
 
 let updateItemTag (id: string) (create: ItemTagCreate) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("UPDATE item_tags SET item_id = ?, tag_id = ? WHERE item_id = ?"))
+    bind (db.prepare("UPDATE item_tags SET item_id = ?, tag_id = ? WHERE id = ?"))
          [| box create.ItemId; box create.TagId; box id |]
 
 let deleteItemTag (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM item_tags WHERE item_id = ?")) [| box id |]
+    bind (db.prepare("DELETE FROM item_tags WHERE id = ?")) [| box id |]
 
 let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ? LIMIT 100")) [| box itemId |]
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ? LIMIT 100")) [| box itemId |]
 
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT item_id, tag_id, deleted_at FROM item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]

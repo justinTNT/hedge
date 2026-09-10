@@ -125,17 +125,18 @@ let itemTag : AdminTable =
       Table = "item_tags"
       Schema =
         schema "ItemTag" [
+            fieldWith "Id" FString [PrimaryKey]
             fieldWith "ItemId" FString [ForeignKey "MicroblogItem"]
             fieldWith "TagId" FString [ForeignKey "Tag"]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT item_id, tag_id, deleted_at FROM item_tags LIMIT 100"
-      SelectOne = "SELECT item_id, tag_id, deleted_at FROM item_tags WHERE item_id = ?"
-      Insert = ""
+      SelectAll = "SELECT id, item_id, tag_id, deleted_at FROM item_tags LIMIT 100"
+      SelectOne = "SELECT id, item_id, tag_id, deleted_at FROM item_tags WHERE id = ?"
+      Insert = "INSERT INTO item_tags (id, item_id, tag_id) VALUES (?, ?, ?)"
       HasCreateTs = false
       HasUpdateTs = false
-      Update = "UPDATE item_tags SET item_id = ?, tag_id = ? WHERE item_id = ?"
-      Delete = "DELETE FROM item_tags WHERE item_id = ?"
+      Update = "UPDATE item_tags SET item_id = ?, tag_id = ? WHERE id = ?"
+      Delete = "DELETE FROM item_tags WHERE id = ?"
       MutableFields = ["ItemId"; "TagId"] }
 
 let tables : AdminTable list = [

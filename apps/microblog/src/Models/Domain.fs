@@ -61,6 +61,10 @@ type Tag = {
 }
 
 type ItemTag = {
+    // Surrogate key so the generic (single-id) admin can create/edit links —
+    // the only way to tag an existing item. Reads join on item_id/tag_id, never
+    // on this; pre-migration rows keep a NULL id and stay readable.
+    Id: PrimaryKey<string>
     ItemId: ForeignKey<MicroblogItem>
     TagId: ForeignKey<Tag>
     DeletedAt: SoftDelete option
