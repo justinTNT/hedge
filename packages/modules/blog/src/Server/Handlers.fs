@@ -250,6 +250,12 @@ let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
 let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
     (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
+        // Item creation (authoring posts) is owner-only — require the admin key,
+        // same check as the admin CRUD. Comments (SubmitComment) stay public.
+        let adminKey = getHeader request "X-Admin-Key"
+        if not (adminKey <> "" && adminKey = env.ADMIN_KEY) then
+            return unauthorized ()
+        else
         match Validate.blogSubmitItemReq req with
         | Error errors ->
             return validationErrorResponse errors

@@ -98,6 +98,11 @@ async function handleApiRequest({ method, path, body }) {
       method,
       headers: { 'Content-Type': 'application/json' },
     }
+    // Authoring (POST /api/blog/item) is owner-only server-side, so send the
+    // configured admin key. Public reads/comments ignore it.
+    if (site && site.key) {
+      opts.headers['X-Admin-Key'] = site.key
+    }
     if (body !== undefined) {
       opts.body = JSON.stringify(body)
     }
