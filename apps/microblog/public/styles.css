@@ -147,6 +147,14 @@ body.tenant-idealist .comment-author { color: #ccc; }
 body.tenant-idealist .comment-body { color: #999; }
 
 /* ============================================================
+   Per-tenant theme: nt-ai-dc.info (body gets `tenant-ntaidc` at build time).
+   Warm cream ground for the NT AI Centres blog (companion to the Project
+   Ares info page).
+   ============================================================ */
+body.tenant-ntaidc { background: #efe7d8; }
+body.tenant-ntaidc .feed-day { background: #efe7d8; }
+
+/* ============================================================
    Per-tenant theme: mtmu.se (body gets `tenant-mtmuse` at build time).
    Revives the old MT Muse look: clean white ground, geometric
    (Kabel-substitute Jost) body, and dramatic slate-blue League Gothic
