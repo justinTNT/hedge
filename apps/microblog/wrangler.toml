@@ -91,6 +91,35 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
+# -- NT AI Centres (worker "ntaidc") — new blog, populate on workers.dev, then
+#    cut over to nt-ai-dc.info once the content is ready (add a route block then). --
+[env.ntaidc]
+name = "ntaidc"
+workers_dev = true
+
+[env.ntaidc.vars]
+ENVIRONMENT = "production"
+
+[[env.ntaidc.d1_databases]]
+binding = "DB"
+database_name = "ntaidc-db"
+database_id = "edc55e71-225f-4116-a488-24f71ede7ed2"
+
+[[env.ntaidc.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "ntaidc-blobs"
+
+[env.ntaidc.durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[env.ntaidc.assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
 # -- id-ea.li/st (worker "idealist"), served under a sub-path --
 [env.idealist]
 name = "idealist"
