@@ -8,8 +8,8 @@ import { promise } from "./fable_modules/Fable.Promise.3.2.0/PromiseImpl.fs.js";
 import { map as map_1, item } from "./fable_modules/fable-library-js.4.29.0/Array.js";
 import { trimEnd, isNullOrEmpty } from "./fable_modules/fable-library-js.4.29.0/String.js";
 import { max } from "./fable_modules/fable-library-js.4.29.0/Double.js";
-import { SubmitItem_Request } from "./src/Models/Api.js";
-import { submitItem } from "./src/Client/generated/ClientGen.js";
+import { SubmitItem_Request } from "./packages/modules/blog/src/Models/Api.js";
+import { blogSubmitItem } from "./src/Client/generated/ClientGen.js";
 import { parse } from "./fable_modules/fable-library-js.4.29.0/Int32.js";
 
 export let extractEditor = createAtom(undefined);
@@ -421,7 +421,7 @@ export function submit() {
                 const btn = elAs("submitBtn");
                 btn.disabled = true;
                 setStatus("Submitting…", "");
-                return submitItem(req).then((_arg) => {
+                return blogSubmitItem(req).then((_arg) => {
                     const result = _arg;
                     btn.disabled = false;
                     if (result.tag === 1) {

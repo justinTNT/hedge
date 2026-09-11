@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../packages/hedge-extension/HedgeExtension.fsproj" />
     <ProjectReference Include="../src/Models/Models.fsproj" />
+    <ProjectReference Include="../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

@@ -92,32 +92,35 @@ export function handleBlobUpload(request, blobs) {
             };
             return Promise.resolve(new Response("{\"error\":\"Missing file field\"}", options));
         }
-        else if (!FSharpSet__Contains(allowedImageTypes, file.type)) {
-            const options_1 = {
-                status: 400,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                },
-            };
-            return Promise.resolve(new Response("{\"error\":\"Unsupported image type\"}", options_1));
-        }
         else {
-            const name = file.name;
-            let key;
-            const arg = crypto.randomUUID();
-            key = toText(printf("%s/%s"))(arg)(name);
-            return blobs.put(key, file).then((_arg_1) => {
-                const body = toText(printf("{\"url\":\"/blobs/%s\"}"))(key);
-                const options_2 = {
-                    status: 200,
+            const mime = file.type;
+            if (!FSharpSet__Contains(allowedImageTypes, mime)) {
+                const options_1 = {
+                    status: 400,
                     headers: {
                         "Content-Type": "application/json",
                         "Access-Control-Allow-Origin": "*",
                     },
                 };
-                return Promise.resolve(new Response(body, options_2));
-            });
+                return Promise.resolve(new Response("{\"error\":\"Unsupported image type\"}", options_1));
+            }
+            else {
+                const name = (file.name).replace(/[^A-Za-z0-9._-]/g, '-');
+                let key;
+                const arg = crypto.randomUUID();
+                key = toText(printf("%s/%s"))(arg)(name);
+                return (blobs.put(key, file, { httpMetadata: { contentType: mime } })).then((_arg_1) => {
+                    const body = toText(printf("{\"url\":\"/blobs/%s\"}"))(key);
+                    const options_2 = {
+                        status: 200,
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Access-Control-Allow-Origin": "*",
+                        },
+                    };
+                    return Promise.resolve(new Response(body, options_2));
+                });
+            }
         }
     }))));
 }
@@ -131,7 +134,7 @@ export function handleBlobServe(key, blobs) {
             const options_1 = {
                 status: 200,
                 headers: {
-                    "Content-Type": (contentType == null) ? "application/octet-stream" : contentType,
+                    "Content-Type": (contentType == null) ? ((function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml'})[e]||'application/octet-stream';})(key)) : contentType,
                     "Cache-Control": "public, max-age=31536000, immutable",
                 },
             };
@@ -148,5 +151,15 @@ export function handleBlobServe(key, blobs) {
             return Promise.resolve(new Response("{\"error\":\"Not found\"}", options));
         }
     }))));
+}
+
+/**
+ * Sign a message with HMAC-SHA256, returning a hex string.
+ */
+export function hmacSha256(secret, message) {
+    return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
+        const keyData = new TextEncoder().encode(secret);
+        return (crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])).then((_arg) => ((crypto.subtle.sign('HMAC', _arg, (new TextEncoder().encode(message)))).then((_arg_1) => (Promise.resolve(Array.from(new Uint8Array(_arg_1)).map(b => b.toString(16).padStart(2, '0')).join(''))))));
+    }));
 }
 

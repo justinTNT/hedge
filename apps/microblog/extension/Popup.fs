@@ -6,7 +6,7 @@ open Browser.Dom
 open Browser.Types
 open HedgeExtension
 open HedgeExtension.TipTap
-open Models.Api
+open Blog.Api
 open Client.ClientGen
 open Codecs
 
@@ -362,7 +362,7 @@ let submit () : JS.Promise<unit> =
         btn.disabled <- true
         setStatus "Submitting…" ""
 
-        let! result = submitItem req
+        let! result = blogSubmitItem req
         btn.disabled <- false
 
         match result with

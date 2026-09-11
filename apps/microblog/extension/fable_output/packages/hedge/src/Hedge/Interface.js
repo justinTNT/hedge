@@ -76,6 +76,21 @@ export function ForeignKey$1_$reflection(gen0) {
     return union_type("Hedge.Interface.ForeignKey`1", [gen0], ForeignKey$1, () => [[["Item", string_type]]]);
 }
 
+export class IdentityRef extends Union {
+    constructor(Item) {
+        super();
+        this.tag = 0;
+        this.fields = [Item];
+    }
+    cases() {
+        return ["IdentityRef"];
+    }
+}
+
+export function IdentityRef_$reflection() {
+    return union_type("Hedge.Interface.IdentityRef", [], IdentityRef, () => [[["Item", string_type]]]);
+}
+
 export class RichContent extends Union {
     constructor(Item) {
         super();
