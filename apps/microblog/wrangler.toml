@@ -97,7 +97,10 @@ not_found_handling = "single-page-application"
 name = "ntaidc"
 workers_dev = true
 routes = [
-    { pattern = "nt-ai-dc.info", custom_domain = true }
+    { pattern = "nt-ai-dc.info", custom_domain = true },
+    # www: a plain route (not custom_domain) so it rides the existing proxied DNS
+    # instead of trying to create a conflicting record.
+    { pattern = "www.nt-ai-dc.info/*", zone_name = "nt-ai-dc.info" }
 ]
 
 [env.ntaidc.vars]
