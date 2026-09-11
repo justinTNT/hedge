@@ -180,6 +180,16 @@ the site's modules and marks the **primary** (its client mounts at `OnPath "/"` 
 the naked URL); primary is decoupled from prefixing. `guests`/`identities` stay
 **app-level and unprefixed** (shared identity, not a module — D3).
 
+**"No root module" resolved: the shared identity IS the one unprefixed base.** Every
+site = `[identity (unprefixed) + content module(s) (prefixed)]`. This is structurally
+identical to justat *today* — justat is `[Models(identity+articles, unprefixed), blog]`;
+the convergence just splits `Models` into `identity` (Guest/Identity, stays unprefixed)
++ a prefixed `articles` content module. So darwin.news = `[identity, blog]` (blog
+primary), ndct = `[identity, articles]`, justat = `[identity, articles, blog]`. The
+generator's unprefixed path is **kept** — it's exactly what serves identity — so "no
+root module" means no unprefixed *content*, not a generator rip-out. (Identity lives
+in each app's own Models for now; deduping into a shared package is a later refinement.)
+
 **Module names/tables (locked).**
 - `articles` — base tables renamed for parity + to avoid `articles_articles`:
   `Article` → `posts`, `ArticleComment` → `comments` ⇒ **`articles_posts`**,
