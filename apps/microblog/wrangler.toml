@@ -91,11 +91,14 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# -- NT AI Centres (worker "ntaidc") — new blog, populate on workers.dev, then
-#    cut over to nt-ai-dc.info once the content is ready (add a route block then). --
+# -- NT AI Centres (worker "ntaidc") — the blog at nt-ai-dc.info; the old single
+#    page (Project Ares) lives on as ares.nt-ai-dc.info (a Pages custom domain). --
 [env.ntaidc]
 name = "ntaidc"
 workers_dev = true
+routes = [
+    { pattern = "nt-ai-dc.info", custom_domain = true }
+]
 
 [env.ntaidc.vars]
 ENVIRONMENT = "production"
