@@ -349,6 +349,25 @@ let navWithSession (model: Model) dispatch =
                   ]
                 ]
             ]
+            // Prominent link to the tenant's external info/companion page, when set
+            // (window.SITE_INFO_URL). A full navigation (href), not SPA routing.
+            if Hedge.Tenant.config.InfoUrl <> "" then
+                Html.a [
+                    prop.className "nav-info"
+                    prop.href Hedge.Tenant.config.InfoUrl
+                    prop.style [
+                        style.backgroundColor "#b8352c"
+                        style.color "#ffffff"
+                        style.paddingTop (length.em 0.4)
+                        style.paddingBottom (length.em 0.4)
+                        style.paddingLeft (length.em 0.95)
+                        style.paddingRight (length.em 0.95)
+                        style.borderRadius (length.px 6)
+                        style.fontWeight.bold
+                        style.textDecoration.none
+                    ]
+                    prop.text (if Hedge.Tenant.config.InfoLabel <> "" then Hedge.Tenant.config.InfoLabel else "Info")
+                ]
             identityView model dispatch
         ]
     ]

@@ -14,6 +14,10 @@ const siteLogo = process.env.SITE_LOGO || '/public/darwinnews.png';
 const siteSlug = process.env.SITE_SLUG || '';
 // Per-tenant feature flags (comma list, e.g. "bigText") — read via Hedge.Tenant.
 const siteFeatures = process.env.SITE_FEATURES || '';
+// Optional external info/companion page (e.g. a campaign page on Pages). When set,
+// the client shows a prominent link to it (see Blog.Client.Shared).
+const siteInfoUrl = process.env.SITE_INFO_URL || '';
+const siteInfoLabel = process.env.SITE_INFO_LABEL || '';
 
 /// Resolves the __BASE__ / __SITE_TITLE__ placeholders in the HTML entry
 /// points and hands the client its runtime config on window.
@@ -27,6 +31,8 @@ function siteConfig() {
         `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
         `window.SITE_SLUG=${JSON.stringify(siteSlug)};` +
         `window.SITE_TITLE=${JSON.stringify(siteTitle)};` +
+        `window.SITE_INFO_URL=${JSON.stringify(siteInfoUrl)};` +
+        `window.SITE_INFO_LABEL=${JSON.stringify(siteInfoLabel)};` +
         `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};</script>`;
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)

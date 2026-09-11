@@ -12,6 +12,10 @@ type TenantConfig = {
     Title: string
     Logo: string
     Features: Set<string>
+    /// Optional external info/companion page (e.g. a campaign page on Pages). When
+    /// set, the client shows a prominent link to it. Empty = no link.
+    InfoUrl: string
+    InfoLabel: string
 }
 
 [<Emit("(window.SITE_SLUG || '')")>]
@@ -22,11 +26,17 @@ let private title : string = jsNative
 let private logo : string = jsNative
 [<Emit("(window.SITE_FEATURES || '')")>]
 let private featuresRaw : string = jsNative
+[<Emit("(window.SITE_INFO_URL || '')")>]
+let private infoUrl : string = jsNative
+[<Emit("(window.SITE_INFO_LABEL || '')")>]
+let private infoLabel : string = jsNative
 
 let config : TenantConfig =
     { Slug = slug
       Title = title
       Logo = logo
+      InfoUrl = infoUrl
+      InfoLabel = infoLabel
       Features =
         featuresRaw.Split(',')
         |> Array.map (fun s -> s.Trim())
