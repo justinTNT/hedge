@@ -130,8 +130,8 @@ let update msg model =
                 | Some rt -> rt.ParentId
                 | None -> None
             let req : SubmitComment.Request =
-                { ItemId = response.Item.Id
-                  ParentId = parentId
+                { ItemId = ForeignKey response.Item.Id
+                  ParentId = parentId |> Option.map ForeignKey
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,

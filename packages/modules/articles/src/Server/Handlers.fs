@@ -127,6 +127,9 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let identityId = newId ()
         let now = epochNow ()
         let author = req.Author |> Option.defaultValue "Anonymous"
+        // Unwrap the typed request ids to plain strings for storage.
+        let (ForeignKey postId) = req.PostId
+        let parentId = req.ParentId |> Option.map (fun (ForeignKey p) -> p)
 
         let! _ =
             env.DB.batch([|
@@ -140,26 +143,26 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let insertComment =
             bind
                 (env.DB.prepare Articles.Sql.insertComment)
-                [| box commentId; box req.PostId; box activeIdentityId; optToDb req.ParentId; box author; box req.Content; box 0; box now |]
+                [| box commentId; box postId; box activeIdentityId; optToDb parentId; box author; box req.Content; box 0; box now |]
 
         let! _ = env.DB.batch([| insertComment |])
 
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
-              PostId = req.PostId
+              PostId = postId
               IdentityId = activeIdentityId
-              ParentId = req.ParentId
+              ParentId = parentId
               Author = author
               Picture = activePicture
               Content = RichContent req.Content
               Timestamp = now }
 
         let event : Articles.Ws.NewCommentEvent =
-            { Id = commentId; PostId = req.PostId; IdentityId = activeIdentityId
-              ParentId = req.ParentId; Author = author; Picture = activePicture
+            { Id = commentId; PostId = postId; IdentityId = activeIdentityId
+              ParentId = parentId; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
-        Hedge.Events.broadcast env.EVENTS ctx req.PostId "NewComment" (Codecs.Encode.articlesNewCommentEvent event)
+        Hedge.Events.broadcast env.EVENTS ctx postId "NewComment" (Codecs.Encode.articlesNewCommentEvent event)
 
         let body =
             Encode.object [ "comment", Encode.articlesCommentItem newComment ] |> Encode.toString 0

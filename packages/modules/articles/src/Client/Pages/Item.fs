@@ -100,8 +100,8 @@ let update msg model =
                 | Some rt -> rt.ParentId
                 | None -> None
             let req : SubmitComment.Request =
-                { PostId = response.Post.Id
-                  ParentId = parentId
+                { PostId = ForeignKey response.Post.Id
+                  ParentId = parentId |> Option.map ForeignKey
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,

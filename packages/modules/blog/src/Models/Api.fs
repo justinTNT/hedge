@@ -38,8 +38,10 @@ module SubmitComment =
     }
 
     type Request = {
-        ItemId: string
-        ParentId: string option
+        // Typed ids: the client can't transpose the item vs the parent comment
+        // (distinct phantom types). Serialize as bare strings (byte-identical wire).
+        ItemId: ForeignKey<Blog.Domain.Item>
+        ParentId: ForeignKey<Blog.Domain.ItemComment> option
         Content: string
         Author: string option
     }

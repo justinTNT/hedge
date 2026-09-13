@@ -155,6 +155,9 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let identityId = newId ()
         let now = epochNow ()
         let author = req.Author |> Option.defaultValue "Anonymous"
+        // Unwrap the typed request ids to plain strings for storage.
+        let (ForeignKey itemId) = req.ItemId
+        let parentId = req.ParentId |> Option.map (fun (ForeignKey p) -> p)
 
         let! _ =
             env.DB.batch([|
@@ -168,26 +171,26 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let insertComment =
             bind
                 (env.DB.prepare Blog.Sql.insertComment)
-                [| box commentId; box req.ItemId; box activeIdentityId; optToDb req.ParentId; box author; box req.Content; box 0; box now |]
+                [| box commentId; box itemId; box activeIdentityId; optToDb parentId; box author; box req.Content; box 0; box now |]
 
         let! _ = env.DB.batch([| insertComment |])
 
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
-              ItemId = req.ItemId
+              ItemId = itemId
               IdentityId = activeIdentityId
-              ParentId = req.ParentId
+              ParentId = parentId
               Author = author
               Picture = activePicture
               Content = RichContent req.Content
               Timestamp = now }
 
         let event : Blog.Ws.NewCommentEvent =
-            { Id = commentId; ItemId = req.ItemId; IdentityId = activeIdentityId
-              ParentId = req.ParentId; Author = author; Picture = activePicture
+            { Id = commentId; ItemId = itemId; IdentityId = activeIdentityId
+              ParentId = parentId; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
-        Hedge.Events.broadcast env.EVENTS ctx req.ItemId "NewComment" (Codecs.Encode.blogNewCommentEvent event)
+        Hedge.Events.broadcast env.EVENTS ctx itemId "NewComment" (Codecs.Encode.blogNewCommentEvent event)
 
         let body =
             Encode.object [
