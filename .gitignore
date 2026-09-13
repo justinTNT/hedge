@@ -44,7 +44,8 @@ npm-debug.log*
 # rich-text lib is copied from packages/rich-text at build time
 apps/*/lib/rich-text/
 
-# guest-session.js is copied from packages/hedge/lib at build time (prep:lib).
-# music keeps its own slimmer, divergent copy (still tracked).
-apps/microblog/lib/guest-session.js
-apps/articles/lib/guest-session.js
+# guest-session.js is copied from packages/hedge/lib at build time (prep:lib);
+# generated per app, so ignore it everywhere — except music, which carries its
+# own slimmer, divergent copy as tracked source.
+apps/*/lib/guest-session.js
+!apps/music/lib/guest-session.js

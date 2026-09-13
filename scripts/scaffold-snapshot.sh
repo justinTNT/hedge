@@ -12,6 +12,7 @@ cd "$app"
 find . -type f \
   ! -path '*/bin/*' ! -path '*/obj/*' ! -path './dist/*' ! -path './_site/*' \
   ! -path './node_modules/*' ! -path './src/*/generated/*' ! -path './lib/rich-text/*' \
+  ! -path './lib/guest-session.js' \
   ! -name 'schema.sql' ! -name 'package-lock.json' \
   | LC_ALL=C sort | while read -r f; do
     printf '=== %s ===\n' "${f#./}"

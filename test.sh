@@ -48,7 +48,19 @@ cd "$ROOT/apps/_test-app"
 dotnet run --project src/Gen/Gen.fsproj
 dotnet build src/Server/Server.fsproj
 dotnet build src/Client/Client.fsproj
-echo "--- Scaffold OK ---"
+
+# Production build: the snapshot only locks template TEXT, so a scaffold that emits
+# an incoherent prod build (missing admin/site step, unresolvable rich-text deps,
+# no vite outDir) still passed. Actually run the full build and assert it assembled
+# a shippable _site (index + admin + bundled assets + copied runtime files).
+npm install
+npm run build
+for f in _site/index.html _site/admin.html _site/lib/guest-session.js _site/admin.css _site/public/styles.css; do
+    [ -f "$ROOT/apps/_test-app/$f" ] || { echo "!!! FAIL: scaffold prod build missing $f"; exit 1; }
+done
+ls "$ROOT/apps/_test-app/_site/assets"/main-*.js  >/dev/null 2>&1 || { echo "!!! FAIL: no client bundle in _site/assets"; exit 1; }
+ls "$ROOT/apps/_test-app/_site/assets"/admin-*.js >/dev/null 2>&1 || { echo "!!! FAIL: no admin bundle in _site/assets"; exit 1; }
+echo "--- Scaffold OK (prod build assembles a shippable _site) ---"
 
 echo ""
 echo "=== Cleanup ==="
