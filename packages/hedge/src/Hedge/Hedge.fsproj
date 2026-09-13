@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <!-- Incomplete pattern matches are a build error here: a value added to a DU like
+         Schema.FieldAttr must be handled at every match site (SchemaCodec, Gen, admin).
+         An unhandled case is exactly the EditableDate admin-schema regression, which
+         shipped as a mere warning. Fail the build instead. -->
+    <WarningsAsErrors>$(WarningsAsErrors);FS0025</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Interface.fs" />

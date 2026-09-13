@@ -71,6 +71,26 @@ cd "$ROOT/apps/articles"
 echo "--- Articles SQL OK ---"
 
 echo ""
+echo "=== Step 1e: Admin schema JSON boundary (SchemaCodec round-trip) ==="
+# The admin /api/admin/types handler encodes every registered schema via
+# SchemaCodec.encodeTypeSchema and the client decodes it. A DU case (e.g. a FieldAttr)
+# added without a SchemaCodec case throws at that boundary — the EditableDate
+# regression. FS0025-as-error catches the encode gap at build; this exercises the
+# actual Fable/JS runtime (real Thoth) end-to-end, catching decode gaps too.
+cd "$ROOT"
+RT_OUT="$ROOT/test/SchemaRoundtrip/dist"
+rm -rf "$RT_OUT"
+dotnet fable test/SchemaRoundtrip/SchemaRoundtrip.fsproj -o "$RT_OUT" >/dev/null 2>&1
+if ! node "$RT_OUT/Program.js" | grep -q "schema-roundtrip:.*OK"; then
+    echo "!!! FAIL: SchemaCodec round-trip failed at the admin schema JSON boundary."
+    node "$RT_OUT/Program.js" || true
+    rm -rf "$RT_OUT"
+    exit 1
+fi
+rm -rf "$RT_OUT"
+echo "--- SchemaCodec round-trip OK ---"
+
+echo ""
 echo "=== Step 2: Scaffold pipeline ==="
 cd "$ROOT"
 rm -rf "$ROOT/apps/_test-app"

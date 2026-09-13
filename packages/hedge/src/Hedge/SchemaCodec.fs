@@ -22,6 +22,7 @@ let encodeFieldAttr (fa: FieldAttr) : JsonValue =
     | CreateTimestamp -> Encode.string "createTimestamp"
     | UpdateTimestamp -> Encode.string "updateTimestamp"
     | SoftDelete -> Encode.string "softDelete"
+    | EditableDate -> Encode.string "editableDate"
     | ForeignKey table -> Encode.object [ "foreignKey", Encode.string table ]
     | RichContent -> Encode.string "richContent"
     | Link -> Encode.string "link"
@@ -84,6 +85,7 @@ let decodeFieldAttr : Decoder<FieldAttr> =
             | "createTimestamp" -> Decode.succeed CreateTimestamp
             | "updateTimestamp" -> Decode.succeed UpdateTimestamp
             | "softDelete" -> Decode.succeed SoftDelete
+            | "editableDate" -> Decode.succeed EditableDate
             | "richContent" -> Decode.succeed RichContent
             | "link" -> Decode.succeed Link
             | "unique" -> Decode.succeed Unique
