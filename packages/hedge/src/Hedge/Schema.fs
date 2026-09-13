@@ -138,6 +138,12 @@ let rec private classifyType (t: System.Type) : FieldType * FieldAttr option =
             else "?"
         FString, Some (ForeignKey table)
 
+    // IdentityRef is a FK to the shared `identities` table, decoupled from any concrete
+    // Identity type (Hedge.Interface.IdentityRef). Classify it exactly as the generator
+    // does (ForeignKey "Identity"), so runtime reflection and Gen agree on its meaning.
+    elif fn.Contains("Interface.IdentityRef") then
+        FString, Some (ForeignKey "Identity")
+
     elif fn.Contains("Interface.RichContent") then
         FString, Some RichContent
 

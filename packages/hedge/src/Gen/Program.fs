@@ -673,7 +673,10 @@ let generateCreateTable (m: TableMeta) (metasByName: Map<string, TableMeta>) : s
                 match metasByName |> Map.tryFind typeName with
                 | Some target ->
                     fkConstraints.Add(sprintf "    FOREIGN KEY (%s) REFERENCES %s(%s)" col target.TableName target.PkCol)
-                | None -> ()
+                | None ->
+                    // A ForeignKey/IdentityRef whose target isn't in the composition would
+                    // otherwise silently lose its SQL FK constraint. Fail loudly instead.
+                    failwithf "%s.%s: foreign-key target '%s' is not a domain type in this composition — is its module missing from gen-modules(.<site>).json?" m.DisplayName col typeName
             | _ -> ()
 
     let allLines =
