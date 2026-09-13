@@ -15,11 +15,13 @@ let articlesSubmitComment (req: Articles.Api.SubmitComment.Request) =
     let body = Encode.articlesSubmitCommentReq req |> Encode.toString 0
     postJson "/api/articles/comment" body Decode.articlesSubmitCommentResponse
 
-let articlesGetFeed (id: string) =
-    fetchJson (sprintf "/api/articles/feed/%s" id) Decode.articlesGetFeedResponse
+let articlesGetFeed (query: Articles.Api.GetFeed.Query) =
+    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
+    fetchJson ("/api/articles/feed" + qs) Decode.articlesGetFeedResponse
 
-let blogGetItemsByTag (id: string) =
-    fetchJson (sprintf "/api/blog/tags/%s/items" id) Decode.blogGetItemsByTagResponse
+let blogGetItemsByTag (id: string) (query: Blog.Api.GetItemsByTag.Query) =
+    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
+    fetchJson (sprintf "/api/blog/tags/%s/items%s" id qs) Decode.blogGetItemsByTagResponse
 
 let blogGetTags () =
     fetchJson "/api/blog/tags" Decode.blogGetTagsResponse
@@ -35,8 +37,9 @@ let blogSubmitComment (req: Blog.Api.SubmitComment.Request) =
     let body = Encode.blogSubmitCommentReq req |> Encode.toString 0
     postJson "/api/blog/comment" body Decode.blogSubmitCommentResponse
 
-let blogGetFeed (id: string) =
-    fetchJson (sprintf "/api/blog/feed/%s" id) Decode.blogGetFeedResponse
+let blogGetFeed (query: Blog.Api.GetFeed.Query) =
+    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
+    fetchJson ("/api/blog/feed" + qs) Decode.blogGetFeedResponse
 
 // --- WebSocket Events ---
 

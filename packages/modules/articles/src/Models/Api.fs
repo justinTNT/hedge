@@ -16,14 +16,16 @@ module GetFeed =
         Timestamp: int
     }
 
+    /// Cursor-paginated. Page 1 omits ?cursor; later pages pass the previous
+    /// response's NextCursor token.
+    type Query = { Cursor: string option }
+
     type Response = {
         Items: FeedItem list
         NextCursor: string option
     }
 
-    // Cursor-paginated. Page 1 uses the sentinel "start"; later pages pass the
-    // previous response's NextCursor token.
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/feed/%s")
+    let endpoint : GetQuery<Query, Response> = GetQuery "/api/feed"
 
 module SubmitComment =
     type CommentItem = {
@@ -75,7 +77,7 @@ module GetPost =
     }
 
     // Path param carries the slug (falls back to id in the handler).
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/post/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/post/%s")
 
 module Events =
     let endpoint : Get<unit> = Get "/api/events"

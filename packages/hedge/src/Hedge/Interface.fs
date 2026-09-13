@@ -56,12 +56,23 @@ type TableAttribute(name: string) =
     member _.Name = name
 
 // -- API endpoint types --
+// The GET family is a 2x2 over (path parameter? x typed query?). A query type is a
+// record whose fields Gen turns into ?k=v params (string/int, each optional or
+// required); the client serializes them and the server parses them, so a handler
+// receives a typed query record rather than picking a raw query string apart.
 
-/// GET endpoint. Phantom type carries the response shape.
+/// GET endpoint, static path, no query. Phantom type carries the response shape.
 type Get<'resp> = Get of string
 
-/// GET endpoint with a path parameter. Phantom type carries the response shape.
-type GetOne<'resp> = GetOne of (string -> string)
+/// GET endpoint, static path + typed query parameters.
+type GetQuery<'query, 'resp> = GetQuery of string
+
+/// GET endpoint with one path parameter. Phantom type carries the response shape.
+/// (Formerly `GetOne`.)
+type GetBy<'resp> = GetBy of (string -> string)
+
+/// GET endpoint with one path parameter + typed query parameters.
+type GetByQuery<'query, 'resp> = GetByQuery of (string -> string)
 
 /// POST endpoint. Phantom types carry request and response shapes.
 type Post<'req, 'resp> = Post of string

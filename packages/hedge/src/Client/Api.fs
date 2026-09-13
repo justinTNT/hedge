@@ -18,6 +18,16 @@ open Thoth.Json
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
 
+[<Emit("encodeURIComponent($0)")>]
+let private uriEnc (s: string) : string = jsNative
+
+/// Build a "?k=v&..." query string from key/value pairs (values URL-encoded); an
+/// empty list yields "". Used by generated GetQuery/GetByQuery client functions.
+let buildQuery (pairs: (string * string) list) : string =
+    match pairs with
+    | [] -> ""
+    | _ -> "?" + (pairs |> List.map (fun (k, v) -> k + "=" + uriEnc v) |> String.concat "&")
+
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
         let! response = fetch (basePath + url) []

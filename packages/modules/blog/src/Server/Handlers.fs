@@ -66,13 +66,16 @@ let private toCommentItem (pictureOf: string -> string) (r: ItemCommentRow) : Su
 
 let private pageSize = 6   // small: load less, reload more (feed + tag pages)
 
-let getFeed (cursor: string) (env: Env) : JS.Promise<WorkerResponse> =
+let getFeed (query: GetFeed.Query) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         // Fetch pageSize+1 to know whether a further page exists without a count query.
+        // No cursor => first page; a cursor is the opaque "<ts>_<id>" token from a
+        // prior response's NextCursor.
         let stmt =
-            if cursor = "start" || cursor = "" then
+            match query.Cursor with
+            | None ->
                 bind (env.DB.prepare Blog.Sql.feedFirstPage) [| box (pageSize + 1) |]
-            else
+            | Some cursor ->
                 let sep = cursor.IndexOf('_')
                 let ts = int (cursor.Substring(0, sep))
                 let id = cursor.Substring(sep + 1)
@@ -214,19 +217,17 @@ let getTags (env: Env) : JS.Promise<WorkerResponse> =
 [<Emit("decodeURIComponent($0)")>]
 let private decodeUri (s: string) : string = jsNative
 
-// The single path param carries "tag" (page 1) or "tag~<cursor>" (later pages);
-// the framework's GetOne only allows one param, so tag+cursor share it. The tag
-// arrives percent-encoded (e.g. "lucas%20heights"), so decode it before querying
-// and echoing it back.
-let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
+// The tag is the path param (arrives percent-encoded, e.g. "lucas%20heights", so
+// decode it before querying + echoing back); pagination is the ?cursor query param
+// (page 1 omits it). No more smuggling tag+cursor through one "tag~cursor" segment.
+let getItemsByTag (tagParam: string) (query: GetItemsByTag.Query) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let sep = param.IndexOf('~')
-        let tag = decodeUri (if sep >= 0 then param.Substring(0, sep) else param)
-        let cursor = if sep >= 0 then param.Substring(sep + 1) else ""
+        let tag = decodeUri tagParam
         let stmt =
-            if cursor = "" then
+            match query.Cursor with
+            | None ->
                 bind (env.DB.prepare Blog.Sql.itemsByTag) [| box tag; box (pageSize + 1) |]
-            else
+            | Some cursor ->
                 let ci = cursor.IndexOf('_')
                 let ts = int (cursor.Substring(0, ci))
                 let id = cursor.Substring(ci + 1)

@@ -47,13 +47,16 @@ let private toCommentItem (pictureOf: string -> string) (r: CommentRow) : Submit
 
 let private pageSize = 8   // small: load less, reload more
 
-let getFeed (cursor: string) (env: Env) : JS.Promise<WorkerResponse> =
+let getFeed (query: GetFeed.Query) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         // Fetch pageSize+1 to know whether a further page exists without a count query.
+        // No cursor => first page; a cursor is the opaque "<ts>_<id>" token from a
+        // prior response's NextCursor.
         let stmt =
-            if cursor = "start" || cursor = "" then
+            match query.Cursor with
+            | None ->
                 bind (env.DB.prepare Articles.Sql.feedFirstPage) [| box (pageSize + 1) |]
-            else
+            | Some cursor ->
                 let sep = cursor.IndexOf('_')
                 let ts = int (cursor.Substring(0, sep))
                 let id = cursor.Substring(sep + 1)

@@ -28,4 +28,4 @@ module GetPage =
     }
     type Response = { Page: PageView }
     // Path param is the page Name (the URL slug).
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/page/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/page/%s")

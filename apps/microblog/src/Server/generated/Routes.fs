@@ -15,15 +15,18 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     | GET path when matchPath "/api/blog/tags" path = Some (Exact "/api/blog/tags") ->
         Some (Blog.Handlers.getTags env)
 
+    | GET path when matchPath "/api/blog/feed" path = Some (Exact "/api/blog/feed") ->
+        let query = ({ Cursor = (let v = (getQueryParam request.url "cursor") in if isNull v || v = "" then None else Some v) } : Blog.Api.GetFeed.Query)
+        Some (Blog.Handlers.getFeed query env)
+
     | GET path ->
         match matchPath "/api/blog/tags/:id/items" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItemsByTag id env)
+        | Some (WithParam (_, id)) ->
+            let query = ({ Cursor = (let v = (getQueryParam request.url "cursor") in if isNull v || v = "" then None else Some v) } : Blog.Api.GetItemsByTag.Query)
+            Some (Blog.Handlers.getItemsByTag id query env)
         | _ ->
         match matchPath "/api/blog/item/:id" path with
         | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItem id env)
-        | _ ->
-        match matchPath "/api/blog/feed/:id" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getFeed id env)
         | _ ->
         None
 

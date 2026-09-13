@@ -135,7 +135,10 @@ let discoverWsTypes (ns: string) (assembly: Assembly) : Type list =
 // API endpoint discovery
 // ============================================================
 
-type EndpointMethod = EGet | EGetOne | EPost
+// The GET family is a 2x2 over (path param? x typed query?): EGet (neither),
+// EGetQuery (query only), EGetBy (path param only, formerly EGetOne), EGetByQuery
+// (both). EGetQuery/EGetByQuery carry the query record type in ParsedEndpoint.QueryType.
+type EndpointMethod = EGet | EGetQuery | EGetBy | EGetByQuery | EPost
 
 type ParsedEndpoint = {
     ModuleName: string
@@ -146,6 +149,7 @@ type ParsedEndpoint = {
     HandlerNs: string
     RequestType: Type option
     ResponseType: Type option
+    QueryType: Type option   // the 'query record for EGetQuery / EGetByQuery
     ViewTypes: Type list
 }
 
@@ -183,12 +187,23 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                             EGet, fields.[0] :?> string
                     elif typeDef = typedefof<Post<_,_>> then
                         EPost, fields.[0] :?> string
-                    elif typeDef = typedefof<GetOne<_>> then
-                        // GetOne contains a function string -> string
+                    elif typeDef = typedefof<GetBy<_>> then
+                        // GetBy contains a function string -> string
                         let func = fields.[0] :?> (string -> string)
-                        EGetOne, func ":id"
+                        EGetBy, func ":id"
+                    elif typeDef = typedefof<GetQuery<_,_>> then
+                        EGetQuery, fields.[0] :?> string
+                    elif typeDef = typedefof<GetByQuery<_,_>> then
+                        let func = fields.[0] :?> (string -> string)
+                        EGetByQuery, func ":id"
                     else
                         EGet, ""
+
+                // The query record is the first type arg of GetQuery / GetByQuery.
+                let queryType =
+                    if typeDef = typedefof<GetQuery<_,_>> || typeDef = typedefof<GetByQuery<_,_>>
+                    then Some endpointType.GenericTypeArguments.[0]
+                    else None
 
                 // Skip websocket endpoints (Get<unit>)
                 if path = "" then None
@@ -202,7 +217,8 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                         FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance)
                         && t.Name <> "Request"
                         && t.Name <> "Response"
-                        && t.Name <> "ServerContext")
+                        && t.Name <> "ServerContext"
+                        && t.Name <> "Query")   // Query is URL-encoded, not a JSON codec type
                     |> Array.toList
 
                 Some {
@@ -214,6 +230,7 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                     HandlerNs = handlerNs
                     RequestType = requestType
                     ResponseType = responseType
+                    QueryType = queryType
                     ViewTypes = viewTypes
                 })
         |> Array.toList
@@ -750,6 +767,28 @@ let apiTypeRef (qualify: bool) (ep: ParsedEndpoint) (suffix: string) =
     if qualify then sprintf "%s.Api.%s.%s" ep.Namespace ep.ModuleName suffix
     else sprintf "%s.%s" ep.ModuleName suffix
 
+/// A field of a GetQuery/GetByQuery `'query` record, reduced to what codegen needs:
+/// the query-string key (field name, first char lowercased) and how to (de)serialize it.
+type QueryFieldKind = QOptString | QReqString | QOptInt | QReqInt
+type QueryField = { Name: string; Key: string; Kind: QueryFieldKind }
+
+let queryFields (t: Type) : QueryField list =
+    FSharpType.GetRecordFields t
+    |> Array.toList
+    |> List.map (fun p ->
+        let key = string (System.Char.ToLowerInvariant p.Name.[0]) + p.Name.Substring 1
+        let pt = p.PropertyType
+        let isOpt = pt.IsGenericType && pt.GetGenericTypeDefinition() = typedefof<option<_>>
+        let inner = if isOpt then pt.GenericTypeArguments.[0] else pt
+        let isInt = inner = typeof<int>
+        let kind =
+            match isOpt, isInt with
+            | true,  true  -> QOptInt
+            | true,  false -> QOptString
+            | false, true  -> QReqInt
+            | false, false -> QReqString
+        { Name = p.Name; Key = key; Kind = kind })
+
 /// Compute a unique codec name for a view type, appending "View" if it collides with a domain type
 let viewCodecName (domainNames: Set<string>) (namePrefix: string) (vt: Type) =
     let base_ = toCamelCase vt.Name
@@ -940,17 +979,42 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
         let funcName = genName ep.NamePrefix ep.ModuleName
         let respName = genName ep.NamePrefix ep.ModuleName + "Response"
         let reqName = genName ep.NamePrefix ep.ModuleName + "Req"
+        // Build the client-side query-string pairs from a `'query` record var: each
+        // field becomes a (key, value) option, filtered by `List.choose id`, then
+        // `buildQuery` (Client.Api) URL-encodes + joins into "?k=v&...".
+        let queryPairsExpr (recVar: string) (qt: Type) =
+            let items =
+                queryFields qt |> List.map (fun f ->
+                    match f.Kind with
+                    | QOptString -> sprintf "(match %s.%s with Some v -> Some (\"%s\", v) | None -> None)" recVar f.Name f.Key
+                    | QReqString -> sprintf "Some (\"%s\", %s.%s)" f.Key recVar f.Name
+                    | QOptInt    -> sprintf "(match %s.%s with Some v -> Some (\"%s\", string v) | None -> None)" recVar f.Name f.Key
+                    | QReqInt    -> sprintf "Some (\"%s\", string %s.%s)" f.Key recVar f.Name)
+            // `List.choose (fun p -> p)`, not `List.choose id`: the path param is
+            // named `id` in GetByQuery clients and would shadow the identity function.
+            "buildQuery (List.choose (fun p -> p) [ " + String.concat "; " items + " ])"
         match ep.Method with
         | EGet ->
             emit ""
             emit (sprintf "let %s () =" funcName)
             emit (sprintf "    fetchJson \"%s\" Decode.%s" ep.Path respName)
-        | EGetOne ->
+        | EGetBy ->
             emit ""
             emit (sprintf "let %s (id: string) =" funcName)
             // Replace :id with %s in path for sprintf
             let pathTemplate = ep.Path.Replace(":id", "%s")
             emit (sprintf "    fetchJson (sprintf \"%s\" id) Decode.%s" pathTemplate respName)
+        | EGetQuery ->
+            emit ""
+            emit (sprintf "let %s (query: %s) =" funcName (apiTypeRef qualify ep "Query"))
+            emit (sprintf "    let qs = %s" (queryPairsExpr "query" ep.QueryType.Value))
+            emit (sprintf "    fetchJson (\"%s\" + qs) Decode.%s" ep.Path respName)
+        | EGetByQuery ->
+            emit ""
+            emit (sprintf "let %s (id: string) (query: %s) =" funcName (apiTypeRef qualify ep "Query"))
+            emit (sprintf "    let qs = %s" (queryPairsExpr "query" ep.QueryType.Value))
+            let fmt = ep.Path.Replace(":id", "%s") + "%s"
+            emit (sprintf "    fetchJson (sprintf \"%s\" id qs) Decode.%s" fmt respName)
         | EPost ->
             emit ""
             emit (sprintf "let %s (req: %s) =" funcName (apiTypeRef qualify ep "Request"))
@@ -1019,7 +1083,21 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
     emit "    let route = parseRoute request"
     emit "    match route with"
 
-    // GET exact routes
+    // Construct a `'query` record from the request's query string. Optional fields
+    // map an absent/empty param to None; required fields to a sensible default.
+    let queryRecordExpr (qt: Type) (typeRef: string) =
+        let fields =
+            queryFields qt |> List.map (fun f ->
+                let raw = sprintf "(getQueryParam request.url \"%s\")" f.Key
+                match f.Kind with
+                | QOptString -> sprintf "%s = (let v = %s in if isNull v || v = \"\" then None else Some v)" f.Name raw
+                | QReqString -> sprintf "%s = (let v = %s in if isNull v then \"\" else v)" f.Name raw
+                | QOptInt    -> sprintf "%s = (let v = %s in if isNull v || v = \"\" then None else Some (int v))" f.Name raw
+                | QReqInt    -> sprintf "%s = (let v = %s in if isNull v || v = \"\" then 0 else int v)" f.Name raw)
+        sprintf "({ %s } : %s)" (String.concat "; " fields) typeRef
+    let queryTypeRef (ep: ParsedEndpoint) = sprintf "%s.Api.%s.Query" ep.Namespace ep.ModuleName
+
+    // GET exact routes (no query)
     let getExacts = endpoints |> List.filter (fun ep -> ep.Method = EGet)
     for ep in getExacts do
         let handlerName = toCamelCase ep.ModuleName
@@ -1027,16 +1105,29 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
         emit (sprintf "        Some (%s.%s env)" ep.HandlerNs handlerName)
         emit ""
 
-    // GetOne routes — collected into a single GET path branch
-    let getOnes = endpoints |> List.filter (fun ep -> ep.Method = EGetOne)
+    // GET exact routes with a typed query (parse the query record, pass it in)
+    let getQueries = endpoints |> List.filter (fun ep -> ep.Method = EGetQuery)
+    for ep in getQueries do
+        let handlerName = toCamelCase ep.ModuleName
+        emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
+        emit (sprintf "        let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
+        emit (sprintf "        Some (%s.%s query env)" ep.HandlerNs handlerName)
+        emit ""
+
+    // GET by path param (with or without a typed query) — one shared GET-path branch
+    let getOnes = endpoints |> List.filter (fun ep -> ep.Method = EGetBy || ep.Method = EGetByQuery)
     if not getOnes.IsEmpty then
         emit "    | GET path ->"
-        for i, ep in getOnes |> List.indexed do
+        for ep in getOnes do
             let handlerName = toCamelCase ep.ModuleName
-            // Convert :id back to a match pattern
-            let pattern = ep.Path.Replace(":id", ":id")
-            emit (sprintf "        match matchPath \"%s\" path with" pattern)
-            emit (sprintf "        | Some (WithParam (_, id)) -> Some (%s.%s id env)" ep.HandlerNs handlerName)
+            emit (sprintf "        match matchPath \"%s\" path with" ep.Path)
+            match ep.Method with
+            | EGetByQuery ->
+                emit "        | Some (WithParam (_, id)) ->"
+                emit (sprintf "            let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
+                emit (sprintf "            Some (%s.%s id query env)" ep.HandlerNs handlerName)
+            | _ ->
+                emit (sprintf "        | Some (WithParam (_, id)) -> Some (%s.%s id env)" ep.HandlerNs handlerName)
             emit "        | _ ->"
         emit "        None"
         emit ""
@@ -1089,8 +1180,22 @@ let generateHandlersFs (endpoints: ParsedEndpoint list) : string =
             emit "        return notFound ()"
             emit "    }"
             emit ""
-        | EGetOne ->
+        | EGetBy ->
             emit (sprintf "let %s (id: string) (env: Env) : JS.Promise<WorkerResponse> =" handlerName)
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+        | EGetQuery ->
+            emit (sprintf "let %s (query: %s.Query) (env: Env) : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName)
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+        | EGetByQuery ->
+            emit (sprintf "let %s (id: string) (query: %s.Query) (env: Env) : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName)
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"

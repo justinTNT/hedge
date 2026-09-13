@@ -17,13 +17,16 @@ module GetFeed =
         Timestamp: int
     }
 
+    /// Cursor-paginated (infinite scroll). Page 1 omits ?cursor; later pages pass
+    /// the previous response's NextCursor token.
+    type Query = { Cursor: string option }
+
     type Response = {
         Items: FeedItem list
         NextCursor: string option
     }
 
-    // Cursor-paginated (infinite scroll). Page 1 uses the sentinel "start".
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/feed/%s")
+    let endpoint : GetQuery<Query, Response> = GetQuery "/api/feed"
 
 module SubmitComment =
     type CommentItem = {
@@ -96,7 +99,7 @@ module GetItem =
         Item: SubmitItem.Item
     }
 
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/item/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/item/%s")
 
 module GetTags =
     type Response = {
@@ -106,14 +109,17 @@ module GetTags =
     let endpoint : Get<Response> = Get "/api/tags"
 
 module GetItemsByTag =
+    /// The tag is the path param; pagination is a proper query param (page 1 omits
+    /// ?cursor). No more smuggling both through one "tag~cursor" path segment.
+    type Query = { Cursor: string option }
+
     type Response = {
         Tag: string
         Items: GetFeed.FeedItem list
         NextCursor: string option
     }
 
-    // Single param carries "tag" or "tag~<cursor>" (GetOne allows only one).
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/tags/%s/items")
+    let endpoint : GetByQuery<Query, Response> = GetByQuery (sprintf "/api/tags/%s/items")
 
 module Events =
     let endpoint : Get<unit> = Get "/api/events"

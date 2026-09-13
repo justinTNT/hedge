@@ -40,7 +40,7 @@ module GetSection =
         Section: string
         Items: ArticleStub list
     }
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/section/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/section/%s")
 
 module GetArticle =
     /// Full article for the detail page — the original archived HTML body.
@@ -56,7 +56,7 @@ module GetArticle =
     }
     type Response = { Article: ArticleDetail }
     // Path param carries the Mongo id (preserving old /article/<id> links).
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/article/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/article/%s")
 
 module Search =
     /// Full-text search over title + body (D1 FTS5). Query is a path param.
@@ -64,4 +64,4 @@ module Search =
         Query: string
         Items: ArticleStub list
     }
-    let endpoint : GetOne<Response> = GetOne (sprintf "/api/search/%s")
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/search/%s")

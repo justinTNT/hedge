@@ -22,7 +22,7 @@ let update msg model =
     match msg with
     | LoadTagItems tag ->
         { model with IsLoading = true; TagItems = None; TagLoadingMore = false },
-        Cmd.OfPromise.either Client.ClientGen.blogGetItemsByTag tag GotTagItems (fun ex -> GotTagItems (Error ex.Message))
+        Cmd.OfPromise.either (Client.ClientGen.blogGetItemsByTag tag) { Cursor = None } GotTagItems (fun ex -> GotTagItems (Error ex.Message))
 
     | GotTagItems (Ok response) ->
         { model with TagItems = Some response; IsLoading = false; Error = None },
@@ -35,7 +35,7 @@ let update msg model =
         match model.TagItems with
         | Some t when t.NextCursor.IsSome && not model.TagLoadingMore ->
             { model with TagLoadingMore = true },
-            Cmd.OfPromise.either Client.ClientGen.blogGetItemsByTag (t.Tag + "~" + t.NextCursor.Value) GotMoreTagItems (fun ex -> GotMoreTagItems (Error ex.Message))
+            Cmd.OfPromise.either (Client.ClientGen.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor } GotMoreTagItems (fun ex -> GotMoreTagItems (Error ex.Message))
         | _ -> model, Cmd.none
 
     | GotMoreTagItems (Ok response) ->
