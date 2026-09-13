@@ -1,3 +1,8 @@
+// The framework's shared guest-session runtime (defines window.HedgeGuest, the
+// partner of Hedge's Client.GuestSession). One source: apps copy it into lib/ at
+// prep time (see each app's prep:lib script); the per-app lib/guest-session.js is
+// generated + gitignored. Do not edit a copy. (music carries its own slimmer,
+// divergent version — no identity/syncSession/avatarForAuthor.)
 (function () {
   var KEY = 'hedge_guest_session';
   var adjectives = ['Sleepy','Brave','Grumpy','Neon','Ancient','Quantum','Wandering','Clever',
