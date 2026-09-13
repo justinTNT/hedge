@@ -20,9 +20,14 @@
   <Import Project="../../../../packages/modules/blog/blog.server.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
   <ItemGroup>
     <Compile Include="Handlers.fs" />
-    <Compile Include="generated/AdminGen.fs" />
+    <!-- The per-composition glue (AdminGen registry + Routes dispatch) is committed
+         per HEDGE_SITE: the default files are the superset (justat); ndct has its own
+         .ndct files (articles-only, no Blog refs). schema.sql is suffixed the same way. -->
+    <Compile Include="generated/AdminGen.fs" Condition="'$(HEDGE_SITE)' != 'ndct'" />
+    <Compile Include="generated/AdminGen.ndct.fs" Condition="'$(HEDGE_SITE)' == 'ndct'" />
     <Compile Include="AdminConfig.fs" />
-    <Compile Include="generated/Routes.fs" />
+    <Compile Include="generated/Routes.fs" Condition="'$(HEDGE_SITE)' != 'ndct'" />
+    <Compile Include="generated/Routes.ndct.fs" Condition="'$(HEDGE_SITE)' == 'ndct'" />
     <Compile Include="Meta.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>

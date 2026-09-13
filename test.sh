@@ -42,6 +42,21 @@ if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articl
 fi
 echo "--- module surfaces match committed ---"
 
+# Per-HEDGE_SITE glue is committed too (a site's deployed Routes/AdminGen/schema is a
+# reviewable, gen-stable artifact — no more regenerate-at-deploy-then-restore dance).
+# ndct is the only site with its own manifest today. Its gen writes only *.ndct.* and
+# does not touch the default (justat superset), so no restore is needed after.
+echo ""
+echo "=== Step 1c: Per-site glue (ndct) ==="
+( cd "$ROOT/apps/articles" && HEDGE_SITE=ndct npm run gen >/dev/null 2>&1 )
+ndct_paths="apps/articles/src/Server/generated/Routes.ndct.fs apps/articles/src/Server/generated/AdminGen.ndct.fs apps/articles/schema.ndct.sql"
+if ! git diff --quiet -- $ndct_paths; then
+    echo "!!! FAIL: articles ndct glue differs from committed. Regenerate + commit:"
+    git --no-pager diff --stat -- $ndct_paths
+    exit 1
+fi
+echo "--- articles ndct glue matches committed ---"
+
 echo ""
 echo "=== Step 1b: Microblog golden model (SQL + build) ==="
 cd "$ROOT/apps/microblog"

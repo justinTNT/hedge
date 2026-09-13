@@ -1762,29 +1762,41 @@ let private runSite (argv: string array) =
     let ownedCodecs = ownedModules |> List.map (fun m -> m.Namespace + ".Codecs")
     let ownedRegistries = ownedModules |> List.map (fun m -> m.Namespace + ".AdminGen.tables")
 
+    // Per-composition glue (Routes / AdminGen registry / schema.sql) differs by which
+    // modules a site composes, so when a site-specific manifest (gen-modules.<site>.json)
+    // is in use, write it to a <name>.<site> committed path. The default site (no such
+    // manifest, e.g. justat = the superset) keeps the plain path. This makes each site's
+    // deployed glue a committed, gen-stable artifact and lets `HEDGE_SITE=ndct gen` avoid
+    // clobbering the default — no regen-swap-restore dance. The identity slice
+    // (Codecs/Db/ClientGen) is site-invariant, so it always keeps its default path.
+    let site = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
+    let siteSuffix =
+        if not (System.String.IsNullOrEmpty site) && File.Exists (sprintf "gen-modules.%s.json" site)
+        then "." + site else ""
+
     // AdminGen — identity tables + each owned module's registry (composition order).
     let admin = generateAdminFs "Server.AdminGen" ownedRegistries idMetas
-    writeIfChanged "src/Server/generated/AdminGen.fs" admin
+    writeIfChanged (sprintf "src/Server/generated/AdminGen%s.fs" siteSuffix) admin
 
-    // Db — identity slice (owned modules ship Blog.Db etc.).
+    // Db — identity slice (site-invariant; owned modules ship Blog.Db etc.).
     let db = generateDbFs "Server.Db" idMetas
     writeIfChanged "src/Server/generated/Db.fs" db
 
     // schema.sql — combined (cross-module FKs + topo span all modules).
     let schemaSql = generateSchemaSql metas
-    writeIfChanged "schema.sql" schemaSql
+    writeIfChanged (sprintf "schema%s.sql" siteSuffix) schemaSql
 
-    // Codecs — identity slice + the shared unwrap helpers.
+    // Codecs — identity slice (site-invariant) + the shared unwrap helpers.
     let codecs = generateCodecsFs idDomainTypes idEndpoints idWsTypes qualify singleNs "Codecs" true
     writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
-    // ClientGen — identity slice (owned modules ship Blog.ClientGen etc.).
+    // ClientGen — identity slice (site-invariant; owned modules ship Blog.ClientGen etc.).
     let clientGen = generateClientGenFs idEndpoints idWsTypes qualify singleNs "Client.ClientGen" "Codecs"
     writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
 
     // Routes — combined dispatch; opens the owned modules' Codecs for their decoders.
     let routes = generateRoutesFs ownedCodecs endpoints
-    writeIfChanged "src/Server/generated/Routes.fs" routes
+    writeIfChanged (sprintf "src/Server/generated/Routes%s.fs" siteSuffix) routes
 
     // Step 8: Generate Handlers.fs stubs (only if file doesn't exist)
     if not (File.Exists "src/Server/Handlers.fs") then
