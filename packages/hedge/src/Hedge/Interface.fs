@@ -36,7 +36,9 @@ type ForeignKey<'table> = ForeignKey of string
 /// Gen treats it as a TEXT column with a FK to the shared `identities` table.
 type IdentityRef = IdentityRef of string
 
-/// Rich content (markdown, HTML, structured JSON).
+/// Rich content — a TipTap/ProseMirror document stored as a JSON string. The admin
+/// editor produces it and the rich-text viewer pipeline renders it (some legacy rows,
+/// e.g. basewatch, hold archived HTML rendered as-is).
 type RichContent = RichContent of string
 
 /// URL / link.

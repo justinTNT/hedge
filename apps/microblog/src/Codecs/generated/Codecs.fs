@@ -36,8 +36,6 @@ module Encode =
 
     // -- WebSocket event encoders --
     let inline blogNewCommentEvent (e: Blog.Ws.NewCommentEvent) = encode e
-    let inline blogCommentModeratedEvent (e: Blog.Ws.CommentModeratedEvent) = encode e
-    let inline blogCommentRemovedEvent (e: Blog.Ws.CommentRemovedEvent) = encode e
 
 module Decode =
 
@@ -68,8 +66,6 @@ module Decode =
 
     // -- WebSocket event decoders --
     let blogNewCommentEvent : Decoder<Blog.Ws.NewCommentEvent> = decode<Blog.Ws.NewCommentEvent>()
-    let blogCommentModeratedEvent : Decoder<Blog.Ws.CommentModeratedEvent> = decode<Blog.Ws.CommentModeratedEvent>()
-    let blogCommentRemovedEvent : Decoder<Blog.Ws.CommentRemovedEvent> = decode<Blog.Ws.CommentRemovedEvent>()
 
 module Validate =
 

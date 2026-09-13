@@ -32,19 +32,11 @@ let blogGetFeed (id: string) =
 
 type BlogWsEvent =
     | BlogNewComment of Blog.Ws.NewCommentEvent
-    | BlogCommentModerated of Blog.Ws.CommentModeratedEvent
-    | BlogCommentRemoved of Blog.Ws.CommentRemovedEvent
 
 let blogDecodeWsEvent (text: string) : Result<BlogWsEvent, string> =
     match Decode.fromString (Decode.field "type" Decode.string) text with
     | Ok "NewComment" ->
         Decode.fromString (Decode.field "payload" Decode.blogNewCommentEvent) text
         |> Result.map BlogNewComment
-    | Ok "CommentModerated" ->
-        Decode.fromString (Decode.field "payload" Decode.blogCommentModeratedEvent) text
-        |> Result.map BlogCommentModerated
-    | Ok "CommentRemoved" ->
-        Decode.fromString (Decode.field "payload" Decode.blogCommentRemovedEvent) text
-        |> Result.map BlogCommentRemoved
     | Ok t -> Error (sprintf "Unknown event: %s" t)
     | Error e -> Error e

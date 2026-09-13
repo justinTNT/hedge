@@ -30,7 +30,6 @@ let connectEventsCmd (itemId: string) : Cmd<Msg> =
                     let text : string = e?data |> string
                     match blogDecodeWsEvent text with
                     | Ok (BlogNewComment event) -> dispatch (GotEvent event)
-                    | Ok _ -> ()
                     | Error err -> dispatch (EventError err))
                 (fun _ -> dispatch (EventError "WebSocket error"))
         currentWsClose <- Some close

@@ -14,16 +14,3 @@ type NewCommentEvent = {
     Content: string
     Timestamp: int
 }
-
-/// An admin moderated a comment (removed = true/false).
-type CommentModeratedEvent = {
-    CommentId: string
-    Removed: bool
-}
-
-/// A comment was hard-deleted.
-type CommentRemovedEvent = {
-    CommentId: string
-    PostId: string
-    Timestamp: int
-}
