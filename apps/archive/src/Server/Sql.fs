@@ -36,10 +36,15 @@ let countsBySection = """
     GROUP BY section"""
 
 /// Full-text search over title + body. Bind: [matchExpr, limit].
+// Soft-deleted articles stay in the FTS index (delete is now an UPDATE, so no FTS
+// row is removed) — filter them out by id. Kept as a subquery rather than a join
+// so the FTS5 MATCH + rank query shape is untouched; the deleted set is small
+// (admin deletions), so NOT IN over it is cheap.
 let searchFts = """
     SELECT id, section, article_date, title
     FROM articles_fts
     WHERE articles_fts MATCH ?
+      AND id NOT IN (SELECT id FROM articles WHERE deleted_at IS NOT NULL)
     ORDER BY rank
     LIMIT ?"""
 

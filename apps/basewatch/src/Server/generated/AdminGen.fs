@@ -21,13 +21,13 @@ let page : AdminTable =
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE id = ?"
+      SelectAll = "SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE id = ? AND deleted_at IS NULL"
       Insert = "INSERT INTO pages (id, name, title, teaser, body, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = true
       Update = "UPDATE pages SET name = ?, title = ?, teaser = ?, body = ?, updated_at = ? WHERE id = ?"
-      Delete = "DELETE FROM pages WHERE id = ?"
+      Delete = "UPDATE pages SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["Name"; "Title"; "Teaser"; "Body"] }
 
 let menuItem : AdminTable =
@@ -44,13 +44,13 @@ let menuItem : AdminTable =
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE id = ?"
+      SelectAll = "SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE id = ? AND deleted_at IS NULL"
       Insert = "INSERT INTO menu_items (id, item, title, link, parent_item, ordinal, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = false
       Update = "UPDATE menu_items SET item = ?, title = ?, link = ?, parent_item = ?, ordinal = ? WHERE id = ?"
-      Delete = "DELETE FROM menu_items WHERE id = ?"
+      Delete = "UPDATE menu_items SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["Item"; "Title"; "Link"; "ParentItem"; "Ordinal"] }
 
 let tables : AdminTable list = [

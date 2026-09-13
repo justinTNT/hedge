@@ -25,13 +25,13 @@ let article : AdminTable =
             fieldWith "ViewCount" FInt []
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE id = ?"
+      SelectAll = "SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE id = ? AND deleted_at IS NULL"
       Insert = "INSERT INTO articles (id, aid, title, body, section, article_date, attrib, source, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = true
       Update = "UPDATE articles SET aid = ?, title = ?, body = ?, section = ?, article_date = ?, attrib = ?, source = ?, view_count = ?, updated_at = ? WHERE id = ?"
-      Delete = "DELETE FROM articles WHERE id = ?"
+      Delete = "UPDATE articles SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["Aid"; "Title"; "Body"; "Section"; "ArticleDate"; "Attrib"; "Source"; "ViewCount"] }
 
 let tables : AdminTable list = [

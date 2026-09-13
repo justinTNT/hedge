@@ -48,10 +48,10 @@ let parseArticleRow (row: obj) : ArticleRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectArticles (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectArticle (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertArticle (db: D1Database) (create: ArticleCreate) =
     let id = newId()
@@ -67,7 +67,7 @@ let updateArticle (id: string) (create: ArticleCreate) (db: D1Database) : D1Prep
          [| box create.Aid; box create.Title; box create.Body; box create.Section; box create.ArticleDate; box create.Attrib; box create.Source; box create.ViewCount; box now; box id |]
 
 let deleteArticle (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM articles WHERE id = ?")) [| box id |]
+    bind (db.prepare("UPDATE articles SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 module Tables =
     let article = "articles"

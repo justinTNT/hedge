@@ -36,10 +36,10 @@ let parsePageRow (row: obj) : PageRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectPages (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectPage (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertPage (db: D1Database) (create: PageCreate) =
     let id = newId()
@@ -55,7 +55,7 @@ let updatePage (id: string) (create: PageCreate) (db: D1Database) : D1PreparedSt
          [| box create.Name; box create.Title; box create.Teaser; box create.Body; box now; box id |]
 
 let deletePage (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM pages WHERE id = ?")) [| box id |]
+    bind (db.prepare("UPDATE pages SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 // ============================================================
 // MenuItem (menu_items)
@@ -91,10 +91,10 @@ let parseMenuItemRow (row: obj) : MenuItemRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectMenuItems (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectMenuItem (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertMenuItem (db: D1Database) (create: MenuItemCreate) =
     let id = newId()
@@ -109,7 +109,7 @@ let updateMenuItem (id: string) (create: MenuItemCreate) (db: D1Database) : D1Pr
          [| box create.Item; box create.Title; box create.Link; box create.ParentItem; box create.Ordinal; box id |]
 
 let deleteMenuItem (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM menu_items WHERE id = ?")) [| box id |]
+    bind (db.prepare("UPDATE menu_items SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 module Tables =
     let page = "pages"
