@@ -94,8 +94,19 @@ def main():
         worlds.append(("migrated", migrated))
 
     tables = parse_tables("src/Server/generated/Db.fs")
-    modules = [m for m in json.load(open("gen-modules.json")) if m.get("tablePrefix")]
-    module_dirs = [f"../../packages/modules/{m['namespace'].lower()}" for m in modules]
+    # Composed content modules, from gen-modules.json. Two manifest shapes:
+    #   {"module": "../../packages/modules/blog"}  -> read its module.json for the namespace
+    #   {"namespace": "...", "tablePrefix": "..."}  -> legacy inline entry
+    # (an {"identity": true} / prefix-less entry is the shared base, not a content module)
+    modules = []  # each: (namespace, module_dir)
+    for m in json.load(open("gen-modules.json")):
+        if m.get("module"):
+            d = m["module"]
+            ns = json.load(open(os.path.join(d, "module.json"))).get("namespace", "")
+            modules.append((ns, d))
+        elif m.get("tablePrefix"):
+            modules.append((m["namespace"], f"../../packages/modules/{m['namespace'].lower()}"))
+    module_dirs = [d for _, d in modules]
 
     # Lint app + composed-module server code for inline SQL.
     lint_inline_sql("src/Server", failures)
@@ -104,8 +115,8 @@ def main():
 
     # Extract statements: app plain literals + each module's Tables-resolved SQL.
     stmts = extract_plain("src/Server/Sql.fs", "Sql")
-    for m, d in zip(modules, module_dirs):
-        stmts += extract_module(os.path.join(d, "src/Server/Sql.fs"), f"{m['namespace']}.Sql", tables)
+    for ns, d in modules:
+        stmts += extract_module(os.path.join(d, "src/Server/Sql.fs"), f"{ns}.Sql", tables)
     if not stmts:
         print("FAIL: no statements extracted"); sys.exit(1)
 
@@ -147,7 +158,7 @@ def main():
 
     if failures[0]:
         print(f"check-sql: {failures[0]} failure(s)"); sys.exit(1)
-    mods = ", ".join(m["namespace"] for m in modules) or "none"
+    mods = ", ".join(ns for ns, _ in modules) or "none"
     scope = "fresh + migrated" if migrated is not None else "fresh"
     print(f"check-sql: {len(stmts)} statements OK against {scope} (app + modules: {mods})"
           + ("; schemas agree" if migrated is not None else ""))

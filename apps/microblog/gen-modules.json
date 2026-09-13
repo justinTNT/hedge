@@ -1,18 +1,4 @@
 [
-  {
-    "assembly": "Models",
-    "namespace": "Models",
-    "tablePrefix": "",
-    "routePrefix": "",
-    "handlerNs": "Server.Handlers",
-    "namePrefix": ""
-  },
-  {
-    "assembly": "BlogModels",
-    "namespace": "Blog",
-    "tablePrefix": "blog_",
-    "routePrefix": "/api/blog",
-    "handlerNs": "Blog.Handlers",
-    "namePrefix": "blog"
-  }
+  { "identity": true },
+  { "module": "../../packages/modules/blog" }
 ]

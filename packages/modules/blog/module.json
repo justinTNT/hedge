@@ -1,0 +1,8 @@
+{
+  "assembly": "BlogModels",
+  "namespace": "Blog",
+  "tablePrefix": "blog_",
+  "routePrefix": "/api/blog",
+  "handlerNs": "Blog.Handlers",
+  "namePrefix": "blog"
+}

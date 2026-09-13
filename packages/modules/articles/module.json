@@ -1,0 +1,8 @@
+{
+  "assembly": "ArticlesModels",
+  "namespace": "Articles",
+  "tablePrefix": "articles_",
+  "routePrefix": "/api/articles",
+  "handlerNs": "Articles.Handlers",
+  "namePrefix": "articles"
+}

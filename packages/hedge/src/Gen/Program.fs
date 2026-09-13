@@ -65,6 +65,12 @@ type GenModule = {
     RoutePrefix: string   // e.g. "/api/blog" ; "" for the root module
     HandlerNs: string     // e.g. "Server.Handlers" | "Blog.Handlers"
     NamePrefix: string    // generated-identifier discriminator: "" (root) | "blog" (a module)
+    // An extracted content module owns its generated surface (committed under
+    // packages/modules/<m>/generated), so the site pass emits only glue for it.
+    // False for the identity/root module + one-off single-apps (site emits their
+    // surface app-local). Its own generated dir, for the module-emit pass.
+    Owned: bool
+    SurfaceDir: string    // packages/modules/<m> path (Owned only); "" otherwise
 }
 
 /// Insert a module's route prefix after the shared "/api" segment:
@@ -1592,15 +1598,38 @@ let writeIfChanged (path: string) (content: string) =
 /// The root module — the app's own Models. Always present; other modules are
 /// mounted alongside it via gen-modules.json.
 let rootModule =
-    { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""; HandlerNs = "Server.Handlers"; NamePrefix = "" }
+    { Assembly = "Models"; Namespace = "Models"; TablePrefix = ""; RoutePrefix = ""
+      HandlerNs = "Server.Handlers"; NamePrefix = ""; Owned = false; SurfaceDir = "" }
 
-/// Read the site's module list from gen-modules.json (in the app dir) if present,
+/// Read a content module's fixed identity from its own module.json — the single
+/// source of truth for its prefixes, so its generated surface is host-invariant
+/// (no host can supply different prefixes). `dir` is the module path relative to
+/// the app dir (e.g. "../../packages/modules/blog").
+let readModuleManifest (dir: string) : GenModule =
+    let doc = Text.Json.JsonDocument.Parse(File.ReadAllText (Path.Combine(dir, "module.json")))
+    let el = doc.RootElement
+    let str name dflt = match el.TryGetProperty(name: string) with true, v -> v.GetString() | _ -> dflt
+    { Assembly = str "assembly" "Models"
+      Namespace = str "namespace" "Models"
+      TablePrefix = str "tablePrefix" ""
+      RoutePrefix = str "routePrefix" ""
+      HandlerNs = str "handlerNs" "Server.Handlers"
+      NamePrefix = str "namePrefix" ""
+      Owned = true
+      SurfaceDir = dir }
+
+/// Read the site's composition from gen-modules.json (in the app dir) if present,
 /// else just the root module (byte-identical to the pre-modules single-app path).
-/// Each entry: { assembly, namespace, tablePrefix, routePrefix, handlerNs }.
+/// New composition-list format — each entry is one of:
+///   { "identity": true[, "assembly", "namespace"] }  -> the shared identity/root base
+///   { "module": "../../packages/modules/blog"[, "primary": true] } -> a module ref,
+///        expanded from that module's module.json (its fixed prefixes)
+/// The legacy explicit-field format ({ assembly, namespace, tablePrefix, ... }) is
+/// still accepted for one-off apps that inline their module.
 let readModules () : GenModule list =
     // HEDGE_SITE selects a per-site manifest (gen-modules.<site>.json) when one exists,
     // so sites with different module sets (e.g. ndct = articles-only vs justat =
-    // articles + blog) each generate their own Routes/Codecs/schema. Falls back to the
+    // articles + blog) each generate their own Routes/schema. Falls back to the
     // shared gen-modules.json (the superset, used by dev and by uniform apps).
     let site = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
     let sitePath = if System.String.IsNullOrEmpty site then "" else sprintf "gen-modules.%s.json" site
@@ -1609,16 +1638,22 @@ let readModules () : GenModule list =
     else
         let doc = Text.Json.JsonDocument.Parse(File.ReadAllText path)
         [ for el in doc.RootElement.EnumerateArray() ->
-            let str name dflt =
-                match el.TryGetProperty(name: string) with
-                | true, v -> v.GetString()
-                | _ -> dflt
-            { Assembly = str "assembly" "Models"
-              Namespace = str "namespace" "Models"
-              TablePrefix = str "tablePrefix" ""
-              RoutePrefix = str "routePrefix" ""
-              HandlerNs = str "handlerNs" "Server.Handlers"
-              NamePrefix = str "namePrefix" "" } ]
+            let str name dflt = match el.TryGetProperty(name: string) with true, v -> v.GetString() | _ -> dflt
+            let has name = match el.TryGetProperty(name: string) with true, _ -> true | _ -> false
+            if has "module" then
+                readModuleManifest (str "module" "")
+            elif has "identity" then
+                { rootModule with Assembly = str "assembly" "Models"; Namespace = str "namespace" "Models" }
+            else
+                // Legacy explicit-field entry (inline module, e.g. a one-off app).
+                { Assembly = str "assembly" "Models"
+                  Namespace = str "namespace" "Models"
+                  TablePrefix = str "tablePrefix" ""
+                  RoutePrefix = str "routePrefix" ""
+                  HandlerNs = str "handlerNs" "Server.Handlers"
+                  NamePrefix = str "namePrefix" ""
+                  Owned = false
+                  SurfaceDir = "" } ]
 
 // ============================================================
 // Main
