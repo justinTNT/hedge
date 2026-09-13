@@ -284,12 +284,25 @@ let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
     let fkFields = dbFields |> List.filter isForeignKey
 
     let hasCreatedAtCol = cols |> List.contains "created_at"
+    // Soft-delete column (deleted_at), if this type has a SoftDelete field. When present,
+    // the admin soft-deletes (stamps the timestamp) instead of a hard DELETE — matching
+    // the domain model, avoiding FK violations when the row has referencing children
+    // (e.g. deleting a blog_items row that still has blog_comments), and hiding
+    // soft-deleted rows from admin listings.
+    let sdCol =
+        dbFields |> List.tryPick (fun f ->
+            if f.Attrs |> List.exists (function SoftDelete -> true | _ -> false)
+            then Some (toSnakeCase f.Name) else None)
+    let liveFilter = match sdCol with Some c -> sprintf " WHERE %s IS NULL" c | None -> ""
     let selectAll =
         if hasCreatedAtCol then
-            sprintf "SELECT %s FROM %s ORDER BY created_at DESC LIMIT 100" colStr tableName
+            sprintf "SELECT %s FROM %s%s ORDER BY created_at DESC LIMIT 100" colStr tableName liveFilter
         else
-            sprintf "SELECT %s FROM %s LIMIT 100" colStr tableName
-    let selectOne = sprintf "SELECT %s FROM %s WHERE %s = ?" colStr tableName pkCol
+            sprintf "SELECT %s FROM %s%s LIMIT 100" colStr tableName liveFilter
+    let selectOne =
+        match sdCol with
+        | Some c -> sprintf "SELECT %s FROM %s WHERE %s = ? AND %s IS NULL" colStr tableName pkCol c
+        | None -> sprintf "SELECT %s FROM %s WHERE %s = ?" colStr tableName pkCol
     // updated_at is auto-managed, so it isn't a mutable column — but the admin
     // still has to stamp it, or editing through the admin silently leaves it
     // null while the typed Db update sets it.
@@ -298,7 +311,12 @@ let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
         |> List.map (fun c -> sprintf "%s = ?" c)
         |> String.concat ", "
     let update = sprintf "UPDATE %s SET %s WHERE %s = ?" tableName updateSetClause pkCol
-    let delete = sprintf "DELETE FROM %s WHERE %s = ?" tableName pkCol
+    // Soft-delete when the type supports it (stamp deleted_at via SQLite's clock, so
+    // the admin's single id-bind still matches); otherwise a real DELETE.
+    let delete =
+        match sdCol with
+        | Some c -> sprintf "UPDATE %s SET %s = CAST(strftime('%%s','now') AS INTEGER) WHERE %s = ?" tableName c pkCol
+        | None -> sprintf "DELETE FROM %s WHERE %s = ?" tableName pkCol
 
     // Admin create is only meaningful for a table with a real primary key —
     // without one, pkCol is just the first column and we'd write a generated id
@@ -1378,7 +1396,13 @@ let rootModule =
 /// else just the root module (byte-identical to the pre-modules single-app path).
 /// Each entry: { assembly, namespace, tablePrefix, routePrefix, handlerNs }.
 let readModules () : GenModule list =
-    let path = "gen-modules.json"
+    // HEDGE_SITE selects a per-site manifest (gen-modules.<site>.json) when one exists,
+    // so sites with different module sets (e.g. ndct = articles-only vs justat =
+    // articles + blog) each generate their own Routes/Codecs/schema. Falls back to the
+    // shared gen-modules.json (the superset, used by dev and by uniform apps).
+    let site = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
+    let sitePath = if System.String.IsNullOrEmpty site then "" else sprintf "gen-modules.%s.json" site
+    let path = if sitePath <> "" && File.Exists sitePath then sitePath else "gen-modules.json"
     if not (File.Exists path) then [ rootModule ]
     else
         let doc = Text.Json.JsonDocument.Parse(File.ReadAllText path)
@@ -1419,6 +1443,16 @@ let main (argv: string array) =
     let wsTypes = perModule |> List.collect (fun (_, w, _, _) -> w)
     let endpoints = perModule |> List.collect (fun (_, _, e, _) -> e)
     let metas = perModule |> List.collect (fun (_, _, _, m) -> m)
+
+    // D5 guard: Gen keys FK + topo-sort resolution on the unprefixed domain type
+    // short name (DisplayName), so two modules sharing one would silently collapse
+    // their tables and emit duplicate types. Keep short names globally unique; fail
+    // loudly here rather than miscompile (see notes/MODULES.md, convergence plan).
+    match metas |> List.countBy (fun m -> m.DisplayName) |> List.filter (fun (_, n) -> n > 1) with
+    | [] -> ()
+    | dups ->
+        let names = dups |> List.map (fun (name, n) -> sprintf "%s (x%d)" name n) |> String.concat ", "
+        failwithf "gen-modules: domain type short-name(s) collide across modules: %s. Rename so every module's domain types are globally unique (see notes/MODULES.md)." names
 
     // Composing >1 module forces namespace-qualified type refs (colliding module
     // names) and per-module identifier prefixes; single-module stays byte-identical.

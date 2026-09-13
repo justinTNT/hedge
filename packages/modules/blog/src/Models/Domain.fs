@@ -6,8 +6,10 @@ module Blog.Domain
 
 open Hedge.Interface
 
-[<Table "items">]
-type MicroblogItem = {
+// "Item" derives its table name (items -> blog_items when mounted); no [<Table>]
+// override needed. Named neutrally: the app's name ("microblog") shouldn't live in
+// the reusable module.
+type Item = {
     Id: PrimaryKey<string>
     Title: string
     Link: Link option
@@ -27,10 +29,12 @@ type MicroblogItem = {
 [<Table "comments">]
 type ItemComment = {
     Id: PrimaryKey<string>
-    ItemId: ForeignKey<MicroblogItem>
+    ItemId: ForeignKey<Item>
     /// The shared app-level identity — decoupled from any concrete Identity type.
     IdentityId: IdentityRef
-    ParentId: string option
+    /// The parent comment this reply targets (None for a top-level comment) — a
+    /// typed self-reference, not a bare id string (wrap, don't unwrap).
+    ParentId: ForeignKey<ItemComment> option
     Author: string
     Content: RichContent
     Removed: bool
@@ -48,7 +52,7 @@ type Tag = {
 [<Table "item_tags">]
 type ItemTag = {
     Id: PrimaryKey<string>
-    ItemId: ForeignKey<MicroblogItem>
+    ItemId: ForeignKey<Item>
     TagId: ForeignKey<Tag>
     DeletedAt: SoftDelete option
 }

@@ -1,12 +1,13 @@
-module Client.App
+module Articles.Client.App
 
 open Fable.Core
 open Fable.Core.JsInterop
 open Feliz
 open Feliz.Router
 open Elmish
-open Client.Types
-open Client.Pages
+open Articles.Client
+open Articles.Client.Types
+open Articles.Client.Pages
 
 [<Emit("new URLSearchParams(window.location.search).get($0)")>]
 let private getQueryParam (name: string) : string = jsNative
@@ -22,7 +23,7 @@ let private parseClaimFromRoute () : (string option * string) =
 let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
     let body = sprintf """{"identityId":"%s","merge":%s}""" identityId (if merge then "true" else "false")
     Cmd.OfPromise.either
-        (fun () -> Client.Api.postJsonRaw "/api/auth/revert" body)
+        (fun () -> Articles.Client.Api.postJsonRaw "/api/auth/revert" body)
         ()
         GotRevertIdentity
         (fun ex -> GotRevertIdentity (Error ex.Message))
@@ -30,7 +31,7 @@ let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
 let private disconnectIdentityCmd (identityId: string) (fallbackName: string) : Cmd<Msg> =
     let body = sprintf """{"identityId":"%s","name":"%s"}""" identityId fallbackName
     Cmd.OfPromise.either
-        (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" body)
+        (fun () -> Articles.Client.Api.postJsonRaw "/api/auth/disconnect" body)
         ()
         GotDisconnect
         (fun ex -> GotDisconnect (Error ex.Message))
@@ -39,7 +40,7 @@ let private loadProvidersCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
             promise {
-                let! data = Client.Api.fetchJsonRaw "/api/auth/providers"
+                let! data = Articles.Client.Api.fetchJsonRaw "/api/auth/providers"
                 let arr : string array = data?providers |> unbox
                 return List.ofArray arr
             })
@@ -50,7 +51,7 @@ let private loadIdentitiesCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
             promise {
-                let! data = Client.Api.fetchJsonRaw "/api/auth/identities"
+                let! data = Articles.Client.Api.fetchJsonRaw "/api/auth/identities"
                 let arr : obj array = data?identities |> unbox
                 return arr |> Array.map (fun o ->
                     { Id = o?id |> unbox<string>
@@ -203,7 +204,7 @@ let appView (model: Model) dispatch =
     Html.div [
         prop.className "app"
         prop.children [
-            if Shared.siteSlug = "ndct" && List.isEmpty model.Route then Shared.ndctHero else Html.none
+            if Hedge.Tenant.config.Slug = "ndct" && List.isEmpty model.Route then Shared.ndctHero else Html.none
             Html.header [ Shared.navWithSession model dispatch ]
             Html.main [
                 match model.Error with
@@ -219,17 +220,15 @@ let appView (model: Model) dispatch =
                     | [_] ->
                         match model.CurrentItem with
                         | Some response -> Item.view response model dispatch
-                        | None -> Html.p [ prop.text "Article not found." ]
+                        | None -> Html.p [ prop.text "Post not found." ]
                     | _ ->
                         match model.Feed with
                         | Some response -> Feed.view response
-                        | None -> Html.p [ prop.text "No articles yet." ]
+                        | None -> Html.p [ prop.text "No posts yet." ]
             ]
-            if Shared.siteSlug = "justat" then Shared.justatSidebar else Html.none
+            if Hedge.Tenant.config.Slug = "justat" then Shared.justatSidebar else Html.none
         ]
     ]
-
-open Elmish.React
 
 let view model dispatch =
     React.router [
@@ -238,10 +237,6 @@ let view model dispatch =
         router.children [ appView model dispatch ]
     ]
 
-#if DEBUG
-open Elmish.HMR
-#endif
-
-Program.mkProgram init update view
-|> Program.withReactSynchronous "app"
-|> Program.run
+// This is a COMPONENT (init/update/view) — the standalone entry
+// (apps/articles/src/Client/Articles/Main.fs) runs it, and a future unified shell
+// can host the same component unchanged (locked decision D1).

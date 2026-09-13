@@ -1,32 +1,35 @@
-module Client.Pages.Item
+module Articles.Client.Pages.Item
+
+// The shared rich-text module lives in the host's Client.RichText namespace.
+module RichText = Client.RichText
 
 open Fable.Core.JsInterop
 open Feliz
 open Elmish
-open Client
+open Articles.Client
 open Hedge.Interface
-open Models.Api
+open Articles.Api
 open Client.ClientGen
-open Client.Types
-open Client.Shared
+open Articles.Client.Types
+open Articles.Client.Shared
 
 // --- WebSocket management ---
 
 let mutable private currentWsClose : (unit -> unit) option = None
 
-let connectEventsCmd (articleId: string) : Cmd<Msg> =
+let connectEventsCmd (postId: string) : Cmd<Msg> =
     Cmd.ofEffect (fun dispatch ->
         match currentWsClose with
         | Some close -> close ()
         | None -> ()
-        let url = sprintf "%s/api/events?itemId=%s" (Client.Api.wsBase()) articleId
+        let url = sprintf "%s/api/events?itemId=%s" (Articles.Client.Api.wsBase()) postId
         let close =
-            Client.Api.openWebSocket
+            Articles.Client.Api.openWebSocket
                 url
                 (fun e ->
                     let text : string = e?data |> string
-                    match decodeWsEvent text with
-                    | Ok (NewComment event) -> dispatch (GotEvent event)
+                    match articlesDecodeWsEvent text with
+                    | Ok (ArticlesNewComment event) -> dispatch (GotEvent event)
                     | Error err -> dispatch (EventError err))
                 (fun _ -> dispatch (EventError "WebSocket error"))
         currentWsClose <- Some close
@@ -76,13 +79,13 @@ let update msg model =
     match msg with
     | LoadItem idOrSlug ->
         { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Client.ClientGen.getArticle idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.articlesGetPost idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
         Cmd.batch [
-            Cmd.ofEffect (fun _ -> setDocTitle response.Article.Title)
-            connectEventsCmd response.Article.Id
+            Cmd.ofEffect (fun _ -> setDocTitle response.Post.Title)
+            connectEventsCmd response.Post.Id
         ]
 
     | GotItem (Error err) ->
@@ -97,20 +100,20 @@ let update msg model =
                 | Some rt -> rt.ParentId
                 | None -> None
             let req : SubmitComment.Request =
-                { ArticleId = response.Article.Id
+                { PostId = response.Post.Id
                   ParentId = parentId
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,
-            Cmd.OfPromise.either Client.ClientGen.submitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Client.ClientGen.articlesSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok resp) ->
         // No live WS echo — append the returned comment locally so it shows now.
         let updated =
             match model.CurrentItem with
-            | Some r when r.Article.Comments |> List.exists (fun c -> c.Id = resp.Comment.Id) |> not ->
-                { model with CurrentItem = Some { r with Article = { r.Article with Comments = r.Article.Comments @ [ resp.Comment ] } } }
+            | Some r when r.Post.Comments |> List.exists (fun c -> c.Id = resp.Comment.Id) |> not ->
+                { model with CurrentItem = Some { r with Post = { r.Post with Comments = r.Post.Comments @ [ resp.Comment ] } } }
             | _ -> model
         { updated with ReplyingTo = None }, destroyCommentEditorCmd
 
@@ -123,36 +126,36 @@ let update msg model =
             else Set.add commentId model.CollapsedComments
         { model with CollapsedComments = collapsed }, Cmd.none
 
-    | SetReplyTo (articleId, parentId) ->
-        { model with ReplyingTo = Some {| ArticleId = articleId; ParentId = parentId |} },
+    | SetReplyTo (postId, parentId) ->
+        { model with ReplyingTo = Some {| PostId = postId; ParentId = parentId |} },
         Cmd.batch [ destroyCommentEditorCmd; initCommentEditorCmd ]
 
     | CancelReply ->
         { model with ReplyingTo = None }, destroyCommentEditorCmd
 
-    | ConnectEvents articleId ->
-        model, connectEventsCmd articleId
+    | ConnectEvents postId ->
+        model, connectEventsCmd postId
 
     | DisconnectEvents ->
         model, disconnectEventsCmd ()
 
     | GotEvent event ->
         match model.CurrentItem with
-        | Some response when response.Article.Id = event.ArticleId ->
-            let existingIds = response.Article.Comments |> List.map (fun c -> c.Id) |> Set.ofList
+        | Some response when response.Post.Id = event.PostId ->
+            let existingIds = response.Post.Comments |> List.map (fun c -> c.Id) |> Set.ofList
             if Set.contains event.Id existingIds then
                 model, Cmd.none
             else
                 let newComment : SubmitComment.CommentItem =
                     { Id = event.Id
-                      ArticleId = event.ArticleId
+                      PostId = event.PostId
                       IdentityId = event.IdentityId
                       ParentId = event.ParentId
                       Author = event.Author
                       Picture = event.Picture
                       Content = RichContent event.Content
                       Timestamp = event.Timestamp }
-                { model with CurrentItem = Some { response with Article = { response.Article with Comments = response.Article.Comments @ [ newComment ] } } }, Cmd.none
+                { model with CurrentItem = Some { response with Post = { response.Post with Comments = response.Post.Comments @ [ newComment ] } } }, Cmd.none
         | _ -> model, Cmd.none
 
     | EventError _ ->
@@ -250,7 +253,7 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
                                     prop.text "reply"
                                     prop.onClick (fun _ ->
                                         match model.CurrentItem with
-                                        | Some response -> dispatch (SetReplyTo (response.Article.Id, Some comment.Id))
+                                        | Some response -> dispatch (SetReplyTo (response.Post.Id, Some comment.Id))
                                         | None -> ()
                                     )
                                 ]
@@ -268,30 +271,29 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
         ]
     ]
 
-let view (response: GetArticle.Response) (model: Model) dispatch =
-    let article = response.Article
+let view (response: GetPost.Response) (model: Model) dispatch =
+    let post = response.Post
     Html.div [
         prop.className "item-detail article-detail"
         prop.children [
-            Html.h1 [ prop.className "article-title"; prop.text article.Title ]
-            // The article body is self-contained (its own images). The hero Image
-            // is only for the feed thumbnail, and the teaser is the list preview —
-            // showing either here would double the body's opening/image (old
-            // showpost.htm rendered title + body alone).
-            richContent "article-body" article.Body
+            Html.h1 [ prop.className "article-title"; prop.text post.Title ]
+            // The post body is self-contained (its own images). The hero Image is
+            // only for the feed thumbnail, and the teaser is the list preview —
+            // showing either here would double the body's opening/image.
+            richContent "article-body" post.Body
             Html.div [
                 prop.className "comments"
                 prop.children [
-                    if article.Comments.Length > 0 then
-                        Html.h3 [ prop.text (sprintf "Comments (%d)" article.Comments.Length) ]
-                    yield! filterRootComments article.Comments
-                           |> List.map (commentView model article.Comments 0 dispatch)
+                    if post.Comments.Length > 0 then
+                        Html.h3 [ prop.text (sprintf "Comments (%d)" post.Comments.Length) ]
+                    yield! filterRootComments post.Comments
+                           |> List.map (commentView model post.Comments 0 dispatch)
                     replyForm model None dispatch
                     if model.ReplyingTo.IsNone then
                         Html.button [
                             prop.className "comment-reply-btn"
                             prop.text "Leave a comment"
-                            prop.onClick (fun _ -> dispatch (SetReplyTo (article.Id, None)))
+                            prop.onClick (fun _ -> dispatch (SetReplyTo (post.Id, None)))
                         ]
                 ]
             ]

@@ -56,7 +56,7 @@ module SubmitComment =
     let endpoint : Post<Request, Response> = Post "/api/comment"
 
 module SubmitItem =
-    type MicroblogItem = {
+    type Item = {
         Id: string
         Title: string
         Slug: string option
@@ -84,14 +84,14 @@ module SubmitItem =
     }
 
     type Response = {
-        Item: MicroblogItem
+        Item: Item
     }
 
     let endpoint : Post<Request, Response> = Post "/api/item"
 
 module GetItem =
     type Response = {
-        Item: SubmitItem.MicroblogItem
+        Item: SubmitItem.Item
     }
 
     let endpoint : GetOne<Response> = GetOne (sprintf "/api/item/%s")

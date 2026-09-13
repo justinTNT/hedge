@@ -22,7 +22,7 @@ open Server.Db
 // by namespace proximity; this module lives outside `Server`, so alias it.
 module Identity = Server.Identity
 
-let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
+let private toFeedItem (r: ItemRow) : GetFeed.FeedItem =
     { Id = r.Id
       Title = r.Title
       Slug = r.Slug
@@ -78,7 +78,7 @@ let getFeed (cursor: string) (env: Env) : JS.Promise<WorkerResponse> =
                 let id = cursor.Substring(sep + 1)
                 bind (env.DB.prepare Blog.Sql.feedAfterCursor) [| box ts; box ts; box id; box (pageSize + 1) |]
         let! result = stmt.all()
-        let rows = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        let rows = result.results |> Array.map (parseItemRow >> toFeedItem) |> Array.toList
         let hasMore = List.length rows > pageSize
         let pageItems = if hasMore then List.truncate pageSize rows else rows
         let nextCursor =
@@ -99,7 +99,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
         let itemStmt =
             if isUuid idOrSlug then
-                selectMicroblogItem idOrSlug env.DB
+                selectItem idOrSlug env.DB
             else
                 bind (env.DB.prepare Blog.Sql.itemBySlug) [| box idOrSlug |]
 
@@ -108,7 +108,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
         if itemRows.Length = 0 then
             return notFound ()
         else
-            let r = parseMicroblogItemRow itemRows.[0]
+            let r = parseItemRow itemRows.[0]
             let commentStmt = selectItemCommentsByItemId r.Id env.DB
             let tagStmt = bind (env.DB.prepare Blog.Sql.tagsForItem) [| box r.Id |]
             let pictureStmt = bind (env.DB.prepare Blog.Sql.picturesForItemComments) [| box r.Id |]
@@ -122,7 +122,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
             let comments = results.[0].results |> Array.map (parseItemCommentRow >> toCommentItem pictureOf) |> Array.toList
             let tags = results.[1].results |> Array.map (fun row -> rowStr row "name") |> Array.toList
 
-            let item : SubmitItem.MicroblogItem =
+            let item : SubmitItem.Item =
                 { Id = r.Id
                   Title = r.Title
                   Slug = r.Slug
@@ -136,7 +136,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
 
             let body =
                 Encode.object [
-                    "item", Encode.blogMicroblogItemView item
+                    "item", Encode.blogItemView item
                 ] |> Encode.toString 0
 
             return okJson body
@@ -229,7 +229,7 @@ let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
                 let id = cursor.Substring(ci + 1)
                 bind (env.DB.prepare Blog.Sql.itemsByTagAfter) [| box tag; box ts; box ts; box id; box (pageSize + 1) |]
         let! result = stmt.all()
-        let rows = result.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+        let rows = result.results |> Array.map (parseItemRow >> toFeedItem) |> Array.toList
         let hasMore = List.length rows > pageSize
         let pageItems = if hasMore then List.truncate pageSize rows else rows
         let nextCursor =
@@ -247,13 +247,17 @@ let getItemsByTag (param: string) (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
+/// Admin gate for owner-only writes (item authoring): the request must carry the
+/// matching X-Admin-Key. Comments (SubmitComment) stay public.
+let private isAdmin (request: WorkerRequest) (env: Env) =
+    let key = getHeader request "X-Admin-Key"
+    key <> "" && key = env.ADMIN_KEY
+
 let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
     (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
-        // Item creation (authoring posts) is owner-only — require the admin key,
-        // same check as the admin CRUD. Comments (SubmitComment) stay public.
-        let adminKey = getHeader request "X-Admin-Key"
-        if not (adminKey <> "" && adminKey = env.ADMIN_KEY) then
+        // Item creation (authoring posts) is owner-only — require the admin key.
+        if not (isAdmin request env) then
             return unauthorized ()
         else
         match Validate.blogSubmitItemReq req with
@@ -266,7 +270,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Ok validatedSlug ->
         // New submissions default their article date to now; backdate later via admin.
         let submittedAt = epochNow ()
-        let ins = insertMicroblogItem env.DB
+        let ins = insertItem env.DB
                     { Title = req.Title; Link = req.Link; Image = req.Image
                       Extract = req.Extract; OwnerComment = req.OwnerComment
                       ArticleDate = submittedAt
@@ -300,7 +304,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
             return validationErrorResponse [ { Field = "Slug"; Message = "This slug is already taken" } ]
         else
 
-        let newItem : SubmitItem.MicroblogItem =
+        let newItem : SubmitItem.Item =
             { Id = ins.Id
               Title = req.Title
               Slug = validatedSlug
@@ -314,7 +318,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
 
         let body =
             Encode.object [
-                "item", Encode.blogMicroblogItemView newItem
+                "item", Encode.blogItemView newItem
             ] |> Encode.toString 0
 
         return okJson body

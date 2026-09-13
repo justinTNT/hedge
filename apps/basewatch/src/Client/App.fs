@@ -67,7 +67,9 @@ let private plainText (json: string) : string = jsNative
 [<Emit("$0.target.style.display = 'none'")>]
 let private hideBrokenImg (e: Browser.Types.Event) : unit = jsNative
 
-let private newsUrl = "https://usba.se/api/feed/start"
+// usba.se runs on the composed blog module, so its feed lives under the module's
+// /api/blog route prefix (the bare /api/feed path now falls through to the SPA).
+let private newsUrl = "https://usba.se/api/blog/feed/start"
 
 let private decodeNews : Decoder<NewsItem list> =
     let item =

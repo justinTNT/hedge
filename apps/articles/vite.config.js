@@ -11,6 +11,9 @@ const siteLogo = process.env.SITE_LOGO || '/public/logo.png';
 // Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
 // deploy-specific rules.
 const siteSlug = process.env.SITE_SLUG || '';
+// Which modules this site composes (see Server/Client fsproj + gen-modules.<site>.json).
+// ndct is articles-only, so it doesn't bundle the blog shell.
+const hedgeSite = process.env.HEDGE_SITE || '';
 
 /// Resolves the __BASE__ / __SITE_TITLE__ placeholders in the HTML entry points
 /// and hands the client its runtime config on window.
@@ -44,7 +47,8 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
-        blog: resolve(__dirname, 'blog.html')
+        // blog shell everywhere except ndct (articles-only)
+        ...(hedgeSite !== 'ndct' ? { blog: resolve(__dirname, 'blog.html') } : {})
       }
     }
   },

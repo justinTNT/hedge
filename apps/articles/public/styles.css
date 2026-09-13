@@ -64,13 +64,27 @@ body.tenant-justat .app {
   align-items: start;
 }
 
+/* The blog mount (/blog on justat) renders no sidebar, so the two-column grid
+   leaves a dead 315px column — fall back to a single block flow there. */
+body.tenant-justat .app:not(:has(.js-sidebar)) {
+  display: block;
+}
+
 /* top nav sits over the decorative header art (dark) */
 body.tenant-justat header { grid-area: nav; padding: 46px 8px 0; }
 body.tenant-justat nav { min-height: 60px; }
-body.tenant-justat nav > a img { display: none; }          /* no logo image — masthead is in the sidebar */
-body.tenant-justat nav > a::before {
+body.tenant-justat nav > a:first-child img { display: none; }   /* no logo image — masthead is in the sidebar */
+/* Only the first nav link is the "Home" label; other links (Web Log, Info) keep their own text. */
+body.tenant-justat nav > a:first-child::before {
   content: "Home";
   font: normal 1.1rem Georgia, serif; color: #c4c4c3;
+}
+/* "Web Log" sits on the dark header too — the default link colour (#4a413a) is
+   camouflaged against the dark art, so give it a light, visible colour. */
+body.tenant-justat .nav-blog {
+  color: #c4c4c3;
+  font: normal 1.1rem Georgia, serif;
+  margin-left: 1rem;
 }
 body.tenant-justat .identity-area { color: #cfcabf; }
 

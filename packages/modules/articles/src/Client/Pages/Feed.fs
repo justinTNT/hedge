@@ -1,10 +1,10 @@
-module Client.Pages.Feed
+module Articles.Client.Pages.Feed
 
 open Feliz
 open Elmish
-open Models.Api
-open Client.Types
-open Client.Shared
+open Articles.Api
+open Articles.Client.Types
+open Articles.Client.Shared
 
 // Install the scroll watcher (once) that drives loads as the user scrolls.
 let private watchCmd : Cmd<Msg> =
@@ -22,7 +22,7 @@ let update msg model =
     match msg with
     | LoadFeed ->
         { model with IsLoading = true; FeedLoadingMore = false },
-        Cmd.OfPromise.either Client.ClientGen.getArticles "start" GotFeed (fun ex -> GotFeed (Error ex.Message))
+        Cmd.OfPromise.either Client.ClientGen.articlesGetFeed "start" GotFeed (fun ex -> GotFeed (Error ex.Message))
 
     | GotFeed (Ok response) ->
         { model with Feed = Some response; IsLoading = false; Error = None },
@@ -35,7 +35,7 @@ let update msg model =
         match model.Feed with
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
             { model with FeedLoadingMore = true },
-            Cmd.OfPromise.either Client.ClientGen.getArticles feed.NextCursor.Value GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
+            Cmd.OfPromise.either Client.ClientGen.articlesGetFeed feed.NextCursor.Value GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
         | _ -> model, Cmd.none
 
     | GotMoreFeed (Ok response) ->
@@ -51,7 +51,7 @@ let update msg model =
 
     | _ -> model, Cmd.none
 
-let view (response: GetArticles.Response) =
+let view (response: GetFeed.Response) =
     Html.div [
         prop.className "feed"
         prop.children [

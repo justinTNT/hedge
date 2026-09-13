@@ -12,52 +12,22 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
-    | GET path when matchPath "/api/blog/tags" path = Some (Exact "/api/blog/tags") ->
-        Some (Blog.Handlers.getTags env)
-
     | GET path ->
-        match matchPath "/api/article/:id" path with
-        | Some (WithParam (_, id)) -> Some (Server.Handlers.getArticle id env)
+        match matchPath "/api/articles/post/:id" path with
+        | Some (WithParam (_, id)) -> Some (Articles.Handlers.getPost id env)
         | _ ->
-        match matchPath "/api/articles/:id" path with
-        | Some (WithParam (_, id)) -> Some (Server.Handlers.getArticles id env)
-        | _ ->
-        match matchPath "/api/blog/tags/:id/items" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItemsByTag id env)
-        | _ ->
-        match matchPath "/api/blog/item/:id" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItem id env)
-        | _ ->
-        match matchPath "/api/blog/feed/:id" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getFeed id env)
+        match matchPath "/api/articles/feed/:id" path with
+        | Some (WithParam (_, id)) -> Some (Articles.Handlers.getFeed id env)
         | _ ->
         None
 
-    | POST path when matchPath "/api/comment" path = Some (Exact "/api/comment") ->
+    | POST path when matchPath "/api/articles/comment" path = Some (Exact "/api/articles/comment") ->
         Some (promise {
             let! bodyText = request.text()
-            match Decode.fromString Decode.submitCommentReq bodyText with
+            match Decode.fromString Decode.articlesSubmitCommentReq bodyText with
             | Error err -> return badRequest err
             | Ok req ->
-                return! Server.Handlers.submitComment req request env ctx
-        })
-
-    | POST path when matchPath "/api/blog/item" path = Some (Exact "/api/blog/item") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.blogSubmitItemReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Blog.Handlers.submitItem req request env ctx
-        })
-
-    | POST path when matchPath "/api/blog/comment" path = Some (Exact "/api/blog/comment") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.blogSubmitCommentReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Blog.Handlers.submitComment req request env ctx
+                return! Articles.Handlers.submitComment req request env ctx
         })
 
     | _ -> None

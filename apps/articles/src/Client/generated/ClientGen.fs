@@ -8,64 +8,25 @@ open Client.Api
 
 // --- HTTP API ---
 
-let getArticle (id: string) =
-    fetchJson (sprintf "/api/article/%s" id) Decode.getArticleResponse
+let articlesGetPost (id: string) =
+    fetchJson (sprintf "/api/articles/post/%s" id) Decode.articlesGetPostResponse
 
-let submitComment (req: Models.Api.SubmitComment.Request) =
-    let body = Encode.submitCommentReq req |> Encode.toString 0
-    postJson "/api/comment" body Decode.submitCommentResponse
+let articlesSubmitComment (req: Articles.Api.SubmitComment.Request) =
+    let body = Encode.articlesSubmitCommentReq req |> Encode.toString 0
+    postJson "/api/articles/comment" body Decode.articlesSubmitCommentResponse
 
-let getArticles (id: string) =
-    fetchJson (sprintf "/api/articles/%s" id) Decode.getArticlesResponse
-
-let blogGetItemsByTag (id: string) =
-    fetchJson (sprintf "/api/blog/tags/%s/items" id) Decode.blogGetItemsByTagResponse
-
-let blogGetTags () =
-    fetchJson "/api/blog/tags" Decode.blogGetTagsResponse
-
-let blogGetItem (id: string) =
-    fetchJson (sprintf "/api/blog/item/%s" id) Decode.blogGetItemResponse
-
-let blogSubmitItem (req: Blog.Api.SubmitItem.Request) =
-    let body = Encode.blogSubmitItemReq req |> Encode.toString 0
-    postJson "/api/blog/item" body Decode.blogSubmitItemResponse
-
-let blogSubmitComment (req: Blog.Api.SubmitComment.Request) =
-    let body = Encode.blogSubmitCommentReq req |> Encode.toString 0
-    postJson "/api/blog/comment" body Decode.blogSubmitCommentResponse
-
-let blogGetFeed (id: string) =
-    fetchJson (sprintf "/api/blog/feed/%s" id) Decode.blogGetFeedResponse
+let articlesGetFeed (id: string) =
+    fetchJson (sprintf "/api/articles/feed/%s" id) Decode.articlesGetFeedResponse
 
 // --- WebSocket Events ---
 
-type WsEvent =
-    | NewComment of Models.Ws.NewCommentEvent
+type ArticlesWsEvent =
+    | ArticlesNewComment of Articles.Ws.NewCommentEvent
 
-let decodeWsEvent (text: string) : Result<WsEvent, string> =
+let articlesDecodeWsEvent (text: string) : Result<ArticlesWsEvent, string> =
     match Decode.fromString (Decode.field "type" Decode.string) text with
     | Ok "NewComment" ->
-        Decode.fromString (Decode.field "payload" Decode.newCommentEvent) text
-        |> Result.map NewComment
-    | Ok t -> Error (sprintf "Unknown event: %s" t)
-    | Error e -> Error e
-
-type BlogWsEvent =
-    | BlogNewComment of Blog.Ws.NewCommentEvent
-    | BlogCommentModerated of Blog.Ws.CommentModeratedEvent
-    | BlogCommentRemoved of Blog.Ws.CommentRemovedEvent
-
-let blogDecodeWsEvent (text: string) : Result<BlogWsEvent, string> =
-    match Decode.fromString (Decode.field "type" Decode.string) text with
-    | Ok "NewComment" ->
-        Decode.fromString (Decode.field "payload" Decode.blogNewCommentEvent) text
-        |> Result.map BlogNewComment
-    | Ok "CommentModerated" ->
-        Decode.fromString (Decode.field "payload" Decode.blogCommentModeratedEvent) text
-        |> Result.map BlogCommentModerated
-    | Ok "CommentRemoved" ->
-        Decode.fromString (Decode.field "payload" Decode.blogCommentRemovedEvent) text
-        |> Result.map BlogCommentRemoved
+        Decode.fromString (Decode.field "payload" Decode.articlesNewCommentEvent) text
+        |> Result.map ArticlesNewComment
     | Ok t -> Error (sprintf "Unknown event: %s" t)
     | Error e -> Error e

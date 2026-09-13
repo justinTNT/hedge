@@ -1,33 +1,42 @@
-module Client.Shared
+module Articles.Client.Shared
+
+// The shared rich-text module lives in the host's Client.RichText namespace.
+module RichText = Client.RichText
 
 open Feliz
 open Feliz.Router
 open Fable.Core
 open Hedge.Interface
-open Models.Api
-open Client.Types
+open Articles.Api
+open Articles.Client.Types
 
 // -- Deployment configuration (injected at build time; see vite.config.js) --
 
 /// Sub-path this deployment is served under, e.g. "/st". Empty when at the root.
+/// Used for API + asset URLs.
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
 
-[<Emit("window.SITE_LOGO || '/public/darwinnews.png'")>]
-let private siteLogo : string = jsNative
+/// The path this module is mounted at: "" when it's the site's primary module
+/// (served at the naked URL — articles is primary on justat/ndct). ROUTING (nav +
+/// route-strip) is based here; API + assets keep the deployment base above. The
+/// mount's shell sets window.MOUNT_BASE; absent => "" (primary).
+[<Emit("window.MOUNT_BASE || ''")>]
+let private mountBase : string = jsNative
 
-[<Emit("window.SITE_SLUG || ''")>]
-let siteSlug : string = jsNative
+/// Tenant logo from the framework accessor, with a neutral default.
+let private siteLogo : string =
+    if Hedge.Tenant.config.Logo = "" then "/public/logo.png" else Hedge.Tenant.config.Logo
 
-/// Set the browser tab title: "<article> · <site>" for an article, or just the
-/// site title when passed "". Uses SITE_TITLE as the base (the server pre-sets
-/// <title> to the article name for SEO, so we can't read it off document.title).
+/// Set the browser tab title: "<post> · <site>" for a post, or just the site
+/// title when passed "". Uses SITE_TITLE as the base (the server pre-sets <title>
+/// to the post name for SEO, so we can't read it off document.title).
 [<Emit("(function(t){var b=window.SITE_TITLE||'';document.title=t?(t+' · '+b):b;})($0)")>]
-let setDocTitle (articleTitle: string) : unit = jsNative
+let setDocTitle (postTitle: string) : unit = jsNative
 
 /// First image src inside a RichContent (TipTap) doc, or "" if none. Lets the feed
-/// derive a thumbnail from the teaser itself, so an authored article shows its
-/// image without a separately-set hero.
+/// derive a thumbnail from the teaser itself, so an authored post shows its image
+/// without a separately-set hero.
 [<Emit("(function(s){try{var d=JSON.parse(s);var f=function(n){if(!n)return null;if(n.type==='image'&&n.attrs&&n.attrs.src)return n.attrs.src;var c=n.content;if(c)for(var i=0;i<c.length;i++){var r=f(c[i]);if(r)return r;}return null;};return f(d)||'';}catch(e){return '';}})($0)")>]
 let firstImageSrc (richJson: string) : string = jsNative
 
@@ -79,8 +88,10 @@ let loadMoreIfSentinelVisible (elementId: string) (onMore: unit -> unit) : unit 
 let private hideBrokenImg (e: obj) : unit = jsNative
 
 let private baseSegments =
-    basePath.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
+    (basePath + mountBase).Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
+/// Drop the deployment/mount prefix from router segments, so route matching is
+/// written as though the app were always mounted at the root.
 let stripBase (segments: string list) =
     let rec strip prefix rest =
         match prefix, rest with
@@ -116,7 +127,7 @@ let error (msg: string) dispatch =
         ]
     ]
 
-let feedItem (item: GetArticles.ArticleItem) =
+let feedItem (item: GetFeed.FeedItem) =
     let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
         prop.key item.Id
@@ -128,7 +139,7 @@ let feedItem (item: GetArticles.ArticleItem) =
             match item.Teaser with
             | Some (RichContent text) ->
                 // Thumbnail: prefer the teaser's own first image (works for authored
-                // articles too), fall back to the Image field.
+                // posts too), fall back to the Image field.
                 let thumb =
                     let t = firstImageSrc text
                     if t <> "" then Some t else item.Image
@@ -148,7 +159,7 @@ let feedItem (item: GetArticles.ArticleItem) =
 
 /// Group consecutive items by calendar day (lists are date-descending). Carries a
 /// representative timestamp so the divider can format the badge (month + day).
-let groupByDay (items: GetArticles.ArticleItem list) : (int * GetArticles.ArticleItem list) list =
+let groupByDay (items: GetFeed.FeedItem list) : (int * GetFeed.FeedItem list) list =
     ([], items)
     ||> List.fold (fun groups item ->
         let day = formatDate item.Timestamp
@@ -289,27 +300,38 @@ let navWithSession (model: Model) dispatch =
     Html.nav [
         prop.children [
             Html.a [
+                // A real link to home (so it's right-clickable / shows a URL); the
+                // onClick keeps navigation in-SPA. justat's theme hides the img and
+                // labels this "Home" via CSS ::before.
+                prop.href (basePath + "/")
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> navigateTo [])
+                prop.onClick (fun (e: Browser.Types.MouseEvent) -> e.preventDefault(); navigateTo [])
                 prop.children [
                   Html.img [ prop.src (basePath + siteLogo) ]
                 ]
             ]
-            // The blog module's path-mount is a separate bundle, so this is a
-            // real navigation (href), not SPA routing. Shown only where the blog
-            // is mounted (justat), matching the worker's SITE="justat" gate.
+            // The blog module's path-mount is a separate bundle, so this is a real
+            // navigation (href), not SPA routing. Shown only where the blog is
+            // mounted (justat), matching the worker's SITE="justat" gate.
             if Hedge.Tenant.config.Slug = "justat" then
                 Html.a [
                     prop.className "nav-blog"
                     prop.href (basePath + "/blog")
-                    prop.text "Blog"
+                    prop.text "Web Log"
+                ]
+            // Prominent link to the tenant's external info/companion page, when set.
+            if Hedge.Tenant.config.InfoUrl <> "" then
+                Html.a [
+                    prop.className "nav-info"
+                    prop.href Hedge.Tenant.config.InfoUrl
+                    prop.text (if Hedge.Tenant.config.InfoLabel <> "" then Hedge.Tenant.config.InfoLabel else "Info")
                 ]
             identityView model dispatch
         ]
     ]
 
-/// ndct's full-screen intro banner (HTML5UP "Massively" look): the contrails
-/// hero with the title + subtitle. Shown on the home feed only.
+/// ndct's full-screen intro banner (HTML5UP "Massively" look): the contrails hero
+/// with the title + subtitle. Shown on the home feed only.
 let ndctHero =
     Html.section [
         prop.className "ndct-hero"
@@ -325,8 +347,7 @@ let ndctHero =
         ]
     ]
 
-/// justat.at's static sidebar, ported verbatim from the old app's baseplate
-/// (lime "just@justat.at" masthead + About / My sites / Contact / Links).
+/// justat.at's static sidebar, ported verbatim from the old app's baseplate.
 /// Tenant-specific for now; a later per-tenant config would generalise it.
 let private sidebarLink (href: string) (text: string) =
     Html.a [ prop.href href; prop.text text ]

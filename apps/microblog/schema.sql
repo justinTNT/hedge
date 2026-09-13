@@ -47,7 +47,8 @@ CREATE TABLE blog_comments (
     created_at INTEGER NOT NULL,
     deleted_at INTEGER,
     FOREIGN KEY (item_id) REFERENCES blog_items(id),
-    FOREIGN KEY (identity_id) REFERENCES identities(id)
+    FOREIGN KEY (identity_id) REFERENCES identities(id),
+    FOREIGN KEY (parent_id) REFERENCES blog_comments(id)
 );
 
 CREATE TABLE blog_tags (
@@ -73,6 +74,7 @@ CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
 CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
 CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);
 CREATE INDEX idx_blog_comments_identity_id ON blog_comments(identity_id);
+CREATE INDEX idx_blog_comments_parent_id ON blog_comments(parent_id);
 CREATE INDEX idx_blog_comments_created_at ON blog_comments(created_at DESC);
 CREATE UNIQUE INDEX idx_blog_tags_name ON blog_tags(name);
 CREATE INDEX idx_blog_tags_created_at ON blog_tags(created_at DESC);

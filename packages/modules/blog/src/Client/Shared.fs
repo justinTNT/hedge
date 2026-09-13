@@ -341,8 +341,14 @@ let navWithSession (model: Model) dispatch =
     Html.nav [
         prop.children [
             Html.a [
+                // Real link to the site root. When blog is the PRIMARY module (it is
+                // the whole site, mountBase=""), stay in-SPA. When it's a SECONDARY
+                // path-mount (e.g. justat's /blog), let the href navigate to the site
+                // home (the host app), leaving the blog bundle — navigateTo [] would
+                // only reach the blog root (/blog), not "/".
+                prop.href (basePath + "/")
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> navigateTo [])
+                prop.onClick (fun (e: Browser.Types.MouseEvent) -> if mountBase = "" then (e.preventDefault(); navigateTo []))
                 prop.children [
                   Html.img [
                     prop.src (basePath + siteLogo)
@@ -369,22 +375,6 @@ let navWithSession (model: Model) dispatch =
                     prop.text (if Hedge.Tenant.config.InfoLabel <> "" then Hedge.Tenant.config.InfoLabel else "Info")
                 ]
             identityView model dispatch
-        ]
-    ]
-
-let nav =
-    Html.nav [
-        prop.children [
-            Html.a [
-                prop.text "Hedge"
-                prop.style [ style.cursor.pointer ]
-                prop.onClick (fun _ -> navigateTo [])
-                prop.children [
-                  Html.img [
-                    prop.src (basePath + siteLogo)
-                  ]
-                ]
-            ]
         ]
     ]
 

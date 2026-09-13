@@ -77,7 +77,7 @@ let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
         match segments with
         | [ idOrSlug ] when not (Set.contains idOrSlug reserved) && not (idOrSlug.Contains ".") ->
             Some (promise {
-                let stmt = bind (env.DB.prepare Sql.articleMetaBySlugOrId) [| box idOrSlug; box idOrSlug |]
+                let stmt = bind (env.DB.prepare Articles.Sql.postMetaBySlugOrId) [| box idOrSlug; box idOrSlug |]
                 let! result = stmt.all()
                 let! shell = assetShell (box env) request
                 if result.results.Length = 0 then

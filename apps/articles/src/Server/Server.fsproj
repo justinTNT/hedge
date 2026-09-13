@@ -8,13 +8,18 @@
     <Compile Include="generated/Db.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Attribution.fs" />
-    <Compile Include="Handlers.fs" />
   </ItemGroup>
-  <!-- Blog module server layer, composed via the module's own .props (it owns its
-       file list). Import sits between ItemGroups so its files land here in compile
-       order: after Db/Identity/Handlers, before Routes. -->
-  <Import Project="../../../../packages/modules/blog/blog.server.props" />
+  <!-- Content module server layers, composed via each module's own .props (it owns
+       its file list). Imports sit between ItemGroups so the module files land here in
+       compile order: after Db/Identity (which they use), before the app's identity
+       Handlers, AdminGen and generated/Routes (which dispatches to their handlers). -->
+  <Import Project="../../../../packages/modules/articles/articles.server.props" />
+  <!-- blog is composed on every site EXCEPT ndct (articles-only). HEDGE_SITE drives
+       both this import and the gen manifest (gen-modules.ndct.json omits blog), so
+       ndct's generated Routes never reference Blog.Handlers. -->
+  <Import Project="../../../../packages/modules/blog/blog.server.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
   <ItemGroup>
+    <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" />
@@ -24,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>

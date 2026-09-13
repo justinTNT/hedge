@@ -37,14 +37,14 @@ let findIdentityByProviderGlobal = """
     SELECT i.id, i.guest_id
     FROM identities i
     WHERE i.provider = ? AND i.provider_user_id = ?
-    ORDER BY (SELECT COUNT(*) FROM comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
+    ORDER BY (SELECT COUNT(*) FROM articles_comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
     LIMIT 1"""
 
 let moveIdentitiesToGuest =
     "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
 
 let countCommentsForIdentity =
-    "SELECT COUNT(*) AS n FROM comments WHERE identity_id = ?"
+    "SELECT COUNT(*) AS n FROM articles_comments WHERE identity_id = ?"
 
 let moveIdentityToGuest =
     "UPDATE identities SET guest_id = ? WHERE id = ?"
@@ -80,41 +80,14 @@ let setIdentityActive =
 // ---- Attribution ----
 
 let reassignComments = """
-    UPDATE comments
+    UPDATE articles_comments
     SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?)
     WHERE identity_id = ?"""
 
-// ---- Articles / comments ----
-
-let articleBySlug =
-    "SELECT id, title, teaser, body, image, article_date, slug, created_at, updated_at, view_count, deleted_at FROM articles WHERE slug = ?"
-
-// Cursor-paginated list (infinite scroll). Ordered by (article_date, id) so the
-// compound cursor is stable across shared dates. Body is deliberately excluded —
-// the list doesn't need it and essays can be large. Bind: [limit].
-let listFirstPage = """
-    SELECT id, title, teaser, image, article_date, slug
-    FROM articles
-    WHERE deleted_at IS NULL
-    ORDER BY article_date DESC, id DESC
-    LIMIT ?"""
-
-// Bind: [cursorTs, cursorTs, cursorId, limit].
-let listAfterCursor = """
-    SELECT id, title, teaser, image, article_date, slug
-    FROM articles
-    WHERE deleted_at IS NULL
-      AND (article_date < ? OR (article_date = ? AND id < ?))
-    ORDER BY article_date DESC, id DESC
-    LIMIT ?"""
-
-/// Just the columns social previews need (teaser stands in for description).
-let articleMetaBySlugOrId =
-    "SELECT id, title, teaser, image, slug FROM articles WHERE (slug = ? OR id = ?) AND deleted_at IS NULL"
-
-let picturesForArticleComments =
-    "SELECT DISTINCT i.id, i.picture FROM identities i JOIN comments c ON c.identity_id = i.id WHERE c.article_id = ?"
-
-let insertComment = """
-    INSERT INTO comments (id, article_id, identity_id, parent_id, author, content, removed, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
+// Content SQL (posts + comments) now lives in the articles module (Articles.Sql,
+// Tables-driven). The identity statements above reference `articles_comments` as a
+// plain literal — this file compiles before the generated Server.Db, so it can't use
+// the `Tables` constants (same reason microblog's identity SQL literals `blog_comments`).
+// On justat the blog module owns its own `blog_comments`; re-attributing a merged
+// identity's comments across BOTH content tables is a follow-up (this preserves the
+// pre-module behaviour, which only ever re-attributed the articles table).

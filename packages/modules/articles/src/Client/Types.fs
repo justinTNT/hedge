@@ -1,6 +1,6 @@
-module Client.Types
+module Articles.Client.Types
 
-open Models.Api
+open Articles.Api
 open Client.ClientGen
 
 type IdentityListItem = {
@@ -13,15 +13,15 @@ type IdentityListItem = {
 
 type Model = {
     Route: string list
-    Feed: GetArticles.Response option
+    Feed: GetFeed.Response option
     /// True while a subsequent (infinite-scroll) page is in flight.
     FeedLoadingMore: bool
-    CurrentItem: GetArticle.Response option
+    CurrentItem: GetPost.Response option
     IsLoading: bool
     Error: string option
     GuestSession: GuestSession.GuestSessionData
     CollapsedComments: Set<string>
-    ReplyingTo: {| ArticleId: string; ParentId: string option |} option
+    ReplyingTo: {| PostId: string; ParentId: string option |} option
     Identities: IdentityListItem list
     /// Providers the server has credentials for.
     AvailableProviders: string list
@@ -35,20 +35,20 @@ type Model = {
 type Msg =
     | UrlChanged of string list
     | LoadFeed
-    | GotFeed of Result<GetArticles.Response, string>
+    | GotFeed of Result<GetFeed.Response, string>
     | LoadMoreFeed
-    | GotMoreFeed of Result<GetArticles.Response, string>
+    | GotMoreFeed of Result<GetFeed.Response, string>
     | LoadItem of string
-    | GotItem of Result<GetArticle.Response, string>
+    | GotItem of Result<GetPost.Response, string>
     | DismissError
     | SubmitComment
     | GotSubmitComment of Result<SubmitComment.Response, string>
     | ToggleCollapse of string
-    | SetReplyTo of articleId: string * parentId: string option
+    | SetReplyTo of postId: string * parentId: string option
     | CancelReply
     | ConnectEvents of string
     | DisconnectEvents
-    | GotEvent of Models.Ws.NewCommentEvent
+    | GotEvent of Articles.Ws.NewCommentEvent
     | EventError of string
     | GotSessionSync of GuestSession.GuestSessionData
     | RevertIdentity of identityId: string * merge: bool

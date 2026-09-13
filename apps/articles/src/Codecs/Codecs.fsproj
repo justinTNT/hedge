@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
   </ItemGroup>
   <ItemGroup>

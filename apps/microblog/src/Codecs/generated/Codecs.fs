@@ -20,13 +20,13 @@ module Encode =
     // -- Domain types --
     let inline guest (v: Models.Domain.Guest) = encode v
     let inline identity (v: Models.Domain.Identity) = encode v
-    let inline microblogItem (v: Blog.Domain.MicroblogItem) = encode v
+    let inline item (v: Blog.Domain.Item) = encode v
     let inline itemComment (v: Blog.Domain.ItemComment) = encode v
     let inline tag (v: Blog.Domain.Tag) = encode v
     let inline itemTag (v: Blog.Domain.ItemTag) = encode v
 
     // -- API view types --
-    let inline blogMicroblogItemView (v: Blog.Api.SubmitItem.MicroblogItem) = encode v
+    let inline blogItemView (v: Blog.Api.SubmitItem.Item) = encode v
     let inline blogCommentItem (v: Blog.Api.SubmitComment.CommentItem) = encode v
     let inline blogFeedItem (v: Blog.Api.GetFeed.FeedItem) = encode v
 
@@ -44,13 +44,13 @@ module Decode =
     // -- Domain types --
     let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
     let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
-    let microblogItem : Decoder<Blog.Domain.MicroblogItem> = decode<Blog.Domain.MicroblogItem>()
+    let item : Decoder<Blog.Domain.Item> = decode<Blog.Domain.Item>()
     let itemComment : Decoder<Blog.Domain.ItemComment> = decode<Blog.Domain.ItemComment>()
     let tag : Decoder<Blog.Domain.Tag> = decode<Blog.Domain.Tag>()
     let itemTag : Decoder<Blog.Domain.ItemTag> = decode<Blog.Domain.ItemTag>()
 
     // -- API view types --
-    let blogMicroblogItemView : Decoder<Blog.Api.SubmitItem.MicroblogItem> = decode<Blog.Api.SubmitItem.MicroblogItem>()
+    let blogItemView : Decoder<Blog.Api.SubmitItem.Item> = decode<Blog.Api.SubmitItem.Item>()
     let blogCommentItem : Decoder<Blog.Api.SubmitComment.CommentItem> = decode<Blog.Api.SubmitComment.CommentItem>()
     let blogFeedItem : Decoder<Blog.Api.GetFeed.FeedItem> = decode<Blog.Api.GetFeed.FeedItem>()
 

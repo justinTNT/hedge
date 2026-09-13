@@ -289,7 +289,7 @@ let getIdentities (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
         return okJsonWithCookie body (guestCookieValue guest)
     }
 
-let private toFeedItem (r: MicroblogItemRow) : GetFeed.FeedItem =
+let private toFeedItem (r: ItemRow) : GetFeed.FeedItem =
     { Id = r.Id
       Title = r.Title
       Slug = r.Slug
@@ -311,7 +311,7 @@ let getRhymes (env: Env) : JS.Promise<WorkerResponse> =
         let groups = ResizeArray<string * GetFeed.FeedItem list>()
         for tag in tags do
             let! itemsRes = (bind (env.DB.prepare Blog.Sql.itemsByTag) [| box tag; box 12 |]).all()
-            let items = itemsRes.results |> Array.map (parseMicroblogItemRow >> toFeedItem) |> Array.toList
+            let items = itemsRes.results |> Array.map (parseItemRow >> toFeedItem) |> Array.toList
             // A rhyme needs at least a pair; skip empty/singleton tags.
             if List.length items >= 2 then groups.Add(tag, items)
         let body =
