@@ -1267,6 +1267,35 @@ let execProcess (cmd: string) (args: string) : string =
     p.WaitForExit()
     output
 
+let private hedgeSite () = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
+
+/// " --env <site>" for every wrangler invocation (introspection AND apply) when
+/// HEDGE_SITE is set, else "". A site's DB lives under [env.<site>], so the flag is
+/// required for wrangler to resolve it — omitting it on introspection is exactly the
+/// ndct "Couldn't find a D1 DB 'ndct-db'" failure.
+let siteEnvFlag () =
+    match hedgeSite () with
+    | s when System.String.IsNullOrEmpty s -> ""
+    | s -> sprintf " --env %s" s
+
+/// True when wrangler.toml declares [env.<site>] (a real deployment target).
+let private wranglerEnvExists (site: string) : bool =
+    File.Exists "wrangler.toml"
+    && (File.ReadAllLines "wrangler.toml"
+        |> Array.exists (fun l ->
+            let t = l.TrimStart()
+            t.StartsWith(sprintf "[env.%s]" site) || t.StartsWith(sprintf "[env.%s." site)))
+
+/// Fail early on a HEDGE_SITE that names no real target: a typo (e.g. `ndtc`) would
+/// otherwise silently fall back to the default module set + database. A site is known
+/// if it has a gen-modules.<site>.json (its own composition) or an [env.<site>] target.
+let validateSite () =
+    match hedgeSite () with
+    | s when System.String.IsNullOrEmpty s -> ()
+    | s ->
+        if not (File.Exists(sprintf "gen-modules.%s.json" s)) && not (wranglerEnvExists s) then
+            failwithf "Unknown HEDGE_SITE '%s': no gen-modules.%s.json and no [env.%s] in wrangler.toml (a typo would silently use the default module set + database)." s s s
+
 let getDbName () : string =
     let content = File.ReadAllText("wrangler.toml")
     let lines = content.Split('\n')
@@ -1302,7 +1331,8 @@ let getDbName () : string =
 let wranglerQuery (remote: bool) (dbName: string) (sql: string) : Text.Json.JsonElement array =
     let escaped = sql.Replace("\"", "\\\"")
     let target = if remote then "--remote" else "--local"
-    let args = sprintf "wrangler d1 execute %s %s --command \"%s\" --json" dbName target escaped
+    // --env <site> is required for wrangler to resolve a per-[env.<site>] database.
+    let args = sprintf "wrangler d1 execute %s%s %s --command \"%s\" --json" dbName (siteEnvFlag ()) target escaped
     let output = execProcess "npx" args
     let doc = Text.Json.JsonDocument.Parse(output)
     // wrangler's `d1 execute --json` shape varies by version/target: --local wraps
@@ -1499,19 +1529,19 @@ let writeMigration (sql: string) : string =
 let runMigrate (metas: TableMeta list) (dryRun: bool) (remote: bool) =
     let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
     let dbName = getDbName ()
-    let envFlag =
-        match System.Environment.GetEnvironmentVariable "HEDGE_SITE" with
-        | null | "" -> ""
-        | site -> sprintf " --env %s" site
+    let envFlag = siteEnvFlag ()   // introspection + apply target the same site
+    let siteLabel = match hedgeSite () with s when System.String.IsNullOrEmpty s -> "default" | s -> s
     if dbName = "" then
-        printfn "ERROR: Could not find database_name in wrangler.toml"
+        printfn "ERROR: Could not find database_name for site '%s' in wrangler.toml" siteLabel
     else
-        printfn "Diffing schema against the %s database (%s)." (if remote then "REMOTE" else "local") dbName
+        printfn "Diffing schema against the %s database (%s, site: %s)." (if remote then "REMOTE" else "local") dbName siteLabel
         let currentTables = getCurrentTables remote dbName
         let currentTableSet = currentTables |> Set.ofList
 
         let migrationParts = ResizeArray<string>()
-        migrationParts.Add("-- Auto-generated migration")
+        // Label the target so a generated migration is self-evidently for one site/db,
+        // not silently anonymous (the migrations/ dir is shared across envs today).
+        migrationParts.Add(sprintf "-- Auto-generated migration for site: %s (db: %s)" siteLabel dbName)
         migrationParts.Add("")
 
         let mutable hasChanges = false
@@ -1719,6 +1749,7 @@ let emitModuleSurface (m: GenModule) =
 // ============================================================
 
 let private runSite (argv: string array) =
+    validateSite ()   // reject an unknown HEDGE_SITE before generating anything
     let modules = readModules ()
 
     // Step 3+4: reflect each module, then concatenate into the combined lists.
