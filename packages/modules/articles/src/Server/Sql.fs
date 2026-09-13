@@ -26,7 +26,7 @@ let postMetaBySlugOrId =
     sprintf "SELECT id, title, teaser, image, slug FROM %s WHERE (slug = ? OR id = ?) AND deleted_at IS NULL" Tables.post
 
 let picturesForPostComments =
-    sprintf "SELECT DISTINCT i.id, i.picture FROM identities i JOIN %s c ON c.identity_id = i.id WHERE c.post_id = ?" Tables.comment
+    sprintf "SELECT DISTINCT i.id, i.picture FROM identities i JOIN %s c ON c.identity_id = i.id WHERE c.post_id = ? AND c.deleted_at IS NULL" Tables.comment
 
 let insertComment =
     sprintf "INSERT INTO %s (id, post_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)" Tables.comment

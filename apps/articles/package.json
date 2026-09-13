@@ -17,7 +17,7 @@
     "deploy": "npm run build && wrangler deploy",
     "clean:site": "rm -rf src/Server/obj src/Server/bin src/Client/obj src/Client/bin dist",
     "deploy:justat": "npm run clean:site && HEDGE_SITE=justat npm run gen && HEDGE_SITE=justat SITE_SLUG=justat SITE_TITLE=\"just@justat.at\" ADMIN_TITLE=\"just@justat.at admin\" SITE_LOGO=\"/public/justat.png\" npm run build && wrangler deploy --env justat",
-    "deploy:ndct": "npm run clean:site && HEDGE_SITE=ndct npm run gen && HEDGE_SITE=ndct SITE_SLUG=ndct SITE_TITLE=\"Now Do Chemtrails\" ADMIN_TITLE=\"NDCT admin\" SITE_LOGO=\"/public/ndct.png\" npm run build && wrangler deploy --env ndct",
+    "deploy:ndct": "npm run clean:site && HEDGE_SITE=ndct npm run gen && HEDGE_SITE=ndct SITE_SLUG=ndct SITE_TITLE=\"Now Do Chemtrails\" ADMIN_TITLE=\"NDCT admin\" SITE_LOGO=\"/public/ndct.png\" npm run build && wrangler deploy --env ndct && npm run gen",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
     "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",

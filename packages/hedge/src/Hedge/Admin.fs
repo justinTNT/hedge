@@ -54,6 +54,13 @@ let private toSnakeCase (s: string) =
 // Row → JSON (generic, driven by schema)
 // ============================================================
 
+/// Coerce a DB value to a bool across representations (0/1, "0"/"1", "true"/"false").
+/// Admin writes booleans as 0/1 ints (see mutableArgs); legacy rows may hold text,
+/// and an erased F# cast of the raw column doesn't reliably yield a JS boolean.
+let private coerceBool (v: obj) : bool =
+    let s = (string v).ToLowerInvariant()
+    not (s = "0" || s = "false" || s = "" || s = "null")
+
 let private rowToJson (schema: TypeSchema) (row: obj) : JsonValue =
     let pairs =
         schema.Fields |> List.map (fun field ->
@@ -63,7 +70,9 @@ let private rowToJson (schema: TypeSchema) (row: obj) : JsonValue =
             let encoded =
                 match field.Type with
                 | FInt -> if isNull v then Encode.nil else Encode.int (unbox v)
-                | FBool -> if isNull v then Encode.nil else Encode.bool (unbox v)
+                | FBool -> if isNull v then Encode.nil else Encode.bool (coerceBool v)
+                | FOption FInt -> if isNull v then Encode.nil else Encode.int (unbox v)
+                | FOption FBool -> if isNull v then Encode.nil else Encode.bool (coerceBool v)
                 | FOption _ -> if isNull v then Encode.nil else Encode.string (unbox v)
                 | FList FString -> Encode.list []
                 | _ -> if isNull v then Encode.nil else Encode.string (unbox v)
@@ -96,19 +105,39 @@ let private genericGet (db: D1Database) (table: AdminTable) (id: string) : JS.Pr
     }
 
 /// The mutable-field values from a decoded body, in MutableFields order —
-/// shared by update and create so both bind columns the same way.
+/// shared by update and create so both bind columns the same way. Conversion is
+/// field-type-aware (option-transparent): booleans bind as 0/1 and ints as ints,
+/// otherwise the JSON text ("false") lands in an INTEGER column and reads back as
+/// true. Everything else binds as text (or NULL).
 let private mutableArgs (table: AdminTable) (pairMap: Map<string, JsonValue>) =
+    let rec strip t = match t with FOption inner -> strip inner | _ -> t
+    let baseType name =
+        table.Schema.Fields
+        |> List.tryPick (fun f -> if f.Name = name then Some f.Type else None)
+        |> Option.map strip
     table.MutableFields |> List.map (fun fieldName ->
         let jsonKey = camelCase fieldName
         match Map.tryFind jsonKey pairMap with
+        | None -> jsNull
         | Some v ->
-            match Decode.fromValue "" Decode.string v with
-            | Ok s -> box s
+            match baseType fieldName with
+            | Some FBool ->
+                match Decode.fromValue "" Decode.bool v with
+                | Ok b -> box (if b then 1 else 0)
+                | _ ->
+                    match Decode.fromValue "" Decode.string v with
+                    | Ok s -> let s = s.ToLowerInvariant() in box (if s = "true" || s = "1" then 1 else 0)
+                    | _ -> jsNull
+            | Some FInt ->
+                match Decode.fromValue "" Decode.int v with
+                | Ok i -> box i
+                | _ -> jsNull
             | _ ->
-                let s = Encode.toString 0 v
-                if s = "null" then jsNull
-                else box s
-        | None -> jsNull)
+                match Decode.fromValue "" Decode.string v with
+                | Ok s -> box s
+                | _ ->
+                    let s = Encode.toString 0 v
+                    if s = "null" then jsNull else box s)
 
 let private genericCreate (db: D1Database) (table: AdminTable) (body: string) : JS.Promise<string> =
     promise {

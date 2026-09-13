@@ -573,15 +573,22 @@ let generateDbTable (m: TableMeta) : string list =
     emit (sprintf "let delete%s (id: string) (db: D1Database) : D1PreparedStatement =" m.DisplayName)
     emit (sprintf "    bind (db.prepare(\"%s\")) [| box id |]" m.Delete)
 
-    // FK selectors
+    // FK selectors — carry the soft-delete filter so relationship reads (e.g. a
+    // post's comments) never surface soft-deleted rows, matching the single-row and
+    // list selectors above.
     let hasCreatedAtCol = m.Cols |> List.contains "created_at"
+    let sdCol =
+        m.DbFields |> List.tryPick (fun f ->
+            if f.Attrs |> List.exists (function SoftDelete -> true | _ -> false)
+            then Some (toSnakeCase f.Name) else None)
+    let liveClause = match sdCol with Some c -> sprintf " AND %s IS NULL" c | None -> ""
     for f in m.FkFields do
         let fkCol = toSnakeCase f.Name
         let paramName = toCamelCase f.Name
         let orderClause = if hasCreatedAtCol then " ORDER BY created_at DESC LIMIT 100" else " LIMIT 100"
         emit ""
         emit (sprintf "let select%sBy%s (%s: string) (db: D1Database) : D1PreparedStatement =" plural f.Name paramName)
-        emit (sprintf "    bind (db.prepare(\"SELECT %s FROM %s WHERE %s = ?%s\")) [| box %s |]" m.ColStr m.TableName fkCol orderClause paramName)
+        emit (sprintf "    bind (db.prepare(\"SELECT %s FROM %s WHERE %s = ?%s%s\")) [| box %s |]" m.ColStr m.TableName fkCol liveClause orderClause paramName)
 
     lines |> Seq.toList
 
@@ -1122,17 +1129,34 @@ let execProcess (cmd: string) (args: string) : string =
 let getDbName () : string =
     let content = File.ReadAllText("wrangler.toml")
     let lines = content.Split('\n')
-    lines
-    |> Array.tryFind (fun l -> l.Trim().StartsWith("database_name"))
-    |> Option.bind (fun l ->
+    let extract (l: string) =
         let eqIdx = l.IndexOf('=')
         if eqIdx >= 0 then
             let v = l.Substring(eqIdx + 1).Trim()
             let commentIdx = v.IndexOf('#')
             let cleaned = if commentIdx >= 0 then v.Substring(0, commentIdx).Trim() else v
             Some (cleaned.Trim('"'))
-        else None)
-    |> Option.defaultValue ""
+        else None
+    // Select the database for HEDGE_SITE (the same flag that drives the gen manifest),
+    // so a per-site migration diffs the right tenant DB. Without it, take the top-level
+    // default (the first database_name before any [env.*] block).
+    let site = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
+    if System.String.IsNullOrEmpty site then
+        lines
+        |> Array.takeWhile (fun l -> not (l.TrimStart().StartsWith "[env."))
+        |> Array.tryPick (fun l -> if l.Trim().StartsWith "database_name" then extract l else None)
+        |> Option.defaultValue ""
+    else
+        let marker = sprintf "[env.%s" site
+        let mutable inSection = false
+        let mutable result = ""
+        for l in lines do
+            let t = l.TrimStart()
+            if t.StartsWith "[env." then
+                inSection <- t.StartsWith(marker + "]") || t.StartsWith(marker + ".")
+            if inSection && result = "" && l.Trim().StartsWith "database_name" then
+                match extract l with Some v -> result <- v | None -> ()
+        result
 
 let wranglerQuery (remote: bool) (dbName: string) (sql: string) : Text.Json.JsonElement array =
     let escaped = sql.Replace("\"", "\\\"")
@@ -1289,6 +1313,10 @@ let writeMigration (sql: string) : string =
 let runMigrate (metas: TableMeta list) (dryRun: bool) (remote: bool) =
     let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
     let dbName = getDbName ()
+    let envFlag =
+        match System.Environment.GetEnvironmentVariable "HEDGE_SITE" with
+        | null | "" -> ""
+        | site -> sprintf " --env %s" site
     if dbName = "" then
         printfn "ERROR: Could not find database_name in wrangler.toml"
     else
@@ -1355,9 +1383,9 @@ let runMigrate (metas: TableMeta list) (dryRun: bool) (remote: bool) =
                 // Remote is production — never auto-apply. Write the file, and let a
                 // human review it and apply deliberately.
                 printfn "Review the migration, then apply it yourself:"
-                printfn "  npx wrangler d1 migrations apply %s --remote" dbName
+                printfn "  npx wrangler d1 migrations apply %s --remote%s" dbName envFlag
             else
-                let args = sprintf "wrangler d1 migrations apply %s --local" dbName
+                let args = sprintf "wrangler d1 migrations apply %s --local%s" dbName envFlag
                 let output = execProcess "npx" args
                 printfn "%s" output
                 printfn "Migration applied locally."

@@ -230,13 +230,13 @@ let deleteItemComment (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("UPDATE blog_comments SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 let selectItemCommentsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE item_id = ? ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE item_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
 
 let selectItemCommentsByIdentityId (identityId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE identity_id = ? ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE identity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box identityId |]
 
 let selectItemCommentsByParentId (parentId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE parent_id = ? ORDER BY created_at DESC LIMIT 100")) [| box parentId |]
+    bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box parentId |]
 
 // ============================================================
 // Tag (blog_tags)
@@ -323,10 +323,10 @@ let deleteItemTag (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("UPDATE blog_item_tags SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE item_id = ? LIMIT 100")) [| box itemId |]
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE item_id = ? AND deleted_at IS NULL LIMIT 100")) [| box itemId |]
 
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE tag_id = ? LIMIT 100")) [| box tagId |]
+    bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE tag_id = ? AND deleted_at IS NULL LIMIT 100")) [| box tagId |]
 
 module Tables =
     let guest = "guests"

@@ -50,6 +50,52 @@ CREATE TABLE articles_comments (
     FOREIGN KEY (parent_id) REFERENCES articles_comments(id)
 );
 
+CREATE TABLE blog_items (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    link TEXT,
+    image TEXT,
+    extract TEXT,
+    owner_comment TEXT NOT NULL,
+    article_date INTEGER NOT NULL,
+    slug TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    view_count INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE TABLE blog_comments (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    identity_id TEXT NOT NULL,
+    parent_id TEXT,
+    author TEXT NOT NULL,
+    content TEXT NOT NULL,
+    removed INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    FOREIGN KEY (item_id) REFERENCES blog_items(id),
+    FOREIGN KEY (identity_id) REFERENCES identities(id),
+    FOREIGN KEY (parent_id) REFERENCES blog_comments(id)
+);
+
+CREATE TABLE blog_tags (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE TABLE blog_item_tags (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    deleted_at INTEGER,
+    FOREIGN KEY (item_id) REFERENCES blog_items(id),
+    FOREIGN KEY (tag_id) REFERENCES blog_tags(id)
+);
+
 -- Indexes
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
@@ -59,3 +105,12 @@ CREATE INDEX idx_articles_comments_post_id ON articles_comments(post_id);
 CREATE INDEX idx_articles_comments_identity_id ON articles_comments(identity_id);
 CREATE INDEX idx_articles_comments_parent_id ON articles_comments(parent_id);
 CREATE INDEX idx_articles_comments_created_at ON articles_comments(created_at DESC);
+CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
+CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);
+CREATE INDEX idx_blog_comments_identity_id ON blog_comments(identity_id);
+CREATE INDEX idx_blog_comments_parent_id ON blog_comments(parent_id);
+CREATE INDEX idx_blog_comments_created_at ON blog_comments(created_at DESC);
+CREATE UNIQUE INDEX idx_blog_tags_name ON blog_tags(name);
+CREATE INDEX idx_blog_tags_created_at ON blog_tags(created_at DESC);
+CREATE INDEX idx_blog_item_tags_item_id ON blog_item_tags(item_id);
+CREATE INDEX idx_blog_item_tags_tag_id ON blog_item_tags(tag_id);
