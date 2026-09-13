@@ -8,6 +8,10 @@ const basePath = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const siteTitle = process.env.SITE_TITLE || 'Articles';
 const adminTitle = process.env.ADMIN_TITLE || 'Articles Admin';
 const siteLogo = process.env.SITE_LOGO || '/public/logo.png';
+// BCP-47 locale for date formatting (read via Hedge.Tenant). "" = viewer's own locale.
+const siteLocale = process.env.SITE_LOCALE || 'en-AU';
+// Per-tenant feature flags (comma list, e.g. "blog") — read via Hedge.Tenant.hasFeature.
+const siteFeatures = process.env.SITE_FEATURES || '';
 // Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
 // deploy-specific rules.
 const siteSlug = process.env.SITE_SLUG || '';
@@ -25,6 +29,8 @@ function siteConfig() {
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
         `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
+        `window.SITE_LOCALE=${JSON.stringify(siteLocale)};` +
+        `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};` +
         `window.SITE_SLUG=${JSON.stringify(siteSlug)};` +
         `window.SITE_TITLE=${JSON.stringify(siteTitle)};</script>`;
       return html

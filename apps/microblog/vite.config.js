@@ -9,6 +9,9 @@ const basePath = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const siteTitle = process.env.SITE_TITLE || 'Darwin News';
 const adminTitle = process.env.ADMIN_TITLE || 'DNews Admin';
 const siteLogo = process.env.SITE_LOGO || '/public/darwinnews.png';
+// BCP-47 locale for date formatting (read via Hedge.Tenant). Defaults to the
+// estate's en-AU; a site can override, or set "" for the viewer's own locale.
+const siteLocale = process.env.SITE_LOCALE || 'en-AU';
 // Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
 // deploy-specific rules (e.g. body.tenant-usbase nav img { width: 50% }).
 const siteSlug = process.env.SITE_SLUG || '';
@@ -29,6 +32,7 @@ function siteConfig() {
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
         `window.SITE_LOGO=${JSON.stringify(siteLogo)};` +
+        `window.SITE_LOCALE=${JSON.stringify(siteLocale)};` +
         `window.SITE_SLUG=${JSON.stringify(siteSlug)};` +
         `window.SITE_TITLE=${JSON.stringify(siteTitle)};` +
         `window.SITE_INFO_URL=${JSON.stringify(siteInfoUrl)};` +

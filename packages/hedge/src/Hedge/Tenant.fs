@@ -11,6 +11,9 @@ type TenantConfig = {
     Slug: string
     Title: string
     Logo: string
+    /// BCP-47 locale for date/number formatting (e.g. "en-AU"). Empty = the
+    /// viewer's own browser locale.
+    Locale: string
     Features: Set<string>
     /// Optional external info/companion page (e.g. a campaign page on Pages). When
     /// set, the client shows a prominent link to it. Empty = no link.
@@ -24,6 +27,8 @@ let private slug : string = jsNative
 let private title : string = jsNative
 [<Emit("(window.SITE_LOGO || '')")>]
 let private logo : string = jsNative
+[<Emit("(window.SITE_LOCALE || '')")>]
+let private locale : string = jsNative
 [<Emit("(window.SITE_FEATURES || '')")>]
 let private featuresRaw : string = jsNative
 [<Emit("(window.SITE_INFO_URL || '')")>]
@@ -35,6 +40,7 @@ let config : TenantConfig =
     { Slug = slug
       Title = title
       Logo = logo
+      Locale = locale
       InfoUrl = infoUrl
       InfoLabel = infoLabel
       Features =

@@ -26,13 +26,15 @@ let basePath : string = jsNative
 [<Emit("window.MOUNT_BASE || ''")>]
 let private mountBase : string = jsNative
 
-/// Tenant logo from the framework accessor, with the darwin.news default.
-let private siteLogo : string =
-    if Hedge.Tenant.config.Logo = "" then "/public/darwinnews.png" else Hedge.Tenant.config.Logo
+/// Tenant logo from the framework accessor. The per-site default lives in the
+/// app's vite config (SITE_LOGO), not here — a shared module names no site's asset.
+let private siteLogo : string = Hedge.Tenant.config.Logo
 
-/// Short human date from a Unix-seconds timestamp (created_at is stored in seconds).
-[<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
-let formatDate (ts: int) : string = jsNative
+/// Short human date from a Unix-seconds timestamp (created_at is stored in
+/// seconds), in the tenant's locale ("" -> the viewer's own).
+[<Emit("new Date($0 * 1000).toLocaleDateString($1 || undefined, { year: 'numeric', month: 'short', day: 'numeric' })")>]
+let private formatDateIn (ts: int) (locale: string) : string = jsNative
+let formatDate (ts: int) : string = formatDateIn ts Hedge.Tenant.config.Locale
 
 /// Install a global scroll/resize watcher (once) that calls `onNear` whenever the
 /// sentinel element sits within 600px of the viewport bottom. A scroll listener

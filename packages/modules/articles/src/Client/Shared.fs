@@ -24,9 +24,9 @@ let basePath : string = jsNative
 [<Emit("window.MOUNT_BASE || ''")>]
 let private mountBase : string = jsNative
 
-/// Tenant logo from the framework accessor, with a neutral default.
-let private siteLogo : string =
-    if Hedge.Tenant.config.Logo = "" then "/public/logo.png" else Hedge.Tenant.config.Logo
+/// Tenant logo from the framework accessor. The per-site default lives in the
+/// app's vite config (SITE_LOGO), not here — a shared module names no site's asset.
+let private siteLogo : string = Hedge.Tenant.config.Logo
 
 /// Set the browser tab title: "<post> · <site>" for a post, or just the site
 /// title when passed "". Uses SITE_TITLE as the base (the server pre-sets <title>
@@ -40,13 +40,16 @@ let setDocTitle (postTitle: string) : unit = jsNative
 [<Emit("(function(s){try{var d=JSON.parse(s);var f=function(n){if(!n)return null;if(n.type==='image'&&n.attrs&&n.attrs.src)return n.attrs.src;var c=n.content;if(c)for(var i=0;i<c.length;i++){var r=f(c[i]);if(r)return r;}return null;};return f(d)||'';}catch(e){return '';}})($0)")>]
 let firstImageSrc (richJson: string) : string = jsNative
 
-/// Short human date from a Unix-seconds timestamp.
-[<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })")>]
-let formatDate (ts: int) : string = jsNative
+/// Short human date from a Unix-seconds timestamp, in the tenant's locale
+/// ("" -> the viewer's own).
+[<Emit("new Date($0 * 1000).toLocaleDateString($1 || undefined, { year: 'numeric', month: 'short', day: 'numeric' })")>]
+let private formatDateIn (ts: int) (locale: string) : string = jsNative
+let formatDate (ts: int) : string = formatDateIn ts Hedge.Tenant.config.Locale
 
-/// Month abbreviation + day-of-month, for the two-row date badge.
-[<Emit("new Date($0 * 1000).toLocaleDateString('en-AU', { month: 'short' })")>]
-let formatMonth (ts: int) : string = jsNative
+/// Month abbreviation, for the two-row date badge, in the tenant's locale.
+[<Emit("new Date($0 * 1000).toLocaleDateString($1 || undefined, { month: 'short' })")>]
+let private formatMonthIn (ts: int) (locale: string) : string = jsNative
+let formatMonth (ts: int) : string = formatMonthIn ts Hedge.Tenant.config.Locale
 
 [<Emit("new Date($0 * 1000).getDate()")>]
 let formatDay (ts: int) : int = jsNative
@@ -312,8 +315,9 @@ let navWithSession (model: Model) dispatch =
             ]
             // The blog module's path-mount is a separate bundle, so this is a real
             // navigation (href), not SPA routing. Shown only where the blog is
-            // mounted (justat), matching the worker's SITE="justat" gate.
-            if Hedge.Tenant.config.Slug = "justat" then
+            // mounted (the "blog" feature flag, set on the site's build), matching
+            // the worker's HEDGE_SITE blog-composition gate.
+            if Hedge.Tenant.hasFeature "blog" then
                 Html.a [
                     prop.className "nav-blog"
                     prop.href (basePath + "/blog")
