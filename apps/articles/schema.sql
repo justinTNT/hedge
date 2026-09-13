@@ -100,11 +100,13 @@ CREATE TABLE blog_item_tags (
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
+CREATE UNIQUE INDEX idx_articles_posts_slug ON articles_posts(slug);
 CREATE INDEX idx_articles_posts_created_at ON articles_posts(created_at DESC);
 CREATE INDEX idx_articles_comments_post_id ON articles_comments(post_id);
 CREATE INDEX idx_articles_comments_identity_id ON articles_comments(identity_id);
 CREATE INDEX idx_articles_comments_parent_id ON articles_comments(parent_id);
 CREATE INDEX idx_articles_comments_created_at ON articles_comments(created_at DESC);
+CREATE UNIQUE INDEX idx_blog_items_slug ON blog_items(slug);
 CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
 CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);
 CREATE INDEX idx_blog_comments_identity_id ON blog_comments(identity_id);

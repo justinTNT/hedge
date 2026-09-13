@@ -71,6 +71,7 @@ CREATE TABLE blog_item_tags (
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
+CREATE UNIQUE INDEX idx_blog_items_slug ON blog_items(slug);
 CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
 CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);
 CREATE INDEX idx_blog_comments_identity_id ON blog_comments(identity_id);

@@ -19,7 +19,9 @@ type Item = {
     /// The article's own date (drives display, sort and day-grouping). Editable
     /// and independent of CreatedAt/UpdatedAt. Unix seconds.
     ArticleDate: int
-    Slug: string option
+    /// URL slug. Unique when present (Gen emits the unique index); the submit
+    /// handler's UNIQUE-violation catch is backed by that index on every site.
+    Slug: Unique<string> option
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option
     ViewCount: int
