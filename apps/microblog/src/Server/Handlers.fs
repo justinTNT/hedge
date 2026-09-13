@@ -11,6 +11,9 @@ open Codecs
 open Blog.Api
 open Server.Env
 open Server.Db
+// darwin.news glue (getRhymes) reaches into the composed blog module's surface.
+open Blog.Codecs
+open Blog.Db
 
 let private identityJson (i: IdentityRow) : string =
     let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""

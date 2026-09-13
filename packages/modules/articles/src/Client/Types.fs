@@ -5,7 +5,7 @@ module Articles.Client.Types
 module GuestSession = Client.GuestSession
 
 open Articles.Api
-open Client.ClientGen
+open Articles.ClientGen
 
 type IdentityListItem = {
     Id: string

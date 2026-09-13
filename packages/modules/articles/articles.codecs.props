@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    The articles module's generated codecs (Articles.Codecs), for a consuming app's
+    shared Codecs project to compose (mirrors blog.codecs.props). Depends only on
+    Thoth.Json + Hedge.Codec + ArticlesModels; import order is free.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Codecs.fs" />
+  </ItemGroup>
+</Project>

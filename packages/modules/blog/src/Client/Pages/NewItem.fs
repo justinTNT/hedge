@@ -57,7 +57,7 @@ let update msg model =
               OwnerComment = ownerComment
               Tags = tags }
         { model with ItemForm = emptyItemForm },
-        Cmd.OfPromise.either Client.ClientGen.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
+        Cmd.OfPromise.either Blog.ClientGen.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
 
     | GotSubmitItem (Ok _) ->
         model, Cmd.batch [

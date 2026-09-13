@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    The blog module's generated codecs (Blog.Codecs), for a consuming app's shared
+    Codecs project to compose. Blog.Codecs depends only on Thoth.Json + Hedge.Codec +
+    BlogModels (all already referenced by the app's Codecs project), and nothing
+    depends on it at compile time within that project, so import order is free.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Codecs.fs" />
+  </ItemGroup>
+</Project>

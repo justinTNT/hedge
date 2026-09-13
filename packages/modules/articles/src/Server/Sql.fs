@@ -1,11 +1,11 @@
 module Articles.Sql
 
 /// The articles module's hand-written SQL. Table names come from the generated
-/// `Server.Db.Tables` constants, so the same statements work whether the module is
+/// `Articles.Db.Tables` constants, so the same statements work whether the module is
 /// mounted standalone (`posts`/`comments`) or prefixed in a host (`articles_posts`/
 /// `articles_comments`). (`identities` stays unprefixed — the shared, app-level table.)
 
-open Server.Db
+open Articles.Db
 
 let postBySlug =
     sprintf "SELECT id, title, teaser, body, image, article_date, slug, created_at, updated_at, view_count, deleted_at FROM %s WHERE slug = ? AND deleted_at IS NULL" Tables.post

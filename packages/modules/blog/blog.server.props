@@ -5,14 +5,16 @@
     reaching into the module's files by hand. Paths are $(MSBuildThisFileDirectory)-
     rooted so they resolve the same from any consumer.
 
-    Ordering: Sql needs the consumer's generated Server.Db.Tables; Handlers needs
-    Server.Identity + Codecs + Blog.Sql. So Import this AFTER the app's generated
-    Db and Server.Identity, and BEFORE the app's own Handlers.fs (whose bespoke glue
-    may read Blog.Sql, e.g. microblog's getRhymes) and BEFORE generated/Routes.fs
-    (which dispatches to Blog.Handlers).
+    Ordering: Blog.Db (generated surface) provides Tables + rows for Blog.Sql; Handlers
+    needs Server.Identity + Blog.Codecs + Blog.Db + Blog.Sql; Blog.AdminGen must precede
+    the app's site generated/AdminGen.fs (its registry appends Blog.AdminGen.tables). So
+    Import this AFTER the app's generated Db + Server.Identity, and BEFORE the app's own
+    Handlers.fs, generated/AdminGen.fs, and generated/Routes.fs.
   -->
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Db.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Sql.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Handlers.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
   </ItemGroup>
 </Project>

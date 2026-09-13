@@ -13,10 +13,10 @@ open Hedge.Interface
 open Hedge.Validate
 open Hedge.Workers
 open Hedge.Router
-open Codecs
+open Blog.Codecs
 open Blog.Api
 open Server.Env
-open Server.Db
+open Blog.Db
 
 // The shared, app-level identity layer. `Server.Handlers` reaches it as `Identity`
 // by namespace proximity; this module lives outside `Server`, so alias it.
@@ -193,7 +193,7 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               ParentId = parentId; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
-        Hedge.Events.broadcast env.EVENTS ctx itemId "NewComment" (Codecs.Encode.blogNewCommentEvent event)
+        Hedge.Events.broadcast env.EVENTS ctx itemId "NewComment" (Blog.Codecs.Encode.blogNewCommentEvent event)
 
         let body =
             Encode.object [

@@ -5,6 +5,9 @@
   <ItemGroup>
     <Compile Include="generated/Codecs.fs" />
   </ItemGroup>
+  <!-- Composed module codecs live with the module. Blog only outside ndct (ndct = articles-only). -->
+  <Import Project="../../../../packages/modules/articles/articles.codecs.props" />
+  <Import Project="../../../../packages/modules/blog/blog.codecs.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />

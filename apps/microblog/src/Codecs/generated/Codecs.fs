@@ -21,77 +21,28 @@ module Encode =
     // -- Domain types --
     let inline guest (v: Models.Domain.Guest) = encode v
     let inline identity (v: Models.Domain.Identity) = encode v
-    let inline item (v: Blog.Domain.Item) = encode v
-    let inline itemComment (v: Blog.Domain.ItemComment) = encode v
-    let inline tag (v: Blog.Domain.Tag) = encode v
-    let inline itemTag (v: Blog.Domain.ItemTag) = encode v
 
     // -- API view types --
-    let inline blogItemView (v: Blog.Api.SubmitItem.Item) = encode v
-    let inline blogCommentItem (v: Blog.Api.SubmitComment.CommentItem) = encode v
-    let inline blogFeedItem (v: Blog.Api.GetFeed.FeedItem) = encode v
 
     // -- API request encoders --
-    let inline blogSubmitItemReq (v: Blog.Api.SubmitItem.Request) = encode v
-    let inline blogSubmitCommentReq (v: Blog.Api.SubmitComment.Request) = encode v
 
     // -- WebSocket event encoders --
-    let inline blogNewCommentEvent (e: Blog.Ws.NewCommentEvent) = encode e
 
 module Decode =
 
     // -- Domain types --
     let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
     let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
-    let item : Decoder<Blog.Domain.Item> = decode<Blog.Domain.Item>()
-    let itemComment : Decoder<Blog.Domain.ItemComment> = decode<Blog.Domain.ItemComment>()
-    let tag : Decoder<Blog.Domain.Tag> = decode<Blog.Domain.Tag>()
-    let itemTag : Decoder<Blog.Domain.ItemTag> = decode<Blog.Domain.ItemTag>()
 
     // -- API view types --
-    let blogItemView : Decoder<Blog.Api.SubmitItem.Item> = decode<Blog.Api.SubmitItem.Item>()
-    let blogCommentItem : Decoder<Blog.Api.SubmitComment.CommentItem> = decode<Blog.Api.SubmitComment.CommentItem>()
-    let blogFeedItem : Decoder<Blog.Api.GetFeed.FeedItem> = decode<Blog.Api.GetFeed.FeedItem>()
 
     // -- API response decoders --
-    let blogGetItemsByTagResponse : Decoder<Blog.Api.GetItemsByTag.Response> = decode<Blog.Api.GetItemsByTag.Response>()
-    let blogGetTagsResponse : Decoder<Blog.Api.GetTags.Response> = decode<Blog.Api.GetTags.Response>()
-    let blogGetItemResponse : Decoder<Blog.Api.GetItem.Response> = decode<Blog.Api.GetItem.Response>()
-    let blogSubmitItemResponse : Decoder<Blog.Api.SubmitItem.Response> = decode<Blog.Api.SubmitItem.Response>()
-    let blogSubmitCommentResponse : Decoder<Blog.Api.SubmitComment.Response> = decode<Blog.Api.SubmitComment.Response>()
-    let blogGetFeedResponse : Decoder<Blog.Api.GetFeed.Response> = decode<Blog.Api.GetFeed.Response>()
 
     // -- API request decoders --
-    let blogSubmitItemReq : Decoder<Blog.Api.SubmitItem.Request> = decode<Blog.Api.SubmitItem.Request>()
-    let blogSubmitCommentReq : Decoder<Blog.Api.SubmitComment.Request> = decode<Blog.Api.SubmitComment.Request>()
 
     // -- WebSocket event decoders --
-    let blogNewCommentEvent : Decoder<Blog.Ws.NewCommentEvent> = decode<Blog.Ws.NewCommentEvent>()
 
 module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
-
-    let blogSubmitItemSchema =
-        schema "Blog.Api.SubmitItem.Request" [
-            fieldWith "Title" FString [Required; Trim]
-            fieldWith "Slug" (FOption FString) [Trim]
-            fieldWith "Link" (FOption FString) [Trim]
-            fieldWith "Image" (FOption FString) [Trim]
-            fieldWith "Extract" (FOption FString) [Trim]
-            fieldWith "OwnerComment" FString [Required; Trim]
-            fieldWith "Tags" (FList FString) []
-        ]
-
-    let inline blogSubmitItemReq (r: Blog.Api.SubmitItem.Request) = validate blogSubmitItemSchema r
-
-    let blogSubmitCommentSchema =
-        schema "Blog.Api.SubmitComment.Request" [
-            fieldWith "ItemId" FString [Required; Trim]
-            fieldWith "ParentId" (FOption FString) [Trim]
-            fieldWith "Content" FString [Required; Trim]
-            fieldWith "Author" (FOption FString) [Trim]
-        ]
-
-    let inline blogSubmitCommentReq (r: Blog.Api.SubmitComment.Request) = validate blogSubmitCommentSchema r

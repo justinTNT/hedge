@@ -25,6 +25,23 @@ for app in microblog articles archive basewatch music; do
     echo "--- $app gen matches committed ---"
 done
 
+# Content modules own their generated surface (packages/modules/<m>/generated), committed
+# once. Re-run the module-emit pass (from a host that composes it) and diff, so the
+# committed surface can't silently lag the generator either.
+echo ""
+echo "=== Step 1a: Module surfaces (module-owned generated) ==="
+run_module_surface() { # <host-app> <module-path>
+    ( cd "$ROOT/apps/$1" && dotnet run --project src/Gen/Gen.fsproj -- module "$2" >/dev/null 2>&1 )
+}
+run_module_surface microblog ../../packages/modules/blog
+run_module_surface articles ../../packages/modules/articles
+if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated; then
+    echo "!!! FAIL: a module's generated surface differs from committed. Regenerate + commit:"
+    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated
+    exit 1
+fi
+echo "--- module surfaces match committed ---"
+
 echo ""
 echo "=== Step 1b: Microblog golden model (SQL + build) ==="
 cd "$ROOT/apps/microblog"

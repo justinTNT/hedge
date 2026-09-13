@@ -451,14 +451,19 @@ let generateAdminFs (moduleName: string) (appendRegistries: string list) (metas:
         metas |> List.map (fun m ->
             sprintf "    %s" (toCamelCase m.DisplayName))
 
-    emit "let tables : AdminTable list = ["
-    valNames |> List.iter emit
     if appendRegistries.IsEmpty then
+        emit "let tables : AdminTable list = ["
+        valNames |> List.iter emit
         emit "]"
     else
         // Site registry: identity tables ++ each owned module's own `tables` list,
-        // in composition order (preserves the pre-split combined ordering).
-        emit (sprintf "] @ %s" (String.concat " @ " appendRegistries))
+        // in composition order (preserves the pre-split combined ordering). A
+        // separate binding keeps the list's dedented `]` off the `@` continuation
+        // (F# offside would reject `] @ …` after a column-0 `]`).
+        emit "let private ownTables : AdminTable list = ["
+        valNames |> List.iter emit
+        emit "]"
+        emit (sprintf "let tables : AdminTable list = ownTables @ %s" (String.concat " @ " appendRegistries))
     emit ""
 
     lines |> String.concat "\n"
@@ -1088,7 +1093,10 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
 // Routes.fs generation (Step 7)
 // ============================================================
 
-let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
+/// `extraCodecOpens` are the owned modules' Codecs modules (e.g. ["Blog.Codecs"]) —
+/// the site dispatch references their POST-body decoders, which now live in the module
+/// surface rather than the combined site Codecs.
+let generateRoutesFs (extraCodecOpens: string list) (endpoints: ParsedEndpoint list) : string =
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
 
@@ -1100,6 +1108,7 @@ let generateRoutesFs (endpoints: ParsedEndpoint list) : string =
     emit "open Hedge.Workers"
     emit "open Hedge.Router"
     emit "open Codecs"
+    for op in extraCodecOpens do emit (sprintf "open %s" op)
     emit "open Server.Env"
     emit ""
     emit "let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)"
@@ -1738,26 +1747,43 @@ let private runSite (argv: string array) =
     // for a standalone blog site). Harmless when qualifying (opens aren't emitted).
     let singleNs = match modules with [ m ] -> m.Namespace | _ -> "Models"
 
-    // Generate existing files (Db, AdminGen, schema.sql)
-    let admin = generateAdminFs "Server.AdminGen" [] metas
+    // Split: an OWNED content module emits its own surface (compiled from
+    // packages/modules/<m>/generated), so the site emits Codecs/Db/ClientGen for the
+    // identity/root slice only + a thin AdminGen registry that appends each owned
+    // module's `tables`. schema.sql + Routes stay COMBINED (cross-module FKs, one
+    // dispatch). One-off single-apps have no owned modules -> identity slice = the
+    // whole app, so their output is byte-identical to before.
+    let ownedModules = modules |> List.filter (fun m -> m.Owned)
+    let idPer = modules |> List.filter (fun m -> not m.Owned) |> List.map reflectModule
+    let idDomainTypes = idPer |> List.collect (fun (d, _, _, _) -> d)
+    let idWsTypes = idPer |> List.collect (fun (_, w, _, _) -> w)
+    let idEndpoints = idPer |> List.collect (fun (_, _, e, _) -> e)
+    let idMetas = idPer |> List.collect (fun (_, _, _, m) -> m)
+    let ownedCodecs = ownedModules |> List.map (fun m -> m.Namespace + ".Codecs")
+    let ownedRegistries = ownedModules |> List.map (fun m -> m.Namespace + ".AdminGen.tables")
+
+    // AdminGen — identity tables + each owned module's registry (composition order).
+    let admin = generateAdminFs "Server.AdminGen" ownedRegistries idMetas
     writeIfChanged "src/Server/generated/AdminGen.fs" admin
 
-    let db = generateDbFs "Server.Db" metas
+    // Db — identity slice (owned modules ship Blog.Db etc.).
+    let db = generateDbFs "Server.Db" idMetas
     writeIfChanged "src/Server/generated/Db.fs" db
 
+    // schema.sql — combined (cross-module FKs + topo span all modules).
     let schemaSql = generateSchemaSql metas
     writeIfChanged "schema.sql" schemaSql
 
-    // Step 5: Generate Codecs.fs
-    let codecs = generateCodecsFs domainTypes endpoints wsTypes qualify singleNs "Codecs" true
+    // Codecs — identity slice + the shared unwrap helpers.
+    let codecs = generateCodecsFs idDomainTypes idEndpoints idWsTypes qualify singleNs "Codecs" true
     writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
-    // Step 6: Generate ClientGen.fs
-    let clientGen = generateClientGenFs endpoints wsTypes qualify singleNs "Client.ClientGen" "Codecs"
+    // ClientGen — identity slice (owned modules ship Blog.ClientGen etc.).
+    let clientGen = generateClientGenFs idEndpoints idWsTypes qualify singleNs "Client.ClientGen" "Codecs"
     writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
 
-    // Step 7: Generate Routes.fs
-    let routes = generateRoutesFs endpoints
+    // Routes — combined dispatch; opens the owned modules' Codecs for their decoders.
+    let routes = generateRoutesFs ownedCodecs endpoints
     writeIfChanged "src/Server/generated/Routes.fs" routes
 
     // Step 8: Generate Handlers.fs stubs (only if file doesn't exist)

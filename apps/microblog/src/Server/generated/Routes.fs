@@ -6,6 +6,7 @@ open Thoth.Json
 open Hedge.Workers
 open Hedge.Router
 open Codecs
+open Blog.Codecs
 open Server.Env
 
 let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)

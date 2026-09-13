@@ -8,6 +8,7 @@
     $(MSBuildThisFileDirectory)-rooted.
   -->
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/ClientGen.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Client/Types.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Client/Shared.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Client/Pages/Feed.fs" />

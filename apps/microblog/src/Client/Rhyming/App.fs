@@ -42,7 +42,7 @@ let private rhymesDecoder : Decoder<RhymeGroup list> =
             (Decode.map2
                 (fun t i -> { Tag = t; Items = i })
                 (Decode.field "tag" Decode.string)
-                (Decode.field "items" (Decode.list Codecs.Decode.blogFeedItem))))
+                (Decode.field "items" (Decode.list Blog.Codecs.Decode.blogFeedItem))))
 
 type Model = { Rhymes: RhymeGroup list; Loading: bool; Error: string option }
 type Msg = GotRhymes of Result<RhymeGroup list, string>

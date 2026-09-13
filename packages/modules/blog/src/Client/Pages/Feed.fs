@@ -28,7 +28,7 @@ let update msg model =
     match msg with
     | LoadFeed ->
         { model with IsLoading = true; FeedLoadingMore = false },
-        Cmd.OfPromise.either Client.ClientGen.blogGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
+        Cmd.OfPromise.either Blog.ClientGen.blogGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
 
     | GotFeed (Ok response) ->
         { model with Feed = Some response; IsLoading = false; Error = None },
@@ -44,7 +44,7 @@ let update msg model =
         match model.Feed with
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
             { model with FeedLoadingMore = true },
-            Cmd.OfPromise.either Client.ClientGen.blogGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
+            Cmd.OfPromise.either Blog.ClientGen.blogGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
         | _ -> model, Cmd.none
 
     | GotMoreFeed (Ok response) ->

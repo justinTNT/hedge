@@ -7,7 +7,7 @@ module GuestSession = Client.GuestSession
 open Elmish
 open Hedge.Interface
 open Blog.Api
-open Client.ClientGen
+open Blog.ClientGen
 
 type ItemForm = {
     Title: string

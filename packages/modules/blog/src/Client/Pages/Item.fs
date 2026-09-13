@@ -13,7 +13,7 @@ open Elmish
 open Blog.Client
 open Hedge.Interface
 open Blog.Api
-open Client.ClientGen
+open Blog.ClientGen
 open Blog.Client.Types
 open Blog.Client.Shared
 
@@ -87,7 +87,7 @@ let update msg model =
     match msg with
     | LoadItem itemId ->
         { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Client.ClientGen.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
+        Cmd.OfPromise.either Blog.ClientGen.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
@@ -139,7 +139,7 @@ let update msg model =
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,
-            Cmd.OfPromise.either Client.ClientGen.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Blog.ClientGen.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok _) ->

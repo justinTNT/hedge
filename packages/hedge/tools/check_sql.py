@@ -93,7 +93,6 @@ def main():
         migrated = build(sorted(glob.glob(args.migrations)))
         worlds.append(("migrated", migrated))
 
-    tables = parse_tables("src/Server/generated/Db.fs")
     # Composed content modules, from gen-modules.json. Two manifest shapes:
     #   {"module": "../../packages/modules/blog"}  -> read its module.json for the namespace
     #   {"namespace": "...", "tablePrefix": "..."}  -> legacy inline entry
@@ -107,6 +106,12 @@ def main():
         elif m.get("tablePrefix"):
             modules.append((m["namespace"], f"../../packages/modules/{m['namespace'].lower()}"))
     module_dirs = [d for _, d in modules]
+
+    # Resolve Tables.* names: the app's Server.Db (identity) + each owned module's own
+    # Db surface (Blog.Db.Tables etc., now committed with the module, not in the app).
+    tables = parse_tables("src/Server/generated/Db.fs")
+    for _, d in modules:
+        tables.update(parse_tables(os.path.join(d, "generated/Db.fs")))
 
     # Lint app + composed-module server code for inline SQL.
     lint_inline_sql("src/Server", failures)

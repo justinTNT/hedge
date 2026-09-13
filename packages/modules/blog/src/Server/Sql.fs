@@ -1,12 +1,12 @@
 module Blog.Sql
 
 /// The blog module's hand-written SQL. Table names come from the generated
-/// `Server.Db.Tables` constants, so the same statements work whether the module
+/// `Blog.Db.Tables` constants, so the same statements work whether the module
 /// is mounted standalone (`items`) or prefixed in a host (`blog_items`). This is
 /// the "module SQL hygiene" cost: a module must never hardcode a table name.
 /// (`identities` stays unprefixed — it's the shared, app-level table.)
 
-open Server.Db
+open Blog.Db
 
 let itemBySlug =
     sprintf "SELECT id, title, link, image, extract, owner_comment, slug, created_at, updated_at, view_count, deleted_at FROM %s WHERE slug = ? AND deleted_at IS NULL" Tables.item

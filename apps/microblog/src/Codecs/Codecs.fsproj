@@ -5,6 +5,8 @@
   <ItemGroup>
     <Compile Include="generated/Codecs.fs" />
   </ItemGroup>
+  <!-- Composed module codecs (Blog.Codecs) live with the module, not per-app. -->
+  <Import Project="../../../../packages/modules/blog/blog.codecs.props" />
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
