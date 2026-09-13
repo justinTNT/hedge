@@ -12,6 +12,7 @@ let inline pk (PrimaryKey v) = v
 let inline ct (CreateTimestamp v) = v
 let inline ut (UpdateTimestamp v) = v
 let inline sd (SoftDelete v) = v
+let inline ed (EditableDate v) = v
 let inline fk (ForeignKey v) = v
 let inline rc (RichContent v) = v
 let inline lk (Link v) = v

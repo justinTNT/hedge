@@ -11,8 +11,9 @@ type Album = {
     Slug: string
     /// Cover image (derived from the dphon.es S3 path).
     Cover: Link option
-    /// Release date, unix seconds — drives sort order.
-    ReleaseDate: int
+    /// Release date, unix seconds — drives sort order. Editable in the admin as a
+    /// date picker (EditableDate).
+    ReleaseDate: EditableDate
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option
     DeletedAt: SoftDelete option

@@ -26,6 +26,12 @@ type UpdateTimestamp = UpdateTimestamp of int
 /// Field should be `option` — None if not deleted.
 type SoftDelete = SoftDelete of int
 
+/// A user-editable calendar date (epoch seconds), distinct from the auto
+/// CreateTimestamp/UpdateTimestamp: it's the record's own date (article date,
+/// release date) that drives display/sort/grouping and the author sets. The admin
+/// renders it as a date picker — by this type, not a field-name convention.
+type EditableDate = EditableDate of int
+
 /// Foreign key reference. Phantom type 'table carries the
 /// referenced model for documentation; value is the ID string.
 type ForeignKey<'table> = ForeignKey of string

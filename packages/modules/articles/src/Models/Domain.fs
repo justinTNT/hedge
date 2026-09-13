@@ -20,8 +20,9 @@ type Post = {
     /// Optional hero image (most essays put images inline in the body).
     Image: Link option
     /// The post's own date (drives display, sort and day-grouping). Editable and
-    /// independent of CreatedAt/UpdatedAt. Unix seconds.
-    ArticleDate: int
+    /// independent of CreatedAt/UpdatedAt. Unix seconds; the admin renders it as a
+    /// date picker (EditableDate).
+    ArticleDate: EditableDate
     /// URL slug. Unique when present (Gen emits the unique index); admin post
     /// creation surfaces a duplicate as a UNIQUE violation, backed by that index.
     Slug: Unique<string> option

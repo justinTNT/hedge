@@ -61,7 +61,7 @@ let item : AdminTable =
             fieldWith "Image" (FOption FString) [Link]
             fieldWith "Extract" (FOption FString) [RichContent]
             fieldWith "OwnerComment" FString [RichContent]
-            fieldWith "ArticleDate" FInt []
+            fieldWith "ArticleDate" FInt [EditableDate]
             fieldWith "Slug" (FOption FString) [Unique]
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]

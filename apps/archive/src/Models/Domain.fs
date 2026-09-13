@@ -18,7 +18,8 @@ type Article = {
     /// Drives the section pages and the front-page columns.
     Section: string
     /// Publication date (Unix seconds) — drives sort and the year-grouped index.
-    ArticleDate: int
+    /// Editable in the admin as a date picker (EditableDate).
+    ArticleDate: EditableDate
     /// Original citation fields (frequently empty in the archive).
     Attrib: string
     Source: string

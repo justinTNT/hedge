@@ -22,6 +22,7 @@ type FieldAttr =
     | CreateTimestamp
     | UpdateTimestamp
     | SoftDelete
+    | EditableDate
     | ForeignKey of table: string
     | RichContent
     | Link
@@ -65,6 +66,7 @@ let showAttr = function
     | CreateTimestamp -> "CreateTimestamp"
     | UpdateTimestamp -> "UpdateTimestamp"
     | SoftDelete -> "SoftDelete"
+    | EditableDate -> "EditableDate"
     | ForeignKey t -> sprintf "ForeignKey(%s)" t
     | RichContent -> "RichContent"
     | Link -> "Link"
@@ -127,6 +129,9 @@ let rec private classifyType (t: System.Type) : FieldType * FieldAttr option =
 
     elif fn.Contains("Interface.SoftDelete") then
         FInt, Some SoftDelete
+
+    elif fn.Contains("Interface.EditableDate") then
+        FInt, Some EditableDate
 
     elif fn.Contains("Interface.ForeignKey") then
         let table =

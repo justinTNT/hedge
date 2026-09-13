@@ -97,6 +97,7 @@ let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
     elif propType = typeof<CreateTimestamp> then FInt, [CreateTimestamp]
     elif propType = typeof<UpdateTimestamp> then FInt, [UpdateTimestamp]
     elif propType = typeof<SoftDelete> then FInt, [SoftDelete]
+    elif propType = typeof<EditableDate> then FInt, [EditableDate]
     elif propType = typeof<RichContent> then FString, [RichContent]
     elif propType = typeof<Link> then FString, [Link]
     // IdentityRef is a decoupled handle to the shared identity layer — treat it
@@ -370,6 +371,7 @@ let fieldAttrDsl (fa: FieldAttr) =
     | CreateTimestamp -> "CreateTimestamp"
     | UpdateTimestamp -> "UpdateTimestamp"
     | SoftDelete -> "SoftDelete"
+    | EditableDate -> "EditableDate"
     | ForeignKey table -> sprintf "ForeignKey \"%s\"" table
     | RichContent -> "RichContent"
     | Link -> "Link"
@@ -818,6 +820,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
     emit "let inline ct (CreateTimestamp v) = v"
     emit "let inline ut (UpdateTimestamp v) = v"
     emit "let inline sd (SoftDelete v) = v"
+    emit "let inline ed (EditableDate v) = v"
     emit "let inline fk (ForeignKey v) = v"
     emit "let inline rc (RichContent v) = v"
     emit "let inline lk (Link v) = v"

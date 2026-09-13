@@ -17,7 +17,7 @@ let article : AdminTable =
             fieldWith "Title" FString []
             fieldWith "Body" FString []
             fieldWith "Section" FString []
-            fieldWith "ArticleDate" FInt []
+            fieldWith "ArticleDate" FInt [EditableDate]
             fieldWith "Attrib" FString []
             fieldWith "Source" FString []
             fieldWith "CreatedAt" FInt [CreateTimestamp]

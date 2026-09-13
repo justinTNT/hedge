@@ -16,7 +16,7 @@ let album : AdminTable =
             fieldWith "Title" FString []
             fieldWith "Slug" FString []
             fieldWith "Cover" (FOption FString) [Link]
-            fieldWith "ReleaseDate" FInt []
+            fieldWith "ReleaseDate" FInt [EditableDate]
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]

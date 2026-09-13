@@ -421,13 +421,13 @@ module View =
         let text = if isNull raw then "" else string raw
         let hasAttr a = field.Attrs |> List.contains a
         let isForeignKey = field.Attrs |> List.exists (function ForeignKey _ -> true | _ -> false)
-        // Attributed timestamps, plus the naming convention: an integer field
-        // called SomethingAt (ActivatedAt, PublishedAt) is an epoch too, even
-        // though it carries no timestamp attribute.
+        // Date-like ints render as short dates: the timestamp attrs, the
+        // user-editable date type, plus a naming fallback for un-attributed epoch
+        // columns named SomethingAt (ActivatedAt, PublishedAt).
         let isTimestamp =
-            hasAttr CreateTimestamp || hasAttr UpdateTimestamp || hasAttr SoftDelete
+            hasAttr CreateTimestamp || hasAttr UpdateTimestamp || hasAttr SoftDelete || hasAttr EditableDate
             || (match underlying field.Type with
-                | FInt -> field.Name.EndsWith "At" || field.Name.EndsWith "Date"
+                | FInt -> field.Name.EndsWith "At"
                 | _ -> false)
         if text = "" then
             Html.td [ prop.className "admin-cell admin-cell-empty"; prop.text "—" ]
@@ -588,9 +588,10 @@ module View =
                     ]
                 ]
             ]
-        // Editable date fields (e.g. ArticleDate): a native date picker over the
-        // stored epoch seconds, so you edit a date, not a raw timestamp.
-        | FInt when field.Name.EndsWith "Date" && not isReadOnly ->
+        // Editable date fields (EditableDate, e.g. ArticleDate): a native date
+        // picker over the stored epoch seconds — recognized by the type, not a
+        // field-name convention, so you edit a date, not a raw timestamp.
+        | FInt when (field.Attrs |> List.contains EditableDate) && not isReadOnly ->
             let raw = values |> Map.tryFind field.Name |> Option.defaultValue ""
             Html.div [
                 prop.className "admin-field"
