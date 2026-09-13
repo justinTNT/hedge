@@ -21,13 +21,13 @@ let album : AdminTable =
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE id = ?"
+      SelectAll = "SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE id = ? AND deleted_at IS NULL"
       Insert = "INSERT INTO albums (id, title, slug, cover, release_date, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = true
       Update = "UPDATE albums SET title = ?, slug = ?, cover = ?, release_date = ?, updated_at = ? WHERE id = ?"
-      Delete = "DELETE FROM albums WHERE id = ?"
+      Delete = "UPDATE albums SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["Title"; "Slug"; "Cover"; "ReleaseDate"] }
 
 let track : AdminTable =
@@ -44,13 +44,13 @@ let track : AdminTable =
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE id = ?"
+      SelectAll = "SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE id = ? AND deleted_at IS NULL"
       Insert = "INSERT INTO tracks (id, album_id, title, url, track_index, plays, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = false
       Update = "UPDATE tracks SET album_id = ?, title = ?, url = ?, track_index = ?, plays = ? WHERE id = ?"
-      Delete = "DELETE FROM tracks WHERE id = ?"
+      Delete = "UPDATE tracks SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["AlbumId"; "Title"; "Url"; "TrackIndex"; "Plays"] }
 
 let tables : AdminTable list = [

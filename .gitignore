@@ -44,6 +44,10 @@ npm-debug.log*
 # rich-text lib is copied from packages/rich-text at build time
 apps/*/lib/rich-text/
 
+# archive has a vanilla-JS client (no Client.fsproj), so the ClientGen.fs that
+# `npm run gen` still emits is dead output — never compiled, never committed.
+apps/archive/src/Client/generated/
+
 # guest-session.js is copied from packages/hedge/lib at build time (prep:lib);
 # generated per app, so ignore it everywhere — except music, which carries its
 # own slimmer, divergent copy as tracked source.

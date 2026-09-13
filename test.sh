@@ -3,26 +3,40 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Step 1: Microblog golden model ==="
+echo "=== Step 1: Gen stability (every app) ==="
+# The generated files are committed, so they ARE the snapshot: re-running gen must
+# reproduce them byte-for-byte. If not, either the generator regressed or the
+# committed output is stale (how the soft-delete drift on archive/basewatch/music
+# hid — the check used to run for microblog only). Every app with a generator is
+# checked, so committed generated code can't silently lag the generator.
+cd "$ROOT"
+for app in microblog articles archive basewatch music; do
+    [ -f "apps/$app/src/Gen/Gen.fsproj" ] || continue
+    ( cd "apps/$app" && npm run gen >/dev/null 2>&1 )
+    # git diff considers only tracked files, so an app's untracked generated output
+    # (e.g. archive's dead Client/generated, gitignored) is correctly ignored.
+    paths="apps/$app/src/Codecs/generated apps/$app/src/Server/generated apps/$app/src/Client/generated apps/$app/schema.sql"
+    if ! git diff --quiet -- $paths; then
+        echo "!!! FAIL: $app gen output differs from committed (generator regression, or"
+        echo "    stale committed gen). Review and commit:"
+        git --no-pager diff --stat -- $paths
+        exit 1
+    fi
+    echo "--- $app gen matches committed ---"
+done
+
+echo ""
+echo "=== Step 1b: Microblog golden model (SQL + build) ==="
 cd "$ROOT/apps/microblog"
-npm run gen
-
-# Gen stability: the generated files are committed, so they ARE the snapshot.
-# If re-running gen changes them, the generator regressed (or the committed
-# output is stale) — fail loudly rather than let it drift.
-GEN_PATHS="src/Codecs/generated src/Server/generated src/Client/generated schema.sql"
-if ! git diff --quiet -- $GEN_PATHS; then
-    echo "!!! FAIL: gen output differs from committed (generator regression, or"
-    echo "    you have uncommitted gen changes). Review and commit:"
-    git --no-pager diff --stat -- $GEN_PATHS
-    exit 1
-fi
-echo "--- gen output matches committed ---"
-
 ./check-sql.sh
 dotnet build src/Server/Server.fsproj
 dotnet build src/Client/Client.fsproj
 echo "--- Microblog OK ---"
+
+# Articles composes two modules (Articles + Blog); check its SQL too.
+cd "$ROOT/apps/articles"
+./check-sql.sh
+echo "--- Articles SQL OK ---"
 
 echo ""
 echo "=== Step 2: Scaffold pipeline ==="

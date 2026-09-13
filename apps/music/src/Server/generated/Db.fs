@@ -36,10 +36,10 @@ let parseAlbumRow (row: obj) : AlbumRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectAlbums (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectAlbum (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertAlbum (db: D1Database) (create: AlbumCreate) =
     let id = newId()
@@ -55,7 +55,7 @@ let updateAlbum (id: string) (create: AlbumCreate) (db: D1Database) : D1Prepared
          [| box create.Title; box create.Slug; optToDb create.Cover; box create.ReleaseDate; box now; box id |]
 
 let deleteAlbum (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM albums WHERE id = ?")) [| box id |]
+    bind (db.prepare("UPDATE albums SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 // ============================================================
 // Track (tracks)
@@ -91,10 +91,10 @@ let parseTrackRow (row: obj) : TrackRow =
       DeletedAt = rowIntOpt row "deleted_at" }
 
 let selectTracks (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectTrack (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertTrack (db: D1Database) (create: TrackCreate) =
     let id = newId()
@@ -109,10 +109,10 @@ let updateTrack (id: string) (create: TrackCreate) (db: D1Database) : D1Prepared
          [| box create.AlbumId; box create.Title; box create.Url; box create.TrackIndex; box create.Plays; box id |]
 
 let deleteTrack (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("DELETE FROM tracks WHERE id = ?")) [| box id |]
+    bind (db.prepare("UPDATE tracks SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 let selectTracksByAlbumId (albumId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE album_id = ? ORDER BY created_at DESC LIMIT 100")) [| box albumId |]
+    bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE album_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box albumId |]
 
 module Tables =
     let album = "albums"
