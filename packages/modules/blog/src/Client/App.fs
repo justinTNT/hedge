@@ -1,5 +1,9 @@
 module Blog.Client.App
 
+// The shared guest-session accessor is host-provided (packages/hedge/src/Client);
+// alias it locally, the same way Client.RichText is aliased.
+module GuestSession = Client.GuestSession
+
 open Fable.Core
 open Fable.Core.JsInterop
 open Feliz
@@ -22,7 +26,7 @@ let private parseClaimFromRoute () : (string option * string) =
 let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
     let body = sprintf """{"identityId":"%s","merge":%s}""" identityId (if merge then "true" else "false")
     Cmd.OfPromise.either
-        (fun () -> Blog.Client.Api.postJsonRaw "/api/auth/revert" body)
+        (fun () -> Client.Api.postJsonRaw "/api/auth/revert" body)
         ()
         GotRevertIdentity
         (fun ex -> GotRevertIdentity (Error ex.Message))
@@ -30,7 +34,7 @@ let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
 let private disconnectIdentityCmd (identityId: string) (fallbackName: string) : Cmd<Msg> =
     let body = sprintf """{"identityId":"%s","name":"%s"}""" identityId fallbackName
     Cmd.OfPromise.either
-        (fun () -> Blog.Client.Api.postJsonRaw "/api/auth/disconnect" body)
+        (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" body)
         ()
         GotDisconnect
         (fun ex -> GotDisconnect (Error ex.Message))
@@ -39,7 +43,7 @@ let private loadProvidersCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
             promise {
-                let! data = Blog.Client.Api.fetchJsonRaw "/api/auth/providers"
+                let! data = Client.Api.fetchJsonRaw "/api/auth/providers"
                 let arr : string array = data?providers |> unbox
                 return List.ofArray arr
             })
@@ -50,7 +54,7 @@ let private loadIdentitiesCmd : Cmd<Msg> =
     Cmd.OfPromise.perform
         (fun () ->
             promise {
-                let! data = Blog.Client.Api.fetchJsonRaw "/api/auth/identities"
+                let! data = Client.Api.fetchJsonRaw "/api/auth/identities"
                 let arr : obj array = data?identities |> unbox
                 return arr |> Array.map (fun o ->
                     { Id = o?id |> unbox<string>

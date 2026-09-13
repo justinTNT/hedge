@@ -1,5 +1,9 @@
 module Blog.Client.Pages.Item
 
+// The shared guest-session accessor is host-provided (packages/hedge/src/Client);
+// alias it locally, the same way RichText is aliased.
+module GuestSession = Client.GuestSession
+
 // The shared rich-text module lives in the host's Client.RichText namespace.
 module RichText = Client.RichText
 
@@ -22,9 +26,9 @@ let connectEventsCmd (itemId: string) : Cmd<Msg> =
         match currentWsClose with
         | Some close -> close ()
         | None -> ()
-        let url = sprintf "%s/api/events?itemId=%s" (Blog.Client.Api.wsBase()) itemId
+        let url = sprintf "%s/api/events?itemId=%s" (Client.Api.wsBase()) itemId
         let close =
-            Blog.Client.Api.openWebSocket
+            Client.Api.openWebSocket
                 url
                 (fun e ->
                     let text : string = e?data |> string

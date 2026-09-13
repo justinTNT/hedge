@@ -1,5 +1,11 @@
 module Client.GuestSession
 
+// The framework's shared guest-session accessor over window.HedgeGuest (see
+// lib/guest-session.js). One source, `<Compile Include>`'d by apps that carry
+// identities; content modules reference it as `Client.GuestSession` (aliased
+// locally as `module GuestSession = Client.GuestSession`, mirroring RichText).
+// Do not copy per app. (music has a slimmer, divergent copy of its own.)
+
 open Fable.Core
 open Fable.Core.JsInterop
 

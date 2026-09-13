@@ -1,5 +1,9 @@
 module Articles.Client.Shared
 
+// The shared guest-session accessor is host-provided (packages/hedge/src/Client);
+// alias it locally, the same way Client.RichText is aliased.
+module GuestSession = Client.GuestSession
+
 // The shared rich-text module lives in the host's Client.RichText namespace.
 module RichText = Client.RichText
 

@@ -1,4 +1,10 @@
-module Blog.Client.Api
+module Client.Api
+
+// The framework's shared client HTTP helpers. One source, `<Compile Include>`'d by
+// every app's Client project (and relied on by content modules, which reference
+// `Client.Api`) — do not copy this per app. Typed API functions are in the app's
+// generated/ClientGen.fs, which opens Client.Api. Requests are basePath-prefixed so
+// the app works mounted under a sub-path; basePath is "" for root deployments.
 
 open Fable.Core
 open Fable.Core.JsInterop

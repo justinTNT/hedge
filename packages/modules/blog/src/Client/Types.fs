@@ -1,5 +1,9 @@
 module Blog.Client.Types
 
+// The shared guest-session accessor is host-provided (packages/hedge/src/Client);
+// alias it locally, the same way Client.RichText is aliased.
+module GuestSession = Client.GuestSession
+
 open Elmish
 open Hedge.Interface
 open Blog.Api
