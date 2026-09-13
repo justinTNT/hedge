@@ -1194,6 +1194,21 @@ let getTableColumns (remote: bool) (dbName: string) (tableName: string) : ColInf
           IsPk = r.GetProperty("pk").GetInt32() = 1 })
     |> Array.toList
 
+/// Current foreign keys of a table as a set of (fromColumn, referencedTable), for
+/// diffing against the model's desired FKs (a change needs a table rebuild).
+let getTableForeignKeys (remote: bool) (dbName: string) (tableName: string) : Set<string * string> =
+    wranglerQuery remote dbName (sprintf "PRAGMA foreign_key_list(%s)" tableName)
+    |> Array.map (fun r -> r.GetProperty("from").GetString(), r.GetProperty("table").GetString())
+    |> Set.ofArray
+
+/// Current Gen-managed index names (idx_*) of a table; sqlite auto-indexes are ignored.
+let getTableIndexNames (remote: bool) (dbName: string) (tableName: string) : Set<string> =
+    wranglerQuery remote dbName (sprintf "PRAGMA index_list(%s)" tableName)
+    |> Array.choose (fun r ->
+        let name = r.GetProperty("name").GetString()
+        if name.StartsWith "idx_" then Some name else None)
+    |> Set.ofArray
+
 // ============================================================
 // Schema diff
 // ============================================================
@@ -1227,6 +1242,28 @@ let diffTable (m: TableMeta) (currentCols: ColInfo list) : ColumnChange list =
             changes.Add(DropColumn current.ColName)
 
     changes |> Seq.toList
+
+/// The model's desired foreign keys as (fromColumn, referencedTable) — resolved
+/// through the composition, to diff against the live table's FKs.
+let desiredForeignKeys (m: TableMeta) (metasByName: Map<string, TableMeta>) : Set<string * string> =
+    m.DbFields
+    |> List.collect (fun f ->
+        f.Attrs |> List.choose (function
+            | ForeignKey typeName ->
+                metasByName |> Map.tryFind typeName |> Option.map (fun t -> toSnakeCase f.Name, t.TableName)
+            | _ -> None))
+    |> Set.ofList
+
+/// The Gen-managed index names the model expects (matches generateIndexes).
+let desiredIndexNames (m: TableMeta) : Set<string> =
+    [ for f in m.FkFields do
+          yield sprintf "idx_%s_%s" m.TableName (toSnakeCase f.Name)
+      for f in m.DbFields do
+          if f.Attrs |> List.contains FieldAttr.Unique then
+              yield sprintf "idx_%s_%s" m.TableName (toSnakeCase f.Name)
+      if m.HasCreateTs then
+          yield sprintf "idx_%s_created_at" m.TableName ]
+    |> Set.ofList
 
 // ============================================================
 // Migration SQL generation
@@ -1267,6 +1304,14 @@ let generateRecreateTableSql (m: TableMeta) (currentCols: ColInfo list) (metasBy
     let selList = selectExprs |> String.concat ", "
 
     let lines = ResizeArray<string>()
+    // Defer FK enforcement to the migration's (implicit) transaction commit so the
+    // DROP + RENAME don't trip constraints from child tables mid-rebuild on a populated
+    // DB. This is D1's documented mechanism — it runs migrations in an implicit
+    // transaction and forbids toggling foreign_keys inside one
+    // (https://developers.cloudflare.com/d1/sql-api/foreign-keys/). Any real violation
+    // still surfaces at commit, so review + test a recreate before applying it remotely
+    // (remote migrations are never auto-applied).
+    lines.Add("PRAGMA defer_foreign_keys = on;")
     lines.Add(newCreateSql)
     lines.Add(sprintf "INSERT INTO %s_new (%s) SELECT %s FROM %s;" m.TableName colList selList m.TableName)
     lines.Add(sprintf "DROP TABLE %s;" m.TableName)
@@ -1347,24 +1392,42 @@ let runMigrate (metas: TableMeta list) (dryRun: bool) (remote: bool) =
             else
                 let currentCols = getTableColumns remote dbName m.TableName
                 let changes = diffTable m currentCols
+                // Beyond columns, diff the model's FKs and Gen-managed indexes against the
+                // live table — otherwise a FK/unique/index change silently produces no
+                // migration (schema evolution weaker than generation).
+                let fkChanged = getTableForeignKeys remote dbName m.TableName <> desiredForeignKeys m metasByName
+                let currentIdx = getTableIndexNames remote dbName m.TableName
+                let desiredIdx = desiredIndexNames m
+                let idxToAdd = Set.difference desiredIdx currentIdx
+                let idxToDrop = Set.difference currentIdx desiredIdx
 
-                if not changes.IsEmpty then
+                let hasOnlyAdds =
+                    not changes.IsEmpty && (changes |> List.forall (function AddColumn _ -> true | _ -> false))
+                // Column type/drop changes OR any FK change need a full rebuild (SQLite
+                // can't ALTER a constraint); the rebuild also restores the right indexes.
+                let needsRecreate = (not changes.IsEmpty && not hasOnlyAdds) || fkChanged
+
+                if needsRecreate || not changes.IsEmpty || not idxToAdd.IsEmpty || not idxToDrop.IsEmpty then
                     hasChanges <- true
                     migrationParts.Add(sprintf "-- Changes to %s" m.TableName)
 
-                    let hasOnlyAdds = changes |> List.forall (fun c ->
-                        match c with
-                        | AddColumn _ -> true
-                        | _ -> false)
-
-                    if hasOnlyAdds then
+                    if needsRecreate then
+                        // Rebuild reconciles columns, FKs, and indexes in one step.
+                        migrationParts.Add(generateRecreateTableSql m currentCols metasByName)
+                    else
+                        // Additive-only: ADD COLUMN(s), then reconcile indexes directly.
                         for change in changes do
                             match change with
                             | AddColumn(col, typ, notNull) ->
                                 migrationParts.Add(generateAddColumnSql m.TableName col typ notNull)
                             | _ -> ()
-                    else
-                        migrationParts.Add(generateRecreateTableSql m currentCols metasByName)
+                        for idx in idxToDrop do
+                            migrationParts.Add(sprintf "DROP INDEX %s;" idx)
+                        let idxStmts = generateIndexes m
+                        for name in idxToAdd do
+                            match idxStmts |> List.tryFind (fun s -> s.Contains(sprintf " %s ON " name)) with
+                            | Some stmt -> migrationParts.Add stmt
+                            | None -> ()
 
                     migrationParts.Add("")
 
