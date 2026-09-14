@@ -10,6 +10,9 @@
 <body>
     <div id="app"></div>
     <script type="module" src="/lib/rich-text/bootstrap.js"></script>
-    <script type="module" src="/dist/client/Articles/Main.js"></script>
+    <!-- Client entry, resolved per site at build (see vite.config.js): the unified shell
+         (Shell/Main.js) for Justat/default; the articles standalone entry
+         (Articles/Main.js) for ndct. -->
+    <script type="module" src="/dist/client/__CLIENT_MAIN__"></script>
 </body>
 </html>

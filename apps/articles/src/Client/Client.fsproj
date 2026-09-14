@@ -20,10 +20,20 @@
   <Import Project="../../../../packages/modules/articles/articles.client.props" />
   <!-- blog client composed everywhere EXCEPT ndct (articles-only) — see Server.fsproj. -->
   <Import Project="../../../../packages/modules/blog/blog.client.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
-  <ItemGroup>
+  <!-- ndct: articles standalone entry (no shell, no blog). -->
+  <ItemGroup Condition="'$(HEDGE_SITE)' == 'ndct'">
     <Compile Include="Articles/Main.fs" />
   </ItemGroup>
+  <!-- default/justat: the unified shell (Stage 1) hosts articles at the root; blog keeps
+       its own /blog bundle (Blog/Main.fs). The shell references the articles module's
+       hosted surface, so it compiles after articles.client.props. -->
   <ItemGroup Condition="'$(HEDGE_SITE)' != 'ndct'">
+    <Compile Include="Shell/Config.fs" />
+    <Compile Include="Shell/Identity.fs" />
+    <Compile Include="Shell/Types.fs" />
+    <Compile Include="Shell/Chrome.fs" />
+    <Compile Include="Shell/App.fs" />
+    <Compile Include="Shell/Main.fs" />
     <Compile Include="Blog/Main.fs" />
   </ItemGroup>
   <ItemGroup>

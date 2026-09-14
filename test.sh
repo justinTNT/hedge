@@ -111,9 +111,9 @@ echo "=== Step 1g: Unified shell Stage 0 (client matrix + host-context probe) ==
 # Stage 0 adds compatible hosting interfaces to the content modules (emptyHosted/
 # enterHosted/updateHosted/contentView/withSession + idempotent disposal) plus a shared
 # immutable HostContext, with standalone behaviour preserved. Assert every client
-# composition still builds — articles default (articles+blog), microblog (blog), and
-# articles ndct (articles only) — and that the context yields INDEPENDENT URL/ID
-# contexts (articles at root, blog at /blog), the Stage 0 acceptance probe.
+# composition still builds — articles default (now the Stage-1 shell + blog), microblog
+# (blog), and articles ndct (articles standalone) — and that the context yields
+# INDEPENDENT URL/ID contexts (articles at root, blog at /blog), the Stage 0 probe.
 cd "$ROOT"
 dotnet build apps/articles/src/Client/Client.fsproj >/dev/null 2>&1 \
     || { echo "!!! FAIL: articles default client build (articles+blog)"; exit 1; }
@@ -133,6 +133,41 @@ if ! node "$HC_OUT/Program.js" | grep -q "host-context-probe:.*OK"; then
 fi
 rm -rf "$HC_OUT"
 echo "--- host-context probe OK (independent URL/ID contexts) ---"
+
+echo ""
+echo "=== Step 1h: Unified shell Stage 1 (Justat shell production build) ==="
+# Stage 1 boots Justat's root on the unified shell (Shell/Main.js) hosting articles,
+# while blog keeps its own /blog bundle and ndct keeps the articles standalone entry.
+# The shell's hosted module set must agree with the composition manifests + the fsproj
+# conditional (Shell/Config.fs): default composes articles + blog (shell hosts articles,
+# links blog); ndct composes articles only (no shell, no blog).
+cd "$ROOT"
+GM="apps/articles/gen-modules.json"
+GMN="apps/articles/gen-modules.ndct.json"
+grep -q '"module": "\.\./\.\./packages/modules/articles"' "$GM" && grep -q '"module": "\.\./\.\./packages/modules/blog"' "$GM" \
+    || { echo "!!! FAIL: gen-modules.json no longer composes articles + blog (shell Config disagrees)"; exit 1; }
+grep -q '"module": "\.\./\.\./packages/modules/blog"' "$GMN" \
+    && { echo "!!! FAIL: gen-modules.ndct.json composes blog, but ndct is articles-standalone (no shell)"; exit 1; }
+echo "--- shell module set agrees with gen-modules manifests (default articles+blog; ndct articles-only) ---"
+# The production artifact must actually build (not just typecheck): Fable-compile the
+# Justat client (shell) + admin, then assemble _site via vite. Assert index boots the
+# shell client bundle and blog keeps its own bundle. (Runs from the app dir; artifacts
+# are gitignored and cleaned after.)
+(
+    cd "$ROOT/apps/articles" \
+    && rm -rf dist _site \
+    && npm run build:client >/dev/null 2>&1 \
+    && npm run build:admin >/dev/null 2>&1 \
+    && SITE_SLUG=justat SITE_TITLE="just@justat.at" SITE_LOGO="/public/justat.png" npm run build:site >/dev/null 2>&1
+) || { echo "!!! FAIL: Justat shell production build did not assemble"; rm -rf "$ROOT/apps/articles/dist" "$ROOT/apps/articles/_site" "$ROOT/apps/articles/lib"; exit 1; }
+ok=1
+[ -f "$ROOT/apps/articles/dist/client/Shell/Main.js" ] || { echo "!!! FAIL: shell entry (dist/client/Shell/Main.js) not Fable-compiled"; ok=0; }
+ls "$ROOT/apps/articles/_site/assets"/main-*.js >/dev/null 2>&1 || { echo "!!! FAIL: no shell client bundle in _site/assets"; ok=0; }
+grep -q 'assets/main-' "$ROOT/apps/articles/_site/index.html" || { echo "!!! FAIL: _site/index.html does not bundle the client entry"; ok=0; }
+[ -f "$ROOT/apps/articles/_site/blog.html" ] || { echo "!!! FAIL: blog bundle (_site/blog.html) missing from the Justat build"; ok=0; }
+rm -rf "$ROOT/apps/articles/dist" "$ROOT/apps/articles/_site" "$ROOT/apps/articles/lib"
+[ "$ok" = 1 ] || exit 1
+echo "--- Justat shell production build OK (index boots the shell; blog.html kept) ---"
 
 echo ""
 echo "=== Step 2: Scaffold pipeline ==="
