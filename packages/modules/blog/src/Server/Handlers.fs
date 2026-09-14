@@ -189,8 +189,8 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               Timestamp = now }
 
         let event : Blog.Ws.NewCommentEvent =
-            { Id = commentId; ItemId = itemId; IdentityId = activeIdentityId
-              ParentId = parentId; Author = author; Picture = activePicture
+            { Id = commentId; ItemId = ForeignKey itemId; IdentityId = IdentityRef activeIdentityId
+              ParentId = parentId |> Option.map ForeignKey; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
         Hedge.Events.broadcast env.EVENTS ctx itemId "NewComment" (Blog.Codecs.Encode.blogNewCommentEvent event)

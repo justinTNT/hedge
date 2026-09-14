@@ -151,17 +151,20 @@ let update (ctx: Content.HostContext) msg model =
         model, disconnectEventsCmd ()
 
     | GotEvent event ->
+        // Unwrap the event's typed reference ids back to plain strings for the view DTO.
+        let (ForeignKey eventPostId) = event.PostId
+        let (IdentityRef eventIdentityId) = event.IdentityId
         match model.CurrentItem with
-        | Some response when response.Post.Id = event.PostId ->
+        | Some response when response.Post.Id = eventPostId ->
             let existingIds = response.Post.Comments |> List.map (fun c -> c.Id) |> Set.ofList
             if Set.contains event.Id existingIds then
                 model, Cmd.none
             else
                 let newComment : SubmitComment.CommentItem =
                     { Id = event.Id
-                      PostId = event.PostId
-                      IdentityId = event.IdentityId
-                      ParentId = event.ParentId
+                      PostId = eventPostId
+                      IdentityId = eventIdentityId
+                      ParentId = event.ParentId |> Option.map (fun (ForeignKey p) -> p)
                       Author = event.Author
                       Picture = event.Picture
                       Content = RichContent event.Content

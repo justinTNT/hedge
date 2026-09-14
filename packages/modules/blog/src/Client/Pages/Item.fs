@@ -110,13 +110,16 @@ let update msg model =
         model, disconnectEventsCmd ()
 
     | GotEvent event ->
+        // Unwrap the event's typed reference ids back to plain strings for the view DTO.
+        let (ForeignKey eventItemId) = event.ItemId
+        let (IdentityRef eventIdentityId) = event.IdentityId
         match model.CurrentItem with
-        | Some response when response.Item.Id = event.ItemId ->
+        | Some response when response.Item.Id = eventItemId ->
             let newComment : SubmitComment.CommentItem =
                 { Id = event.Id
-                  ItemId = event.ItemId
-                  IdentityId = event.IdentityId
-                  ParentId = event.ParentId
+                  ItemId = eventItemId
+                  IdentityId = eventIdentityId
+                  ParentId = event.ParentId |> Option.map (fun (ForeignKey p) -> p)
                   Author = event.Author
                   Picture = event.Picture
                   Content = RichContent event.Content
