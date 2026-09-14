@@ -31,20 +31,14 @@ let ensureAnonymousIdentity = """
 let findIdentityByProvider =
     "SELECT id FROM identities WHERE guest_id = ? AND provider = ? AND provider_user_id = ?"
 
-/// A provider account, regardless of which guest currently holds it. Ordered by
-/// history (comment count), not age; earliest created breaks ties.
-let findIdentityByProviderGlobal = """
-    SELECT i.id, i.guest_id
-    FROM identities i
-    WHERE i.provider = ? AND i.provider_user_id = ?
-    ORDER BY (SELECT COUNT(*) FROM articles_comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
-    LIMIT 1"""
+// `findIdentityByProviderGlobal` (provider-account lookup ranked by comment history) and
+// `countCommentsForIdentity` (an identity's comment count) are built in Server.Attribution
+// from `AttributionPolicy.commentTables`, so they sum across EVERY content module the site
+// composes (articles + blog on justat), not just articles_comments. They were single-table
+// literals here; a cross-module SUM can't be a static literal (the table set is per-site).
 
 let moveIdentitiesToGuest =
     "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
-
-let countCommentsForIdentity =
-    "SELECT COUNT(*) AS n FROM articles_comments WHERE identity_id = ?"
 
 let moveIdentityToGuest =
     "UPDATE identities SET guest_id = ? WHERE id = ?"
@@ -78,16 +72,11 @@ let setIdentityActive =
     "UPDATE identities SET activated_at = ? WHERE id = ?"
 
 // ---- Attribution ----
-
-let reassignComments = """
-    UPDATE articles_comments
-    SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?)
-    WHERE identity_id = ?"""
-
-// Content SQL (posts + comments) now lives in the articles module (Articles.Sql,
-// Tables-driven). The identity statements above reference `articles_comments` as a
-// plain literal — this file compiles before the generated Server.Db, so it can't use
-// the `Tables` constants (same reason microblog's identity SQL literals `blog_comments`).
-// On justat the blog module owns its own `blog_comments`; re-attributing a merged
-// identity's comments across BOTH content tables is a follow-up (this preserves the
-// pre-module behaviour, which only ever re-attributed the articles table).
+//
+// Comment re-attribution on a merge is now module-owned: each content module exposes a
+// Tables-driven `reassignComments` (Articles.Sql / Blog.Sql), composed per-site into the
+// merge policy by `Server.AttributionPolicy` and run by `Server.Attribution.reassign`.
+// This closes the pre-module gap where only `articles_comments` was re-attributed — on
+// justat a merged identity's `blog_comments` now move too. The provider-lookup ranking +
+// comment counts (see the note where those literals used to be) are likewise summed across
+// all composed content tables, so every identity-history path is now module-aware.

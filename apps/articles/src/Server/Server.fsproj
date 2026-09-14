@@ -19,6 +19,12 @@
        ndct's generated Routes never reference Blog.Handlers. -->
   <Import Project="../../../../packages/modules/blog/blog.server.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
   <ItemGroup>
+    <!-- The merge policy composes each composed module's own reassignComments, so it
+         sits after the module props (needs Articles.Sql / Blog.Sql) and before Handlers
+         (which calls it). Site-selected like the generated glue: default = articles+blog
+         (justat), .ndct = articles-only. -->
+    <Compile Include="AttributionPolicy.fs" Condition="'$(HEDGE_SITE)' != 'ndct'" />
+    <Compile Include="AttributionPolicy.ndct.fs" Condition="'$(HEDGE_SITE)' == 'ndct'" />
     <Compile Include="Handlers.fs" />
     <!-- The per-composition glue (AdminGen registry + Routes dispatch) is committed
          per HEDGE_SITE: the default files are the superset (justat); ndct has its own

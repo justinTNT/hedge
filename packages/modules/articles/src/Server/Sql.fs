@@ -30,3 +30,10 @@ let picturesForPostComments =
 
 let insertComment =
     sprintf "INSERT INTO %s (id, post_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)" Tables.comment
+
+/// Re-attribute this module's comments from one identity to another on a merge.
+/// The module owns this because it owns the comment table; the host composes it
+/// into the app's merge policy (see the app's Attribution / AttributionPolicy).
+/// Bind: [toId; toId; fromId].
+let reassignComments =
+    sprintf "UPDATE %s SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?) WHERE identity_id = ?" Tables.comment
