@@ -11,6 +11,7 @@ module Articles.Client.Shell.Types
 
 module A = Articles.Client.Types
 module B = Blog.Client.Types
+module Identity = Content.Identity   // the shared identity subsystem (Stage 3)
 
 type ModuleId =
     | Articles

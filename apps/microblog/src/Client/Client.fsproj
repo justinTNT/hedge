@@ -13,6 +13,10 @@
     <!-- One-use OAuth claim handoff (consumed by the blog module's session sync); unified
          shell Stage 1. No handoff is ever written here, so consumption is a no-op. -->
     <Compile Include="../../../../packages/content-client/ClaimHandoff.fs" />
+    <!-- Shared identity subsystem + UI (unified shell Stage 3). Linked so this app can
+         migrate its standalone blog host onto it; unused until then. -->
+    <Compile Include="../../../../packages/content-client/Identity.fs" />
+    <Compile Include="../../../../packages/content-client/IdentityView.fs" />
   </ItemGroup>
   <!-- Content client comes from the composed blog module (its own .props); this app's
        own content pages were removed. Blog is PRIMARY here, run at "/" by Blog/Main.fs. -->

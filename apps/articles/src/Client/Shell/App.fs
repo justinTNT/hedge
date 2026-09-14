@@ -10,6 +10,7 @@ module A = Articles.Client.Types
 module B = Blog.Client.Types
 module ArtApp = Articles.Client.App
 module BlogApp = Blog.Client.App
+module Identity = Content.Identity   // the shared identity subsystem (Stage 3)
 
 open Fable.Core
 open Feliz
