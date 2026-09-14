@@ -17,6 +17,15 @@ let allAttrs : FieldAttr list =
       ForeignKey "Item"; RichContent; Link; Unique; Required; Trim; Inject
       MinLength 3; MaxLength 5 ]
 
+// A request record with wrapper-typed ids (Hedge.Interface.ForeignKey), the shape the
+// wire-id typing pass produces. The generated validation schema types such ids as FString
+// + Trim, but at runtime they are wrapper objects, not strings — see the validate probe.
+type private CommentReqProbe =
+    { PostId: Hedge.Interface.ForeignKey<obj>
+      ParentId: Hedge.Interface.ForeignKey<obj> option
+      Content: string
+      Author: string option }
+
 [<EntryPoint>]
 let main _ =
     let mutable failures = 0
@@ -46,6 +55,30 @@ let main _ =
     | Ok back when back = schema -> ()
     | Ok back -> fail (sprintf "TypeSchema round-trip mismatch: %A" back)
     | Error e -> fail (sprintf "TypeSchema decode failed: %s" e)
+
+    // 3. Runtime validation must not crash on wrapper-typed ids. The wire-id typing pass
+    //    makes request ids Hedge.Interface.ForeignKey (a JS object), but the generated
+    //    validation schema types them FString + Trim. validate must skip string sanitizing
+    //    the wrapper (not throw "s.trim is not a function" — the live comment-submit 500),
+    //    while still trimming the real string fields.
+    let vschema : TypeSchema =
+        { Name = "CommentReqProbe"
+          Fields = [ { Name = "PostId"; Type = FString; Attrs = [ Required; Trim ] }
+                     { Name = "ParentId"; Type = FOption FString; Attrs = [ Trim ] }
+                     { Name = "Content"; Type = FString; Attrs = [ Required; Trim ] }
+                     { Name = "Author"; Type = FOption FString; Attrs = [ Trim ] } ]
+          Attrs = [] }
+    let vreq =
+        { PostId = Hedge.Interface.ForeignKey "p1"
+          ParentId = Some (Hedge.Interface.ForeignKey "c1")
+          Content = "  hi  "
+          Author = Some "  bob " }
+    (try
+        match Hedge.Validate.validate vschema vreq with
+        | Ok r when r.Content = "hi" && r.Author = Some "bob" -> ()   // strings trimmed, ids untouched
+        | Ok r -> fail (sprintf "validate wrapper-id probe: unexpected sanitized value %A" r)
+        | Error e -> fail (sprintf "validate wrapper-id probe errored: %A" e)
+     with ex -> fail (sprintf "validate wrapper-id probe threw: %s" ex.Message))
 
     if failures > 0 then
         eprintfn "schema-roundtrip: %d failure(s)" failures

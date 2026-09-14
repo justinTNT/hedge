@@ -18,6 +18,14 @@ let private getProp (obj: obj) (name: string) : obj = jsNative
 [<Emit("($0 == null)")>]
 let private isNull (v: obj) : bool = jsNative
 
+/// A field whose SCHEMA type is FString serializes on the wire as a string, but its
+/// RUNTIME value may be a wrapper (a ForeignKey/IdentityRef single-case DU is a JS object,
+/// not a string). String sanitizers (Trim) and `.Length` must only run on real strings —
+/// otherwise `s.Trim()` throws "s.trim is not a function". Wrapper-typed ids carry no free
+/// text to sanitize, so they pass through validation untouched.
+[<Emit("(typeof $0 === 'string')")>]
+let private isString (v: obj) : bool = jsNative
+
 [<Emit("new ($0.construct)(...$1)")>]
 let private makeRecord (typeInfo: System.Type) (values: obj array) : obj = jsNative
 
@@ -49,6 +57,10 @@ let private validateField (fieldName: string) (fs: FieldSchema) (value: obj) : o
     let addError msg = errors.Add({ Field = fieldName; Message = msg })
 
     match fs.Type with
+    | FString when not (isString value) ->
+        // Wrapper-typed id (ForeignKey/IdentityRef) — string on the wire, an object at
+        // runtime. No free text to sanitize; pass it through unchanged.
+        value, []
     | FString ->
         let mutable s : string = unbox value
         if hasAttr Trim fs then s <- s.Trim()
@@ -63,7 +75,8 @@ let private validateField (fieldName: string) (fs: FieldSchema) (value: obj) : o
         box s, Seq.toList errors
 
     | FOption FString ->
-        if isNull value then
+        if isNull value || not (isString value) then
+            // None, or a wrapper-typed optional id (ForeignKey option) — nothing to trim.
             value, Seq.toList errors
         else
             let mutable s : string = unbox value
