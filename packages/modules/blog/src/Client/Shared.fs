@@ -142,7 +142,7 @@ let private tagColor (name: string) =
     let hash = name.ToCharArray() |> Array.fold (fun acc c -> int c + acc * 31) 0
     tagColors.[abs hash % tagColors.Length]
 
-let tagPill (tag: string) =
+let tagPill (ctx: Content.HostContext) (tag: string) =
     Html.span [
         prop.className "tag"
         prop.style [
@@ -153,7 +153,7 @@ let tagPill (tag: string) =
         prop.text tag
         prop.onClick (fun e ->
             e.stopPropagation ()
-            navigateTo [ "tag"; tag ]
+            ctx.Navigate [ "tag"; tag ]
         )
     ]
 
@@ -175,13 +175,13 @@ let error (msg: string) dispatch =
         ]
     ]
 
-let feedItem (item: GetFeed.FeedItem) =
+let feedItem (ctx: Content.HostContext) (item: GetFeed.FeedItem) =
     let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
         prop.key item.Id
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
-        prop.onClick (fun _ -> navigateTo [ itemPath ])
+        prop.onClick (fun _ -> ctx.Navigate [ itemPath ])
         prop.children [
             Html.h2 [ prop.text item.Title ]
             match item.Extract with

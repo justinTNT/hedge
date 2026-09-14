@@ -53,17 +53,17 @@ let update msg model =
 
 // --- View ---
 
-let view (response: GetItemsByTag.Response) =
+let view (ctx: Content.HostContext) (response: GetItemsByTag.Response) =
     Html.div [
         prop.className "feed"
         prop.children [
             Html.div [
                 prop.className "tag-header"
-                prop.children [ tagPill response.Tag ]
+                prop.children [ tagPill ctx response.Tag ]
             ]
             for (day, items) in groupByDay response.Items do
                 dayDivider day
-                yield! (items |> List.map feedItem)
+                yield! (items |> List.map (feedItem ctx))
             Html.div [ prop.key "tag-sentinel"; prop.id "tag-sentinel"; prop.className "feed-sentinel" ]
         ]
     ]

@@ -79,7 +79,7 @@ let private richContent (className: string) (content: RichContent) =
 
 // --- Update ---
 
-let update msg model =
+let update (ctx: Content.HostContext) msg model =
     match msg with
     | LoadItem idOrSlug ->
         { model with IsLoading = true; CurrentItem = None },
@@ -88,7 +88,7 @@ let update msg model =
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
         Cmd.batch [
-            Cmd.ofEffect (fun _ -> setDocTitle response.Post.Title)
+            Cmd.ofEffect (fun _ -> ctx.SetDocTitle response.Post.Title)
             connectEventsCmd response.Post.Id
         ]
 

@@ -61,13 +61,13 @@ let update msg model =
 
     | _ -> model, Cmd.none
 
-let view (response: GetFeed.Response) =
+let view (ctx: Content.HostContext) (response: GetFeed.Response) =
     Html.div [
         prop.className "feed"
         prop.children [
             for (day, items) in groupByDay response.Items do
                 dayDivider day
-                yield! (items |> List.map feedItem)
+                yield! (items |> List.map (feedItem ctx))
             // Infinite-scroll sentinel: keyed so React preserves the same node
             // across appends, keeping its IntersectionObserver alive. Always
             // rendered; LoadMoreFeed self-guards on NextCursor once exhausted.

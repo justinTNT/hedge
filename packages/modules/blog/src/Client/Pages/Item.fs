@@ -277,7 +277,7 @@ let rec private commentView (model: Model) (allComments: SubmitComment.CommentIt
         ]
     ]
 
-let view (response: GetItem.Response) (model: Model) dispatch =
+let view (ctx: Content.HostContext) (response: GetItem.Response) (model: Model) dispatch =
     let item = response.Item
     Html.div [
         prop.className "item-detail"
@@ -306,7 +306,7 @@ let view (response: GetItem.Response) (model: Model) dispatch =
             if not item.Tags.IsEmpty then
                 Html.div [
                     prop.className "tags"
-                    prop.children (item.Tags |> List.map tagPill)
+                    prop.children (item.Tags |> List.map (tagPill ctx))
                 ]
             Html.div [
                 prop.className "comments"

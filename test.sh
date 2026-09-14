@@ -107,6 +107,34 @@ else
 fi
 
 echo ""
+echo "=== Step 1g: Unified shell Stage 0 (client matrix + host-context probe) ==="
+# Stage 0 adds compatible hosting interfaces to the content modules (emptyHosted/
+# enterHosted/updateHosted/contentView/withSession + idempotent disposal) plus a shared
+# immutable HostContext, with standalone behaviour preserved. Assert every client
+# composition still builds — articles default (articles+blog), microblog (blog), and
+# articles ndct (articles only) — and that the context yields INDEPENDENT URL/ID
+# contexts (articles at root, blog at /blog), the Stage 0 acceptance probe.
+cd "$ROOT"
+dotnet build apps/articles/src/Client/Client.fsproj >/dev/null 2>&1 \
+    || { echo "!!! FAIL: articles default client build (articles+blog)"; exit 1; }
+dotnet build apps/microblog/src/Client/Client.fsproj >/dev/null 2>&1 \
+    || { echo "!!! FAIL: microblog client build (blog)"; exit 1; }
+HEDGE_SITE=ndct dotnet build apps/articles/src/Client/Client.fsproj >/dev/null 2>&1 \
+    || { echo "!!! FAIL: articles ndct client build (articles only)"; exit 1; }
+echo "--- client build matrix OK (articles default, microblog, articles ndct) ---"
+HC_OUT="$ROOT/test/HostContextProbe/dist"
+rm -rf "$HC_OUT"
+dotnet fable test/HostContextProbe/HostContextProbe.fsproj -o "$HC_OUT" >/dev/null 2>&1
+if ! node "$HC_OUT/Program.js" | grep -q "host-context-probe:.*OK"; then
+    echo "!!! FAIL: host-context probe (independent URL/ID contexts)."
+    node "$HC_OUT/Program.js" || true
+    rm -rf "$HC_OUT"
+    exit 1
+fi
+rm -rf "$HC_OUT"
+echo "--- host-context probe OK (independent URL/ID contexts) ---"
+
+echo ""
 echo "=== Step 2: Scaffold pipeline ==="
 cd "$ROOT"
 rm -rf "$ROOT/apps/_test-app"

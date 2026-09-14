@@ -7,6 +7,9 @@
     <Compile Include="../../../../packages/hedge/src/Client/Api.fs" />
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="../../../../packages/rich-text/RichText.fs" />
+    <!-- Shared content-client contract (immutable host context) the blog content
+         module references; linked once before the module .props (unified shell, Stage 0). -->
+    <Compile Include="../../../../packages/content-client/HostContext.fs" />
   </ItemGroup>
   <!-- Content client comes from the composed blog module (its own .props); this app's
        own content pages were removed. Blog is PRIMARY here, run at "/" by Blog/Main.fs. -->

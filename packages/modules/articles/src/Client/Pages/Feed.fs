@@ -51,13 +51,13 @@ let update msg model =
 
     | _ -> model, Cmd.none
 
-let view (response: GetFeed.Response) =
+let view (ctx: Content.HostContext) (response: GetFeed.Response) =
     Html.div [
         prop.className "feed"
         prop.children [
             for (ts, items) in groupByDay response.Items do
                 dayDivider ts
-                yield! (items |> List.map feedItem)
+                yield! (items |> List.map (feedItem ctx))
             Html.div [ prop.key "feed-sentinel"; prop.id "feed-sentinel"; prop.className "feed-sentinel" ]
         ]
     ]

@@ -13,6 +13,11 @@ open Articles.Client
 open Articles.Client.Types
 open Articles.Client.Pages
 
+// The standalone entry (Articles/Main.fs) runs this component with routing/navigation
+// read from window globals — the default host context. Ctx-taking page helpers get this
+// one; a shell supplies its own context per hosted instance (unified shell, Stage 0).
+let private standaloneCtx = Content.HostContext.standalone Shared.navigateTo
+
 [<Emit("new URLSearchParams(window.location.search).get($0)")>]
 let private getQueryParam (name: string) : string = jsNative
 
@@ -145,7 +150,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply
     | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
-        Item.update msg model
+        Item.update standaloneCtx msg model
 
     | GotSessionSync session ->
         { model with GuestSession = session }, Cmd.none
@@ -227,7 +232,7 @@ let appView (model: Model) dispatch =
                         | None -> Html.p [ prop.text "Post not found." ]
                     | _ ->
                         match model.Feed with
-                        | Some response -> Feed.view response
+                        | Some response -> Feed.view standaloneCtx response
                         | None -> Html.p [ prop.text "No posts yet." ]
             ]
             if Hedge.Tenant.config.Slug = "justat" then Shared.justatSidebar else Html.none
@@ -241,6 +246,102 @@ let view model dispatch =
         router.children [ appView model dispatch ]
     ]
 
+// ============================================================
+// Hosted surface (unified shell, Stage 0) — see notes/UNIFIED-SHELL.md
+//
+// Compatible hosting interfaces alongside the standalone init/update/view above. A
+// shell drives these with an immutable per-instance HostContext; it owns the router,
+// identity, and chrome. The standalone entry keeps owning those. These functions do no
+// browser-location reads, no identity boot, and (for emptyHosted) no effects at all.
+// ============================================================
+
+/// An idle content model — no fetch, no location read, no listeners, no identity boot.
+/// The host seeds the session snapshot; a first `enterHosted` drives the initial route.
+let emptyHosted (session: GuestSession.GuestSessionData) : Model =
+    { Route = []
+      Feed = None
+      FeedLoadingMore = false
+      CurrentItem = None
+      IsLoading = false
+      Error = None
+      GuestSession = session
+      CollapsedComments = Set.empty
+      ReplyingTo = None
+      Identities = []
+      AvailableProviders = []
+      ShowIdentitySwitcher = false
+      SelectedIdentity = None
+      PendingClaimFocus = None }
+
+/// Pure snapshot of the host's authoritative session into the child model (the comment
+/// forms read it). Identity is host-owned; this never triggers a sync/switcher flow.
+let withSession (session: GuestSession.GuestSessionData) (model: Model) : Model =
+    { model with GuestSession = session }
+
+/// Dispose this instance's live resources — WebSocket + comment editor. Idempotent
+/// (each teardown self-guards on its own state). Stage 0 uses module-level singletons;
+/// instance/activation scoping is Stage 2.
+let disposeHostedCmd : Cmd<Msg> =
+    Cmd.batch [ Item.disconnectEventsCmd (); Item.destroyCommentEditorCmd; Item.destroyAllViewersCmd ]
+
+/// Enter a module-local content route. Returns the route's content model + load
+/// commands, preceded by disposal of the outgoing route's resources. Reads no browser
+/// location and touches no identity; identity-claim routes are the host's concern (the
+/// host resolves them before ever calling this), so they fall through as an empty view.
+let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) : Model * Cmd<Msg> =
+    let cleared =
+        { model with
+            Route = route
+            CurrentItem = None
+            ReplyingTo = None
+            CollapsedComments = Set.empty }
+    let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
+    match route with
+    | [] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg LoadFeed ]
+    | [idOrSlug] -> cleared, Cmd.batch [ disposeHostedCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
+    | _ -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle ]
+
+/// Handle a CONTENT message. Browser routing (UrlChanged) and identity messages are
+/// host-owned on the hosted path — they arrive through the shell, not here — so they
+/// are no-ops if dispatched into a hosted child.
+let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
+    match msg with
+    | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
+        Feed.update msg model
+    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply
+    | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
+        Item.update ctx msg model
+    | DismissError ->
+        { model with Error = None }, Cmd.none
+    | UrlChanged _
+    | GotSessionSync _ | RevertIdentity _ | GotRevertIdentity _ | DisconnectIdentity _ | GotDisconnect _
+    | LoadIdentities | GotIdentities _ | GotProviders _ | ToggleIdentitySwitcher | SelectIdentity _ ->
+        model, Cmd.none
+
+/// Render module content only — no router, header, identity switcher, sidebar, or outer
+/// <main>. The host supplies the frame and places this inside its own <main>.
+let contentView (ctx: Content.HostContext) (model: Model) dispatch =
+    React.fragment [
+        match model.Error with
+        | Some err -> Shared.error err dispatch
+        | None -> Html.none
+
+        if model.IsLoading then
+            Shared.loading
+        else
+            match model.Route with
+            | ["auth"; "claim"] | ["auth"; "claim"; _] ->
+                Shared.loading
+            | [_] ->
+                match model.CurrentItem with
+                | Some response -> Item.view response model dispatch
+                | None -> Html.p [ prop.text "Post not found." ]
+            | _ ->
+                match model.Feed with
+                | Some response -> Feed.view ctx response
+                | None -> Html.p [ prop.text "No posts yet." ]
+    ]
+
 // This is a COMPONENT (init/update/view) — the standalone entry
-// (apps/articles/src/Client/Articles/Main.fs) runs it, and a future unified shell
-// can host the same component unchanged (locked decision D1).
+// (apps/articles/src/Client/Articles/Main.fs) runs it, and the unified shell hosts the
+// same component via the hosted surface above (locked decision D1).

@@ -134,13 +134,13 @@ let error (msg: string) dispatch =
         ]
     ]
 
-let feedItem (item: GetFeed.FeedItem) =
+let feedItem (ctx: Content.HostContext) (item: GetFeed.FeedItem) =
     let itemPath = item.Slug |> Option.defaultValue item.Id
     Html.article [
         prop.key item.Id
         prop.className "feed-item"
         prop.style [ style.cursor.pointer ]
-        prop.onClick (fun _ -> navigateTo [ itemPath ])
+        prop.onClick (fun _ -> ctx.Navigate [ itemPath ])
         prop.children [
             Html.h2 [ prop.text item.Title ]
             match item.Teaser with
