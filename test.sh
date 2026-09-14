@@ -91,6 +91,22 @@ rm -rf "$RT_OUT"
 echo "--- SchemaCodec round-trip OK ---"
 
 echo ""
+echo "=== Step 1f: Populated table recreate (P3) ==="
+# A schema change that forces a table rebuild (a column type/drop or any FK change)
+# emits copy -> DROP -> RENAME. On a populated DB with self-FKs (comments.parent_id) or
+# child tables, that used to fail at COMMIT even with defer_foreign_keys — the classic
+# foreign_keys=OFF fix is unavailable inside D1's implicit migration txn. This applies
+# the generator's ACTUAL recreate SQL to a real SQLite DB and asserts it commits with
+# rows retained, while an invalid-reference control still fails at commit.
+cd "$ROOT"
+if command -v sqlite3 >/dev/null 2>&1; then
+    ./test/recreate/run.sh
+    echo "--- Populated table recreate OK ---"
+else
+    echo "--- SKIP: sqlite3 not on PATH (P3 recreate check needs it) ---"
+fi
+
+echo ""
 echo "=== Step 2: Scaffold pipeline ==="
 cd "$ROOT"
 rm -rf "$ROOT/apps/_test-app"

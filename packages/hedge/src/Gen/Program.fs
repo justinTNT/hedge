@@ -1445,11 +1445,29 @@ let generateAddColumnSql (tableName: string) (col: string) (typ: string) (notNul
         sprintf "ALTER TABLE %s ADD COLUMN %s %s;" tableName col typ
 
 let generateRecreateTableSql (m: TableMeta) (currentCols: ColInfo list) (metasByName: Map<string, TableMeta>) : string =
-    let createSql = generateCreateTable m metasByName
-    let newCreateSql =
-        createSql.Replace(
-            sprintf "CREATE TABLE %s" m.TableName,
-            sprintf "CREATE TABLE %s_new" m.TableName)
+    // Point a table's OWN self-referential FK at its <t>_new during the rebuild window.
+    // generateCreateTable emits self-FKs as `REFERENCES <table>(...)`; the trailing "("
+    // guards against prefix collisions (REFERENCES item( never matches REFERENCES items().
+    // Without this the self-FK still names the live table, and DROPping it below leaves
+    // <t>_new pointing at a table that's about to vanish — the deferred check then fails
+    // at COMMIT even though PRAGMA foreign_key_check is clean (SQLite counts the drop as a
+    // pending violation that the rename does not clear). Cross-table FKs name other tables
+    // and are left untouched.
+    let rewriteSelfRef (tableName: string) (ddl: string) =
+        ddl.Replace(sprintf "REFERENCES %s(" tableName, sprintf "REFERENCES %s_new(" tableName)
+
+    // Emit <t>_new + populate + drop-source + rename + indexes for one table, copying from
+    // `sourceTable` (the live table for the parent; a *_bak snapshot for a child).
+    let rebuildOne (t: TableMeta) (sourceTable: string) (insertColList: string) (selectList: string) : string list =
+        let newDdl =
+            (generateCreateTable t metasByName)
+                .Replace(sprintf "CREATE TABLE %s" t.TableName, sprintf "CREATE TABLE %s_new" t.TableName)
+            |> rewriteSelfRef t.TableName
+        [ yield newDdl
+          yield sprintf "INSERT INTO %s_new (%s) SELECT %s FROM %s;" t.TableName insertColList selectList sourceTable
+          yield sprintf "DROP TABLE %s;" sourceTable
+          yield sprintf "ALTER TABLE %s_new RENAME TO %s;" t.TableName t.TableName
+          yield! generateIndexes t ]
 
     let currentColNames = currentCols |> List.map (fun c -> c.ColName) |> Set.ofList
     // For each schema column: copy it when the source table has it. If the schema
@@ -1471,23 +1489,68 @@ let generateRecreateTableSql (m: TableMeta) (currentCols: ColInfo list) (metasBy
     let colList = insertCols |> String.concat ", "
     let selList = selectExprs |> String.concat ", "
 
+    // Tables that reference m: DROPping a populated parent orphans their rows, which the
+    // deferred check catches at COMMIT (a clean foreign_key_check notwithstanding). Rebuild
+    // the whole cluster in one pass — stash + drop the children first so nothing references
+    // the parent while it's rebuilt, then recreate the children from their snapshots. A
+    // self-FK on m alone (the estate's real trigger: comments.parent_id) needs no children,
+    // just the rewrite above.
+    let allMetas = metasByName |> Map.toList |> List.map snd |> List.distinctBy (fun t -> t.TableName)
+    let referencesTable (t: TableMeta) (target: string) =
+        desiredForeignKeys t metasByName |> Set.exists (fun (_, r) -> r = target)
+    let children =
+        allMetas |> List.filter (fun c -> c.TableName <> m.TableName && referencesTable c m.TableName)
+
+    // The single-level cluster (parent + its direct children) covers the estate. A referencer
+    // OUTSIDE the cluster pointing into it (a grandchild) or a child referencing another child
+    // (not the parent) would need a wider/ordered rebuild this doesn't do — such SQL would
+    // fail at COMMIT, so flag it loudly rather than ship a migration that silently breaks.
+    let clusterNames = Set.ofList (m.TableName :: (children |> List.map (fun c -> c.TableName)))
+    let externalReferencers =
+        allMetas
+        |> List.filter (fun t -> not (clusterNames.Contains t.TableName))
+        |> List.filter (fun t -> desiredForeignKeys t metasByName |> Set.exists (fun (_, r) -> clusterNames.Contains r))
+        |> List.map (fun t -> t.TableName)
+    let interChildRefs =
+        children
+        |> List.filter (fun c ->
+            desiredForeignKeys c metasByName
+            |> Set.exists (fun (_, r) -> clusterNames.Contains r && r <> m.TableName && r <> c.TableName))
+        |> List.map (fun c -> c.TableName)
+    let unhandled = (externalReferencers @ interChildRefs) |> List.distinct
+
     let lines = ResizeArray<string>()
+    if not unhandled.IsEmpty then
+        lines.Add(sprintf "-- !!! WARNING: %s has referencing table(s) this auto-migration cannot" m.TableName)
+        lines.Add(sprintf "-- !!! rebuild safely in one transaction: %s." (String.concat ", " unhandled))
+        lines.Add("-- !!! (a table outside the parent+direct-children cluster references into it, or")
+        lines.Add("-- !!!  two children reference each other). The SQL below WILL fail at COMMIT on a")
+        lines.Add("-- !!!  populated DB. Rebuild by hand: snapshot every affected table, drop them")
+        lines.Add("-- !!!  children-first, recreate parents-first, restore data, then verify")
+        lines.Add("-- !!!  PRAGMA foreign_key_check is clean before applying.")
+        lines.Add("")
     // Defer FK enforcement to the migration's (implicit) transaction commit so the
-    // DROP + RENAME don't trip constraints from child tables mid-rebuild on a populated
-    // DB. This is D1's documented mechanism — it runs migrations in an implicit
-    // transaction and forbids toggling foreign_keys inside one
+    // DROP + RENAME don't trip constraints mid-rebuild on a populated DB. This is D1's
+    // documented mechanism — it runs migrations in an implicit transaction and forbids
+    // toggling foreign_keys inside one
     // (https://developers.cloudflare.com/d1/sql-api/foreign-keys/). Any real violation
     // still surfaces at commit, so review + test a recreate before applying it remotely
     // (remote migrations are never auto-applied).
     lines.Add("PRAGMA defer_foreign_keys = on;")
-    lines.Add(newCreateSql)
-    lines.Add(sprintf "INSERT INTO %s_new (%s) SELECT %s FROM %s;" m.TableName colList selList m.TableName)
-    lines.Add(sprintf "DROP TABLE %s;" m.TableName)
-    lines.Add(sprintf "ALTER TABLE %s_new RENAME TO %s;" m.TableName m.TableName)
 
-    let indexes = generateIndexes m
-    for idx in indexes do
-        lines.Add(idx)
+    // Stash + drop children (children-first) so nothing references the parent as it rebuilds.
+    for c in children do
+        lines.Add(sprintf "CREATE TABLE %s_bak AS SELECT * FROM %s;" c.TableName c.TableName)
+        lines.Add(sprintf "DROP TABLE %s;" c.TableName)
+
+    // Rebuild the parent from its live table (with the NOT-NULL-seeding column mapping).
+    lines.AddRange(rebuildOne m m.TableName colList selList)
+
+    // Recreate each child from its snapshot (children are assumed in sync with their model;
+    // their own schema drift is handled by their own recreate, not here).
+    for c in children do
+        let childCols = c.DbFields |> List.map (fun f -> toSnakeCase f.Name) |> String.concat ", "
+        lines.AddRange(rebuildOne c (sprintf "%s_bak" c.TableName) childCols childCols)
 
     lines |> String.concat "\n"
 
@@ -1847,6 +1910,30 @@ let private runSite (argv: string array) =
 
     0
 
+/// Print the recreate migration SQL for one domain type without touching D1 — the
+/// live columns are synthesized from the model (a FK-only change, the estate's real
+/// recreate trigger, leaves columns identical). Lets a local SQLite test apply the
+/// generator's ACTUAL output for a populated parent+children rebuild (test/recreate).
+let private runEmitRecreate (displayName: string) =
+    validateSite ()
+    let metas = readModules () |> List.collect (fun mo -> let _, _, _, ms = reflectModule mo in ms)
+    let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
+    match metasByName |> Map.tryFind displayName with
+    | None ->
+        eprintfn "emit-recreate: no domain type '%s' in this composition (have: %s)"
+            displayName (metas |> List.map (fun m -> m.DisplayName) |> String.concat ", ")
+        1
+    | Some m ->
+        let currentCols =
+            m.DbFields
+            |> List.map (fun f ->
+                { ColName = toSnakeCase f.Name
+                  ColType = sqlType f.Type
+                  NotNull = not (isNullable f) && not (isPrimaryKey f)
+                  IsPk = isPrimaryKey f })
+        printfn "%s" (generateRecreateTableSql m currentCols metasByName)
+        0
+
 [<EntryPoint>]
 let main (argv: string array) =
     // Module-emit pass: `-- module <path>` writes that module's own generated surface.
@@ -1856,4 +1943,6 @@ let main (argv: string array) =
         emitModuleSurface (readModuleManifest argv.[i + 1])
         0
     | _ ->
-        runSite argv
+        match argv |> Array.tryFindIndex ((=) "emit-recreate") with
+        | Some i when i + 1 < argv.Length -> runEmitRecreate argv.[i + 1]
+        | _ -> runSite argv
