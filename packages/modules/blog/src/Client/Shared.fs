@@ -246,6 +246,27 @@ let private providerLabel (provider: string) =
 
 let private identitySwitcher (model: Model) dispatch =
     if not model.ShowIdentitySwitcher then Html.none
+    // No OAuth configured *and* nothing but anonymous identities: no providers to connect
+    // and nothing to switch to or disconnect, so the switch UI would be an empty, dead
+    // panel. Say plainly that this is anonymous. (If a real identity exists — e.g. OAuth
+    // was removed after someone linked an account — keep the switcher so they can manage it.)
+    elif model.AvailableProviders.IsEmpty
+         && model.Identities |> List.forall (fun i -> i.Provider = "anonymous") then
+        let name =
+            match model.GuestSession.Identity with
+            | Some identity -> identity.Name
+            | None -> model.GuestSession.DisplayName
+        let note =
+            if System.String.IsNullOrWhiteSpace name
+            then "No sign-in here — comment under a name we generate for you."
+            else sprintf "No sign-in here — you're commenting as %s." name
+        Html.div [
+            prop.className "identity-switcher"
+            prop.children [
+                Html.h4 [ prop.text "Engaging anonymously" ]
+                Html.p [ prop.className "switcher-note"; prop.text note ]
+            ]
+        ]
     else
         Html.div [
             prop.className "identity-switcher"
