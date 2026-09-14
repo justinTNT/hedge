@@ -20,12 +20,15 @@ let initOwnerCommentEditorCmd : Cmd<Msg> =
             RichText.createEditorWhenReady RichText.ownerCommentEditorId ""
     )
 
+/// Destroy the owner-comment editor now (synchronous, idempotent). Plain function for
+/// ordered host-driven disposal.
+let destroyOwnerCommentEditor () : unit =
+    if ownerCommentEditorActive then
+        RichText.destroyEditor RichText.ownerCommentEditorId
+        ownerCommentEditorActive <- false
+
 let destroyOwnerCommentEditorCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
-        if ownerCommentEditorActive then
-            RichText.destroyEditor RichText.ownerCommentEditorId
-            ownerCommentEditorActive <- false
-    )
+    Cmd.ofEffect (fun _dispatch -> destroyOwnerCommentEditor ())
 
 // --- Update ---
 

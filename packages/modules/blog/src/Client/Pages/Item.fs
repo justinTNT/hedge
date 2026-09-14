@@ -39,14 +39,18 @@ let connectEventsCmd (itemId: string) : Cmd<Msg> =
         currentWsClose <- Some close
     )
 
+/// Close the live-events socket now (synchronous, idempotent). Exposed as a plain
+/// function so a host can dispose the outgoing module's resources in order, before
+/// entering the incoming one.
+let disconnectEvents () : unit =
+    match currentWsClose with
+    | Some close ->
+        close ()
+        currentWsClose <- None
+    | None -> ()
+
 let disconnectEventsCmd () : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
-        match currentWsClose with
-        | Some close ->
-            close ()
-            currentWsClose <- None
-        | None -> ()
-    )
+    Cmd.ofEffect (fun _dispatch -> disconnectEvents ())
 
 // --- Rich text editor lifecycle ---
 
@@ -59,12 +63,15 @@ let initCommentEditorCmd : Cmd<Msg> =
             RichText.createEditorWithClose RichText.commentEditorId "" (fun () -> dispatch CancelReply)
     )
 
+/// Destroy the comment editor now (synchronous, idempotent). Plain function for
+/// ordered host-driven disposal (see disconnectEvents).
+let destroyCommentEditor () : unit =
+    if commentEditorActive then
+        RichText.destroyEditor RichText.commentEditorId
+        commentEditorActive <- false
+
 let destroyCommentEditorCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun _dispatch ->
-        if commentEditorActive then
-            RichText.destroyEditor RichText.commentEditorId
-            commentEditorActive <- false
-    )
+    Cmd.ofEffect (fun _dispatch -> destroyCommentEditor ())
 
 /// Rich content is rendered declaratively (see `richContent`), so there are no
 /// viewer instances to tear down. Kept as a no-op command so the route-change

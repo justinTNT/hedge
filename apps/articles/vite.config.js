@@ -60,11 +60,11 @@ export default defineConfig({
   build: {
     outDir: '_site' + basePath,
     rollupOptions: {
+      // The unified shell (Stage 2) hosts blog in-document, so there is no separate
+      // blog bundle — index.html (shell) + admin.html are the only entries.
       input: {
         main: resolve(__dirname, 'index.html'),
-        admin: resolve(__dirname, 'admin.html'),
-        // blog shell everywhere except ndct (articles-only)
-        ...(hedgeSite !== 'ndct' ? { blog: resolve(__dirname, 'blog.html') } : {})
+        admin: resolve(__dirname, 'admin.html')
       }
     }
   },

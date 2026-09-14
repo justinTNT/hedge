@@ -1,12 +1,15 @@
 module Articles.Client.Shell.App
 
-// The Justat shell (unified shell, Stage 1): one path-mode router, the shell-owned
-// identity authority, the Justat chrome, and the articles content module hosted via its
-// Stage-0 hosted surface. NDCT keeps the standalone Articles/Main; blog keeps its own
-// /blog bundle. See notes/UNIFIED-SHELL.md.
+// The Justat shell (unified shell, Stage 2): one path-mode router, the shell-owned
+// identity authority, the Justat chrome, and BOTH content modules hosted via their
+// Stage-0 hosted surfaces — articles at the root, blog at /blog — with seamless SPA
+// navigation between them. NDCT keeps the standalone Articles/Main. See
+// notes/UNIFIED-SHELL.md.
 
 module A = Articles.Client.Types
-module Articles = Articles.Client.App
+module B = Blog.Client.Types
+module ArtApp = Articles.Client.App
+module BlogApp = Blog.Client.App
 
 open Fable.Core
 open Feliz
@@ -14,8 +17,8 @@ open Feliz.Router
 open Elmish
 open Articles.Client.Shell.Types
 
-// -- The hosted articles instance's context: articles is PRIMARY on Justat (mount []),
-//    routing based at the deployment base, navigation via the shell's single router. --
+// -- Deployment base + the shell's single navigator. Articles is PRIMARY (mount []),
+//    blog is mounted at /blog; both navigate through this one router. --
 
 [<Emit("window.BASE_PATH || ''")>]
 let private basePathGlobal : string = jsNative
@@ -29,13 +32,18 @@ let private shellNavigate (segments: string list) =
 let private shellNavigateToPath (path: string) =
     shellNavigate (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList)
 
-/// The articles content module runs at the root here, so its context mirrors the
-/// standalone default (mount []), but navigates through the shell router.
-let private ctx : Content.HostContext =
+/// Articles content runs at the root; its context navigates through the shell router.
+let private articlesCtx : Content.HostContext =
     { Content.HostContext.standalone shellNavigate with InstanceId = 1 }
 
-// -- Route + OAuth-claim parsing (the shell owns routing; content routes are stripped
-//    to module-local segments, claim routes are handled here, not by the child). --
+/// Blog content is mounted at /blog; its navigation prepends that segment, and its
+/// context reports the mount so hrefs/routes compose correctly.
+let private blogCtx : Content.HostContext =
+    { Content.HostContext.standalone (fun segments -> shellNavigate ("blog" :: segments)) with
+        MountSegments = [ "blog" ]
+        InstanceId = 2 }
+
+// -- Route + OAuth-claim parsing (the shell owns routing). --
 
 [<Emit("window.location.pathname")>]
 let private locationPathname : string = jsNative
@@ -59,99 +67,120 @@ let private (|ClaimRoute|_|) route =
     | [ "auth"; "claim" ] | [ "auth"; "claim"; _ ] -> Some ()
     | _ -> None
 
-[<Emit("window.location.assign($0)")>]
-let private documentNavigate (url: string) : unit = jsNative
+/// Which module a content route targets, and the module-local route within it. Whole-
+/// segment mount: "blog" peels to the blog module; "blogger" is NOT a blog mount.
+let private targetOf (route: string list) : ModuleId * string list =
+    match route with
+    | "blog" :: rest -> Blog, rest
+    | _ -> Articles, route
 
-/// Is this OAuth return target the separately-bundled blog document (not an articles
-/// route the shell can host)? Checks the content route's leading segment.
-let private isBlogDestination (returnTo: string) =
-    match Content.HostContext.routeOf ctx (returnTo.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList) with
-    | "blog" :: _ -> true
+// -- Activation-tagged command mapping: child commands carry the activation they were
+//    issued under, so a late read for a route we've left is recognised as stale. --
+
+let private mapArticles (activation: int) (cmd: Cmd<A.Msg>) : Cmd<Msg> =
+    cmd |> Cmd.map (fun m -> ArticlesMsg (activation, m))
+
+let private mapBlog (activation: int) (cmd: Cmd<B.Msg>) : Cmd<Msg> =
+    cmd |> Cmd.map (fun m -> BlogMsg (activation, m))
+
+/// Initial content reads that replace the whole view/title — dropped when they arrive
+/// for a superseded activation (the A -> B navigation that resolves B then A). Feed/tag
+/// PAGINATION is exempt: it only fires from the visible feed's own sentinel.
+let private articlesStaleDrop (m: A.Msg) =
+    match m with
+    | A.GotFeed _ | A.GotItem _ -> true
     | _ -> false
 
-/// The navigation effect for an OAuth return. A BLOG destination can't be SPA-routed
-/// into the articles shell (it's a separate bundle), so hand the claimed identity to it
-/// (one-use, per-tab) and DOCUMENT-navigate; the blog bundle opens the switcher on
-/// arrival. An articles destination navigates in-SPA; the switcher opens via
-/// PendingClaimFocus once the route lands.
-let private claimEffect (guestId: string) (claimFocus: string option) (returnTo: string) : Cmd<Msg> =
-    if isBlogDestination returnTo then
-        Cmd.ofEffect (fun _ ->
-            (match claimFocus with
-             | Some identityId -> Content.ClaimHandoff.write returnTo identityId guestId
-             | None -> ())
-            documentNavigate returnTo)
-    else
-        Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
+let private blogStaleDrop (m: B.Msg) =
+    match m with
+    | B.GotFeed _ | B.GotItem _ | B.GotTagItems _ -> true
+    | _ -> false
 
 let init () : Model * Cmd<Msg> =
-    let route = Content.HostContext.routeOf ctx (currentSegments ())
+    let route = Content.HostContext.routeOf articlesCtx (currentSegments ())
     match route with
     | ClaimRoute ->
-        // Handle the OAuth return once, in the shell, then navigate back to the return
-        // route — in-SPA for an articles destination (the switcher opens via
-        // PendingClaimFocus on arrival), or as a document navigation with an identity
-        // handoff for a blog destination. The articles child stays idle until then.
+        // OAuth return handled entirely in the shell now (both modules hosted): load
+        // identities and SPA-navigate back; the switcher opens via PendingClaimFocus.
         let claimFocus, returnTo = parseClaimFromRoute ()
         let idModel, idCmd = Identity.init claimFocus
-        { Route = route; Articles = Articles.emptyHosted idModel.GuestSession; Identity = idModel },
-        Cmd.batch [
-            Cmd.map IdentityMsg idCmd
-            claimEffect idModel.GuestSession.GuestId claimFocus returnTo
-        ]
+        { Active = Articles; Route = []; Activation = 0; Pending = None
+          Articles = ArtApp.emptyHosted idModel.GuestSession; Blog = None; Identity = idModel },
+        Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo) ]
     | _ ->
         let idModel, idCmd = Identity.init None
-        let articles, aCmd = Articles.enterHosted ctx route (Articles.emptyHosted idModel.GuestSession)
-        { Route = route; Articles = articles; Identity = idModel },
-        Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.map ArticlesMsg aCmd ]
-
-/// A content read that targets a route we have already left. The shell drops these so a
-/// late article/feed response cannot replace the active content or title (the A -> B
-/// navigation that resolves B then A). The route is the request identity here; full
-/// per-request / activation IDs arrive with Stage 2.
-let private isStaleRead (route: string list) (msg: A.Msg) : bool =
-    match msg with
-    | A.GotItem (Ok response) ->
-        match route with
-        | [ idOrSlug ] -> not (response.Post.Id = idOrSlug || response.Post.Slug = Some idOrSlug)
-        | _ -> true
-    | A.GotItem (Error _) ->
-        (match route with [ _ ] -> false | _ -> true)
-    | A.GotFeed _ | A.GotMoreFeed _ ->
-        (match route with [] -> false | _ -> true)
-    | _ -> false
+        match targetOf route with
+        | Articles, subRoute ->
+            let articles, cmd = ArtApp.enterHosted articlesCtx subRoute (ArtApp.emptyHosted idModel.GuestSession)
+            { Active = Articles; Route = subRoute; Activation = 0; Pending = None
+              Articles = articles; Blog = None; Identity = idModel },
+            Cmd.batch [ Cmd.map IdentityMsg idCmd; mapArticles 0 cmd ]
+        | Blog, subRoute ->
+            let blog, cmd = BlogApp.enterHosted blogCtx subRoute (BlogApp.emptyHosted idModel.GuestSession)
+            { Active = Blog; Route = subRoute; Activation = 0; Pending = None
+              Articles = ArtApp.emptyHosted idModel.GuestSession; Blog = Some blog; Identity = idModel },
+            Cmd.batch [ Cmd.map IdentityMsg idCmd; mapBlog 0 cmd ]
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | UrlChanged segments ->
-        match Content.HostContext.routeOf ctx segments with
-        | ClaimRoute as route ->
+        match Content.HostContext.routeOf articlesCtx segments with
+        | ClaimRoute ->
             let claimFocus, returnTo = parseClaimFromRoute ()
-            if isBlogDestination returnTo then
-                // Leaving to the blog document — hand off the claim and navigate; no local
-                // switcher focus (this document is being replaced).
-                model, claimEffect model.Identity.GuestSession.GuestId claimFocus returnTo
-            else
-                { model with Route = route; Identity = { model.Identity with PendingClaimFocus = claimFocus } },
-                Cmd.batch [
-                    Cmd.map IdentityMsg Identity.loadIdentitiesCmd
-                    claimEffect model.Identity.GuestSession.GuestId claimFocus returnTo
-                ]
+            { model with Identity = { model.Identity with PendingClaimFocus = claimFocus } },
+            Cmd.batch [
+                Cmd.map IdentityMsg Identity.loadIdentitiesCmd
+                Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
+            ]
         | route ->
-            // Consume any pending claim focus (opens the switcher pre-selected); an
-            // ordinary navigation otherwise closes the switcher, matching the modules.
+            // Navigation: bump the activation (invalidating the outgoing one), dispose
+            // the outgoing module's live resources synchronously, THEN enter the incoming
+            // route via LeaveCompleted. A newer navigation supersedes a pending one.
+            let target, subRoute = targetOf route
+            let newAct = model.Activation + 1
             let idModel = Identity.consumeClaimFocus model.Identity
-            let articles, aCmd = Articles.enterHosted ctx route model.Articles
-            { model with Route = route; Articles = articles; Identity = idModel },
-            Cmd.map ArticlesMsg aCmd
+            let disposeOutgoing () =
+                match model.Active with
+                | Articles -> ArtApp.disposeHosted ()
+                | Blog -> BlogApp.disposeHosted ()
+            { model with Activation = newAct; Pending = Some (newAct, target, subRoute); Identity = idModel },
+            Cmd.ofEffect (fun dispatch ->
+                disposeOutgoing ()
+                dispatch (LeaveCompleted newAct))
 
-    | ArticlesMsg m when isStaleRead model.Route m ->
-        // Obsolete read for a route we've left — ignore it (no content/title change).
-        model, Cmd.none
+    | LeaveCompleted t ->
+        match model.Pending with
+        | Some (pid, target, subRoute) when pid = t && t = model.Activation ->
+            match target with
+            | Articles ->
+                let articles, cmd = ArtApp.enterHosted articlesCtx subRoute model.Articles
+                { model with Active = Articles; Route = subRoute; Pending = None; Articles = articles },
+                mapArticles model.Activation cmd
+            | Blog ->
+                // Create the blog child lazily on first visit, seeded from the current session.
+                let blog0 = model.Blog |> Option.defaultValue (BlogApp.emptyHosted model.Identity.GuestSession)
+                let blog, cmd = BlogApp.enterHosted blogCtx subRoute blog0
+                { model with Active = Blog; Route = subRoute; Pending = None; Blog = Some blog },
+                mapBlog model.Activation cmd
+        | _ ->
+            model, Cmd.none   // superseded by a newer navigation
 
-    | ArticlesMsg m ->
-        let articles, aCmd = Articles.updateHosted ctx m model.Articles
-        { model with Articles = articles }, Cmd.map ArticlesMsg aCmd
+    | ArticlesMsg (act, m) ->
+        if act <> model.Activation && articlesStaleDrop m then
+            model, Cmd.none
+        else
+            let articles, cmd = ArtApp.updateHosted articlesCtx m model.Articles
+            { model with Articles = articles }, mapArticles model.Activation cmd
+
+    | BlogMsg (act, m) ->
+        match model.Blog with
+        | None -> model, Cmd.none
+        | Some blog0 ->
+            if act <> model.Activation && blogStaleDrop m then
+                model, Cmd.none
+            else
+                let blog, cmd = BlogApp.updateHosted blogCtx m blog0
+                { model with Blog = Some blog }, mapBlog model.Activation cmd
 
     | IdentityMsg m ->
         let idModel, idCmd, signal = Identity.update m model.Identity
@@ -159,25 +188,53 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let model', extraCmd =
             match signal with
             | Identity.SessionChanged session ->
-                // Push the authoritative session snapshot into the hosted child.
-                { baseModel with Articles = Articles.withSession session baseModel.Articles }, Cmd.none
+                // Fan the authoritative session snapshot into BOTH retained children.
+                { baseModel with
+                    Articles = ArtApp.withSession session baseModel.Articles
+                    Blog = baseModel.Blog |> Option.map (BlogApp.withSession session) }, Cmd.none
             | Identity.ReloadContent ->
-                // A merge/disconnect re-attributed content server-side — reload the route.
-                let articles, aCmd = Articles.enterHosted ctx model.Route baseModel.Articles
-                { baseModel with Articles = articles }, Cmd.map ArticlesMsg aCmd
+                // Reload the ACTIVE module's current route so authorship refreshes.
+                match baseModel.Active with
+                | Articles ->
+                    let articles, cmd = ArtApp.enterHosted articlesCtx baseModel.Route baseModel.Articles
+                    { baseModel with Articles = articles }, mapArticles baseModel.Activation cmd
+                | Blog ->
+                    match baseModel.Blog with
+                    | Some blog0 ->
+                        let blog, cmd = BlogApp.enterHosted blogCtx baseModel.Route blog0
+                        { baseModel with Blog = Some blog }, mapBlog baseModel.Activation cmd
+                    | None -> baseModel, Cmd.none
             | Identity.Failed err ->
-                // Surface the failure where the content module already renders errors.
-                { baseModel with Articles = { baseModel.Articles with Error = Some err } }, Cmd.none
+                // Surface the failure in the active module's error area.
+                match baseModel.Active with
+                | Articles -> { baseModel with Articles = { baseModel.Articles with Error = Some err } }, Cmd.none
+                | Blog ->
+                    match baseModel.Blog with
+                    | Some blog0 -> { baseModel with Blog = Some { blog0 with Error = Some err } }, Cmd.none
+                    | None -> baseModel, Cmd.none
             | Identity.NoSignal ->
                 baseModel, Cmd.none
         model', Cmd.batch [ Cmd.map IdentityMsg idCmd; extraCmd ]
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    let content = Articles.contentView ctx model.Articles (ArticlesMsg >> dispatch)
+    let content =
+        match model.Active with
+        | Articles ->
+            ArtApp.contentView articlesCtx model.Articles (fun m -> dispatch (ArticlesMsg (model.Activation, m)))
+        | Blog ->
+            match model.Blog with
+            | Some blog -> BlogApp.contentView blogCtx blog (fun m -> dispatch (BlogMsg (model.Activation, m)))
+            | None -> Html.none
     React.router [
         router.pathMode
         router.onUrlChanged (fun segments -> dispatch (UrlChanged segments))
         router.children [
-            Chrome.shell model.Identity (IdentityMsg >> dispatch) (fun () -> shellNavigate []) content
+            Chrome.shell
+                model.Identity
+                (IdentityMsg >> dispatch)
+                (fun () -> shellNavigate [])          // Home
+                (fun () -> shellNavigate [ "blog" ])  // Web Log (in-SPA now)
+                (model.Active = Articles)             // Justat sidebar on articles routes only
+                content
         ]
     ]

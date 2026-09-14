@@ -121,7 +121,15 @@ let private identityView (model: Identity.Model) (dispatch: Identity.Msg -> unit
         ]
     ]
 
-let private navWithSession (model: Identity.Model) (dispatchId: Identity.Msg -> unit) (navigateHome: unit -> unit) =
+/// Intercept only an unmodified primary click; let cmd/ctrl/shift/alt and non-left
+/// buttons fall through so "open in a new tab" still works on these real hrefs.
+let private onPlainClick (navigate: unit -> unit) =
+    prop.onClick (fun (e: Browser.Types.MouseEvent) ->
+        if e.button = 0 && not e.ctrlKey && not e.metaKey && not e.shiftKey && not e.altKey then
+            e.preventDefault ()
+            navigate ())
+
+let private navWithSession (model: Identity.Model) (dispatchId: Identity.Msg -> unit) (navigateHome: unit -> unit) (navigateBlog: unit -> unit) =
     Html.nav [
         prop.children [
             Html.a [
@@ -129,20 +137,16 @@ let private navWithSession (model: Identity.Model) (dispatchId: Identity.Msg -> 
                 // in-SPA. Justat's theme hides the img and labels it via CSS.
                 prop.href (Shared.basePath + "/")
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun (e: Browser.Types.MouseEvent) ->
-                    // Intercept only an unmodified primary click; let cmd/ctrl/shift/alt
-                    // and non-left buttons fall through so "open in a new tab" still works.
-                    if e.button = 0 && not e.ctrlKey && not e.metaKey && not e.shiftKey && not e.altKey then
-                        e.preventDefault ()
-                        navigateHome ())
+                onPlainClick navigateHome
                 prop.children [ Html.img [ prop.src (Shared.basePath + Hedge.Tenant.config.Logo) ] ]
             ]
-            // Blog is a separately-bundled sibling (Stage 1): a REAL navigation, not
-            // SPA routing. Static (Config), not gated on a SITE_FEATURES flag.
-            if Config.hasBlogSibling then
+            // Blog is now hosted in this same shell (Stage 2): a real href to /blog, but
+            // an unmodified click navigates in-SPA. Static (Config), not a SITE_FEATURES flag.
+            if Config.hostsBlog then
                 Html.a [
                     prop.className "nav-blog"
-                    prop.href (Shared.basePath + Config.blogSiblingPath)
+                    prop.href (Shared.basePath + Config.blogPath)
+                    onPlainClick navigateBlog
                     prop.text "Web Log"
                 ]
             if Hedge.Tenant.config.InfoUrl <> "" then
@@ -156,13 +160,20 @@ let private navWithSession (model: Identity.Model) (dispatchId: Identity.Msg -> 
     ]
 
 /// The Justat frame: one header (nav + identity), one <main> for the hosted content,
-/// and the Justat sidebar. `content` is the hosted module's content-only view.
-let shell (idModel: Identity.Model) (dispatchId: Identity.Msg -> unit) (navigateHome: unit -> unit) (content: ReactElement) =
+/// and the Justat sidebar (shown on articles routes only — the shell owns this
+/// conditional slot). `content` is the active module's content-only view.
+let shell
+    (idModel: Identity.Model)
+    (dispatchId: Identity.Msg -> unit)
+    (navigateHome: unit -> unit)
+    (navigateBlog: unit -> unit)
+    (showSidebar: bool)
+    (content: ReactElement) =
     Html.div [
         prop.className "app"
         prop.children [
-            Html.header [ navWithSession idModel dispatchId navigateHome ]
+            Html.header [ navWithSession idModel dispatchId navigateHome navigateBlog ]
             Html.main [ content ]
-            Shared.justatSidebar
+            if showSidebar then Shared.justatSidebar else Html.none
         ]
     ]

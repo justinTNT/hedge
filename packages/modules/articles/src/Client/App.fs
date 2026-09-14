@@ -278,11 +278,15 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
 let withSession (session: GuestSession.GuestSessionData) (model: Model) : Model =
     { model with GuestSession = session }
 
-/// Dispose this instance's live resources — WebSocket + comment editor. Idempotent
-/// (each teardown self-guards on its own state). Stage 0 uses module-level singletons;
-/// instance/activation scoping is Stage 2.
+/// Synchronously dispose this instance's live resources — WebSocket + comment editor.
+/// Idempotent (each teardown self-guards). A plain function so a host can dispose the
+/// OUTGOING module in order, before entering the incoming one.
+let disposeHosted () : unit =
+    Item.disconnectEvents ()
+    Item.destroyCommentEditor ()
+
 let disposeHostedCmd : Cmd<Msg> =
-    Cmd.batch [ Item.disconnectEventsCmd (); Item.destroyCommentEditorCmd; Item.destroyAllViewersCmd ]
+    Cmd.ofEffect (fun _ -> disposeHosted ())
 
 /// Enter a module-local content route. Returns the route's content model + load
 /// commands, preceded by disposal of the outgoing route's resources. Reads no browser

@@ -26,9 +26,10 @@
   <ItemGroup Condition="'$(HEDGE_SITE)' == 'ndct'">
     <Compile Include="Articles/Main.fs" />
   </ItemGroup>
-  <!-- default/justat: the unified shell (Stage 1) hosts articles at the root; blog keeps
-       its own /blog bundle (Blog/Main.fs). The shell references the articles module's
-       hosted surface, so it compiles after articles.client.props. -->
+  <!-- default/justat: the unified shell (Stage 2) hosts BOTH content modules — articles
+       at the root, blog at /blog — in one document. It references both modules' hosted
+       surfaces, so it compiles after their .props. There is no standalone Blog/Main
+       entry here any more; the blog module itself is still composed via blog.client.props. -->
   <ItemGroup Condition="'$(HEDGE_SITE)' != 'ndct'">
     <Compile Include="Shell/Config.fs" />
     <Compile Include="Shell/Identity.fs" />
@@ -36,7 +37,6 @@
     <Compile Include="Shell/Chrome.fs" />
     <Compile Include="Shell/App.fs" />
     <Compile Include="Shell/Main.fs" />
-    <Compile Include="Blog/Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />

@@ -40,15 +40,11 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
-    // The blog module's path-mount: GET /blog[/*] is served the blog SPA shell
-    // (its own client bundle). /api/blog/* is dispatched by Server.Routes above;
-    // live comments ride the shared framework /api/events DO (keyed by itemId, so
-    // blog and article items never collide). The blog is compiled into every env
-    // of this app, but `When` mounts the client only where SITE = "justat" — ndct
-    // leaves it dormant (no /blog shell, no menu link, blog_* tables unmigrated).
-    Mounts = [
-        { On = OnPath "/blog"
-          Shell = "/blog.html"
-          When = fun env -> (env?SITE |> unbox<string>) = "justat" }
-    ]
+    // No path-mounts: the unified shell (Stage 2) hosts blog at /blog in-document, so
+    // GET /blog[/*] falls through to the single-page-application asset fallback (the
+    // shell's index.html — see wrangler.toml [assets] not_found_handling), which routes
+    // blog in-SPA. /api/blog/* is still dispatched by Server.Routes above; live comments
+    // ride the shared /api/events DO. Meta.fs reserves "blog" so it is never mistaken for
+    // an article slug. (ndct composes no blog module, so /blog simply 404s→SPA there.)
+    Mounts = []
 }

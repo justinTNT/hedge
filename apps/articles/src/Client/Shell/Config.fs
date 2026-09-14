@@ -1,21 +1,23 @@
 module Articles.Client.Shell.Config
 
-// Static route/navigation configuration for the Justat shell (unified shell, Stage 1).
+// Static route/navigation configuration for the Justat shell (unified shell, Stage 2).
 //
-// Justat composes {identity, articles, blog} (gen-modules.json). The shell HOSTS
-// articles at the root and links to blog as a separately-bundled sibling document at
-// /blog (a real navigation, not an in-SPA route); Stage 2 folds blog into the shell.
+// Justat composes {identity, articles, blog} (gen-modules.json). The shell HOSTS both
+// content modules in one document — articles at the root, blog at /blog — with in-SPA
+// navigation between them (Stage 1 kept blog as a separate bundle; Stage 2 folds it in).
 //
 // This is a compile-time fact, NOT derived from SITE_FEATURES / a runtime flag — the
 // navigation entries the shell renders are fixed for this build. test.sh asserts this
 // set agrees with gen-modules.json + the Client.fsproj conditional imports (the shell is
 // compiled for every site EXCEPT ndct, which stays articles-standalone).
 
-/// Content modules this shell hosts in-SPA. Stage 1: articles only.
-type HostedModule = Articles
+/// Content modules this shell hosts in-SPA.
+type HostedModule =
+    | Articles
+    | Blog
 
-let hostedModules : HostedModule list = [ Articles ]
+let hostedModules : HostedModule list = [ Articles; Blog ]
 
-/// Blog is reachable as a separately-bundled sibling document at this path until Stage 2.
-let hasBlogSibling = true
-let blogSiblingPath = "/blog"
+/// The blog module is hosted at this mount within the shell.
+let hostsBlog = true
+let blogPath = "/blog"

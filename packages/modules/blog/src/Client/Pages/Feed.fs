@@ -6,15 +6,18 @@ open Blog.Api
 open Blog.Client.Types
 open Blog.Client.Shared
 
-// Install the scroll watcher (once) that drives loads as the user scrolls.
+// Install the scroll watcher (once) that drives loads as the user scrolls. The id is
+// module-distinct ("blog-feed-sentinel") so that, when a unified shell hosts blog and
+// articles in one document, the two feeds' global scroll watchers never collide (each
+// watcher fires into its own module's dispatch).
 let private watchCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun dispatch -> watchScroll "feed-sentinel" (fun () -> dispatch LoadMoreFeed))
+    Cmd.ofEffect (fun dispatch -> watchScroll "blog-feed-sentinel" (fun () -> dispatch LoadMoreFeed))
 
 // "Fill to viewport": after a page renders, if the sentinel is still on-screen,
 // pull another page. Stops once content pushes the sentinel below the fold, at
 // which point the scroll watcher takes over.
 let private fillCmd : Cmd<Msg> =
-    Cmd.ofEffect (fun dispatch -> loadMoreIfSentinelVisible "feed-sentinel" (fun () -> dispatch LoadMoreFeed))
+    Cmd.ofEffect (fun dispatch -> loadMoreIfSentinelVisible "blog-feed-sentinel" (fun () -> dispatch LoadMoreFeed))
 
 let private continueCmd (next: bool) : Cmd<Msg> =
     if next then Cmd.batch [ watchCmd; fillCmd ] else Cmd.none
@@ -71,6 +74,6 @@ let view (ctx: Content.HostContext) (response: GetFeed.Response) =
             // Infinite-scroll sentinel: keyed so React preserves the same node
             // across appends, keeping its IntersectionObserver alive. Always
             // rendered; LoadMoreFeed self-guards on NextCursor once exhausted.
-            Html.div [ prop.key "feed-sentinel"; prop.id "feed-sentinel"; prop.className "feed-sentinel" ]
+            Html.div [ prop.key "blog-feed-sentinel"; prop.id "blog-feed-sentinel"; prop.className "feed-sentinel" ]
         ]
     ]

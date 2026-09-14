@@ -44,8 +44,10 @@ let private plainText (s: string) : string = jsNative
 let private truncate (n: int) (s: string) =
     if s.Length <= n then s else s.[.. n - 1].TrimEnd() + "…"
 
-/// Paths the SPA owns that are not articles.
-let private reserved = set [ "new"; "feed"; "api"; "blobs"; "public"; "admin"; "auth" ]
+/// Paths the SPA owns that are not articles. "blog" is reserved so the unified shell's
+/// blog mount (/blog[/*]) is never treated as an article slug — it falls through to the
+/// single-page-application fallback, which the shell routes to the hosted blog module.
+let private reserved = set [ "new"; "feed"; "api"; "blobs"; "public"; "admin"; "auth"; "blog" ]
 
 let private metaTags (siteName: string) (title: string) (description: string) (image: string option) (url: string) =
     let tag prop content = sprintf """<meta property="%s" content="%s">""" prop (esc content)
