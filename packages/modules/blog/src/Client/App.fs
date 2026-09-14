@@ -177,7 +177,16 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         TagItems.update msg model
 
     | GotSessionSync session ->
-        { model with GuestSession = session }, Cmd.none
+        let synced = { model with GuestSession = session }
+        // Consume a one-use claim handoff from the unified shell (Stage 1): after an OAuth
+        // return the shell hands the claimed identity to this blog bundle so the switcher
+        // opens pre-selected. No-op when there's no handoff (e.g. microblog, or a normal
+        // sync).
+        match Content.ClaimHandoff.tryTake session.GuestId with
+        | Some identityId ->
+            { synced with ShowIdentitySwitcher = true; SelectedIdentity = Some identityId }, loadIdentitiesCmd
+        | None ->
+            synced, Cmd.none
 
     | RevertIdentity (identityId, merge) ->
         // Deliberately not setting IsLoading: that swaps the whole view for a

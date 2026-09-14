@@ -53,6 +53,8 @@ type Signal =
     /// A merge/disconnect re-attributed content server-side — the host reloads the
     /// current route so displayed authorship is refreshed.
     | ReloadContent
+    /// An identity operation failed — the host surfaces the message to the user.
+    | Failed of string
 
 // -- Commands (copied from the modules' App.fs; the /api/auth/* endpoints are shared) --
 
@@ -136,8 +138,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> * Signal =
         Cmd.batch [ syncCmd; loadIdentitiesCmd ],
         ReloadContent
 
-    | GotRevertIdentity (Error _) ->
-        { model with ShowIdentitySwitcher = false; SelectedIdentity = None }, Cmd.none, NoSignal
+    | GotRevertIdentity (Error err) ->
+        // Keep the switcher open so the user can retry; surface the failure.
+        model, Cmd.none, Failed err
 
     | DisconnectIdentity identityId ->
         model, disconnectIdentityCmd identityId model.GuestSession.DisplayName, NoSignal
@@ -147,8 +150,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> * Signal =
         Cmd.batch [ syncCmd; loadIdentitiesCmd ],
         ReloadContent
 
-    | GotDisconnect (Error _) ->
-        model, Cmd.none, NoSignal
+    | GotDisconnect (Error err) ->
+        model, Cmd.none, Failed err
 
     | LoadIdentities ->
         model, loadIdentitiesCmd, NoSignal

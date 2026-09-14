@@ -59,19 +59,45 @@ let private (|ClaimRoute|_|) route =
     | [ "auth"; "claim" ] | [ "auth"; "claim"; _ ] -> Some ()
     | _ -> None
 
+[<Emit("window.location.assign($0)")>]
+let private documentNavigate (url: string) : unit = jsNative
+
+/// Is this OAuth return target the separately-bundled blog document (not an articles
+/// route the shell can host)? Checks the content route's leading segment.
+let private isBlogDestination (returnTo: string) =
+    match Content.HostContext.routeOf ctx (returnTo.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList) with
+    | "blog" :: _ -> true
+    | _ -> false
+
+/// The navigation effect for an OAuth return. A BLOG destination can't be SPA-routed
+/// into the articles shell (it's a separate bundle), so hand the claimed identity to it
+/// (one-use, per-tab) and DOCUMENT-navigate; the blog bundle opens the switcher on
+/// arrival. An articles destination navigates in-SPA; the switcher opens via
+/// PendingClaimFocus once the route lands.
+let private claimEffect (guestId: string) (claimFocus: string option) (returnTo: string) : Cmd<Msg> =
+    if isBlogDestination returnTo then
+        Cmd.ofEffect (fun _ ->
+            (match claimFocus with
+             | Some identityId -> Content.ClaimHandoff.write returnTo identityId guestId
+             | None -> ())
+            documentNavigate returnTo)
+    else
+        Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
+
 let init () : Model * Cmd<Msg> =
     let route = Content.HostContext.routeOf ctx (currentSegments ())
     match route with
     | ClaimRoute ->
-        // Handle the OAuth return once, in the shell: load identities, then navigate
-        // back to the return route (which lands as a normal UrlChanged and opens the
-        // switcher pre-selected). The articles child stays idle until then.
+        // Handle the OAuth return once, in the shell, then navigate back to the return
+        // route — in-SPA for an articles destination (the switcher opens via
+        // PendingClaimFocus on arrival), or as a document navigation with an identity
+        // handoff for a blog destination. The articles child stays idle until then.
         let claimFocus, returnTo = parseClaimFromRoute ()
         let idModel, idCmd = Identity.init claimFocus
         { Route = route; Articles = Articles.emptyHosted idModel.GuestSession; Identity = idModel },
         Cmd.batch [
             Cmd.map IdentityMsg idCmd
-            Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
+            claimEffect idModel.GuestSession.GuestId claimFocus returnTo
         ]
     | _ ->
         let idModel, idCmd = Identity.init None
@@ -79,17 +105,38 @@ let init () : Model * Cmd<Msg> =
         { Route = route; Articles = articles; Identity = idModel },
         Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.map ArticlesMsg aCmd ]
 
+/// A content read that targets a route we have already left. The shell drops these so a
+/// late article/feed response cannot replace the active content or title (the A -> B
+/// navigation that resolves B then A). The route is the request identity here; full
+/// per-request / activation IDs arrive with Stage 2.
+let private isStaleRead (route: string list) (msg: A.Msg) : bool =
+    match msg with
+    | A.GotItem (Ok response) ->
+        match route with
+        | [ idOrSlug ] -> not (response.Post.Id = idOrSlug || response.Post.Slug = Some idOrSlug)
+        | _ -> true
+    | A.GotItem (Error _) ->
+        (match route with [ _ ] -> false | _ -> true)
+    | A.GotFeed _ | A.GotMoreFeed _ ->
+        (match route with [] -> false | _ -> true)
+    | _ -> false
+
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | UrlChanged segments ->
         match Content.HostContext.routeOf ctx segments with
         | ClaimRoute as route ->
             let claimFocus, returnTo = parseClaimFromRoute ()
-            { model with Route = route; Identity = { model.Identity with PendingClaimFocus = claimFocus } },
-            Cmd.batch [
-                Cmd.map IdentityMsg Identity.loadIdentitiesCmd
-                Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
-            ]
+            if isBlogDestination returnTo then
+                // Leaving to the blog document — hand off the claim and navigate; no local
+                // switcher focus (this document is being replaced).
+                model, claimEffect model.Identity.GuestSession.GuestId claimFocus returnTo
+            else
+                { model with Route = route; Identity = { model.Identity with PendingClaimFocus = claimFocus } },
+                Cmd.batch [
+                    Cmd.map IdentityMsg Identity.loadIdentitiesCmd
+                    claimEffect model.Identity.GuestSession.GuestId claimFocus returnTo
+                ]
         | route ->
             // Consume any pending claim focus (opens the switcher pre-selected); an
             // ordinary navigation otherwise closes the switcher, matching the modules.
@@ -97,6 +144,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             let articles, aCmd = Articles.enterHosted ctx route model.Articles
             { model with Route = route; Articles = articles; Identity = idModel },
             Cmd.map ArticlesMsg aCmd
+
+    | ArticlesMsg m when isStaleRead model.Route m ->
+        // Obsolete read for a route we've left — ignore it (no content/title change).
+        model, Cmd.none
 
     | ArticlesMsg m ->
         let articles, aCmd = Articles.updateHosted ctx m model.Articles
@@ -114,6 +165,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 // A merge/disconnect re-attributed content server-side — reload the route.
                 let articles, aCmd = Articles.enterHosted ctx model.Route baseModel.Articles
                 { baseModel with Articles = articles }, Cmd.map ArticlesMsg aCmd
+            | Identity.Failed err ->
+                // Surface the failure where the content module already renders errors.
+                { baseModel with Articles = { baseModel.Articles with Error = Some err } }, Cmd.none
             | Identity.NoSignal ->
                 baseModel, Cmd.none
         model', Cmd.batch [ Cmd.map IdentityMsg idCmd; extraCmd ]

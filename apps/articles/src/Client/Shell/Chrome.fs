@@ -129,7 +129,12 @@ let private navWithSession (model: Identity.Model) (dispatchId: Identity.Msg -> 
                 // in-SPA. Justat's theme hides the img and labels it via CSS.
                 prop.href (Shared.basePath + "/")
                 prop.style [ style.cursor.pointer ]
-                prop.onClick (fun (e: Browser.Types.MouseEvent) -> e.preventDefault(); navigateHome ())
+                prop.onClick (fun (e: Browser.Types.MouseEvent) ->
+                    // Intercept only an unmodified primary click; let cmd/ctrl/shift/alt
+                    // and non-left buttons fall through so "open in a new tab" still works.
+                    if e.button = 0 && not e.ctrlKey && not e.metaKey && not e.shiftKey && not e.altKey then
+                        e.preventDefault ()
+                        navigateHome ())
                 prop.children [ Html.img [ prop.src (Shared.basePath + Hedge.Tenant.config.Logo) ] ]
             ]
             // Blog is a separately-bundled sibling (Stage 1): a REAL navigation, not

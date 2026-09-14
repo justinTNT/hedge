@@ -12,6 +12,8 @@
     <!-- Shared content-client contract (immutable host context) both content modules
          reference; linked once before the module .props (unified shell, Stage 0). -->
     <Compile Include="../../../../packages/content-client/HostContext.fs" />
+    <!-- One-use OAuth claim handoff (shell -> blog document); unified shell Stage 1. -->
+    <Compile Include="../../../../packages/content-client/ClaimHandoff.fs" />
   </ItemGroup>
   <!-- Content module clients, composed via each module's own .props (it owns its
        file list). Imported after ClientGen/RichText; then the thin entries run each
