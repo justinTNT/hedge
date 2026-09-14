@@ -18,22 +18,51 @@ import Highlight from '@tiptap/extension-highlight'
 
 const editors = new Map()
 
+// Pending waitForElement polls, keyed by elementId. A poll left running after the
+// caller has navigated away would create a zombie editor for a torn-down element;
+// destroyRichTextEditor (and a superseding waitForElement) cancel the pending poll.
+const pendingWaits = new Map()
+
+/**
+ * Cancels a pending waitForElement poll for the given element, if one is in flight.
+ */
+function cancelPendingWait(elementId) {
+    const token = pendingWaits.get(elementId)
+    if (token) {
+        token.cancelled = true
+        if (token.rafId) cancelAnimationFrame(token.rafId)
+        pendingWaits.delete(elementId)
+    }
+}
+
 /**
  * Wait for a DOM element to appear, then call the callback.
  * Retries on each animation frame up to maxAttempts.
+ *
+ * The poll is cancellable: destroyRichTextEditor(elementId) stops a pending poll,
+ * and starting a new wait for the same id supersedes (cancels) the previous one, so
+ * a create callback never fires after the caller navigated away.
  */
 export function waitForElement(elementId, callback, maxAttempts = 20) {
+    cancelPendingWait(elementId)
+
+    const token = { cancelled: false, rafId: 0 }
+    pendingWaits.set(elementId, token)
+
     let attempts = 0
     function check() {
+        if (token.cancelled) return
         if (document.getElementById(elementId)) {
+            pendingWaits.delete(elementId)
             callback()
         } else if (++attempts < maxAttempts) {
-            requestAnimationFrame(check)
+            token.rafId = requestAnimationFrame(check)
         } else {
+            pendingWaits.delete(elementId)
             console.warn(`[hamlet-rt] Element never appeared: ${elementId}`)
         }
     }
-    requestAnimationFrame(check)
+    token.rafId = requestAnimationFrame(check)
 }
 
 // =============================================================================
@@ -689,6 +718,7 @@ export function createRichTextEditor({ elementId, initialContent, onChange, uplo
  * @param {string} elementId - The ID of the container element
  */
 export function destroyRichTextEditor(elementId) {
+    cancelPendingWait(elementId)
     const editor = editors.get(elementId)
     if (editor) {
         editor.destroy()
@@ -868,6 +898,7 @@ export function createRichTextViewer({ elementId, content }) {
  * @param {string} elementId - The ID of the container element
  */
 export function destroyRichTextViewer(elementId) {
+    cancelPendingWait(elementId)
     const viewer = viewers.get(elementId)
     if (viewer) {
         viewer.destroy()
