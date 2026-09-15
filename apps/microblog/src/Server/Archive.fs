@@ -107,6 +107,17 @@ let handleSnapshot (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespon
                     return serverError ("snapshot failed: " + ex.Message)
     }
 
+/// GET /api/blog/item/<itemId>/snapshot — the latest snapshot id for an item (or null). Lets
+/// the reader UI reveal an "Archived copy" link without bloating the item response/query.
+let handleLatestSnapshot (itemId: string) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! row = (Blog.Db.selectItemSnapshotsByItemId itemId env.DB).first()
+        if isNull (box row) then
+            return okJson """{"id":null}"""
+        else
+            return okJson (sprintf """{"id":"%s"}""" (rowStr row "id"))
+    }
+
 /// GET /archive/<snapshotId> — serve the stored snapshot HTML in a locked-down sandbox so
 /// foreign markup can never run in the app origin (it could read the admin key otherwise).
 let handleArchiveServe (snapshotId: string) (env: Env) : JS.Promise<WorkerResponse> =
@@ -126,7 +137,13 @@ let handleArchiveServe (snapshotId: string) (env: Env) : JS.Promise<WorkerRespon
                         "headers" ==> createObj [
                             "Content-Type" ==> "text/html; charset=utf-8"
                             "X-Content-Type-Options" ==> "nosniff"
-                            "Content-Security-Policy" ==> "sandbox allow-popups; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self' data:"
+                            // No scripts (default-src 'none' + no script-src, and they're stripped
+                            // anyway); images/fonts/media by scheme (https:/data:) rather than
+                            // 'self', so they still load when the reader frames this under the
+                            // iframe's opaque (sandboxed) origin. Origin isolation is the iframe's
+                            // sandbox attribute (see the reader affordance), not a CSP sandbox
+                            // directive — a CSP sandbox would also break scheme-'self' image loads.
+                            "Content-Security-Policy" ==> "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https: data:; media-src https: data:"
                         ]
                     ]
                 return streamResponse obj.body options

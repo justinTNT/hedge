@@ -90,6 +90,17 @@ let private richContent (className: string) (content: RichContent) =
 
 // --- Update ---
 
+/// Fetch the latest source-page snapshot pointer for an item — archive-feature tenants only, so
+/// non-archive sites make no extra request. Best-effort: any failure shows no archived copy.
+let private loadSnapshotCmd (itemId: string) : Cmd<Msg> =
+    if Hedge.Tenant.hasFeature "archive" then
+        Cmd.OfPromise.either
+            (fun () -> Client.Api.fetchJsonRaw (sprintf "/api/blog/item/%s/snapshot" itemId))
+            ()
+            (fun (o: obj) -> let id : string = o?id in GotSnapshot (if isNull (box id) then None else Some id))
+            (fun _ -> GotSnapshot None)
+    else Cmd.none
+
 let update msg model =
     match msg with
     | LoadItem itemId ->
@@ -98,10 +109,16 @@ let update msg model =
 
     | GotItem (Ok response) ->
         { model with CurrentItem = Some response; IsLoading = false },
-        connectEventsCmd response.Item.Id
+        Cmd.batch [ connectEventsCmd response.Item.Id; loadSnapshotCmd response.Item.Id ]
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
+
+    | GotSnapshot id ->
+        { model with Snapshot = id }, Cmd.none
+
+    | ToggleArchive ->
+        { model with ShowArchive = not model.ShowArchive }, Cmd.none
 
     | ConnectEvents itemId ->
         model, connectEventsCmd itemId
@@ -308,6 +325,29 @@ let view (ctx: Content.HostContext) (response: GetItem.Response) (model: Model) 
             match item.Image with
             | Some (Link imgUrl) ->
                 Html.img [ prop.src imgUrl; prop.className "item-image" ]
+            | None -> Html.none
+            // Archived copy of the source page (archive-feature tenants, when a snapshot exists).
+            // The snapshot is served under a locked-down CSP; the iframe sandbox (no scripts, no
+            // same-origin) is the belt to that CSP's braces.
+            match (if Hedge.Tenant.hasFeature "archive" then model.Snapshot else None) with
+            | Some sid ->
+                Html.div [
+                    prop.className "archive-affordance"
+                    prop.children [
+                        Html.button [
+                            prop.className "archive-toggle"
+                            prop.text (if model.ShowArchive then "Hide archived copy" else "View archived copy")
+                            prop.onClick (fun _ -> dispatch ToggleArchive)
+                        ]
+                        if model.ShowArchive then
+                            Html.iframe [
+                                prop.className "archive-frame"
+                                prop.src ("/archive/" + sid)
+                                prop.custom ("sandbox", "allow-popups")
+                                prop.custom ("loading", "lazy")
+                            ]
+                    ]
+                ]
             | None -> Html.none
             match item.Extract with
             | Some extract -> richContent "extract" extract

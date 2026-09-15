@@ -13,6 +13,28 @@ h1 { font-size: 1.5rem; }
 .feed-item a { color: #666; font-size: 0.875rem; }
 .item-detail h2 { margin-bottom: 1rem; margin-top: 1rem; }
 .item-image { max-width: 100%; }
+
+/* Archived-copy affordance on the item page (archive feature). */
+.archive-affordance { margin: 1em 0; }
+.archive-toggle {
+  font: inherit;
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+  border: 1px solid #911;
+  background: #fff;
+  color: #911;
+  border-radius: 4px;
+}
+.archive-toggle:hover { background: #911; color: #fff; }
+.archive-frame {
+  width: 100%;
+  height: 70vh;
+  margin-top: 0.75em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+html.dark .archive-frame { border-color: #444; }
 nav img { width: 100%; }
 
 /* ============================================================
