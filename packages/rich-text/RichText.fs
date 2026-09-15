@@ -11,7 +11,11 @@ let ownerCommentEditorId = "owner-comment-editor"
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null }); })")>]
 let createEditorWhenReady (elementId: string) (initialContent: string) : unit = jsNative
 
-[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2 }); })")>]
+// The close-button editor is the public COMMENT editor (blog/articles reply box). Its image
+// uploads go to the guest endpoint (/api/blobs/guest — guest-session gated, raster-only,
+// size-capped), NOT the admin-gated /api/blobs, so a signed-in owner isn't required. Authoring
+// editors (createEditorWhenReady) keep the default admin endpoint.
+[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2, uploadEndpoint: '/api/blobs/guest' }); })")>]
 let createEditorWithClose (elementId: string) (initialContent: string) (onClose: unit -> unit) : unit = jsNative
 
 [<Emit("window.HedgeRT.destroyRichTextEditor($0)")>]

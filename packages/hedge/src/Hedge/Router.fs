@@ -372,6 +372,18 @@ let createWorker (config: WorkerConfig) =
                     return! handleBlobUpload request blobs
                 else
                     return unauthorized ()
+            | POST path when matchPath "/api/blobs/guest" path = Some (Exact "/api/blobs/guest") ->
+                // Public (guest) comment-image upload — NOT admin-gated. Tied to the guest
+                // session instead: require the hedge_guest cookie (set on page load by
+                // /api/auth/me), and handleGuestBlobUpload enforces raster-only (no SVG) +
+                // a size cap. NB: the cookie isn't signed yet, so this is an app-workflow
+                // gate, not strong auth — signing is carded (notes/guest-uploads-signed-cookie.md).
+                let guest = resolveGuest request
+                if guest.IsNew then
+                    return unauthorized ()
+                else
+                    let blobs : R2Bucket = env?BLOBS
+                    return! handleGuestBlobUpload request blobs guest.GuestId
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
                 let key = decodeUri (path.Substring(7))

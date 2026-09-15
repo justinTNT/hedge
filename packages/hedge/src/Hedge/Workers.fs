@@ -138,6 +138,9 @@ let fileName (file: obj) : string = jsNative
 [<Emit("$0.type")>]
 let fileType (file: obj) : string = jsNative
 
+[<Emit("$0.size")>]
+let fileSize (file: obj) : float = jsNative
+
 [<Emit("new Response($0, $1)")>]
 let streamResponse (body: obj) (options: obj) : WorkerResponse = jsNative
 
@@ -193,6 +196,11 @@ let optIntToDb (v: int option) : obj =
 // preference, gets JPEG) can rehost them. Every current browser renders AVIF.
 let allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/avif"; "image/svg+xml" ]
 
+/// Types allowed for UN-privileged (guest) uploads. Deliberately EXCLUDES image/svg+xml:
+/// an SVG served from /blobs/ on our own origin can carry embedded script (stored XSS), so
+/// only trusted admin uploads may store SVG. Raster formats only.
+let guestImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/avif" ]
+
 /// put with the content type recorded, so handleBlobServe can serve it back with
 /// the right Content-Type (an <img> won't render an application/octet-stream).
 [<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
@@ -224,6 +232,37 @@ let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<Wor
             else
                 let name = safeName (fileName file)
                 let key = sprintf "%s/%s" (newId ()) name
+                let! _ = r2PutTyped blobs key file mime
+                let body = sprintf """{"url":"/blobs/%s"}""" key
+                let options = createObj [ "status" ==> 200; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+                return WorkerResponse.create(body, options)
+    }
+
+/// Cap for un-privileged (guest) uploads — bounds R2 storage abuse from the public
+/// comment-image path. Admin uploads are uncapped (trusted).
+let guestUploadMaxBytes = 5.0 * 1024.0 * 1024.0
+
+/// Guest image upload for comments: no admin key (the route gates on the guest session),
+/// raster-only (no SVG — see guestImageTypes) and size-capped. Keyed under
+/// comment/<guestId>/… so uploads are attributable for abuse cleanup.
+let handleGuestBlobUpload (request: WorkerRequest) (blobs: R2Bucket) (guestId: string) : JS.Promise<WorkerResponse> =
+    let errJson (msg: string) (status: int) =
+        let options = createObj [ "status" ==> status; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+        WorkerResponse.create(sprintf """{"error":"%s"}""" msg, options)
+    promise {
+        let! fd = request.formData()
+        let file = formDataGet fd "file"
+        if isNull file then
+            return errJson "Missing file field" 400
+        else
+            let mime = fileType file
+            if not (guestImageTypes.Contains mime) then
+                return errJson "Unsupported image type" 400
+            elif fileSize file > guestUploadMaxBytes then
+                return errJson "Image too large (max 5 MB)" 413
+            else
+                let name = safeName (fileName file)
+                let key = sprintf "comment/%s/%s/%s" (safeName guestId) (newId ()) name
                 let! _ = r2PutTyped blobs key file mime
                 let body = sprintf """{"url":"/blobs/%s"}""" key
                 let options = createObj [ "status" ==> 200; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
