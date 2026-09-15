@@ -1,7 +1,6 @@
 import { PromiseBuilder__Delay_62FBFDE1, PromiseBuilder__Run_212F1D4B } from "../../fable_modules/Fable.Promise.3.2.0/Promise.fs.js";
 import { promise } from "../../fable_modules/Fable.Promise.3.2.0/PromiseImpl.fs.js";
 import { fromString } from "../../fable_modules/Thoth.Json.10.2.0/Decode.fs.js";
-import { toString } from "../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { FSharpResult$2 } from "../../fable_modules/fable-library-js.4.29.0/Result.js";
 
 function sendMessage(msg) {
@@ -21,8 +20,7 @@ export function fetchJson(url, decoder) {
             return Promise.resolve(fromString(decoder, json));
         }
         else {
-            const err = raw.error;
-            const msg = (err == null) ? "Request failed" : toString(err);
+            const msg = (function(e){ if (e == null) return 'Request failed'; if (typeof e === 'string') return e; if (e.error) return String(e.error); if (Array.isArray(e.errors)) return e.errors.map(function(x){ return (x.field ? x.field + ': ' : '') + x.message; }).join('; '); try { return JSON.stringify(e); } catch (_) { return String(e); } })(raw.error);
             return Promise.resolve(new FSharpResult$2(1, [msg]));
         }
     }))));
@@ -44,8 +42,7 @@ export function postJson(url, body, decoder) {
                 return Promise.resolve(fromString(decoder, json));
             }
             else {
-                const err = raw.error;
-                const msg = (err == null) ? "Request failed" : toString(err);
+                const msg = (function(e){ if (e == null) return 'Request failed'; if (typeof e === 'string') return e; if (e.error) return String(e.error); if (Array.isArray(e.errors)) return e.errors.map(function(x){ return (x.field ? x.field + ': ' : '') + x.message; }).join('; '); try { return JSON.stringify(e); } catch (_) { return String(e); } })(raw.error);
                 return Promise.resolve(new FSharpResult$2(1, [msg]));
             }
         });

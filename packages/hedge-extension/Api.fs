@@ -8,6 +8,13 @@ open Thoth.Json
 let private sendMessage (msg: obj) : JS.Promise<obj> =
     HedgeExtension.Chrome.sendMessage msg
 
+/// Render the background proxy's error payload into a human message. The proxy passes
+/// through the server's JSON error body verbatim: `{error}` for most failures and
+/// `{errors:[{field,message}]}` for validation (e.g. a taken slug). Shown raw, either
+/// object stringifies to the useless "[object Object]"; this pulls out the real text.
+[<Emit("(function(e){ if (e == null) return 'Request failed'; if (typeof e === 'string') return e; if (e.error) return String(e.error); if (Array.isArray(e.errors)) return e.errors.map(function(x){ return (x.field ? x.field + ': ' : '') + x.message; }).join('; '); try { return JSON.stringify(e); } catch (_) { return String(e); } })($0)")>]
+let private errorToString (err: obj) : string = jsNative
+
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
         let! raw = sendMessage (createObj [ "type" ==> "api"; "method" ==> "GET"; "path" ==> url ])
@@ -17,8 +24,7 @@ let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, s
             let json = JS.JSON.stringify data
             return Decode.fromString decoder json
         else
-            let err = raw?error
-            let msg = if isNullOrUndefined err then "Request failed" else string err
+            let msg = errorToString (raw?error)
             return Error msg
     }
 
@@ -32,7 +38,6 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
             let json = JS.JSON.stringify data
             return Decode.fromString decoder json
         else
-            let err = raw?error
-            let msg = if isNullOrUndefined err then "Request failed" else string err
+            let msg = errorToString (raw?error)
             return Error msg
     }

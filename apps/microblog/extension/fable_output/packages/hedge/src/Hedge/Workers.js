@@ -75,7 +75,7 @@ export function optIntToDb(v) {
     }
 }
 
-export const allowedImageTypes = ofSeq(["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"], {
+export const allowedImageTypes = ofSeq(["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml"], {
     Compare: comparePrimitives,
 });
 
@@ -134,7 +134,7 @@ export function handleBlobServe(key, blobs) {
             const options_1 = {
                 status: 200,
                 headers: {
-                    "Content-Type": (contentType == null) ? ((function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml'})[e]||'application/octet-stream';})(key)) : contentType,
+                    "Content-Type": (contentType == null) ? ((function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',svg:'image/svg+xml'})[e]||'application/octet-stream';})(key)) : contentType,
                     "Cache-Control": "public, max-age=31536000, immutable",
                 },
             };
