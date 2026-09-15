@@ -106,6 +106,7 @@ let rec classifyFieldType (propType: Type) : FieldType * FieldAttr list =
     elif propType = typeof<EditableDate> then FInt, [EditableDate]
     elif propType = typeof<RichContent> then FString, [RichContent]
     elif propType = typeof<Link> then FString, [Link]
+    elif propType = typeof<Image> then FString, [Image]
     // IdentityRef is a decoupled handle to the shared identity layer — treat it
     // as a FK to the shared `identities` table (reusing ForeignKey machinery),
     // without the module depending on any concrete Identity type.
@@ -381,6 +382,7 @@ let fieldAttrDsl (fa: FieldAttr) =
     | ForeignKey table -> sprintf "ForeignKey \"%s\"" table
     | RichContent -> "RichContent"
     | Link -> "Link"
+    | Image -> "Image"
     | Unique -> "Unique"
     | Required -> "Required"
     | Trim -> "Trim"

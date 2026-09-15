@@ -15,7 +15,7 @@ let item : AdminTable =
             fieldWith "Id" FString [PrimaryKey]
             fieldWith "Title" FString []
             fieldWith "Link" (FOption FString) [Link]
-            fieldWith "Image" (FOption FString) [Link]
+            fieldWith "Image" (FOption FString) [Image]
             fieldWith "Extract" (FOption FString) [RichContent]
             fieldWith "OwnerComment" FString [RichContent]
             fieldWith "ArticleDate" FInt [EditableDate]

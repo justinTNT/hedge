@@ -26,6 +26,7 @@ type FieldAttr =
     | ForeignKey of table: string
     | RichContent
     | Link
+    | Image
     | Required
     | Trim
     | Inject
@@ -70,6 +71,7 @@ let showAttr = function
     | ForeignKey t -> sprintf "ForeignKey(%s)" t
     | RichContent -> "RichContent"
     | Link -> "Link"
+    | Image -> "Image"
     | Unique -> "Unique"
     | Required -> "Required"
     | Trim -> "Trim"
@@ -154,6 +156,9 @@ let rec private classifyType (t: System.Type) : FieldType * FieldAttr option =
 
     elif fn.Contains("Interface.Link") then
         FString, Some Link
+
+    elif fn.Contains("Interface.Image") then
+        FString, Some Image
 
     elif fn.Contains("Interface.Unique") then
         let innerType =

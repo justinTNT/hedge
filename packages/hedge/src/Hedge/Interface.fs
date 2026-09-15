@@ -50,6 +50,11 @@ type RichContent = RichContent of string
 /// URL / link.
 type Link = Link of string
 
+/// An image reference — a `/blobs/<key>` path (uploaded to R2) or an external URL.
+/// Distinct from `Link` (a hyperlink) so the admin can offer an upload widget for it,
+/// and so future right-sizing can target it. Serializes as a bare string, like `Link`.
+type Image = Image of string
+
 /// Unique constraint. Wraps the value type.
 type Unique<'a> = Unique of 'a
 

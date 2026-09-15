@@ -13,7 +13,7 @@ type Item = {
     Id: PrimaryKey<string>
     Title: string
     Link: Link option
-    Image: Link option
+    Image: Image option
     Extract: RichContent option
     OwnerComment: RichContent
     /// The article's own date (drives display, sort and day-grouping). Editable
