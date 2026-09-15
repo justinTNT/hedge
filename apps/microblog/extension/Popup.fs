@@ -136,13 +136,30 @@ chrome.scripting.executeScript({
       if (p && p.tagName === 'PICTURE') {
         Array.from(p.querySelectorAll('source')).forEach(function(s) { if (s.srcset) srcsets.push(s.srcset); });
       }
+      // Parse srcset per the HTML grammar rather than a naive comma split: a URL is a
+      // maximal run of non-whitespace (so commas INSIDE it, e.g. Cloudinary
+      // /c_fill,w_1600/story.jpg, are preserved); a trailing comma with no descriptor
+      // is a candidate separator; otherwise the descriptor runs up to the next comma.
       srcsets.forEach(function(ss) {
-        ss.split(',').forEach(function(part) {
-          var seg = part.trim().split(/\s+/);
-          var url = seg[0];
-          var w = (seg[1] && seg[1].slice(-1) === 'w') ? parseInt(seg[1], 10) : 0;
+        var i = 0, n = ss.length;
+        while (i < n) {
+          while (i < n && /[\s,]/.test(ss[i])) i++;
+          if (i >= n) break;
+          var s = i;
+          while (i < n && !/\s/.test(ss[i])) i++;
+          var url = ss.slice(s, i);
+          var w = 0;
+          if (url.slice(-1) === ',') {
+            url = url.replace(/,+$/, '');
+          } else {
+            while (i < n && /\s/.test(ss[i])) i++;
+            var ds = i;
+            while (i < n && ss[i] !== ',') i++;
+            var desc = ss.slice(ds, i).trim();
+            if (desc.slice(-1) === 'w') w = parseInt(desc, 10) || 0;
+          }
           if (url && w > bestW) { bestW = w; best = url; }
-        });
+        }
       });
       try { best = new URL(best, document.baseURI).href; } catch (e) {}
       return best;
@@ -357,10 +374,10 @@ let toggleConfig () =
 /// host permission needed to read cross-origin image bytes). Best-effort:
 /// returns None on any failure so submit falls back to the original URL, which
 /// the server then tries to rehost itself (tier 2) or keeps as-is (tier 3).
-let captureImageToBlob (url: string) : JS.Promise<string option> =
+let captureImageToBlob (site: obj) (url: string) : JS.Promise<string option> =
     promise {
         try
-            let! raw = Chrome.sendMessage (createObj [ "type" ==> "captureImage"; "url" ==> url ])
+            let! raw = Chrome.sendMessage (createObj [ "type" ==> "captureImage"; "url" ==> url; "site" ==> site ])
             let ok: bool = raw?ok
             if ok then
                 let data = raw?data
@@ -406,11 +423,17 @@ let submit () : JS.Promise<unit> =
         let tags = tagsRaw.Split(',') |> Array.map (fun t -> t.Trim()) |> Array.filter (fun t -> t <> "") |> Array.toList
 
         let btn = elAs<HTMLButtonElement> "submitBtn"
-        // Lock the site selector for the whole operation. Image capture, the item POST,
-        // and the archive POST each resolve the active site independently in the
-        // background; if the user switched sites mid-submit, the image would upload to
-        // one tenant and the post reference it from another (a broken relative /blobs
-        // URL). Locking pins all three to one destination.
+        // Pin the destination for the WHOLE submission. Image capture, the item POST, and
+        // the archive POST each otherwise resolve the active site independently in the
+        // background — so changing the active site mid-submit (switch, or even delete via
+        // settings) would upload the image to one tenant and post it from another (a broken
+        // relative /blobs URL). Resolve the site once here and pass it to every request;
+        // disabling the selector is just the visible cue, not the guarantee.
+        let submitSite : obj =
+            if activeSiteIndex >= 0 && activeSiteIndex < sites.Length then
+                let s = sites.[activeSiteIndex]
+                createObj [ "url" ==> s.Url; "key" ==> s.Key ]
+            else null
         let siteSelect = elAs<HTMLSelectElement> "siteSelect"
         btn.disabled <- true
         siteSelect.disabled <- true
@@ -424,7 +447,7 @@ let submit () : JS.Promise<unit> =
             promise {
                 match selectedImage with
                 | Some url ->
-                    let! captured = captureImageToBlob url
+                    let! captured = captureImageToBlob submitSite url
                     return Some (captured |> Option.defaultValue url)
                 | None ->
                     return None
@@ -444,7 +467,7 @@ let submit () : JS.Promise<unit> =
         // generated ClientGen needs query/ws helpers this extension doesn't ship);
         // the blog codecs give the wire-correct encode/decode.
         let body = Blog.Codecs.Encode.blogSubmitItemReq req |> Thoth.Json.Encode.toString 0
-        let! result = Client.Api.postJson "/api/blog/item" body Blog.Codecs.Decode.blogSubmitItemResponse
+        let! result = Client.Api.postJsonPinned submitSite "/api/blog/item" body Blog.Codecs.Decode.blogSubmitItemResponse
 
         match result with
         | Ok resp ->
@@ -460,7 +483,7 @@ let submit () : JS.Promise<unit> =
                         "sourceUrl" ==> pageUrl
                         "html" ==> documentHtml
                     ]
-                Client.Api.postJson "/api/blog/snapshot" (JS.JSON.stringify snapshotBody) (Thoth.Json.Decode.succeed ())
+                Client.Api.postJsonPinned submitSite "/api/blog/snapshot" (JS.JSON.stringify snapshotBody) (Thoth.Json.Decode.succeed ())
                 |> ignore
         | Error msg ->
             setStatus msg "error"

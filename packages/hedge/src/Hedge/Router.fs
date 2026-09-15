@@ -374,7 +374,16 @@ let createWorker (config: WorkerConfig) =
                     return unauthorized ()
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
-                return! handleBlobServe (decodeUri (path.Substring(7))) blobs
+                let key = decodeUri (path.Substring(7))
+                // Foreign archived HTML is stored under the "archive/" key prefix and must
+                // NEVER be served through this generic public route (raw text/html, no CSP) —
+                // only via an app's sandboxed /archive/<id> route. Block it here, AFTER
+                // decoding, so an encoded key (…/archive%2F…) can't slip past. This route runs
+                // before config.Routes, so an app-level guard cannot cover it.
+                if key.StartsWith("archive/") then
+                    return notFound ()
+                else
+                    return! handleBlobServe key blobs
             | _ ->
 
             // 6. App routes (generated)

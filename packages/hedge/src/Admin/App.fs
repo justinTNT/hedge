@@ -59,6 +59,12 @@ type Model = {
     EditFields: Map<string, string>
     IsLoading: bool
     Error: string option
+    /// Monotonic form-instance token, bumped every time a form opens (edit OR new). An
+    /// async image upload stamps the token it started under; a completion whose token no
+    /// longer matches the current form is dropped — so it can't land in a different form,
+    /// including a second "New" form of the same type (which EditingId/CurrentType alone
+    /// can't distinguish).
+    FormSeq: int
 }
 
 type Msg =
@@ -73,10 +79,10 @@ type Msg =
     | NewRecord of typeName: string
     | GotEditRecord of Result<obj, string>
     | FieldChanged of string * string
-    /// An async image upload completed. Carries the record/type it was started on so a
-    /// completion arriving after the user opened a different record can't overwrite the
-    /// now-current form's field.
-    | ImageUploaded of editingId: string option * currentType: string option * field: string * url: string
+    /// An async image upload completed. Carries the form-instance token it was started
+    /// under so a completion arriving after the user opened a different form (even another
+    /// "New" form of the same type) can't overwrite the now-current form's field.
+    | ImageUploaded of formSeq: int * field: string * url: string
     | Save
     | GotSave of Result<obj, string>
     | DeleteRecord of string
@@ -193,7 +199,8 @@ let init () : Model * Cmd<Msg> =
           EditRecord = None
           EditFields = Map.empty
           IsLoading = false
-          Error = None }
+          Error = None
+          FormSeq = 0 }
     model, Cmd.ofMsg LoadTypes
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -253,7 +260,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | EditRecord (typeName, id) ->
-        { model with CurrentType = Some typeName; EditingId = Some id; IsLoading = true },
+        { model with CurrentType = Some typeName; EditingId = Some id; IsLoading = true; FormSeq = model.FormSeq + 1 },
         Cmd.batch [
             destroyEditorsCmd
             Cmd.OfPromise.either
@@ -264,7 +271,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | NewRecord typeName ->
         // No fetch: a create form starts empty. EditingId stays None, which is
         // what Save keys off to choose POST over PUT.
-        let model = { model with CurrentType = Some typeName; EditingId = None; EditRecord = None; EditFields = Map.empty; IsLoading = false }
+        let model = { model with CurrentType = Some typeName; EditingId = None; EditRecord = None; EditFields = Map.empty; IsLoading = false; FormSeq = model.FormSeq + 1 }
         match findSchema model.Types typeName with
         | Some schema -> model, Cmd.batch [ destroyEditorsCmd; initEmptyEditorsCmd schema ]
         | None -> model, destroyEditorsCmd
@@ -284,10 +291,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | FieldChanged (name, value) ->
         { model with EditFields = model.EditFields |> Map.add name value }, Cmd.none
 
-    | ImageUploaded (originId, originType, name, url) ->
+    | ImageUploaded (originSeq, name, url) ->
         // Drop the result if the form moved on under the in-flight upload — otherwise
-        // record A's upload would land in whatever record/type is open now.
-        if model.EditingId = originId && model.CurrentType = originType then
+        // A's upload would land in whatever form is open now (a different record, or a
+        // freshly opened "New" form). The token changes on every form open.
+        if model.FormSeq = originSeq then
             { model with EditFields = model.EditFields |> Map.add name url }, Cmd.none
         else
             model, Cmd.none
@@ -566,7 +574,7 @@ module View =
             ]
         ]
 
-    let private renderSchemaField dispatch (editingId: string option) (currentType: string option) (values: Map<string, string>) (field: FieldSchema) =
+    let private renderSchemaField dispatch (formSeq: int) (values: Map<string, string>) (field: FieldSchema) =
         let isReadOnly = field.Attrs |> List.exists (fun a ->
             match a with PrimaryKey | CreateTimestamp | UpdateTimestamp -> true | _ -> false)
         let isRichContent = field.Attrs |> List.contains RichContent
@@ -636,9 +644,9 @@ module View =
                             prop.type' "file"
                             prop.accept "image/*"
                             prop.onChange (fun (ev: Browser.Types.Event) ->
-                                // Stamp the record/type the upload started on so a late
-                                // completion can't overwrite a different record's field.
-                                Blobs.uploadFromInput ev.target (fun url -> dispatch (ImageUploaded (editingId, currentType, field.Name, url))))
+                                // Stamp the form-instance token the upload started under so a
+                                // late completion can't overwrite a different form's field.
+                                Blobs.uploadFromInput ev.target (fun url -> dispatch (ImageUploaded (formSeq, field.Name, url))))
                         ]
                     if current <> "" then
                         Html.img [
@@ -716,7 +724,7 @@ module View =
             prop.className "admin-edit-form"
             prop.children [
                 Html.h2 [ prop.text (sprintf "%s %s" (if isCreate then "New" else "Edit") schema.Name) ]
-                yield! fields |> List.map (renderSchemaField dispatch model.EditingId model.CurrentType model.EditFields)
+                yield! fields |> List.map (renderSchemaField dispatch model.FormSeq model.EditFields)
                 Html.div [
                     prop.className "admin-form-actions"
                     prop.children [

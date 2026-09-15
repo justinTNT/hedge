@@ -564,7 +564,8 @@ export function createWorker(config) {
                                                                 }
                                                                 case 1: {
                                                                     const blobs_2 = env.BLOBS;
-                                                                    return handleBlobServe(decodeURIComponent(substring(path_15, 7)), blobs_2);
+                                                                    const key = decodeURIComponent(substring(path_15, 7));
+                                                                    return key.startsWith("archive/") ? (Promise.resolve(notFound())) : (handleBlobServe(key, blobs_2));
                                                                 }
                                                                 default: {
                                                                     const matchValue_11 = config.Routes(request, env, ctx);

@@ -121,7 +121,11 @@ dotnet build apps/microblog/src/Client/Client.fsproj >/dev/null 2>&1 \
     || { echo "!!! FAIL: microblog client build (blog)"; exit 1; }
 HEDGE_SITE=ndct dotnet build apps/articles/src/Client/Client.fsproj >/dev/null 2>&1 \
     || { echo "!!! FAIL: articles ndct client build (articles only)"; exit 1; }
-echo "--- client build matrix OK (articles default, microblog, articles ndct) ---"
+# The microblog extension (Fable-compiled F#) also consumes the framework + blog codecs;
+# the split-gen migration once silently broke its build because nothing here compiled it.
+dotnet build apps/microblog/extension/Extension.fsproj >/dev/null 2>&1 \
+    || { echo "!!! FAIL: microblog extension build (Popup + blog codecs)"; exit 1; }
+echo "--- client build matrix OK (articles default, microblog, articles ndct, extension) ---"
 HC_OUT="$ROOT/test/HostContextProbe/dist"
 rm -rf "$HC_OUT"
 dotnet fable test/HostContextProbe/HostContextProbe.fsproj -o "$HC_OUT" >/dev/null 2>&1

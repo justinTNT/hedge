@@ -11,7 +11,7 @@ import { max } from "./fable_modules/fable-library-js.4.29.0/Double.js";
 import { toString as toString_1 } from "./fable_modules/Thoth.Json.10.2.0/Encode.fs.js";
 import { encodeRecord } from "./packages/hedge/src/Hedge/Codec.js";
 import { SubmitItem_Request, SubmitItem_Request_$reflection } from "./packages/modules/blog/src/Models/Api.js";
-import { postJson } from "./packages/hedge-extension/Api.js";
+import { postJsonPinned } from "./packages/hedge-extension/Api.js";
 import { Decode_blogSubmitItemResponse } from "./packages/modules/blog/generated/Codecs.js";
 import { succeed } from "./fable_modules/Thoth.Json.10.2.0/Decode.fs.js";
 import { parse } from "./fable_modules/fable-library-js.4.29.0/Int32.js";
@@ -218,13 +218,30 @@ export function extractPageData() {
       if (p && p.tagName === 'PICTURE') {
         Array.from(p.querySelectorAll('source')).forEach(function(s) { if (s.srcset) srcsets.push(s.srcset); });
       }
+      // Parse srcset per the HTML grammar rather than a naive comma split: a URL is a
+      // maximal run of non-whitespace (so commas INSIDE it, e.g. Cloudinary
+      // /c_fill,w_1600/story.jpg, are preserved); a trailing comma with no descriptor
+      // is a candidate separator; otherwise the descriptor runs up to the next comma.
       srcsets.forEach(function(ss) {
-        ss.split(',').forEach(function(part) {
-          var seg = part.trim().split(/\s+/);
-          var url = seg[0];
-          var w = (seg[1] && seg[1].slice(-1) === 'w') ? parseInt(seg[1], 10) : 0;
+        var i = 0, n = ss.length;
+        while (i < n) {
+          while (i < n && /[\s,]/.test(ss[i])) i++;
+          if (i >= n) break;
+          var s = i;
+          while (i < n && !/\s/.test(ss[i])) i++;
+          var url = ss.slice(s, i);
+          var w = 0;
+          if (url.slice(-1) === ',') {
+            url = url.replace(/,+$/, '');
+          } else {
+            while (i < n && /\s/.test(ss[i])) i++;
+            var ds = i;
+            while (i < n && ss[i] !== ',') i++;
+            var desc = ss.slice(ds, i).trim();
+            if (desc.slice(-1) === 'w') w = parseInt(desc, 10) || 0;
+          }
           if (url && w > bestW) { bestW = w; best = url; }
-        });
+        }
       });
       try { best = new URL(best, document.baseURI).href; } catch (e) {}
       return best;
@@ -434,10 +451,11 @@ export function toggleConfig() {
  * returns None on any failure so submit falls back to the original URL, which
  * the server then tries to rehost itself (tier 2) or keeps as-is (tier 3).
  */
-export function captureImageToBlob(url) {
+export function captureImageToBlob(site, url) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => (PromiseBuilder__Delay_62FBFDE1(promise, () => ((chrome.runtime.sendMessage({
         type: "captureImage",
         url: url,
+        site: site,
     })).then((_arg) => {
         const raw = _arg;
         if (raw.ok) {
@@ -479,6 +497,17 @@ export function submit() {
                 const tagsRaw = elAs("tags").value;
                 const tags = ofArray((array_1 = map_1((t_1) => t_1.trim(), tagsRaw.split(",")), array_1.filter((t_2) => (t_2 !== ""))));
                 const btn = elAs("submitBtn");
+                let submitSite;
+                if ((activeSiteIndex() >= 0) && (activeSiteIndex() < length(sites()))) {
+                    const s = item_1(activeSiteIndex(), sites());
+                    submitSite = {
+                        url: s.Url,
+                        key: s.Key,
+                    };
+                }
+                else {
+                    submitSite = defaultOf();
+                }
                 const siteSelect = elAs("siteSelect");
                 btn.disabled = true;
                 siteSelect.disabled = true;
@@ -489,18 +518,18 @@ export function submit() {
                     }
                     else {
                         const url = selectedImage();
-                        return captureImageToBlob(url).then((_arg) => (Promise.resolve(defaultArg(_arg, url))));
+                        return captureImageToBlob(submitSite, url).then((_arg) => (Promise.resolve(defaultArg(_arg, url))));
                     }
                 })).then((_arg_1) => {
                     const body = toString_1(0, encodeRecord(SubmitItem_Request_$reflection(), new SubmitItem_Request(title, (slugRaw !== "") ? slugRaw : undefined, (pageUrl() !== "") ? pageUrl() : undefined, _arg_1, map_2((j) => JSON.stringify(j), extractJson), JSON.stringify(commentJson), tags)));
-                    return postJson("/api/blog/item", body, uncurry2(Decode_blogSubmitItemResponse)).then((_arg_2) => {
+                    return postJsonPinned(submitSite, "/api/blog/item", body, uncurry2(Decode_blogSubmitItemResponse)).then((_arg_2) => {
                         let snapshotBody;
                         const result = _arg_2;
                         return ((result.tag === 1) ? ((setStatus(result.fields[0], "error"), Promise.resolve())) : ((setStatus("Submitted!", "success"), (documentHtml() !== "") ? ((snapshotBody = {
                             itemId: result.fields[0].Item.Id,
                             sourceUrl: pageUrl(),
                             html: documentHtml(),
-                        }, (void postJson("/api/blog/snapshot", JSON.stringify(snapshotBody), (arg10$0040, arg20$0040) => succeed(undefined, arg10$0040, arg20$0040)), Promise.resolve()))) : (Promise.resolve())))).then(() => PromiseBuilder__Delay_62FBFDE1(promise, () => {
+                        }, (void postJsonPinned(submitSite, "/api/blog/snapshot", JSON.stringify(snapshotBody), (arg10$0040, arg20$0040) => succeed(undefined, arg10$0040, arg20$0040)), Promise.resolve()))) : (Promise.resolve())))).then(() => PromiseBuilder__Delay_62FBFDE1(promise, () => {
                             btn.disabled = false;
                             siteSelect.disabled = false;
                             return Promise.resolve();

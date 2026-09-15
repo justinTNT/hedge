@@ -92,11 +92,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 })
 
-async function handleApiRequest({ method, path, body }) {
+async function handleApiRequest({ method, path, body, site }) {
   try {
-    const data = await getSitesData()
-    const site = getActiveSite(data)
-    const baseUrl = site ? site.url : 'http://localhost:8787'
+    // A submission pins its destination (`site` = {url, key}) so that image upload,
+    // item POST, and archive POST can't land on different tenants if the user changes
+    // the active site mid-submit. Absent a pin, resolve the current active site.
+    const active = site || getActiveSite(await getSitesData())
+    const baseUrl = active ? active.url : 'http://localhost:8787'
     const url = baseUrl.replace(/\/+$/, '') + path
 
     const opts = {
@@ -105,8 +107,8 @@ async function handleApiRequest({ method, path, body }) {
     }
     // Authoring (POST /api/blog/item) is owner-only server-side, so send the
     // configured admin key. Public reads/comments ignore it.
-    if (site && site.key) {
-      opts.headers['X-Admin-Key'] = site.key
+    if (active && active.key) {
+      opts.headers['X-Admin-Key'] = active.key
     }
     if (body !== undefined) {
       opts.body = JSON.stringify(body)
@@ -138,17 +140,18 @@ async function handleApiRequest({ method, path, body }) {
  * hit. Best-effort: the popup falls back to the original URL on any failure
  * (the server then tries its own rehost as tier 2).
  */
-async function handleCaptureImage({ url }) {
+async function handleCaptureImage({ url, site }) {
   // Tier-1 is best-effort and its failure is silently swallowed by the popup
   // (falls back to the raw URL for the server to rehost). Log each failure with
   // enough detail to tell WHICH step failed — a resize CDN that gates on Origin/
   // Referer typically returns a 403 or an HTML error page here, which the /api/blobs
   // image-type gate then rejects. Grep the service-worker console for "[hedge capture]".
   try {
-    const data = await getSitesData()
-    const site = getActiveSite(data)
-    if (!site) return { ok: false, error: 'No active site' }
-    const baseUrl = site.url.replace(/\/+$/, '')
+    // Use the submission's pinned site ({url, key}) when provided, so the uploaded
+    // bytes land in the same tenant the post will be created in (see handleApiRequest).
+    const active = site || getActiveSite(await getSitesData())
+    if (!active) return { ok: false, error: 'No active site' }
+    const baseUrl = active.url.replace(/\/+$/, '')
 
     const imgRes = await fetch(url)
     if (!imgRes.ok) {
@@ -178,7 +181,7 @@ async function handleCaptureImage({ url }) {
 
     // No Content-Type header — the browser sets the multipart boundary itself.
     const opts = { method: 'POST', body: fd, headers: {} }
-    if (site.key) opts.headers['X-Admin-Key'] = site.key
+    if (active.key) opts.headers['X-Admin-Key'] = active.key
 
     const res = await fetch(baseUrl + '/api/blobs', opts)
     const text = await res.text()
