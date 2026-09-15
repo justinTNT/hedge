@@ -59,3 +59,26 @@ type ItemTag = {
     TagId: ForeignKey<Tag>
     DeletedAt: SoftDelete option
 }
+
+/// A captured snapshot of an item's source page — the microblog as its own web archive.
+/// The captured bytes live in R2 (BlobKey); this row is the pointer + status. A side table
+/// (FK -> Item), so the populated blog_items stays untouched (no in-place-FK rebuild).
+[<Table "snapshots">]
+type ItemSnapshot = {
+    Id: PrimaryKey<string>
+    ItemId: ForeignKey<Item>
+    /// "html" (cleaned rendered DOM) for now; "screenshot" is a later variant.
+    Kind: string
+    /// R2 object key, e.g. "archive/<id>.html".
+    BlobKey: string
+    /// The source URL captured (denormalized from Item.Link at capture time).
+    SourceUrl: string
+    /// "pending" | "ok" | "failed".
+    Status: string
+    /// Failure detail for the admin, when Status = "failed".
+    Error: string option
+    /// Capture time (the row's creation). Named CreatedAt to match the framework's
+    /// CreateTimestamp convention (column `created_at` + its auto-index).
+    CreatedAt: CreateTimestamp
+    DeletedAt: SoftDelete option
+}

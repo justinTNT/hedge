@@ -12,6 +12,7 @@ module Encode =
     let inline itemComment (v: Blog.Domain.ItemComment) = encode v
     let inline tag (v: Blog.Domain.Tag) = encode v
     let inline itemTag (v: Blog.Domain.ItemTag) = encode v
+    let inline itemSnapshot (v: Blog.Domain.ItemSnapshot) = encode v
 
     // -- API view types --
     let inline blogItemView (v: Blog.Api.SubmitItem.Item) = encode v
@@ -32,6 +33,7 @@ module Decode =
     let itemComment : Decoder<Blog.Domain.ItemComment> = decode<Blog.Domain.ItemComment>()
     let tag : Decoder<Blog.Domain.Tag> = decode<Blog.Domain.Tag>()
     let itemTag : Decoder<Blog.Domain.ItemTag> = decode<Blog.Domain.ItemTag>()
+    let itemSnapshot : Decoder<Blog.Domain.ItemSnapshot> = decode<Blog.Domain.ItemSnapshot>()
 
     // -- API view types --
     let blogItemView : Decoder<Blog.Api.SubmitItem.Item> = decode<Blog.Api.SubmitItem.Item>()

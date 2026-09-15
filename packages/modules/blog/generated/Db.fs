@@ -225,8 +225,69 @@ let selectItemTagsByItemId (itemId: string) (db: D1Database) : D1PreparedStateme
 let selectItemTagsByTagId (tagId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE tag_id = ? AND deleted_at IS NULL LIMIT 100")) [| box tagId |]
 
+// ============================================================
+// ItemSnapshot (blog_snapshots)
+// ============================================================
+
+type ItemSnapshotRow = {
+    Id: string
+    ItemId: string
+    Kind: string
+    BlobKey: string
+    SourceUrl: string
+    Status: string
+    Error: string option
+    CreatedAt: int
+    DeletedAt: int option
+}
+
+type ItemSnapshotCreate = {
+    ItemId: string
+    Kind: string
+    BlobKey: string
+    SourceUrl: string
+    Status: string
+    Error: string option
+}
+
+let parseItemSnapshotRow (row: obj) : ItemSnapshotRow =
+    { Id = rowStr row "id"
+      ItemId = rowStr row "item_id"
+      Kind = rowStr row "kind"
+      BlobKey = rowStr row "blob_key"
+      SourceUrl = rowStr row "source_url"
+      Status = rowStr row "status"
+      Error = rowStrOpt row "error"
+      CreatedAt = rowInt row "created_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectItemSnapshots (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
+
+let selectItemSnapshot (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertItemSnapshot (db: D1Database) (create: ItemSnapshotCreate) =
+    let id = newId()
+    let now = epochNow()
+    let stmt =
+        bind (db.prepare("INSERT INTO blog_snapshots (id, item_id, kind, blob_key, source_url, status, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.ItemId; box create.Kind; box create.BlobKey; box create.SourceUrl; box create.Status; optToDb create.Error; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateItemSnapshot (id: string) (create: ItemSnapshotCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE blog_snapshots SET item_id = ?, kind = ?, blob_key = ?, source_url = ?, status = ?, error = ? WHERE id = ?"))
+         [| box create.ItemId; box create.Kind; box create.BlobKey; box create.SourceUrl; box create.Status; optToDb create.Error; box id |]
+
+let deleteItemSnapshot (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE blog_snapshots SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+let selectItemSnapshotsByItemId (itemId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE item_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box itemId |]
+
 module Tables =
     let item = "blog_items"
     let itemComment = "blog_comments"
     let tag = "blog_tags"
     let itemTag = "blog_item_tags"
+    let itemSnapshot = "blog_snapshots"

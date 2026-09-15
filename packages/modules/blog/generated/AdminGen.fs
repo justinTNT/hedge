@@ -96,9 +96,34 @@ let itemTag : AdminTable =
       Delete = "UPDATE blog_item_tags SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["ItemId"; "TagId"] }
 
+let itemSnapshot : AdminTable =
+    { Name = "ItemSnapshot"
+      Table = "blog_snapshots"
+      Schema =
+        schema "ItemSnapshot" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "ItemId" FString [ForeignKey "Item"]
+            fieldWith "Kind" FString []
+            fieldWith "BlobKey" FString []
+            fieldWith "SourceUrl" FString []
+            fieldWith "Status" FString []
+            fieldWith "Error" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO blog_snapshots (id, item_id, kind, blob_key, source_url, status, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE blog_snapshots SET item_id = ?, kind = ?, blob_key = ?, source_url = ?, status = ?, error = ? WHERE id = ?"
+      Delete = "UPDATE blog_snapshots SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["ItemId"; "Kind"; "BlobKey"; "SourceUrl"; "Status"; "Error"] }
+
 let tables : AdminTable list = [
     item
     itemComment
     tag
     itemTag
+    itemSnapshot
 ]

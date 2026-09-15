@@ -96,6 +96,19 @@ CREATE TABLE blog_item_tags (
     FOREIGN KEY (tag_id) REFERENCES blog_tags(id)
 );
 
+CREATE TABLE blog_snapshots (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    blob_key TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER,
+    FOREIGN KEY (item_id) REFERENCES blog_items(id)
+);
+
 -- Indexes
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
@@ -116,3 +129,5 @@ CREATE UNIQUE INDEX idx_blog_tags_name ON blog_tags(name);
 CREATE INDEX idx_blog_tags_created_at ON blog_tags(created_at DESC);
 CREATE INDEX idx_blog_item_tags_item_id ON blog_item_tags(item_id);
 CREATE INDEX idx_blog_item_tags_tag_id ON blog_item_tags(tag_id);
+CREATE INDEX idx_blog_snapshots_item_id ON blog_snapshots(item_id);
+CREATE INDEX idx_blog_snapshots_created_at ON blog_snapshots(created_at DESC);
