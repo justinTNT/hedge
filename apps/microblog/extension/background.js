@@ -139,6 +139,11 @@ async function handleApiRequest({ method, path, body }) {
  * (the server then tries its own rehost as tier 2).
  */
 async function handleCaptureImage({ url }) {
+  // Tier-1 is best-effort and its failure is silently swallowed by the popup
+  // (falls back to the raw URL for the server to rehost). Log each failure with
+  // enough detail to tell WHICH step failed — a resize CDN that gates on Origin/
+  // Referer typically returns a 403 or an HTML error page here, which the /api/blobs
+  // image-type gate then rejects. Grep the service-worker console for "[hedge capture]".
   try {
     const data = await getSitesData()
     const site = getActiveSite(data)
@@ -146,8 +151,17 @@ async function handleCaptureImage({ url }) {
     const baseUrl = site.url.replace(/\/+$/, '')
 
     const imgRes = await fetch(url)
-    if (!imgRes.ok) return { ok: false, error: 'Image fetch failed: ' + imgRes.status }
+    if (!imgRes.ok) {
+      console.warn('[hedge capture] image fetch not ok', {
+        url, status: imgRes.status, statusText: imgRes.statusText,
+        contentType: imgRes.headers.get('content-type'),
+      })
+      return { ok: false, error: 'Image fetch failed: ' + imgRes.status }
+    }
     const blob = await imgRes.blob()
+    // blob.type/size is the tell: an HTML error page or an empty/opaque body here
+    // is why the upload's image-type gate later rejects it.
+    console.info('[hedge capture] fetched image', { url, type: blob.type, size: blob.size })
 
     // Derive a filename from the URL path so the stored key has a sensible name;
     // the upload's content-type gate reads the blob's MIME, not this extension.
@@ -176,10 +190,14 @@ async function handleCaptureImage({ url }) {
     }
 
     if (!res.ok) {
+      console.warn('[hedge capture] blob upload rejected', {
+        url, status: res.status, blobType: blob.type, response: responseData,
+      })
       return { ok: false, status: res.status, error: responseData }
     }
     return { ok: true, data: responseData }
   } catch (err) {
+    console.warn('[hedge capture] threw', { url, error: err && err.message })
     return { ok: false, error: err.message }
   }
 }
