@@ -355,15 +355,21 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             CurrentItem = None
             TagItems = None
             ReplyingTo = None
-            CollapsedComments = Set.empty }
+            CollapsedComments = Set.empty
+            // Any in-flight request from the route we're leaving is invalidated (its result
+            // is stale-dropped by the shell), so its loading flag must not linger — else a
+            // reused cached feed sits behind a spinner, or FeedLoadingMore=true wedges
+            // pagination. The load-issuing branches below re-arm IsLoading via their message. #2.
+            IsLoading = false
+            FeedLoadingMore = false
+            TagLoadingMore = false }
     match route with
     // Feed is retained across a module switch (not in `cleared`); reuse it (with its loaded
     // pages + cursor) instead of refetching page 1, which would discard appended pages. #4.
     | [] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; (if cleared.Feed.IsSome then Cmd.none else Cmd.ofMsg LoadFeed) ]
     | ["tag"; name] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg (LoadTagItems name) ]
-    // "new" issues no load, so a spinner left on from a prior in-flight route would
-    // otherwise mask the form — clear it explicitly.
-    | ["new"] -> { cleared with IsLoading = false }, Cmd.batch [ disposeHostedCmd; resetTitle; NewItem.initOwnerCommentEditorCmd ]
+    // "new" issues no load; the cleared spinner (above) keeps a prior route's spinner from masking the form.
+    | ["new"] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; NewItem.initOwnerCommentEditorCmd ]
     | [idOrSlug] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg (LoadItem idOrSlug) ]
     | _ -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle ]
 

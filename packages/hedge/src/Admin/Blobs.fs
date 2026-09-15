@@ -13,7 +13,9 @@ open Fable.Core
   if (!file) return;
   var fd = new FormData();
   fd.append('file', file);
-  fetch('/api/blobs', { method: 'POST', headers: { 'X-Admin-Key': (localStorage.getItem('adminKey') || '') }, body: fd })
+  // Honor the deployment base path (same as Admin.Api's basePath), so a sub-path mount
+  // (BASE_PATH="/st") posts to /st/api/blobs rather than the origin root.
+  fetch((window.BASE_PATH || '') + '/api/blobs', { method: 'POST', headers: { 'X-Admin-Key': (localStorage.getItem('adminKey') || '') }, body: fd })
     .then(function(r){ if (!r.ok) throw new Error('upload failed: ' + r.status); return r.json(); })
     .then(function(j){ cb(j.url); try { inputEl.value = ''; } catch (e) {} })
     .catch(function(e){ console.error('[admin] image upload failed', e); });

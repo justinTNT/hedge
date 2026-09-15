@@ -26,6 +26,20 @@ open Server.Env
     .on('link[rel="preload"][as="script"]', { element: function(e){ e.remove(); } })
     .on('noscript', { element: function(e){ e.remove(); } })
     .on('base', { element: function(e){ e.remove(); } })
+    // Defense in depth: strip inline event handlers (on*) and javascript: URLs so the
+    // stored artifact can't execute even if some future path serves it without the CSP.
+    // The /archive/<id> serve already sandboxes with default-src 'none'; this makes the
+    // bytes themselves inert too.
+    .on('*', { element: function(e){
+      var drop = [];
+      for (var a of e.attributes) {
+        var n = a[0].toLowerCase();
+        var v = (a[1] || '');
+        if (n.indexOf('on') === 0) drop.push(a[0]);
+        else if ((n === 'href' || n === 'src' || n === 'xlink:href') && /^\s*javascript:/i.test(v)) drop.push(a[0]);
+      }
+      for (var i = 0; i < drop.length; i++) e.removeAttribute(drop[i]);
+    } })
     .transform(res).text();
 })($0)""")>]
 let private stripHtml (html: string) : JS.Promise<string> = jsNative

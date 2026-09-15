@@ -73,6 +73,10 @@ type Msg =
     | NewRecord of typeName: string
     | GotEditRecord of Result<obj, string>
     | FieldChanged of string * string
+    /// An async image upload completed. Carries the record/type it was started on so a
+    /// completion arriving after the user opened a different record can't overwrite the
+    /// now-current form's field.
+    | ImageUploaded of editingId: string option * currentType: string option * field: string * url: string
     | Save
     | GotSave of Result<obj, string>
     | DeleteRecord of string
@@ -279,6 +283,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | FieldChanged (name, value) ->
         { model with EditFields = model.EditFields |> Map.add name value }, Cmd.none
+
+    | ImageUploaded (originId, originType, name, url) ->
+        // Drop the result if the form moved on under the in-flight upload — otherwise
+        // record A's upload would land in whatever record/type is open now.
+        if model.EditingId = originId && model.CurrentType = originType then
+            { model with EditFields = model.EditFields |> Map.add name url }, Cmd.none
+        else
+            model, Cmd.none
 
     | Save ->
         match model.CurrentType with
@@ -554,7 +566,7 @@ module View =
             ]
         ]
 
-    let private renderSchemaField dispatch (values: Map<string, string>) (field: FieldSchema) =
+    let private renderSchemaField dispatch (editingId: string option) (currentType: string option) (values: Map<string, string>) (field: FieldSchema) =
         let isReadOnly = field.Attrs |> List.exists (fun a ->
             match a with PrimaryKey | CreateTimestamp | UpdateTimestamp -> true | _ -> false)
         let isRichContent = field.Attrs |> List.contains RichContent
@@ -624,7 +636,9 @@ module View =
                             prop.type' "file"
                             prop.accept "image/*"
                             prop.onChange (fun (ev: Browser.Types.Event) ->
-                                Blobs.uploadFromInput ev.target (fun url -> dispatch (FieldChanged (field.Name, url))))
+                                // Stamp the record/type the upload started on so a late
+                                // completion can't overwrite a different record's field.
+                                Blobs.uploadFromInput ev.target (fun url -> dispatch (ImageUploaded (editingId, currentType, field.Name, url))))
                         ]
                     if current <> "" then
                         Html.img [
@@ -702,7 +716,7 @@ module View =
             prop.className "admin-edit-form"
             prop.children [
                 Html.h2 [ prop.text (sprintf "%s %s" (if isCreate then "New" else "Edit") schema.Name) ]
-                yield! fields |> List.map (renderSchemaField dispatch model.EditFields)
+                yield! fields |> List.map (renderSchemaField dispatch model.EditingId model.CurrentType model.EditFields)
                 Html.div [
                     prop.className "admin-form-actions"
                     prop.children [

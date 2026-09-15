@@ -298,7 +298,13 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             Route = route
             CurrentItem = None
             ReplyingTo = None
-            CollapsedComments = Set.empty }
+            CollapsedComments = Set.empty
+            // In-flight requests from the route we're leaving are invalidated (their results
+            // are stale-dropped by the shell), so their loading flags must not linger — else a
+            // reused cached feed sits behind a spinner, or FeedLoadingMore=true wedges
+            // pagination. The load-issuing branch below re-arms IsLoading via its message. #2.
+            IsLoading = false
+            FeedLoadingMore = false }
     let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
     match route with
     // Feed is retained across a module switch (not in `cleared`); reuse it (loaded pages +

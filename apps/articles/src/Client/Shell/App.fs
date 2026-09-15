@@ -87,21 +87,30 @@ let private mapBlog (activation: int) (cmd: Cmd<B.Msg>) : Cmd<Msg> =
 /// Content results that must not apply once their activation is superseded (the A -> B
 /// navigation that resolves B then A). Covers whole-view reads AND view-mutating/append +
 /// pagination results: the server write still happened; we only suppress the obsolete UI
-/// effect — e.g. appending A's new comment to B (and destroying B's draft), or merging A's
-/// next page + cursor into B's feed/tag. Activation bumps on every navigation, so a
-/// completion issued before you left arrives stale and is dropped here. Identity/session
-/// results are deliberately absent — they apply regardless of which content view is active.
+/// effect — e.g. appending A's new comment to a now-different item, or merging A's next
+/// page + cursor into another feed/tag. Activation bumps on every navigation, so a
+/// completion issued before you left arrives stale and is dropped here.
+///
+/// The exception is a mutation FAILURE (`GotSubmit* (Error _)`): its only effect is to set
+/// the module's Error field, which is not tied to the item we left and would otherwise be
+/// lost silently — the user must still learn the submit failed (it surfaces on the retained
+/// module, visible on return). Successful mutations carry the wrong-item append/nav effect
+/// and stay dropped. Identity/session results are deliberately absent — they apply
+/// regardless of which content view is active.
 let private articlesStaleDrop (m: A.Msg) =
     match m with
     | A.GotFeed _ | A.GotItem _
-    | A.GotMoreFeed _ | A.GotSubmitComment _ | A.GotEvent _ -> true
+    | A.GotMoreFeed _ | A.GotEvent _ -> true
+    | A.GotSubmitComment (Ok _) -> true
+    | A.GotSubmitComment (Error _) -> false
     | _ -> false
 
 let private blogStaleDrop (m: B.Msg) =
     match m with
     | B.GotFeed _ | B.GotItem _ | B.GotTagItems _
-    | B.GotMoreFeed _ | B.GotMoreTagItems _
-    | B.GotSubmitComment _ | B.GotSubmitItem _ | B.GotEvent _ -> true
+    | B.GotMoreFeed _ | B.GotMoreTagItems _ | B.GotEvent _ -> true
+    | B.GotSubmitComment (Ok _) | B.GotSubmitItem (Ok _) -> true
+    | B.GotSubmitComment (Error _) | B.GotSubmitItem (Error _) -> false
     | _ -> false
 
 let init () : Model * Cmd<Msg> =

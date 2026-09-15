@@ -451,7 +451,9 @@ export function submit() {
                 const tagsRaw = elAs("tags").value;
                 const tags = ofArray((array_1 = map_1((t_1) => t_1.trim(), tagsRaw.split(",")), array_1.filter((t_2) => (t_2 !== ""))));
                 const btn = elAs("submitBtn");
+                const siteSelect = elAs("siteSelect");
                 btn.disabled = true;
+                siteSelect.disabled = true;
                 setStatus("Submitting…", "");
                 return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
                     if (selectedImage() == null) {
@@ -464,27 +466,17 @@ export function submit() {
                 })).then((_arg_1) => {
                     const body = toString_1(0, encodeRecord(SubmitItem_Request_$reflection(), new SubmitItem_Request(title, (slugRaw !== "") ? slugRaw : undefined, (pageUrl() !== "") ? pageUrl() : undefined, _arg_1, map_2((j) => JSON.stringify(j), extractJson), JSON.stringify(commentJson), tags)));
                     return postJson("/api/blog/item", body, uncurry2(Decode_blogSubmitItemResponse)).then((_arg_2) => {
+                        let snapshotBody;
                         const result = _arg_2;
-                        btn.disabled = false;
-                        if (result.tag === 1) {
-                            setStatus(result.fields[0], "error");
+                        return ((result.tag === 1) ? ((setStatus(result.fields[0], "error"), Promise.resolve())) : ((setStatus("Submitted!", "success"), (documentHtml() !== "") ? ((snapshotBody = {
+                            itemId: result.fields[0].Item.Id,
+                            sourceUrl: pageUrl(),
+                            html: documentHtml(),
+                        }, (void postJson("/api/blog/snapshot", JSON.stringify(snapshotBody), (arg10$0040, arg20$0040) => succeed(undefined, arg10$0040, arg20$0040)), Promise.resolve()))) : (Promise.resolve())))).then(() => PromiseBuilder__Delay_62FBFDE1(promise, () => {
+                            btn.disabled = false;
+                            siteSelect.disabled = false;
                             return Promise.resolve();
-                        }
-                        else {
-                            setStatus("Submitted!", "success");
-                            if (documentHtml() !== "") {
-                                const snapshotBody = {
-                                    itemId: result.fields[0].Item.Id,
-                                    sourceUrl: pageUrl(),
-                                    html: documentHtml(),
-                                };
-                                postJson("/api/blog/snapshot", JSON.stringify(snapshotBody), (arg10$0040, arg20$0040) => succeed(undefined, arg10$0040, arg20$0040));
-                                return Promise.resolve();
-                            }
-                            else {
-                                return Promise.resolve();
-                            }
-                        }
+                        }));
                     });
                 });
             }

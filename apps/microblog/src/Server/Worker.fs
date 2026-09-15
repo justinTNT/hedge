@@ -26,6 +26,13 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Archive.handleSnapshot request env)
     | GET path when path.StartsWith("/archive/") ->
         Some (Server.Archive.handleArchiveServe (path.Substring(9)) env)
+    // The archive blob is foreign HTML. It must NEVER be served raw through the generic
+    // public /blobs/ route — only through /archive/<id> above, which sandboxes it with a
+    // locked-down CSP + nosniff. Served raw as text/html on our own origin, its inline
+    // event handlers could execute against localStorage (the admin key). Block it here,
+    // before the framework's blob route can reach it.
+    | GET path when path.StartsWith("/blobs/archive/") ->
+        Some (promise { return jsonResponse """{"error":"Not found"}""" 404 })
     | _ -> None
 
 [<ExportDefault>]

@@ -378,7 +378,14 @@ let submit () : JS.Promise<unit> =
         let tags = tagsRaw.Split(',') |> Array.map (fun t -> t.Trim()) |> Array.filter (fun t -> t <> "") |> Array.toList
 
         let btn = elAs<HTMLButtonElement> "submitBtn"
+        // Lock the site selector for the whole operation. Image capture, the item POST,
+        // and the archive POST each resolve the active site independently in the
+        // background; if the user switched sites mid-submit, the image would upload to
+        // one tenant and the post reference it from another (a broken relative /blobs
+        // URL). Locking pins all three to one destination.
+        let siteSelect = elAs<HTMLSelectElement> "siteSelect"
         btn.disabled <- true
+        siteSelect.disabled <- true
         setStatus "Submitting…" ""
 
         // Rehost the one chosen post image to our R2 before submit, so the post's
@@ -410,14 +417,14 @@ let submit () : JS.Promise<unit> =
         // the blog codecs give the wire-correct encode/decode.
         let body = Blog.Codecs.Encode.blogSubmitItemReq req |> Thoth.Json.Encode.toString 0
         let! result = Client.Api.postJson "/api/blog/item" body Blog.Codecs.Decode.blogSubmitItemResponse
-        btn.disabled <- false
 
         match result with
         | Ok resp ->
             setStatus "Submitted!" "success"
             // Best-effort archive of the rendered source page (reference-only —
             // never shown to readers, ok if it rots). The item already exists, so
-            // a snapshot failure must not surface as a submit error.
+            // a snapshot failure must not surface as a submit error. Initiated while
+            // the site is still locked so it targets the same tenant as the post.
             if documentHtml <> "" then
                 let snapshotBody =
                     createObj [
@@ -429,6 +436,9 @@ let submit () : JS.Promise<unit> =
                 |> ignore
         | Error msg ->
             setStatus msg "error"
+
+        btn.disabled <- false
+        siteSelect.disabled <- false
     }
 
 // ---------------------------------------------------------------------------
