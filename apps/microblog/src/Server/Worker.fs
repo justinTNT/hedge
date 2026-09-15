@@ -21,6 +21,11 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
     // deliberately hand-written (not a reflected/gen endpoint).
     | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
         Some (Server.Handlers.getRhymes env)
+    // Source-page archive: the extension POSTs a captured snapshot; readers view it sandboxed.
+    | POST path when matchPath "/api/blog/snapshot" path = Some (Exact "/api/blog/snapshot") ->
+        Some (Server.Archive.handleSnapshot request env)
+    | GET path when path.StartsWith("/archive/") ->
+        Some (Server.Archive.handleArchiveServe (path.Substring(9)) env)
     | _ -> None
 
 [<ExportDefault>]

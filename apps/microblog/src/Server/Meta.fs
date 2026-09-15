@@ -73,7 +73,7 @@ let private truncate (n: int) (s: string) =
 
 /// Paths the SPA owns that are not items. Mirrors Handlers.reservedSlugs, which
 /// already refuses to mint a slug colliding with any of these.
-let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin"; "rhymes" ]
+let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin"; "rhymes"; "archive" ]
 
 let private metaTags (siteName: string) (fbPageUrl: string) (fbPageId: string) (title: string) (description: string) (image: string option) (url: string) =
     let tag prop content = sprintf """<meta property="%s" content="%s">""" prop (esc content)

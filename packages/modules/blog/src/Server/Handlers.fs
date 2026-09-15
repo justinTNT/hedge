@@ -37,7 +37,7 @@ let private isUuid (s: string) = uuidPattern.IsMatch(s)
 
 let private slugPattern = System.Text.RegularExpressions.Regex("^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
-let private reservedSlugs = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin" ]
+let private reservedSlugs = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin"; "archive" ]
 
 let private validateSlug (slug: string option) =
     match slug with

@@ -194,6 +194,11 @@ let allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/web
 [<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
 let private r2PutTyped (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) : JS.Promise<obj> = jsNative
 
+/// Store a string (e.g. captured/cleaned HTML) in R2 with a content type — the public
+/// counterpart to the internal typed put used by the blob-upload / rehost paths.
+[<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
+let r2PutText (blobs: R2Bucket) (key: string) (text: string) (contentType: string) : JS.Promise<obj> = jsNative
+
 /// Filenames become part of a URL path, so strip anything that would need
 /// percent-encoding (spaces especially) — keeps the stored key and the served
 /// URL identical, with no decode round-trip to get wrong.
