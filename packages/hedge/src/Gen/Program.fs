@@ -1336,15 +1336,36 @@ let wranglerQuery (remote: bool) (dbName: string) (sql: string) : Text.Json.Json
     // --env <site> is required for wrangler to resolve a per-[env.<site>] database.
     let args = sprintf "wrangler d1 execute %s%s %s --command \"%s\" --json" dbName (siteEnvFlag ()) target escaped
     let output = execProcess "npx" args
-    let doc = Text.Json.JsonDocument.Parse(output)
-    // wrangler's `d1 execute --json` shape varies by version/target: --local wraps
-    // the statement result in an array ([{ results, success, meta }]) while --remote
-    // returns the bare object ({ results, success, meta }). Accept both.
-    let root = doc.RootElement
-    let first =
-        if root.ValueKind = Text.Json.JsonValueKind.Array then root.[0] else root
-    let results = first.GetProperty("results")
-    [| for i in 0 .. results.GetArrayLength() - 1 -> results.[i] |]
+    // npx/wrangler can wrap the JSON in banners or update notices on stdout — notably on
+    // the FIRST (cold) invocation in a run, which used to crash the diff with a
+    // KeyNotFoundException. Isolate the JSON payload: from the first '[' or '{' to the
+    // matching last bracket, dropping any leading/trailing noise before parsing.
+    let jsonText =
+        let starts = [ output.IndexOf('['); output.IndexOf('{') ] |> List.filter (fun i -> i >= 0)
+        match starts with
+        | [] -> failwithf "wrangler returned no JSON (is it authenticated?). Raw output:\n%s" output
+        | _ ->
+            let s = List.min starts
+            let closeCh = if output.[s] = '[' then ']' else '}'
+            let e = output.LastIndexOf(closeCh)
+            if e > s then output.Substring(s, e - s + 1) else output.Substring(s)
+    let doc = Text.Json.JsonDocument.Parse(jsonText)
+    // wrangler's `d1 execute --json` shape varies by version/target: --local wraps the
+    // statement result in an array ([{ results, … }]), --remote has returned the bare
+    // object ({ results, … }), and some versions nest under { result: [ … ] }. Find the
+    // `results` array wherever it sits rather than assuming a fixed shape.
+    let rec findResults (el: Text.Json.JsonElement) : Text.Json.JsonElement option =
+        match el.ValueKind with
+        | Text.Json.JsonValueKind.Object ->
+            match el.TryGetProperty("results") with
+            | true, r when r.ValueKind = Text.Json.JsonValueKind.Array -> Some r
+            | _ -> el.EnumerateObject() |> Seq.tryPick (fun p -> findResults p.Value)
+        | Text.Json.JsonValueKind.Array ->
+            el.EnumerateArray() |> Seq.tryPick findResults
+        | _ -> None
+    match findResults doc.RootElement with
+    | Some results -> [| for i in 0 .. results.GetArrayLength() - 1 -> results.[i] |]
+    | None -> failwithf "wrangler JSON had no 'results' array. Payload:\n%s" jsonText
 
 let getCurrentTables (remote: bool) (dbName: string) : string list =
     let rows = wranglerQuery remote dbName "SELECT name FROM sqlite_master WHERE type='table'"
