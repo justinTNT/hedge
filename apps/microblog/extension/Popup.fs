@@ -122,9 +122,37 @@ chrome.scripting.executeScript({
       }
       selectionHtml = container.innerHTML;
     }
-    var images = Array.from(document.images)
-      .map(function(img) { return img.src; })
-      .filter(function(src) { return src.startsWith('http'); })
+    // Prefer the largest variant a responsive image actually offers: the rendered
+    // .src/.currentSrc is only the size the browser chose for this viewport (often a
+    // thumbnail), while srcset lists the full-res URLs -- including the <source>
+    // siblings of a <picture>. Fall back to .src when there's no srcset. These are
+    // real URLs the page serves, so no 403/404 from synthesizing a size.
+    function bestSrc(img) {
+      var best = img.currentSrc || img.src || '';
+      var bestW = 0;
+      var srcsets = [];
+      if (img.srcset) srcsets.push(img.srcset);
+      var p = img.parentElement;
+      if (p && p.tagName === 'PICTURE') {
+        Array.from(p.querySelectorAll('source')).forEach(function(s) { if (s.srcset) srcsets.push(s.srcset); });
+      }
+      srcsets.forEach(function(ss) {
+        ss.split(',').forEach(function(part) {
+          var seg = part.trim().split(/\s+/);
+          var url = seg[0];
+          var w = (seg[1] && seg[1].slice(-1) === 'w') ? parseInt(seg[1], 10) : 0;
+          if (url && w > bestW) { bestW = w; best = url; }
+        });
+      });
+      try { best = new URL(best, document.baseURI).href; } catch (e) {}
+      return best;
+    }
+    // The page's designated share image is usually the full-size lead -- offer it first.
+    var ogImg = '';
+    var ogMeta = document.querySelector('meta[property="og:image"], meta[name="og:image"], meta[name="twitter:image"]');
+    if (ogMeta && ogMeta.content) { try { ogImg = new URL(ogMeta.content, document.baseURI).href; } catch (e) { ogImg = ogMeta.content; } }
+    var images = (ogImg ? [ogImg] : []).concat(Array.from(document.images).map(bestSrc))
+      .filter(function(src) { return src && src.indexOf('http') === 0; })
       .filter(function(src, i, arr) { return arr.indexOf(src) === i; })
       .slice(0, 50);
     // The already-rendered DOM (post-JS) for the archive snapshot — what displayed now.
