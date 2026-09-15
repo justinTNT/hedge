@@ -187,7 +187,11 @@ let optIntToDb (v: int option) : obj =
 // Blob handlers (generic R2 operations)
 // ============================================================
 
-let allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/svg+xml" ]
+// AVIF is included because negotiating image CDNs (e.g. content.api.news) honor a
+// browser's `Accept: image/avif,...` and return AVIF to the extension's fetch — without
+// it, tier-1 capture of those images is rejected here and only the server (no Accept
+// preference, gets JPEG) can rehost them. Every current browser renders AVIF.
+let allowedImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"; "image/avif"; "image/svg+xml" ]
 
 /// put with the content type recorded, so handleBlobServe can serve it back with
 /// the right Content-Type (an <img> won't render an application/octet-stream).
@@ -228,7 +232,7 @@ let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<Wor
 
 /// Fallback content type from the key's extension, for objects stored without
 /// httpMetadata (e.g. uploads from before the type was recorded).
-[<Emit("(function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml'})[e]||'application/octet-stream';})($0)")>]
+[<Emit("(function(k){var e=(k.split('.').pop()||'').toLowerCase();return ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',svg:'image/svg+xml'})[e]||'application/octet-stream';})($0)")>]
 let private contentTypeFromKey (key: string) : string = jsNative
 
 let handleBlobServe (key: string) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
