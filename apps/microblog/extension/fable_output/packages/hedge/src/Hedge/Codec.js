@@ -32,13 +32,22 @@ function wrapperBaseType(fullname, generics) {
     else if (fullname.indexOf("Interface.SoftDelete") >= 0) {
         return "int";
     }
+    else if (fullname.indexOf("Interface.EditableDate") >= 0) {
+        return "int";
+    }
     else if (fullname.indexOf("Interface.ForeignKey") >= 0) {
+        return "string";
+    }
+    else if (fullname.indexOf("Interface.IdentityRef") >= 0) {
         return "string";
     }
     else if (fullname.indexOf("Interface.RichContent") >= 0) {
         return "string";
     }
     else if (fullname.indexOf("Interface.Link") >= 0) {
+        return "string";
+    }
+    else if (fullname.indexOf("Interface.Image") >= 0) {
         return "string";
     }
     else if (fullname.indexOf("Interface.Unique") >= 0) {

@@ -1,8 +1,8 @@
 import { Record } from "../../../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { record_type, obj_type, bool_type, array_type } from "../../../../fable_modules/fable-library-js.4.29.0/Reflection.js";
-import { map } from "../../../../fable_modules/fable-library-js.4.29.0/Option.js";
+import { some, map } from "../../../../fable_modules/fable-library-js.4.29.0/Option.js";
 import { printf, toText, substring } from "../../../../fable_modules/fable-library-js.4.29.0/String.js";
-import { map as map_1, tryFind } from "../../../../fable_modules/fable-library-js.4.29.0/Array.js";
+import { item, map as map_1, tryFind } from "../../../../fable_modules/fable-library-js.4.29.0/Array.js";
 import { FSharpSet__Contains, ofSeq } from "../../../../fable_modules/fable-library-js.4.29.0/Set.js";
 import { comparePrimitives } from "../../../../fable_modules/fable-library-js.4.29.0/Util.js";
 import { PromiseBuilder__Delay_62FBFDE1, PromiseBuilder__Run_212F1D4B } from "../../../../fable_modules/Fable.Promise.3.2.0/Promise.fs.js";
@@ -75,7 +75,7 @@ export function optIntToDb(v) {
     }
 }
 
-const allowedImageTypes = ofSeq(["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"], {
+export const allowedImageTypes = ofSeq(["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"], {
     Compare: comparePrimitives,
 });
 
@@ -161,5 +161,35 @@ export function hmacSha256(secret, message) {
         const keyData = new TextEncoder().encode(secret);
         return (crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])).then((_arg) => ((crypto.subtle.sign('HMAC', _arg, (new TextEncoder().encode(message)))).then((_arg_1) => (Promise.resolve(Array.from(new Uint8Array(_arg_1)).map(b => b.toString(16).padStart(2, '0')).join(''))))));
     }));
+}
+
+/**
+ * Fetch a remote image and copy it into R2, returning a local "/blobs/<key>" path (or the
+ * original url on any failure). Content-addressed by source URL (`keyPrefix/<hash>`), so
+ * re-hosting the same URL is idempotent and dedup'd — which keeps handleBlobServe's immutable
+ * cache header honest. Best-effort: a bad/non-image/unreachable URL returns the url unchanged,
+ * so a flaky third-party host never breaks the caller. `allowed` gates the content type.
+ * The shared primitive behind avatar caching and item-image rehosting.
+ */
+export function rehostRemoteImage(blobs, keyPrefix, allowed, url) {
+    return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => ((((url == null) ? true : (url === "")) ? true : !url.startsWith("https://")) ? (Promise.resolve(url)) : (PromiseBuilder__Delay_62FBFDE1(promise, () => (hmacSha256("hedge-avatar", url).then((_arg) => {
+        let key;
+        const arg_1 = substring(_arg, 0, 32);
+        key = toText(printf("%s/%s"))(keyPrefix)(arg_1);
+        return blobs.get(key).then((_arg_1) => ((_arg_1 == null) ? ((fetch(url, {})).then((_arg_2) => {
+            const response = _arg_2;
+            if (!response.ok) {
+                return Promise.resolve(url);
+            }
+            else {
+                const raw = response.headers.get("content-type");
+                const contentType = (raw == null) ? "" : item(0, raw.split(";")).trim().toLowerCase();
+                return !FSharpSet__Contains(allowed, contentType) ? (Promise.resolve(url)) : ((response.arrayBuffer()).then((_arg_3) => ((blobs.put(key, _arg_3, { httpMetadata: { contentType: contentType } })).then((_arg_4) => (Promise.resolve(toText(printf("/blobs/%s"))(key)))))));
+            }
+        })) : (Promise.resolve(toText(printf("/blobs/%s"))(key)))));
+    }))).catch((_arg_5) => {
+        console.error(some("rehost image failed: " + _arg_5.message));
+        return Promise.resolve(url);
+    })))));
 }
 

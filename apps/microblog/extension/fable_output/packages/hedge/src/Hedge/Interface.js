@@ -61,6 +61,21 @@ export function SoftDelete_$reflection() {
     return union_type("Hedge.Interface.SoftDelete", [], SoftDelete, () => [[["Item", int32_type]]]);
 }
 
+export class EditableDate extends Union {
+    constructor(Item) {
+        super();
+        this.tag = 0;
+        this.fields = [Item];
+    }
+    cases() {
+        return ["EditableDate"];
+    }
+}
+
+export function EditableDate_$reflection() {
+    return union_type("Hedge.Interface.EditableDate", [], EditableDate, () => [[["Item", int32_type]]]);
+}
+
 export class ForeignKey$1 extends Union {
     constructor(Item) {
         super();
@@ -121,6 +136,21 @@ export function Link_$reflection() {
     return union_type("Hedge.Interface.Link", [], Link, () => [[["Item", string_type]]]);
 }
 
+export class Image extends Union {
+    constructor(Item) {
+        super();
+        this.tag = 0;
+        this.fields = [Item];
+    }
+    cases() {
+        return ["Image"];
+    }
+}
+
+export function Image_$reflection() {
+    return union_type("Hedge.Interface.Image", [], Image, () => [[["Item", string_type]]]);
+}
+
 export class Unique$1 extends Union {
     constructor(Item) {
         super();
@@ -170,19 +200,49 @@ export function Get$1_$reflection(gen0) {
     return union_type("Hedge.Interface.Get`1", [gen0], Get$1, () => [[["Item", string_type]]]);
 }
 
-export class GetOne$1 extends Union {
+export class GetQuery$2 extends Union {
     constructor(Item) {
         super();
         this.tag = 0;
         this.fields = [Item];
     }
     cases() {
-        return ["GetOne"];
+        return ["GetQuery"];
     }
 }
 
-export function GetOne$1_$reflection(gen0) {
-    return union_type("Hedge.Interface.GetOne`1", [gen0], GetOne$1, () => [[["Item", lambda_type(string_type, string_type)]]]);
+export function GetQuery$2_$reflection(gen0, gen1) {
+    return union_type("Hedge.Interface.GetQuery`2", [gen0, gen1], GetQuery$2, () => [[["Item", string_type]]]);
+}
+
+export class GetBy$1 extends Union {
+    constructor(Item) {
+        super();
+        this.tag = 0;
+        this.fields = [Item];
+    }
+    cases() {
+        return ["GetBy"];
+    }
+}
+
+export function GetBy$1_$reflection(gen0) {
+    return union_type("Hedge.Interface.GetBy`1", [gen0], GetBy$1, () => [[["Item", lambda_type(string_type, string_type)]]]);
+}
+
+export class GetByQuery$2 extends Union {
+    constructor(Item) {
+        super();
+        this.tag = 0;
+        this.fields = [Item];
+    }
+    cases() {
+        return ["GetByQuery"];
+    }
+}
+
+export function GetByQuery$2_$reflection(gen0, gen1) {
+    return union_type("Hedge.Interface.GetByQuery`2", [gen0, gen1], GetByQuery$2, () => [[["Item", lambda_type(string_type, string_type)]]]);
 }
 
 export class Post$2 extends Union {

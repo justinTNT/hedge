@@ -31,22 +31,26 @@ export function encodeFieldAttr(fa) {
         case 3:
             return "softDelete";
         case 4:
-            return object([["foreignKey", fa.fields[0]]]);
+            return "editableDate";
         case 5:
-            return "richContent";
+            return object([["foreignKey", fa.fields[0]]]);
         case 6:
-            return "link";
-        case 10:
-            return "unique";
+            return "richContent";
         case 7:
-            return "required";
+            return "link";
         case 8:
-            return "trim";
-        case 9:
-            return "inject";
-        case 11:
-            return object([["minLength", fa.fields[0]]]);
+            return "image";
         case 12:
+            return "unique";
+        case 9:
+            return "required";
+        case 10:
+            return "trim";
+        case 11:
+            return "inject";
+        case 13:
+            return object([["minLength", fa.fields[0]]]);
+        case 14:
             return object([["maxLength", fa.fields[0]]]);
         default:
             return "primaryKey";
@@ -118,24 +122,28 @@ export const decodeFieldAttr = (path_10) => ((value_9) => oneOf(ofArray([(path_2
             return (arg10$0040_2) => ((arg20$0040_2) => succeed(new FieldAttr(2, []), arg10$0040_2, arg20$0040_2));
         case "softDelete":
             return (arg10$0040_3) => ((arg20$0040_3) => succeed(new FieldAttr(3, []), arg10$0040_3, arg20$0040_3));
+        case "editableDate":
+            return (arg10$0040_4) => ((arg20$0040_4) => succeed(new FieldAttr(4, []), arg10$0040_4, arg20$0040_4));
         case "richContent":
-            return (arg10$0040_4) => ((arg20$0040_4) => succeed(new FieldAttr(5, []), arg10$0040_4, arg20$0040_4));
-        case "link":
             return (arg10$0040_5) => ((arg20$0040_5) => succeed(new FieldAttr(6, []), arg10$0040_5, arg20$0040_5));
+        case "link":
+            return (arg10$0040_6) => ((arg20$0040_6) => succeed(new FieldAttr(7, []), arg10$0040_6, arg20$0040_6));
+        case "image":
+            return (arg10$0040_7) => ((arg20$0040_7) => succeed(new FieldAttr(8, []), arg10$0040_7, arg20$0040_7));
         case "unique":
-            return (arg10$0040_6) => ((arg20$0040_6) => succeed(new FieldAttr(10, []), arg10$0040_6, arg20$0040_6));
+            return (arg10$0040_8) => ((arg20$0040_8) => succeed(new FieldAttr(12, []), arg10$0040_8, arg20$0040_8));
         case "required":
-            return (arg10$0040_7) => ((arg20$0040_7) => succeed(new FieldAttr(7, []), arg10$0040_7, arg20$0040_7));
-        case "trim":
-            return (arg10$0040_8) => ((arg20$0040_8) => succeed(new FieldAttr(8, []), arg10$0040_8, arg20$0040_8));
-        case "inject":
             return (arg10$0040_9) => ((arg20$0040_9) => succeed(new FieldAttr(9, []), arg10$0040_9, arg20$0040_9));
+        case "trim":
+            return (arg10$0040_10) => ((arg20$0040_10) => succeed(new FieldAttr(10, []), arg10$0040_10, arg20$0040_10));
+        case "inject":
+            return (arg10$0040_11) => ((arg20$0040_11) => succeed(new FieldAttr(11, []), arg10$0040_11, arg20$0040_11));
         default: {
             const msg = toText(printf("Unknown field attr: %s"))(s);
-            return (path_1) => ((arg20$0040_10) => fail(msg, path_1, arg20$0040_10));
+            return (path_1) => ((arg20$0040_12) => fail(msg, path_1, arg20$0040_12));
         }
     }
-}), string, path_2, value_1)), (path_5) => ((value_4) => map_1((table) => (new FieldAttr(4, [table])), (path_4, value_3) => field("foreignKey", string, path_4, value_3), path_5, value_4)), (path_7) => ((value_6) => map_1((Item) => (new FieldAttr(11, [Item])), (path_6, value_5) => field("minLength", uncurry2(int), path_6, value_5), path_7, value_6)), (path_9) => ((value_8) => map_1((Item_1) => (new FieldAttr(12, [Item_1])), (path_8, value_7) => field("maxLength", uncurry2(int), path_8, value_7), path_9, value_8))]), path_10, value_9));
+}), string, path_2, value_1)), (path_5) => ((value_4) => map_1((table) => (new FieldAttr(5, [table])), (path_4, value_3) => field("foreignKey", string, path_4, value_3), path_5, value_4)), (path_7) => ((value_6) => map_1((Item) => (new FieldAttr(13, [Item])), (path_6, value_5) => field("minLength", uncurry2(int), path_6, value_5), path_7, value_6)), (path_9) => ((value_8) => map_1((Item_1) => (new FieldAttr(14, [Item_1])), (path_8, value_7) => field("maxLength", uncurry2(int), path_8, value_7), path_9, value_8))]), path_10, value_9));
 
 export const decodeTypeAttr = (path_2) => ((value_1) => andThen(uncurry3((s) => {
     switch (s) {

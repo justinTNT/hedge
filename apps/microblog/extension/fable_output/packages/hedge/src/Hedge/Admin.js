@@ -1,17 +1,17 @@
-import { Record } from "../../../../fable_modules/fable-library-js.4.29.0/Types.js";
+import { toString, Record } from "../../../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { lambda_type, class_type, record_type, list_type, bool_type, string_type } from "../../../../fable_modules/fable-library-js.4.29.0/Reflection.js";
 import { TypeSchema_$reflection } from "./Schema.js";
 import { printf, toText, join } from "../../../../fable_modules/fable-library-js.4.29.0/String.js";
 import { item, map as map_1, mapIndexed } from "../../../../fable_modules/fable-library-js.4.29.0/Array.js";
 import { isUpper } from "../../../../fable_modules/fable-library-js.4.29.0/Char.js";
-import { toString, list as list_1, nil, object } from "../../../../fable_modules/Thoth.Json.10.2.0/Encode.fs.js";
-import { tryFind as tryFind_1, singleton, append, toArray, ofArray, empty, map } from "../../../../fable_modules/fable-library-js.4.29.0/List.js";
+import { toString as toString_1, list as list_2, nil, object } from "../../../../fable_modules/Thoth.Json.10.2.0/Encode.fs.js";
+import { tryFind as tryFind_1, singleton, append, toArray, tryPick, ofArray, empty, map } from "../../../../fable_modules/fable-library-js.4.29.0/List.js";
 import { PromiseBuilder__Delay_62FBFDE1, PromiseBuilder__Run_212F1D4B } from "../../../../fable_modules/Fable.Promise.3.2.0/Promise.fs.js";
 import { promise } from "../../../../fable_modules/Fable.Promise.3.2.0/PromiseImpl.fs.js";
 import { ofList, tryFind } from "../../../../fable_modules/fable-library-js.4.29.0/Map.js";
-import { defaultArg, value as value_4 } from "../../../../fable_modules/fable-library-js.4.29.0/Option.js";
-import { value as value_5, keyValuePairs, fromString, string, fromValue } from "../../../../fable_modules/Thoth.Json.10.2.0/Decode.fs.js";
-import { equals, comparePrimitives } from "../../../../fable_modules/fable-library-js.4.29.0/Util.js";
+import { defaultArg, map as map_2, value as value_6 } from "../../../../fable_modules/fable-library-js.4.29.0/Option.js";
+import { value as value_7, keyValuePairs, fromString, int, string, bool, fromValue } from "../../../../fable_modules/Thoth.Json.10.2.0/Decode.fs.js";
+import { equals, comparePrimitives, uncurry2 } from "../../../../fable_modules/fable-library-js.4.29.0/Util.js";
 import { unauthorized, RouteMatch, matchPath, badRequest, notFound, okJson } from "./Router.js";
 import { encodeTypeSchema } from "./SchemaCodec.js";
 
@@ -70,20 +70,25 @@ function toSnakeCase(s) {
     }, s.split("")));
 }
 
+function coerceBool(v) {
+    const s = toString(v).toLowerCase();
+    return !((((s === "0") ? true : (s === "false")) ? true : (s === "")) ? true : (s === "null"));
+}
+
 function rowToJson(schema, row) {
     return object(map((field) => {
         let matchValue;
         const col = toSnakeCase(field.Name);
         const jsonKey = camelCase(field.Name);
         const v = row[col];
-        return [jsonKey, (matchValue = field.Type, (matchValue.tag === 1) ? ((v == null) ? nil : v) : ((matchValue.tag === 2) ? ((v == null) ? nil : v) : ((matchValue.tag === 3) ? ((v == null) ? nil : v) : ((matchValue.tag === 4) ? ((matchValue.fields[0].tag === 0) ? list_1(empty()) : ((v == null) ? nil : v)) : ((v == null) ? nil : v)))))];
+        return [jsonKey, (matchValue = field.Type, (matchValue.tag === 1) ? ((v == null) ? nil : v) : ((matchValue.tag === 2) ? ((v == null) ? nil : coerceBool(v)) : ((matchValue.tag === 3) ? ((matchValue.fields[0].tag === 1) ? ((v == null) ? nil : v) : ((matchValue.fields[0].tag === 2) ? ((v == null) ? nil : coerceBool(v)) : ((v == null) ? nil : v))) : ((matchValue.tag === 4) ? ((matchValue.fields[0].tag === 0) ? list_2(empty()) : ((v == null) ? nil : v)) : ((v == null) ? nil : v)))))];
     }, schema.Fields));
 }
 
 function genericList(db, table) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => (db.prepare(table.SelectAll).all().then((_arg) => {
         const items = ofArray(map_1((row) => rowToJson(table.Schema, row), _arg.results));
-        return Promise.resolve(toString(0, list_1(items)));
+        return Promise.resolve(toString_1(0, list_2(items)));
     }))));
 }
 
@@ -97,40 +102,109 @@ function genericGet(db, table, id) {
             }
             else {
                 const json = rowToJson(table.Schema, item(0, result.results));
-                return Promise.resolve(toString(0, json));
+                return Promise.resolve(toString_1(0, json));
             }
         });
     }));
 }
 
 function mutableArgs(table, pairMap) {
-    return map((fieldName) => {
-        const matchValue = tryFind(camelCase(fieldName), pairMap);
-        if (matchValue == null) {
-            return null;
-        }
-        else {
-            const v = value_4(matchValue);
-            const matchValue_1 = fromValue("", string, v);
-            if (matchValue_1.tag === 0) {
-                return matchValue_1.fields[0];
+    const strip = (t_mut) => {
+        strip:
+        while (true) {
+            const t = t_mut;
+            if (t.tag === 3) {
+                t_mut = t.fields[0];
+                continue strip;
             }
             else {
-                const s_1 = toString(0, v);
-                if (s_1 === "null") {
-                    return null;
+                return t;
+            }
+            break;
+        }
+    };
+    return map((fieldName) => {
+        const matchValue = tryFind(camelCase(fieldName), pairMap);
+        if (matchValue != null) {
+            const v = value_6(matchValue);
+            const matchValue_1 = map_2(strip, tryPick((f) => {
+                if (f.Name === fieldName) {
+                    return f.Type;
                 }
                 else {
-                    return s_1;
+                    return undefined;
+                }
+            }, table.Schema.Fields));
+            let matchResult;
+            if (matchValue_1 != null) {
+                switch (matchValue_1.tag) {
+                    case 2: {
+                        matchResult = 0;
+                        break;
+                    }
+                    case 1: {
+                        matchResult = 1;
+                        break;
+                    }
+                    default:
+                        matchResult = 2;
                 }
             }
+            else {
+                matchResult = 2;
+            }
+            switch (matchResult) {
+                case 0: {
+                    const matchValue_2 = fromValue("", bool, v);
+                    if (matchValue_2.tag === 0) {
+                        return matchValue_2.fields[0] ? 1 : 0;
+                    }
+                    else {
+                        const matchValue_3 = fromValue("", string, v);
+                        if (matchValue_3.tag === 0) {
+                            const s_1 = matchValue_3.fields[0].toLowerCase();
+                            return ((s_1 === "true") ? true : (s_1 === "1")) ? 1 : 0;
+                        }
+                        else {
+                            return null;
+                        }
+                    }
+                }
+                case 1: {
+                    const matchValue_4 = fromValue("", uncurry2(int), v);
+                    if (matchValue_4.tag === 0) {
+                        return matchValue_4.fields[0];
+                    }
+                    else {
+                        return null;
+                    }
+                }
+                default: {
+                    const matchValue_5 = fromValue("", string, v);
+                    if (matchValue_5.tag === 0) {
+                        return matchValue_5.fields[0];
+                    }
+                    else {
+                        const s_3 = toString_1(0, v);
+                        if (s_3 === "null") {
+                            return null;
+                        }
+                        else {
+                            return s_3;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            return null;
         }
     }, table.MutableFields);
 }
 
 function genericCreate(db, table, body) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
-        const matchValue = fromString((path, value) => keyValuePairs(value_5, path, value), body);
+        const matchValue = fromString((path, value) => keyValuePairs(value_7, path, value), body);
         if (matchValue.tag === 0) {
             const id = crypto.randomUUID();
             const now = (Math.floor(Date.now() / 1000)) | 0;
@@ -148,7 +222,7 @@ function genericCreate(db, table, body) {
 
 function genericUpdate(db, table, id, body) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
-        const matchValue = fromString((path, value) => keyValuePairs(value_5, path, value), body);
+        const matchValue = fromString((path, value) => keyValuePairs(value_7, path, value), body);
         if (matchValue.tag === 0) {
             const allArgs = toArray(append(mutableArgs(table, ofList(matchValue.fields[0], {
                 Compare: comparePrimitives,
@@ -172,7 +246,7 @@ function genericDelete(db, table, id) {
 }
 
 function typesResponse(config) {
-    return okJson(toString(0, object([["types", list_1(map((t) => object([["name", t.Name], ["schema", encodeTypeSchema(t.Schema)]]), config.Tables))]])));
+    return okJson(toString_1(0, object([["types", list_2(map((t) => object([["name", t.Name], ["schema", encodeTypeSchema(t.Schema)]]), config.Tables))]])));
 }
 
 function listResponse(db, table) {

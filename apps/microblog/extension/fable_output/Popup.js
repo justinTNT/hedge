@@ -1,4 +1,4 @@
-import { int32ToString, equals, defaultOf, disposeSafe, getEnumerator, createAtom } from "./fable_modules/fable-library-js.4.29.0/Util.js";
+import { uncurry2, int32ToString, equals, defaultOf, disposeSafe, getEnumerator, createAtom } from "./fable_modules/fable-library-js.4.29.0/Util.js";
 import { toString, Union, Record } from "./fable_modules/fable-library-js.4.29.0/Types.js";
 import { array_type, union_type, bool_type, lambda_type, unit_type, record_type, string_type } from "./fable_modules/fable-library-js.4.29.0/Reflection.js";
 import { singleton, append, ofArray, indexed, filter, item as item_1, length, isEmpty, map, toArray, empty } from "./fable_modules/fable-library-js.4.29.0/List.js";
@@ -8,8 +8,12 @@ import { promise } from "./fable_modules/Fable.Promise.3.2.0/PromiseImpl.fs.js";
 import { map as map_1, item } from "./fable_modules/fable-library-js.4.29.0/Array.js";
 import { trimEnd, isNullOrEmpty } from "./fable_modules/fable-library-js.4.29.0/String.js";
 import { max } from "./fable_modules/fable-library-js.4.29.0/Double.js";
-import { SubmitItem_Request } from "./packages/modules/blog/src/Models/Api.js";
-import { blogSubmitItem } from "./src/Client/generated/ClientGen.js";
+import { toString as toString_1 } from "./fable_modules/Thoth.Json.10.2.0/Encode.fs.js";
+import { encodeRecord } from "./packages/hedge/src/Hedge/Codec.js";
+import { SubmitItem_Request, SubmitItem_Request_$reflection } from "./packages/modules/blog/src/Models/Api.js";
+import { postJson } from "./packages/hedge-extension/Api.js";
+import { Decode_blogSubmitItemResponse } from "./packages/modules/blog/generated/Codecs.js";
+import { succeed } from "./fable_modules/Thoth.Json.10.2.0/Decode.fs.js";
 import { parse } from "./fable_modules/fable-library-js.4.29.0/Int32.js";
 
 export let extractEditor = createAtom(undefined);
@@ -19,6 +23,8 @@ export let commentEditor = createAtom(undefined);
 export let selectedImage = createAtom(undefined);
 
 export let pageUrl = createAtom("");
+
+export let documentHtml = createAtom("");
 
 export class Site extends Record {
     constructor(Name, Url, Key) {
@@ -157,25 +163,26 @@ export function createEditorInEl(contentEl, toolbarEl, initialContent) {
 }
 
 export class PageData extends Record {
-    constructor(Title, Url, SelectionHtml, SelectionText, Images) {
+    constructor(Title, Url, SelectionHtml, SelectionText, Images, DocumentHtml) {
         super();
         this.Title = Title;
         this.Url = Url;
         this.SelectionHtml = SelectionHtml;
         this.SelectionText = SelectionText;
         this.Images = Images;
+        this.DocumentHtml = DocumentHtml;
     }
 }
 
 export function PageData_$reflection() {
-    return record_type("Extension.Popup.PageData", [], PageData, () => [["Title", string_type], ["Url", string_type], ["SelectionHtml", string_type], ["SelectionText", string_type], ["Images", array_type(string_type)]]);
+    return record_type("Extension.Popup.PageData", [], PageData, () => [["Title", string_type], ["Url", string_type], ["SelectionHtml", string_type], ["SelectionText", string_type], ["Images", array_type(string_type)], ["DocumentHtml", string_type]]);
 }
 
 export function extractPageData() {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => ((chrome.tabs.query({ active: true, currentWindow: true })).then((_arg) => {
         const tabs = _arg;
         if (tabs.length === 0) {
-            return Promise.resolve(new PageData("", "", "", "", []));
+            return Promise.resolve(new PageData("", "", "", "", [], ""));
         }
         else {
             const tab = item(0, tabs);
@@ -202,7 +209,9 @@ export function extractPageData() {
       .filter(function(src) { return src.startsWith('http'); })
       .filter(function(src, i, arr) { return arr.indexOf(src) === i; })
       .slice(0, 50);
-    return { selectionHtml: selectionHtml, selectionText: selectionText, images: images };
+    // The already-rendered DOM (post-JS) for the archive snapshot — what displayed now.
+    var documentHtml = document.documentElement ? document.documentElement.outerHTML : '';
+    return { selectionHtml: selectionHtml, selectionText: selectionText, images: images, documentHtml: documentHtml };
   }
 })
 ).then((_arg_1) => (Promise.resolve(_arg_1))))).catch((_arg_2) => (Promise.resolve(undefined)))))).then((_arg_3) => {
@@ -211,17 +220,18 @@ export function extractPageData() {
                     const r_1 = results;
                     const data = (r_1.length > 0) ? item(0, r_1).result : defaultOf();
                     if (data == null) {
-                        return Promise.resolve(new PageData(tabTitle, tabUrl, "", "", []));
+                        return Promise.resolve(new PageData(tabTitle, tabUrl, "", "", [], ""));
                     }
                     else {
                         const sh = (data.selectionHtml == null) ? "" : toString(data.selectionHtml);
                         const st = (data.selectionText == null) ? "" : toString(data.selectionText);
                         const imgs = (data.images == null) ? [] : data.images;
-                        return Promise.resolve(new PageData(tabTitle, tabUrl, sh, st, imgs));
+                        const dh = (data.documentHtml == null) ? "" : toString(data.documentHtml);
+                        return Promise.resolve(new PageData(tabTitle, tabUrl, sh, st, imgs, dh));
                     }
                 }
                 else {
-                    return Promise.resolve(new PageData(tabTitle, tabUrl, "", "", []));
+                    return Promise.resolve(new PageData(tabTitle, tabUrl, "", "", [], ""));
                 }
             });
         }
@@ -390,6 +400,29 @@ export function toggleConfig() {
     }
 }
 
+/**
+ * Ask the background worker to rehost the chosen image to R2 (it holds the
+ * host permission needed to read cross-origin image bytes). Best-effort:
+ * returns None on any failure so submit falls back to the original URL, which
+ * the server then tries to rehost itself (tier 2) or keeps as-is (tier 3).
+ */
+export function captureImageToBlob(url) {
+    return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => (PromiseBuilder__Delay_62FBFDE1(promise, () => ((chrome.runtime.sendMessage({
+        type: "captureImage",
+        url: url,
+    })).then((_arg) => {
+        const raw = _arg;
+        if (raw.ok) {
+            const data = raw.data;
+            const blobUrl = (data.url == null) ? "" : toString(data.url);
+            return Promise.resolve((blobUrl !== "") ? blobUrl : undefined);
+        }
+        else {
+            return Promise.resolve(undefined);
+        }
+    }))).catch((_arg_1) => (Promise.resolve(undefined))))));
+}
+
 export function submit() {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
         let array_1;
@@ -417,21 +450,42 @@ export function submit() {
                 const slugRaw = elAs("slug").value.trim();
                 const tagsRaw = elAs("tags").value;
                 const tags = ofArray((array_1 = map_1((t_1) => t_1.trim(), tagsRaw.split(",")), array_1.filter((t_2) => (t_2 !== ""))));
-                const req = new SubmitItem_Request(title, (slugRaw !== "") ? slugRaw : undefined, (pageUrl() !== "") ? pageUrl() : undefined, selectedImage(), map_2((j) => JSON.stringify(j), extractJson), JSON.stringify(commentJson), tags);
                 const btn = elAs("submitBtn");
                 btn.disabled = true;
                 setStatus("Submitting…", "");
-                return blogSubmitItem(req).then((_arg) => {
-                    const result = _arg;
-                    btn.disabled = false;
-                    if (result.tag === 1) {
-                        setStatus(result.fields[0], "error");
-                        return Promise.resolve();
+                return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
+                    if (selectedImage() == null) {
+                        return Promise.resolve(undefined);
                     }
                     else {
-                        setStatus("Submitted!", "success");
-                        return Promise.resolve();
+                        const url = selectedImage();
+                        return captureImageToBlob(url).then((_arg) => (Promise.resolve(defaultArg(_arg, url))));
                     }
+                })).then((_arg_1) => {
+                    const body = toString_1(0, encodeRecord(SubmitItem_Request_$reflection(), new SubmitItem_Request(title, (slugRaw !== "") ? slugRaw : undefined, (pageUrl() !== "") ? pageUrl() : undefined, _arg_1, map_2((j) => JSON.stringify(j), extractJson), JSON.stringify(commentJson), tags)));
+                    return postJson("/api/blog/item", body, uncurry2(Decode_blogSubmitItemResponse)).then((_arg_2) => {
+                        const result = _arg_2;
+                        btn.disabled = false;
+                        if (result.tag === 1) {
+                            setStatus(result.fields[0], "error");
+                            return Promise.resolve();
+                        }
+                        else {
+                            setStatus("Submitted!", "success");
+                            if (documentHtml() !== "") {
+                                const snapshotBody = {
+                                    itemId: result.fields[0].Item.Id,
+                                    sourceUrl: pageUrl(),
+                                    html: documentHtml(),
+                                };
+                                postJson("/api/blog/snapshot", JSON.stringify(snapshotBody), (arg10$0040, arg20$0040) => succeed(undefined, arg10$0040, arg20$0040));
+                                return Promise.resolve();
+                            }
+                            else {
+                                return Promise.resolve();
+                            }
+                        }
+                    });
                 });
             }
         }
@@ -481,6 +535,7 @@ export function init() {
                 elAs("title").value = pageData.Title;
                 el("pageUrl").textContent = ((pageData.Url !== "") ? pageData.Url : "—");
                 pageUrl(pageData.Url);
+                documentHtml(pageData.DocumentHtml);
                 const extractContent = htmlToTipTapJson(pageData.SelectionHtml);
                 extractEditor(some(createEditorInEl(el("extractEditor"), el("extractToolbar"), extractContent)));
                 commentEditor(some(createEditorInEl(el("commentEditor"), el("commentToolbar"), undefined)));

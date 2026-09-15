@@ -5,25 +5,28 @@ import { map } from "../../../../fable_modules/fable-library-js.4.29.0/Array.js"
 import { comparePrimitives } from "../../../../fable_modules/fable-library-js.4.29.0/Util.js";
 
 export class TenantConfig extends Record {
-    constructor(Slug, Title, Logo, Features) {
+    constructor(Slug, Title, Logo, Locale, Features, InfoUrl, InfoLabel) {
         super();
         this.Slug = Slug;
         this.Title = Title;
         this.Logo = Logo;
+        this.Locale = Locale;
         this.Features = Features;
+        this.InfoUrl = InfoUrl;
+        this.InfoLabel = InfoLabel;
     }
 }
 
 export function TenantConfig_$reflection() {
-    return record_type("Hedge.Tenant.TenantConfig", [], TenantConfig, () => [["Slug", string_type], ["Title", string_type], ["Logo", string_type], ["Features", class_type("Microsoft.FSharp.Collections.FSharpSet`1", [string_type])]]);
+    return record_type("Hedge.Tenant.TenantConfig", [], TenantConfig, () => [["Slug", string_type], ["Title", string_type], ["Logo", string_type], ["Locale", string_type], ["Features", class_type("Microsoft.FSharp.Collections.FSharpSet`1", [string_type])], ["InfoUrl", string_type], ["InfoLabel", string_type]]);
 }
 
-export const config = new TenantConfig((window.SITE_SLUG || ''), (window.SITE_TITLE || ''), (window.SITE_LOGO || ''), ofArray((() => {
+export const config = new TenantConfig((window.SITE_SLUG || ''), (window.SITE_TITLE || ''), (window.SITE_LOGO || ''), (window.SITE_LOCALE || ''), ofArray((() => {
     const array_1 = map((s) => s.trim(), ((window.SITE_FEATURES || '')).split(","));
     return array_1.filter((s_1) => (s_1 !== ""));
 })(), {
     Compare: comparePrimitives,
-}));
+}), (window.SITE_INFO_URL || ''), (window.SITE_INFO_LABEL || ''));
 
 /**
  * Is a per-tenant feature enabled? (from window.SITE_FEATURES, a comma list)

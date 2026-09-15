@@ -12,12 +12,12 @@ export class FieldAttr extends Union {
         this.fields = fields;
     }
     cases() {
-        return ["PrimaryKey", "CreateTimestamp", "UpdateTimestamp", "SoftDelete", "ForeignKey", "RichContent", "Link", "Required", "Trim", "Inject", "Unique", "MinLength", "MaxLength"];
+        return ["PrimaryKey", "CreateTimestamp", "UpdateTimestamp", "SoftDelete", "EditableDate", "ForeignKey", "RichContent", "Link", "Image", "Required", "Trim", "Inject", "Unique", "MinLength", "MaxLength"];
     }
 }
 
 export function FieldAttr_$reflection() {
-    return union_type("Hedge.Schema.FieldAttr", [], FieldAttr, () => [[], [], [], [], [["table", string_type]], [], [], [], [], [], [], [["Item", int32_type]], [["Item", int32_type]]]);
+    return union_type("Hedge.Schema.FieldAttr", [], FieldAttr, () => [[], [], [], [], [], [["table", string_type]], [], [], [], [], [], [], [], [["Item", int32_type]], [["Item", int32_type]]]);
 }
 
 export class TypeAttr extends Union {
@@ -85,22 +85,26 @@ export function showAttr(_arg) {
         case 3:
             return "SoftDelete";
         case 4:
-            return toText(printf("ForeignKey(%s)"))(_arg.fields[0]);
+            return "EditableDate";
         case 5:
-            return "RichContent";
+            return toText(printf("ForeignKey(%s)"))(_arg.fields[0]);
         case 6:
-            return "Link";
-        case 10:
-            return "Unique";
+            return "RichContent";
         case 7:
-            return "Required";
+            return "Link";
         case 8:
-            return "Trim";
-        case 9:
-            return "Inject";
-        case 11:
-            return toText(printf("MinLength(%d)"))(_arg.fields[0]);
+            return "Image";
         case 12:
+            return "Unique";
+        case 9:
+            return "Required";
+        case 10:
+            return "Trim";
+        case 11:
+            return "Inject";
+        case 13:
+            return toText(printf("MinLength(%d)"))(_arg.fields[0]);
+        case 14:
             return toText(printf("MaxLength(%d)"))(_arg.fields[0]);
         default:
             return "PrimaryKey";
@@ -144,17 +148,26 @@ function classifyType(t) {
     else if (fn.indexOf("Interface.SoftDelete") >= 0) {
         return [new FieldType(1, []), new FieldAttr(3, [])];
     }
+    else if (fn.indexOf("Interface.EditableDate") >= 0) {
+        return [new FieldType(1, []), new FieldAttr(4, [])];
+    }
     else if (fn.indexOf("Interface.ForeignKey") >= 0) {
-        return [new FieldType(0, []), new FieldAttr(4, [(gs.length > 0) ? ((g_1 = (item(0, gs).fullname), (i = (g_1.lastIndexOf(".") | 0), (i >= 0) ? substring(g_1, i + 1) : g_1))) : "?"])];
+        return [new FieldType(0, []), new FieldAttr(5, [(gs.length > 0) ? ((g_1 = (item(0, gs).fullname), (i = (g_1.lastIndexOf(".") | 0), (i >= 0) ? substring(g_1, i + 1) : g_1))) : "?"])];
+    }
+    else if (fn.indexOf("Interface.IdentityRef") >= 0) {
+        return [new FieldType(0, []), new FieldAttr(5, ["Identity"])];
     }
     else if (fn.indexOf("Interface.RichContent") >= 0) {
-        return [new FieldType(0, []), new FieldAttr(5, [])];
-    }
-    else if (fn.indexOf("Interface.Link") >= 0) {
         return [new FieldType(0, []), new FieldAttr(6, [])];
     }
+    else if (fn.indexOf("Interface.Link") >= 0) {
+        return [new FieldType(0, []), new FieldAttr(7, [])];
+    }
+    else if (fn.indexOf("Interface.Image") >= 0) {
+        return [new FieldType(0, []), new FieldAttr(8, [])];
+    }
     else if (fn.indexOf("Interface.Unique") >= 0) {
-        return [(gs.length > 0) ? ((g_2 = (item(0, gs).fullname), (g_2.indexOf("Int32") >= 0) ? (new FieldType(1, [])) : (new FieldType(0, [])))) : (new FieldType(0, [])), new FieldAttr(10, [])];
+        return [(gs.length > 0) ? ((g_2 = (item(0, gs).fullname), (g_2.indexOf("Int32") >= 0) ? (new FieldType(1, [])) : (new FieldType(0, [])))) : (new FieldType(0, [])), new FieldAttr(12, [])];
     }
     else if (fn.indexOf("String") >= 0) {
         return [new FieldType(0, []), undefined];

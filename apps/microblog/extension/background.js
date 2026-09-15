@@ -51,6 +51,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true
   }
 
+  if (message.type === 'captureImage') {
+    handleCaptureImage(message).then(sendResponse)
+    return true
+  }
+
   if (message.type === 'getSites') {
     getSitesData().then(sendResponse)
     return true
@@ -108,6 +113,60 @@ async function handleApiRequest({ method, path, body }) {
     }
 
     const res = await fetch(url, opts)
+    const text = await res.text()
+    let responseData
+    try {
+      responseData = JSON.parse(text)
+    } catch {
+      responseData = text
+    }
+
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: responseData }
+    }
+    return { ok: true, data: responseData }
+  } catch (err) {
+    return { ok: false, error: err.message }
+  }
+}
+
+/**
+ * Hybrid image capture, tier 1: fetch the chosen image with the extension's
+ * host permission (a readable cross-origin response, usually a cache hit from
+ * the page load) and rehost the bytes to R2 via POST /api/blobs. This bypasses
+ * the hotlink/Referer/cookie blocks a server re-fetch from a Cloudflare IP would
+ * hit. Best-effort: the popup falls back to the original URL on any failure
+ * (the server then tries its own rehost as tier 2).
+ */
+async function handleCaptureImage({ url }) {
+  try {
+    const data = await getSitesData()
+    const site = getActiveSite(data)
+    if (!site) return { ok: false, error: 'No active site' }
+    const baseUrl = site.url.replace(/\/+$/, '')
+
+    const imgRes = await fetch(url)
+    if (!imgRes.ok) return { ok: false, error: 'Image fetch failed: ' + imgRes.status }
+    const blob = await imgRes.blob()
+
+    // Derive a filename from the URL path so the stored key has a sensible name;
+    // the upload's content-type gate reads the blob's MIME, not this extension.
+    let name = 'image'
+    try {
+      const last = new URL(url).pathname.split('/').filter(Boolean).pop()
+      if (last) name = last
+    } catch {
+      // Non-parseable URL — keep the 'image' default.
+    }
+
+    const fd = new FormData()
+    fd.append('file', blob, name)
+
+    // No Content-Type header — the browser sets the multipart boundary itself.
+    const opts = { method: 'POST', body: fd, headers: {} }
+    if (site.key) opts.headers['X-Admin-Key'] = site.key
+
+    const res = await fetch(baseUrl + '/api/blobs', opts)
     const text = await res.text()
     let responseData
     try {

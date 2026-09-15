@@ -1,6 +1,7 @@
 import { Record } from "../../../../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { list_type, record_type, int32_type, option_type, string_type } from "../../../../../fable_modules/fable-library-js.4.29.0/Reflection.js";
-import { Get$1, Link_$reflection, Post$2, GetOne$1, RichContent_$reflection } from "../../../../hedge/src/Hedge/Interface.js";
+import { GetByQuery$2, Get$1, GetBy$1, Link_$reflection, Post$2, ForeignKey$1_$reflection, GetQuery$2, RichContent_$reflection } from "../../../../hedge/src/Hedge/Interface.js";
+import { ItemComment_$reflection, Item_$reflection } from "./Domain.js";
 import { printf, toText } from "../../../../../fable_modules/fable-library-js.4.29.0/String.js";
 
 export class GetFeed_FeedItem extends Record {
@@ -20,6 +21,17 @@ export function GetFeed_FeedItem_$reflection() {
     return record_type("Blog.Api.GetFeed.FeedItem", [], GetFeed_FeedItem, () => [["Id", string_type], ["Title", string_type], ["Slug", option_type(string_type)], ["Image", option_type(string_type)], ["Extract", option_type(RichContent_$reflection())], ["OwnerComment", RichContent_$reflection()], ["Timestamp", int32_type]]);
 }
 
+export class GetFeed_Query extends Record {
+    constructor(Cursor) {
+        super();
+        this.Cursor = Cursor;
+    }
+}
+
+export function GetFeed_Query_$reflection() {
+    return record_type("Blog.Api.GetFeed.Query", [], GetFeed_Query, () => [["Cursor", option_type(string_type)]]);
+}
+
 export class GetFeed_Response extends Record {
     constructor(Items, NextCursor) {
         super();
@@ -32,10 +44,7 @@ export function GetFeed_Response_$reflection() {
     return record_type("Blog.Api.GetFeed.Response", [], GetFeed_Response, () => [["Items", list_type(GetFeed_FeedItem_$reflection())], ["NextCursor", option_type(string_type)]]);
 }
 
-export const GetFeed_endpoint = new GetOne$1((() => {
-    const clo = toText(printf("/api/feed/%s"));
-    return clo;
-})());
+export const GetFeed_endpoint = new GetQuery$2("/api/feed");
 
 export class SubmitComment_CommentItem extends Record {
     constructor(Id, ItemId, IdentityId, ParentId, Author, Picture, Content, Timestamp) {
@@ -66,7 +75,7 @@ export class SubmitComment_Request extends Record {
 }
 
 export function SubmitComment_Request_$reflection() {
-    return record_type("Blog.Api.SubmitComment.Request", [], SubmitComment_Request, () => [["ItemId", string_type], ["ParentId", option_type(string_type)], ["Content", string_type], ["Author", option_type(string_type)]]);
+    return record_type("Blog.Api.SubmitComment.Request", [], SubmitComment_Request, () => [["ItemId", ForeignKey$1_$reflection(Item_$reflection())], ["ParentId", option_type(ForeignKey$1_$reflection(ItemComment_$reflection()))], ["Content", string_type], ["Author", option_type(string_type)]]);
 }
 
 export class SubmitComment_ServerContext extends Record {
@@ -94,7 +103,7 @@ export function SubmitComment_Response_$reflection() {
 
 export const SubmitComment_endpoint = new Post$2("/api/comment");
 
-export class SubmitItem_MicroblogItem extends Record {
+export class SubmitItem_Item extends Record {
     constructor(Id, Title, Slug, Link, Image, Extract, OwnerComment, Tags, Comments, Timestamp) {
         super();
         this.Id = Id;
@@ -110,8 +119,8 @@ export class SubmitItem_MicroblogItem extends Record {
     }
 }
 
-export function SubmitItem_MicroblogItem_$reflection() {
-    return record_type("Blog.Api.SubmitItem.MicroblogItem", [], SubmitItem_MicroblogItem, () => [["Id", string_type], ["Title", string_type], ["Slug", option_type(string_type)], ["Link", option_type(Link_$reflection())], ["Image", option_type(Link_$reflection())], ["Extract", option_type(RichContent_$reflection())], ["OwnerComment", RichContent_$reflection()], ["Tags", list_type(string_type)], ["Comments", list_type(SubmitComment_CommentItem_$reflection())], ["Timestamp", int32_type]]);
+export function SubmitItem_Item_$reflection() {
+    return record_type("Blog.Api.SubmitItem.Item", [], SubmitItem_Item, () => [["Id", string_type], ["Title", string_type], ["Slug", option_type(string_type)], ["Link", option_type(Link_$reflection())], ["Image", option_type(Link_$reflection())], ["Extract", option_type(RichContent_$reflection())], ["OwnerComment", RichContent_$reflection()], ["Tags", list_type(string_type)], ["Comments", list_type(SubmitComment_CommentItem_$reflection())], ["Timestamp", int32_type]]);
 }
 
 export class SubmitItem_Request extends Record {
@@ -150,7 +159,7 @@ export class SubmitItem_Response extends Record {
 }
 
 export function SubmitItem_Response_$reflection() {
-    return record_type("Blog.Api.SubmitItem.Response", [], SubmitItem_Response, () => [["Item", SubmitItem_MicroblogItem_$reflection()]]);
+    return record_type("Blog.Api.SubmitItem.Response", [], SubmitItem_Response, () => [["Item", SubmitItem_Item_$reflection()]]);
 }
 
 export const SubmitItem_endpoint = new Post$2("/api/item");
@@ -163,10 +172,10 @@ export class GetItem_Response extends Record {
 }
 
 export function GetItem_Response_$reflection() {
-    return record_type("Blog.Api.GetItem.Response", [], GetItem_Response, () => [["Item", SubmitItem_MicroblogItem_$reflection()]]);
+    return record_type("Blog.Api.GetItem.Response", [], GetItem_Response, () => [["Item", SubmitItem_Item_$reflection()]]);
 }
 
-export const GetItem_endpoint = new GetOne$1((() => {
+export const GetItem_endpoint = new GetBy$1((() => {
     const clo = toText(printf("/api/item/%s"));
     return clo;
 })());
@@ -184,6 +193,17 @@ export function GetTags_Response_$reflection() {
 
 export const GetTags_endpoint = new Get$1("/api/tags");
 
+export class GetItemsByTag_Query extends Record {
+    constructor(Cursor) {
+        super();
+        this.Cursor = Cursor;
+    }
+}
+
+export function GetItemsByTag_Query_$reflection() {
+    return record_type("Blog.Api.GetItemsByTag.Query", [], GetItemsByTag_Query, () => [["Cursor", option_type(string_type)]]);
+}
+
 export class GetItemsByTag_Response extends Record {
     constructor(Tag, Items, NextCursor) {
         super();
@@ -197,7 +217,7 @@ export function GetItemsByTag_Response_$reflection() {
     return record_type("Blog.Api.GetItemsByTag.Response", [], GetItemsByTag_Response, () => [["Tag", string_type], ["Items", list_type(GetFeed_FeedItem_$reflection())], ["NextCursor", option_type(string_type)]]);
 }
 
-export const GetItemsByTag_endpoint = new GetOne$1((() => {
+export const GetItemsByTag_endpoint = new GetByQuery$2((() => {
     const clo = toText(printf("/api/tags/%s/items"));
     return clo;
 })());

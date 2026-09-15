@@ -18,6 +18,7 @@ let mutable extractEditor: Editor option = None
 let mutable commentEditor: Editor option = None
 let mutable selectedImage: string option = None
 let mutable pageUrl = ""
+let mutable documentHtml = ""
 
 type Site = { Name: string; Url: string; Key: string }
 
@@ -102,6 +103,7 @@ type PageData = {
     SelectionHtml: string
     SelectionText: string
     Images: string array
+    DocumentHtml: string
 }
 
 // Content script that runs in the page context — must be plain JS
@@ -125,7 +127,9 @@ chrome.scripting.executeScript({
       .filter(function(src) { return src.startsWith('http'); })
       .filter(function(src, i, arr) { return arr.indexOf(src) === i; })
       .slice(0, 50);
-    return { selectionHtml: selectionHtml, selectionText: selectionText, images: images };
+    // The already-rendered DOM (post-JS) for the archive snapshot — what displayed now.
+    var documentHtml = document.documentElement ? document.documentElement.outerHTML : '';
+    return { selectionHtml: selectionHtml, selectionText: selectionText, images: images, documentHtml: documentHtml };
   }
 })
 """)>]
@@ -135,7 +139,7 @@ let extractPageData () : JS.Promise<PageData> =
     promise {
         let! tabs = Chrome.queryActiveTab ()
         if tabs.Length = 0 then
-            return { Title = ""; Url = ""; SelectionHtml = ""; SelectionText = ""; Images = [||] }
+            return { Title = ""; Url = ""; SelectionHtml = ""; SelectionText = ""; Images = [||]; DocumentHtml = "" }
         else
             let tab = tabs.[0]
             let tabUrl: string = if isNullOrUndefined tab?url then "" else string tab?url
@@ -155,21 +159,23 @@ let extractPageData () : JS.Promise<PageData> =
 
             match results with
             | None ->
-                return { Title = tabTitle; Url = tabUrl; SelectionHtml = ""; SelectionText = ""; Images = [||] }
+                return { Title = tabTitle; Url = tabUrl; SelectionHtml = ""; SelectionText = ""; Images = [||]; DocumentHtml = "" }
             | Some r ->
                 let data = if r.Length > 0 then r.[0]?result else null
                 if isNullOrUndefined data then
-                    return { Title = tabTitle; Url = tabUrl; SelectionHtml = ""; SelectionText = ""; Images = [||] }
+                    return { Title = tabTitle; Url = tabUrl; SelectionHtml = ""; SelectionText = ""; Images = [||]; DocumentHtml = "" }
                 else
                     let sh: string = if isNullOrUndefined data?selectionHtml then "" else string data?selectionHtml
                     let st: string = if isNullOrUndefined data?selectionText then "" else string data?selectionText
                     let imgs: string array = if isNullOrUndefined data?images then [||] else data?images
+                    let dh: string = if isNullOrUndefined data?documentHtml then "" else string data?documentHtml
                     return {
                         Title = tabTitle
                         Url = tabUrl
                         SelectionHtml = sh
                         SelectionText = st
                         Images = imgs
+                        DocumentHtml = dh
                     }
     }
 
@@ -316,6 +322,29 @@ let toggleConfig () =
     if showConfig then renderConfigTable ()
 
 // ---------------------------------------------------------------------------
+// Image capture (hybrid tier 1)
+// ---------------------------------------------------------------------------
+
+/// Ask the background worker to rehost the chosen image to R2 (it holds the
+/// host permission needed to read cross-origin image bytes). Best-effort:
+/// returns None on any failure so submit falls back to the original URL, which
+/// the server then tries to rehost itself (tier 2) or keeps as-is (tier 3).
+let captureImageToBlob (url: string) : JS.Promise<string option> =
+    promise {
+        try
+            let! raw = Chrome.sendMessage (createObj [ "type" ==> "captureImage"; "url" ==> url ])
+            let ok: bool = raw?ok
+            if ok then
+                let data = raw?data
+                let blobUrl: string = if isNullOrUndefined data?url then "" else string data?url
+                return if blobUrl <> "" then Some blobUrl else None
+            else
+                return None
+        with _ ->
+            return None
+    }
+
+// ---------------------------------------------------------------------------
 // Submit
 // ---------------------------------------------------------------------------
 
@@ -348,26 +377,56 @@ let submit () : JS.Promise<unit> =
         let tagsRaw = (elAs<HTMLInputElement> "tags").value
         let tags = tagsRaw.Split(',') |> Array.map (fun t -> t.Trim()) |> Array.filter (fun t -> t <> "") |> Array.toList
 
+        let btn = elAs<HTMLButtonElement> "submitBtn"
+        btn.disabled <- true
+        setStatus "Submitting…" ""
+
+        // Rehost the one chosen post image to our R2 before submit, so the post's
+        // lead image survives source-side rot (only this one image goes to R2 —
+        // the archive keeps original URLs). Falls back to the external URL if the
+        // browser capture fails; the server retries the rehost as tier 2.
+        let! imageForReq =
+            promise {
+                match selectedImage with
+                | Some url ->
+                    let! captured = captureImageToBlob url
+                    return Some (captured |> Option.defaultValue url)
+                | None ->
+                    return None
+            }
+
         let req: SubmitItem.Request = {
             Title = title
             Slug = if slugRaw <> "" then Some slugRaw else None
             Link = if pageUrl <> "" then Some pageUrl else None
-            Image = selectedImage
+            Image = imageForReq
             Extract = extractJson |> Option.map (fun j -> JS.JSON.stringify j)
             OwnerComment = JS.JSON.stringify commentJson
             Tags = tags
         }
 
-        let btn = elAs<HTMLButtonElement> "submitBtn"
-        btn.disabled <- true
-        setStatus "Submitting…" ""
-
-        let! result = blogSubmitItem req
+        // POST directly through the minimal extension Client.Api (the blog module's
+        // generated ClientGen needs query/ws helpers this extension doesn't ship);
+        // the blog codecs give the wire-correct encode/decode.
+        let body = Blog.Codecs.Encode.blogSubmitItemReq req |> Thoth.Json.Encode.toString 0
+        let! result = Client.Api.postJson "/api/blog/item" body Blog.Codecs.Decode.blogSubmitItemResponse
         btn.disabled <- false
 
         match result with
-        | Ok _ ->
+        | Ok resp ->
             setStatus "Submitted!" "success"
+            // Best-effort archive of the rendered source page (reference-only —
+            // never shown to readers, ok if it rots). The item already exists, so
+            // a snapshot failure must not surface as a submit error.
+            if documentHtml <> "" then
+                let snapshotBody =
+                    createObj [
+                        "itemId" ==> resp.Item.Id
+                        "sourceUrl" ==> pageUrl
+                        "html" ==> documentHtml
+                    ]
+                Client.Api.postJson "/api/blog/snapshot" (JS.JSON.stringify snapshotBody) (Thoth.Json.Decode.succeed ())
+                |> ignore
         | Error msg ->
             setStatus msg "error"
     }
@@ -424,6 +483,7 @@ let init () : JS.Promise<unit> =
         // Show URL
         (el "pageUrl").textContent <- if pageData.Url <> "" then pageData.Url else "—"
         pageUrl <- pageData.Url
+        documentHtml <- pageData.DocumentHtml
 
         // Convert selection HTML to TipTap JSON
         let extractContent = htmlToTipTapJson pageData.SelectionHtml

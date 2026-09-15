@@ -1,8 +1,8 @@
 import { Record } from "../../../../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { bool_type, record_type, int32_type, option_type, string_type } from "../../../../../fable_modules/fable-library-js.4.29.0/Reflection.js";
-import { Unique$1_$reflection, IdentityRef_$reflection, ForeignKey$1_$reflection, SoftDelete_$reflection, UpdateTimestamp_$reflection, CreateTimestamp_$reflection, RichContent_$reflection, Link_$reflection, PrimaryKey$1_$reflection } from "../../../../hedge/src/Hedge/Interface.js";
+import { IdentityRef_$reflection, ForeignKey$1_$reflection, SoftDelete_$reflection, UpdateTimestamp_$reflection, CreateTimestamp_$reflection, Unique$1_$reflection, EditableDate_$reflection, RichContent_$reflection, Image_$reflection, Link_$reflection, PrimaryKey$1_$reflection } from "../../../../hedge/src/Hedge/Interface.js";
 
-export class MicroblogItem extends Record {
+export class Item extends Record {
     constructor(Id, Title, Link, Image, Extract, OwnerComment, ArticleDate, Slug, CreatedAt, UpdatedAt, ViewCount, DeletedAt) {
         super();
         this.Id = Id;
@@ -11,7 +11,7 @@ export class MicroblogItem extends Record {
         this.Image = Image;
         this.Extract = Extract;
         this.OwnerComment = OwnerComment;
-        this.ArticleDate = (ArticleDate | 0);
+        this.ArticleDate = ArticleDate;
         this.Slug = Slug;
         this.CreatedAt = CreatedAt;
         this.UpdatedAt = UpdatedAt;
@@ -20,8 +20,8 @@ export class MicroblogItem extends Record {
     }
 }
 
-export function MicroblogItem_$reflection() {
-    return record_type("Blog.Domain.MicroblogItem", [], MicroblogItem, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["Title", string_type], ["Link", option_type(Link_$reflection())], ["Image", option_type(Link_$reflection())], ["Extract", option_type(RichContent_$reflection())], ["OwnerComment", RichContent_$reflection()], ["ArticleDate", int32_type], ["Slug", option_type(string_type)], ["CreatedAt", CreateTimestamp_$reflection()], ["UpdatedAt", option_type(UpdateTimestamp_$reflection())], ["ViewCount", int32_type], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
+export function Item_$reflection() {
+    return record_type("Blog.Domain.Item", [], Item, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["Title", string_type], ["Link", option_type(Link_$reflection())], ["Image", option_type(Image_$reflection())], ["Extract", option_type(RichContent_$reflection())], ["OwnerComment", RichContent_$reflection()], ["ArticleDate", EditableDate_$reflection()], ["Slug", option_type(Unique$1_$reflection(string_type))], ["CreatedAt", CreateTimestamp_$reflection()], ["UpdatedAt", option_type(UpdateTimestamp_$reflection())], ["ViewCount", int32_type], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
 }
 
 export class ItemComment extends Record {
@@ -40,7 +40,7 @@ export class ItemComment extends Record {
 }
 
 export function ItemComment_$reflection() {
-    return record_type("Blog.Domain.ItemComment", [], ItemComment, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["ItemId", ForeignKey$1_$reflection(MicroblogItem_$reflection())], ["IdentityId", IdentityRef_$reflection()], ["ParentId", option_type(string_type)], ["Author", string_type], ["Content", RichContent_$reflection()], ["Removed", bool_type], ["CreatedAt", CreateTimestamp_$reflection()], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
+    return record_type("Blog.Domain.ItemComment", [], ItemComment, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["ItemId", ForeignKey$1_$reflection(Item_$reflection())], ["IdentityId", IdentityRef_$reflection()], ["ParentId", option_type(ForeignKey$1_$reflection(ItemComment_$reflection()))], ["Author", string_type], ["Content", RichContent_$reflection()], ["Removed", bool_type], ["CreatedAt", CreateTimestamp_$reflection()], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
 }
 
 export class Tag extends Record {
@@ -68,6 +68,25 @@ export class ItemTag extends Record {
 }
 
 export function ItemTag_$reflection() {
-    return record_type("Blog.Domain.ItemTag", [], ItemTag, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["ItemId", ForeignKey$1_$reflection(MicroblogItem_$reflection())], ["TagId", ForeignKey$1_$reflection(Tag_$reflection())], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
+    return record_type("Blog.Domain.ItemTag", [], ItemTag, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["ItemId", ForeignKey$1_$reflection(Item_$reflection())], ["TagId", ForeignKey$1_$reflection(Tag_$reflection())], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
+}
+
+export class ItemSnapshot extends Record {
+    constructor(Id, ItemId, Kind, BlobKey, SourceUrl, Status, Error$, CreatedAt, DeletedAt) {
+        super();
+        this.Id = Id;
+        this.ItemId = ItemId;
+        this.Kind = Kind;
+        this.BlobKey = BlobKey;
+        this.SourceUrl = SourceUrl;
+        this.Status = Status;
+        this.Error = Error$;
+        this.CreatedAt = CreatedAt;
+        this.DeletedAt = DeletedAt;
+    }
+}
+
+export function ItemSnapshot_$reflection() {
+    return record_type("Blog.Domain.ItemSnapshot", [], ItemSnapshot, () => [["Id", PrimaryKey$1_$reflection(string_type)], ["ItemId", ForeignKey$1_$reflection(Item_$reflection())], ["Kind", string_type], ["BlobKey", string_type], ["SourceUrl", string_type], ["Status", string_type], ["Error", option_type(string_type)], ["CreatedAt", CreateTimestamp_$reflection()], ["DeletedAt", option_type(SoftDelete_$reflection())]]);
 }
 

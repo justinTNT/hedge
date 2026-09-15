@@ -1,6 +1,6 @@
 import { Record } from "../../../../fable_modules/fable-library-js.4.29.0/Types.js";
 import { record_type, string_type } from "../../../../fable_modules/fable-library-js.4.29.0/Reflection.js";
-import { isEmpty, map, empty, length, tryPick, contains } from "../../../../fable_modules/fable-library-js.4.29.0/List.js";
+import { isEmpty, map, length, empty, tryPick, contains } from "../../../../fable_modules/fable-library-js.4.29.0/List.js";
 import { comparePrimitives, safeHash, equals } from "../../../../fable_modules/fable-library-js.4.29.0/Util.js";
 import { FieldAttr } from "./Schema.js";
 import { printf, toText } from "../../../../fable_modules/fable-library-js.4.29.0/String.js";
@@ -30,7 +30,7 @@ function hasAttr(attr, fs) {
 
 function getMinLength(fs) {
     return tryPick((_arg) => {
-        if (_arg.tag === 11) {
+        if (_arg.tag === 13) {
             return _arg.fields[0];
         }
         else {
@@ -41,7 +41,7 @@ function getMinLength(fs) {
 
 function getMaxLength(fs) {
     return tryPick((_arg) => {
-        if (_arg.tag === 12) {
+        if (_arg.tag === 14) {
             return _arg.fields[0];
         }
         else {
@@ -60,32 +60,39 @@ function validateField(fieldName, fs, value) {
     let matchResult;
     switch (matchValue.tag) {
         case 0: {
-            matchResult = 0;
+            if (!((typeof value === 'string'))) {
+                matchResult = 0;
+            }
+            else {
+                matchResult = 1;
+            }
             break;
         }
         case 3: {
             if (matchValue.fields[0].tag === 0) {
-                matchResult = 1;
+                matchResult = 2;
             }
             else {
-                matchResult = 3;
+                matchResult = 4;
             }
             break;
         }
         case 4: {
-            matchResult = 2;
+            matchResult = 3;
             break;
         }
         default:
-            matchResult = 3;
+            matchResult = 4;
     }
     switch (matchResult) {
-        case 0: {
+        case 0:
+            return [value, empty()];
+        case 1: {
             let s = value;
-            if (hasAttr(new FieldAttr(8, []), fs)) {
+            if (hasAttr(new FieldAttr(10, []), fs)) {
                 s = s.trim();
             }
-            if (hasAttr(new FieldAttr(7, []), fs) && (s.length === 0)) {
+            if (hasAttr(new FieldAttr(9, []), fs) && (s.length === 0)) {
                 addError("is required");
             }
             const matchValue_1 = getMinLength(fs);
@@ -130,13 +137,13 @@ function validateField(fieldName, fs, value) {
             }
             return [s, toList(errors)];
         }
-        case 1:
-            if ((value == null)) {
+        case 2:
+            if (((value == null)) ? true : !((typeof value === 'string'))) {
                 return [value, toList(errors)];
             }
             else {
                 let s_1 = value;
-                if (hasAttr(new FieldAttr(8, []), fs)) {
+                if (hasAttr(new FieldAttr(10, []), fs)) {
                     s_1 = s_1.trim();
                 }
                 const matchValue_3 = getMinLength(fs);
@@ -181,9 +188,9 @@ function validateField(fieldName, fs, value) {
                 }
                 return [s_1, toList(errors)];
             }
-        case 2: {
+        case 3: {
             const count = length(value) | 0;
-            if (hasAttr(new FieldAttr(7, []), fs) && (count === 0)) {
+            if (hasAttr(new FieldAttr(9, []), fs) && (count === 0)) {
                 addError("is required");
             }
             const matchValue_5 = getMaxLength(fs);

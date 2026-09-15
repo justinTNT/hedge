@@ -5,6 +5,12 @@
   <ItemGroup>
     <Compile Include="../src/Codecs/generated/Codecs.fs" Link="Codecs.fs" />
     <Compile Include="../src/Client/generated/ClientGen.fs" Link="ClientGen.fs" />
+    <!-- The blog module owns its own generated codecs post split-gen; the app-level
+         ClientGen no longer carries the blog surface. Pull in the blog codecs so the
+         extension can encode a SubmitItem request / decode its response. It POSTs via
+         the minimal Client.Api directly rather than the blog ClientGen, which needs
+         buildQuery/wsBase helpers this extension's Client.Api doesn't provide. -->
+    <Compile Include="../../../packages/modules/blog/generated/Codecs.fs" Link="BlogCodecs.fs" />
     <Compile Include="Popup.fs" />
   </ItemGroup>
   <ItemGroup>
