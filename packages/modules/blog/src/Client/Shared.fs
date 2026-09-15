@@ -184,18 +184,25 @@ let feedItem (ctx: Content.HostContext) (item: GetFeed.FeedItem) =
         prop.onClick (fun _ -> ctx.Navigate [ itemPath ])
         prop.children [
             Html.h2 [ prop.text item.Title ]
+            let imageNode =
+                match item.Image with
+                | Some url -> Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
+                | None -> Html.none
+            // Show the image whenever it's set: beside the teaser when there's an extract,
+            // otherwise as a standalone thumbnail (previously an item with an image but no
+            // extract showed no image at all).
             match item.Extract with
             | Some (RichContent text) ->
                 Html.p [ prop.className "extract";
                          prop.children [
                                    Html.span [ prop.text (RichText.extractPlainText text) ];
-                                   match item.Image with
-                                   | Some url ->
-                                       Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
-                                   | None -> Html.none
+                                   imageNode
                                ]
                 ]
-            | None -> Html.none
+            | None ->
+                match item.Image with
+                | Some _ -> Html.div [ prop.className "feed-item-thumb"; prop.children [ imageNode ] ]
+                | None -> Html.none
         ]
     ]
 

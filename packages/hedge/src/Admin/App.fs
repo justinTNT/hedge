@@ -604,6 +604,36 @@ module View =
                     ]
                 ]
             ]
+        // Image fields: a URL text input (paste still works) PLUS a file picker that uploads
+        // to /api/blobs and fills the field with the returned /blobs/<key> URL. Must precede
+        // the FString catch-all below, since Image classifies as FString.
+        | _ when field.Attrs |> List.contains Image ->
+            let current = values |> Map.tryFind field.Name |> Option.defaultValue ""
+            Html.div [
+                prop.className "admin-field"
+                prop.children [
+                    Html.label [ prop.text field.Name ]
+                    Html.input [
+                        prop.value current
+                        prop.placeholder "image URL, or choose a file to upload"
+                        prop.disabled isReadOnly
+                        prop.onChange (fun (v: string) -> dispatch (FieldChanged (field.Name, v)))
+                    ]
+                    if not isReadOnly then
+                        Html.input [
+                            prop.type' "file"
+                            prop.accept "image/*"
+                            prop.onChange (fun (ev: Browser.Types.Event) ->
+                                Blobs.uploadFromInput ev.target (fun url -> dispatch (FieldChanged (field.Name, url))))
+                        ]
+                    if current <> "" then
+                        Html.img [
+                            prop.src current
+                            prop.alt "preview"
+                            prop.style [ style.maxWidth 200; style.marginTop 8; style.display.block ]
+                        ]
+                ]
+            ]
         | FString | FOption FString ->
             Html.div [
                 prop.className "admin-field"

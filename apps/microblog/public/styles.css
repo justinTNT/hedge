@@ -88,6 +88,14 @@ body.tenant-usbase nav img {
    extract is flowing rich text, so flex only applies in the feed context. */
 .feed-item .extract { display: flex; }
 
+/* Standalone feed thumbnail: an item with an image but no extract. */
+.feed-item-thumb { margin-top: 0.5em; }
+.feed-item-thumb img {
+  width: 20%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
 /* Date-grouped feed: one sticky divider per day, articles beneath it. */
 .feed-day {
   display: flex;
@@ -522,6 +530,7 @@ html.dark .btn-disconnect { color: #f87171; }
 @media (max-width: 600px) {
     .extract { flex-direction: column; }
     .extract img { width: 100%; margin-left: 0; margin-top: 1em; }
+    .feed-item-thumb img { width: 100%; }
     .login-options { flex-wrap: wrap; }
     .claim-actions { flex-direction: column; }
 }

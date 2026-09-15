@@ -274,8 +274,17 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Ok validatedSlug ->
         // New submissions default their article date to now; backdate later via admin.
         let submittedAt = epochNow ()
+        // Rehost the item image into R2 so it survives the source rotting/hotlink-blocking.
+        // Best-effort (falls back to the original URL); a `/blobs/...` value (e.g. already
+        // uploaded) isn't https:// so it passes through untouched. Existing rows are untouched
+        // — only new submissions rehost. (Server-side fetch is the fallback tier; a future
+        // extension change can upload the bytes it already has for third-party-blocked images.)
+        let! rehostedImage =
+            match req.Image with
+            | Some url -> promise { let! u = rehostRemoteImage env.BLOBS "items" allowedImageTypes url in return Some u }
+            | None -> promise { return None }
         let ins = insertItem env.DB
-                    { Title = req.Title; Link = req.Link; Image = req.Image
+                    { Title = req.Title; Link = req.Link; Image = rehostedImage
                       Extract = req.Extract; OwnerComment = req.OwnerComment
                       ArticleDate = submittedAt
                       Slug = validatedSlug; ViewCount = 0 }
@@ -313,7 +322,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
               Title = req.Title
               Slug = validatedSlug
               Link = req.Link |> Option.map Link
-              Image = req.Image |> Option.map Link
+              Image = rehostedImage |> Option.map Link
               Extract = req.Extract |> Option.map RichContent
               OwnerComment = RichContent req.OwnerComment
               Tags = req.Tags

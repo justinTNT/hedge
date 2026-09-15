@@ -19,57 +19,15 @@ let private identityJson (i: IdentityRow) : string =
     let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
     sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s}""" i.Id i.Provider i.Name i.Picture emailJson
 
-[<Emit("$0.arrayBuffer()")>]
-let private responseArrayBuffer (response: WorkerResponse) : JS.Promise<obj> = jsNative
-
-[<Emit("$0.headers.get($1)")>]
-let private responseHeader (response: WorkerResponse) (name: string) : string = jsNative
-
-// The typed R2 binding has no options arg; httpMetadata matters because
-// handleBlobServe reads contentType back off it when serving.
-[<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
-let private r2PutTyped (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) : JS.Promise<obj> = jsNative
-
 let private avatarTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp" ]
 
-/// Copy a provider's avatar into R2 and return a local /blobs/ URL.
-///
-/// Provider avatar URLs are hotlinks: they rot when the user changes or deletes
-/// their account, and they leak every reader's request to a third party. The
-/// key is content-addressed by source URL, so repeat logins reuse the stored
-/// copy (no refetch, no growth) while a changed avatar lands under a new key —
-/// which keeps handleBlobServe's immutable cache header honest.
-///
-/// Best-effort by design: any failure returns the provider URL unchanged, so a
-/// flaky avatar host can never break sign-in.
+/// Copy a provider's avatar into R2 and return a local /blobs/ URL — a thin alias over the
+/// shared `rehostRemoteImage` primitive (content-addressed under "avatars/", dedup'd,
+/// best-effort). Provider avatar URLs are hotlinks that rot and leak each reader's request to
+/// a third party; rehosting fixes both, and repeat logins reuse the stored copy. Avatars
+/// exclude SVG (avatarTypes). Same key scheme + salt as before, so existing avatars still resolve.
 let private cacheAvatar (blobs: R2Bucket) (url: string) : JS.Promise<string> =
-    promise {
-        if isNull url || url = "" || not (url.StartsWith "https://") then return url
-        else
-            try
-                // HMAC used purely as a content-addressing hash, not for secrecy.
-                let! digest = hmacSha256 "hedge-avatar" url
-                let key = sprintf "avatars/%s" (digest.Substring(0, 32))
-                let! existing = blobs.get key
-                match existing with
-                | Some _ -> return sprintf "/blobs/%s" key
-                | None ->
-                    let! response = fetchRaw url (createObj [])
-                    if not response.ok then return url
-                    else
-                        let raw = responseHeader response "content-type"
-                        let contentType =
-                            if isNull raw then ""
-                            else raw.Split(';').[0].Trim().ToLowerInvariant()
-                        if not (avatarTypes.Contains contentType) then return url
-                        else
-                            let! body = responseArrayBuffer response
-                            let! _ = r2PutTyped blobs key body contentType
-                            return sprintf "/blobs/%s" key
-            with ex ->
-                JS.console.error ("avatar cache failed: " + ex.Message)
-                return url
-    }
+    rehostRemoteImage blobs "avatars" avatarTypes url
 
 let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string option> =
     promise {
