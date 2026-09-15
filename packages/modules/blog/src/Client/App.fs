@@ -346,7 +346,9 @@ let disposeHostedCmd : Cmd<Msg> =
 /// location and touches no identity; identity-claim routes are the host's concern (the
 /// host resolves them before ever calling this), so they fall through as an empty view.
 let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) : Model * Cmd<Msg> =
-    ignore ctx   // blog content navigates by message; no per-route title/nav effect here
+    // Reset the tab title on entering blog: blog views don't set their own, so without this a
+    // prior article's title would linger in the tab (mirrors articles' enterHosted). #6.
+    let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
     let cleared =
         { model with
             Route = route
@@ -355,13 +357,15 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             ReplyingTo = None
             CollapsedComments = Set.empty }
     match route with
-    | [] -> cleared, Cmd.batch [ disposeHostedCmd; Cmd.ofMsg LoadFeed ]
-    | ["tag"; name] -> cleared, Cmd.batch [ disposeHostedCmd; Cmd.ofMsg (LoadTagItems name) ]
+    // Feed is retained across a module switch (not in `cleared`); reuse it (with its loaded
+    // pages + cursor) instead of refetching page 1, which would discard appended pages. #4.
+    | [] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; (if cleared.Feed.IsSome then Cmd.none else Cmd.ofMsg LoadFeed) ]
+    | ["tag"; name] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg (LoadTagItems name) ]
     // "new" issues no load, so a spinner left on from a prior in-flight route would
     // otherwise mask the form — clear it explicitly.
-    | ["new"] -> { cleared with IsLoading = false }, Cmd.batch [ disposeHostedCmd; NewItem.initOwnerCommentEditorCmd ]
-    | [idOrSlug] -> cleared, Cmd.batch [ disposeHostedCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
-    | _ -> cleared, disposeHostedCmd
+    | ["new"] -> { cleared with IsLoading = false }, Cmd.batch [ disposeHostedCmd; resetTitle; NewItem.initOwnerCommentEditorCmd ]
+    | [idOrSlug] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg (LoadItem idOrSlug) ]
+    | _ -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle ]
 
 /// Handle a CONTENT message. Browser routing (UrlChanged) and identity messages are
 /// host-owned on the hosted path — they arrive through the shell, not here — so they

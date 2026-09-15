@@ -84,17 +84,24 @@ let private mapArticles (activation: int) (cmd: Cmd<A.Msg>) : Cmd<Msg> =
 let private mapBlog (activation: int) (cmd: Cmd<B.Msg>) : Cmd<Msg> =
     cmd |> Cmd.map (fun m -> BlogMsg (activation, m))
 
-/// Initial content reads that replace the whole view/title — dropped when they arrive
-/// for a superseded activation (the A -> B navigation that resolves B then A). Feed/tag
-/// PAGINATION is exempt: it only fires from the visible feed's own sentinel.
+/// Content results that must not apply once their activation is superseded (the A -> B
+/// navigation that resolves B then A). Covers whole-view reads AND view-mutating/append +
+/// pagination results: the server write still happened; we only suppress the obsolete UI
+/// effect — e.g. appending A's new comment to B (and destroying B's draft), or merging A's
+/// next page + cursor into B's feed/tag. Activation bumps on every navigation, so a
+/// completion issued before you left arrives stale and is dropped here. Identity/session
+/// results are deliberately absent — they apply regardless of which content view is active.
 let private articlesStaleDrop (m: A.Msg) =
     match m with
-    | A.GotFeed _ | A.GotItem _ -> true
+    | A.GotFeed _ | A.GotItem _
+    | A.GotMoreFeed _ | A.GotSubmitComment _ | A.GotEvent _ -> true
     | _ -> false
 
 let private blogStaleDrop (m: B.Msg) =
     match m with
-    | B.GotFeed _ | B.GotItem _ | B.GotTagItems _ -> true
+    | B.GotFeed _ | B.GotItem _ | B.GotTagItems _
+    | B.GotMoreFeed _ | B.GotMoreTagItems _
+    | B.GotSubmitComment _ | B.GotSubmitItem _ | B.GotEvent _ -> true
     | _ -> false
 
 let init () : Model * Cmd<Msg> =

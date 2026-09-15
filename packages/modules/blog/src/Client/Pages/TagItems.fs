@@ -39,9 +39,14 @@ let update msg model =
         | _ -> model, Cmd.none
 
     | GotMoreTagItems (Ok response) ->
+        // Only merge a page whose tag matches the current view — a delayed page for a tag
+        // we've left must not append its items/cursor to a different tag (belt-and-suspenders
+        // with the shell's activation drop).
         let merged =
             match model.TagItems with
-            | Some existing -> { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
+            | Some existing when existing.Tag = response.Tag ->
+                { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
+            | Some existing -> existing
             | None -> response
         { model with TagItems = Some merged; TagLoadingMore = false },
         continueCmd merged.NextCursor.IsSome

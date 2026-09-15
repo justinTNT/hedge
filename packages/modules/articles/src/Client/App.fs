@@ -301,7 +301,9 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             CollapsedComments = Set.empty }
     let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
     match route with
-    | [] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; Cmd.ofMsg LoadFeed ]
+    // Feed is retained across a module switch (not in `cleared`); reuse it (loaded pages +
+    // cursor) rather than refetching page 1, which would discard the appended pages. #4.
+    | [] -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle; (if cleared.Feed.IsSome then Cmd.none else Cmd.ofMsg LoadFeed) ]
     | [idOrSlug] -> cleared, Cmd.batch [ disposeHostedCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
     | _ -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle ]
 
