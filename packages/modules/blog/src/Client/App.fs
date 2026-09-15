@@ -95,9 +95,7 @@ let init () : Model * Cmd<Msg> =
           AvailableProviders = []
           ShowIdentitySwitcher = false
           SelectedIdentity = None
-          PendingClaimFocus = claimFocus
-          Snapshot = None
-          ShowArchive = false }
+          PendingClaimFocus = claimFocus }
     let routeCmd =
         match route with
         | ["auth"; "claim"] | ["auth"; "claim"; _] ->
@@ -139,9 +137,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                     CollapsedComments = Set.empty
                     ShowIdentitySwitcher = false
                     SelectedIdentity = None
-                    PendingClaimFocus = claimFocus
-                    Snapshot = None
-                    ShowArchive = false }
+                    PendingClaimFocus = claimFocus }
             updated,
             Cmd.batch [
                 cleanupCmd
@@ -162,7 +158,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | ["new"] -> Cmd.batch [ cleanupCmd; NewItem.initOwnerCommentEditorCmd ]
             | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
             | _ -> cleanupCmd
-        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None; Snapshot = None; ShowArchive = false }, cmd
+        { model with Route = route; CurrentItem = None; TagItems = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
 
     | DismissError ->
         { model with Error = None }, Cmd.none
@@ -327,9 +323,7 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
       AvailableProviders = []
       ShowIdentitySwitcher = false
       SelectedIdentity = None
-      PendingClaimFocus = None
-      Snapshot = None
-      ShowArchive = false }
+      PendingClaimFocus = None }
 
 /// Pure snapshot of the host's authoritative session into the child model (the comment
 /// forms read it). Identity is host-owned; this never triggers a sync/switcher flow.
@@ -361,9 +355,7 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             CurrentItem = None
             TagItems = None
             ReplyingTo = None
-            CollapsedComments = Set.empty
-            Snapshot = None
-            ShowArchive = false }
+            CollapsedComments = Set.empty }
     match route with
     // Feed is retained across a module switch (not in `cleared`); reuse it (with its loaded
     // pages + cursor) instead of refetching page 1, which would discard appended pages. #4.

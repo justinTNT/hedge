@@ -26,10 +26,6 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Archive.handleSnapshot request env)
     | GET path when path.StartsWith("/archive/") ->
         Some (Server.Archive.handleArchiveServe (path.Substring(9)) env)
-    | GET path when path.StartsWith("/api/blog/item/") && path.EndsWith("/snapshot") ->
-        // id is the segment between "/api/blog/item/" (15) and "/snapshot" (9)
-        let id = path.Substring(15, path.Length - 15 - 9)
-        Some (Server.Archive.handleLatestSnapshot id env)
     | _ -> None
 
 [<ExportDefault>]

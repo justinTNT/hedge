@@ -47,10 +47,6 @@ type Model = {
     SelectedIdentity: string option
     /// Set on OAuth return; consumed by UrlChanged to open the switcher pre-selected
     PendingClaimFocus: string option
-    /// Latest source-page snapshot id for the current item (archive feature), or None.
-    Snapshot: string option
-    /// Whether the archived-copy iframe is expanded.
-    ShowArchive: bool
 }
 
 type Msg =
@@ -61,8 +57,6 @@ type Msg =
     | GotMoreFeed of Result<GetFeed.Response, string>
     | LoadItem of string
     | GotItem of Result<GetItem.Response, string>
-    | GotSnapshot of string option
-    | ToggleArchive
     | DismissError
     | ConnectEvents of string
     | DisconnectEvents
