@@ -12,7 +12,11 @@ open Server.Env
 [<Emit("$0.ASSETS.fetch($1)")>]
 let private assetShell (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
 
-[<Emit("new HTMLRewriter().on('title', { element(e) { e.setInnerContent($1) } }).on('head', { element(e) { e.append($2, { html: true }) } }).transform($0)")>]
+// Per-article OG tags. The static shell already carries site-level og:/twitter: (baked by
+// vite for the homepage); strip those first, else they'd appear before these and win — Open
+// Graph takes the first occurrence per property — leaving article shares showing the homepage
+// title/url/logo. Removing + re-appending yields exactly one, article-specific, set.
+[<Emit("new HTMLRewriter().on('title', { element(e) { e.setInnerContent($1) } }).on('meta[property^=\"og:\"]', { element(e) { e.remove() } }).on('meta[name^=\"twitter:\"]', { element(e) { e.remove() } }).on('head', { element(e) { e.append($2, { html: true }) } }).transform($0)")>]
 let private rewriteHead (response: WorkerResponse) (title: string) (headHtml: string) : WorkerResponse = jsNative
 
 [<Emit("String($0).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;')")>]

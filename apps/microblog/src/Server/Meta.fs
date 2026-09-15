@@ -19,8 +19,11 @@ open Server.Env
 [<Emit("$0.ASSETS.fetch($1)")>]
 let private assetShell (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
 
-/// Streaming rewrite of the shell: retitle, and append tags to <head>.
-[<Emit("new HTMLRewriter().on('title', { element(e) { e.setInnerContent($1) } }).on('head', { element(e) { e.append($2, { html: true }) } }).transform($0)")>]
+/// Streaming rewrite of the shell: retitle, strip the baked site-level og:/twitter: meta
+/// (vite injects them for the homepage; Open Graph takes the FIRST occurrence per property, so
+/// leaving them would make item shares preview the homepage title/url/logo), then append the
+/// per-item tags — yielding exactly one, item-specific, social-preview set.
+[<Emit("new HTMLRewriter().on('title', { element(e) { e.setInnerContent($1) } }).on('meta[property^=\"og:\"]', { element(e) { e.remove() } }).on('meta[name^=\"twitter:\"]', { element(e) { e.remove() } }).on('head', { element(e) { e.append($2, { html: true }) } }).transform($0)")>]
 let private rewriteHead (response: WorkerResponse) (title: string) (headHtml: string) : WorkerResponse = jsNative
 
 /// Titles routinely contain & and quotes; unescaped they break the head.
