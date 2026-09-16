@@ -18,6 +18,16 @@ let createEditorWhenReady (elementId: string) (initialContent: string) : unit = 
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2, uploadEndpoint: '/api/blobs/guest' }); })")>]
 let createEditorWithClose (elementId: string) (initialContent: string) (onClose: unit -> unit) : unit = jsNative
 
+/// C1b draft-model editor: reports content changes via `onChange` (draft text -> model) so
+/// submission builds from model state instead of a DOM read; `onClose` handles the reply
+/// box's close affordance (pass `ignore` when none); `uploadEndpoint` selects the blob
+/// endpoint ("" -> default admin `/api/blobs`; comments pass "/api/blobs/guest"). Deferred
+/// creation is cancellable via `destroyEditor` (the waitForElement poll self-cancels).
+/// Additive — createEditorWhenReady / createEditorWithClose remain for callers not yet
+/// migrated onto the draft model.
+[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: $2, onClose: $3, uploadEndpoint: ($4 || undefined) }); })")>]
+let createEditorScoped (elementId: string) (initialContent: string) (onChange: string -> unit) (onClose: unit -> unit) (uploadEndpoint: string) : unit = jsNative
+
 [<Emit("window.HedgeRT.destroyRichTextEditor($0)")>]
 let destroyEditor (elementId: string) : unit = jsNative
 
