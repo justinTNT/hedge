@@ -60,7 +60,7 @@ let update msg model =
               OwnerComment = ownerComment
               Tags = tags }
         { model with ItemForm = emptyItemForm },
-        Cmd.OfPromise.either Blog.ClientGen.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
+        Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
 
     | GotSubmitItem (Ok _) ->
         // C1: the item is created server-side regardless; run the post-create effects

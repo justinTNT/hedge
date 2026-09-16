@@ -22,7 +22,7 @@ let update msg model =
     match msg with
     | LoadTagItems tag ->
         { model with IsLoading = true; TagItems = None; TagLoadingMore = false },
-        Cmd.OfPromise.either (Blog.ClientGen.blogGetItemsByTag tag) { Cursor = None } GotTagItems (fun ex -> GotTagItems (Error ex.Message))
+        Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag tag) { Cursor = None } GotTagItems (fun ex -> GotTagItems (Error ex.Message))
 
     | GotTagItems (Ok response) ->
         // C1: apply only if this is still the tag the route wants — a reverse-order resolve
@@ -41,7 +41,7 @@ let update msg model =
         match model.TagItems with
         | Some t when t.NextCursor.IsSome && not model.TagLoadingMore ->
             { model with TagLoadingMore = true },
-            Cmd.OfPromise.either (Blog.ClientGen.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor } GotMoreTagItems (fun ex -> GotMoreTagItems (Error ex.Message))
+            Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor } GotMoreTagItems (fun ex -> GotMoreTagItems (Error ex.Message))
         | _ -> model, Cmd.none
 
     | GotMoreTagItems (Ok response) ->

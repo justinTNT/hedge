@@ -14,6 +14,25 @@ open Hedge.Interface
 open Blog.Api
 open Blog.Client.Types
 
+// -- Transport-neutral API client (C2 migration) --
+// Blog's page updates call these instead of the ambient-transport bare ClientGen functions:
+// the generated Client record wired to the browser transport, with the typed ApiError
+// rendered back to the string the existing Msgs / Model.Error already carry (so Msg and
+// model shapes are unchanged). This is a compatibility shim binding the default browser
+// transport; consumers move to an injected client in C5. Bonus: Http.sendDecode checks the
+// status before decoding, so a 4xx now surfaces the server's message (e.g. "slug: already
+// taken") instead of a decode-failure string.
+module Api =
+    let private client = Blog.ClientGen.createClient Client.Api.browserTransport
+    let private asString (p: JS.Promise<Result<'T, Hedge.Http.ApiError>>) : JS.Promise<Result<'T, string>> =
+        promise { let! r = p in return Result.mapError Hedge.Http.renderError r }
+    let blogGetFeed query = asString (client.blogGetFeed query)
+    let blogGetItem id = asString (client.blogGetItem id)
+    let blogGetItemsByTag tag query = asString (client.blogGetItemsByTag tag query)
+    let blogGetTags () = asString (client.blogGetTags ())
+    let blogSubmitComment req = asString (client.blogSubmitComment req)
+    let blogSubmitItem req = asString (client.blogSubmitItem req)
+
 // -- Deployment configuration --
 // Injected into the page at build time (see vite.config.js). Defaults keep a
 // root-mounted darwin.news build behaving exactly as before.

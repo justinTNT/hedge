@@ -99,7 +99,7 @@ let update msg model =
     match msg with
     | LoadItem itemId ->
         { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Blog.ClientGen.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
+        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
         // C1: accept only if this is still the item the route wants — a reverse-order resolve
@@ -161,7 +161,7 @@ let update msg model =
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,
-            Cmd.OfPromise.either Blog.ClientGen.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok resp) ->
