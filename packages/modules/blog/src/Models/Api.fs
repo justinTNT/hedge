@@ -66,7 +66,11 @@ module SubmitItem =
         Title: string
         Slug: string option
         Link: Link option
-        Image: Link option
+        // C2: the created item's image is a framework Image (like Blog.Domain.Item.Image),
+        // not a Link — a hyperlink and an image are distinct wrappers. Both encode to the same
+        // optional URL string (Codec maps Interface.Link and Interface.Image alike), so the
+        // wire is unchanged; this just removes the model/domain semantic mismatch.
+        Image: Image option
         Extract: RichContent option
         OwnerComment: RichContent
         Tags: string list

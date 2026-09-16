@@ -130,7 +130,7 @@ let getItem (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
                   Title = r.Title
                   Slug = r.Slug
                   Link = r.Link |> Option.map Link
-                  Image = r.Image |> Option.map Link
+                  Image = r.Image |> Option.map Image
                   Extract = r.Extract |> Option.map RichContent
                   OwnerComment = RichContent r.OwnerComment
                   Tags = tags
@@ -322,7 +322,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
               Title = req.Title
               Slug = validatedSlug
               Link = req.Link |> Option.map Link
-              Image = rehostedImage |> Option.map Link
+              Image = rehostedImage |> Option.map Image
               Extract = req.Extract |> Option.map RichContent
               OwnerComment = RichContent req.OwnerComment
               Tags = req.Tags

@@ -330,7 +330,7 @@ let view (ctx: Content.HostContext) (response: GetItem.Response) (model: Model) 
             | None ->
                 Html.h2 [ prop.text item.Title ]
             match item.Image with
-            | Some (Link imgUrl) ->
+            | Some (Image imgUrl) ->
                 Html.img [ prop.src imgUrl; prop.className "item-image" ]
             | None -> Html.none
             match item.Extract with
