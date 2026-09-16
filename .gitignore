@@ -8,6 +8,8 @@ _site/
 .fable/
 # CP-A reorder fixtures: Fable output (test.sh Step 1j), cleaned after each run
 apps/articles/.reorder-fixtures/
+# Shared identity CSS copied into each app by prep:lib (source: packages/content-client/identity.css)
+apps/*/public/identity.css
 
 # Extension packaged builds
 apps/microblog/extension/dist-*/

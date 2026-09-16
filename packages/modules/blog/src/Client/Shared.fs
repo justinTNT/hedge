@@ -97,7 +97,7 @@ let private hideBrokenImg (e: obj) : unit = jsNative
     if(h.scrollWidth > cw+2){ h.style.whiteSpace='normal'; }   // too long even scaled -> wrap
   }
   function fit(){
-    var hs=document.querySelectorAll('.feed-item h2');
+    var hs=document.querySelectorAll('[data-fit-headline]');
     if(!hs.length) return;
     if(hs[0].clientWidth===0){ setTimeout(fit,60); return; }   // wait for layout
     hs.forEach(fitOne);
@@ -188,7 +188,10 @@ let feedItem (ctx: Content.HostContext) (item: GetFeed.FeedItem) =
         prop.style [ style.cursor.pointer ]
         prop.onClick (fun _ -> ctx.Navigate [ itemPath ])
         prop.children [
-            Html.h2 [ prop.text item.Title ]
+            // `data-fit-headline` is a BEHAVIOR hook (Win 2): fitHeadlines (bigText) targets this
+            // attribute, not the `.feed-item h2` presentation class, so a theme rename can't silently
+            // break headline-fitting. Presentation still comes from the `.feed-item h2` CSS.
+            Html.h2 [ prop.custom ("data-fit-headline", ""); prop.text item.Title ]
             let imageNode =
                 match item.Image with
                 | Some url -> Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]

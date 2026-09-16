@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "prep:lib": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/ && cp ../../packages/hedge/lib/guest-session.js lib/guest-session.js",
+    "prep:lib": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/ && cp ../../packages/hedge/lib/guest-session.js lib/guest-session.js && cp ../../packages/content-client/identity.css public/identity.css",
     "predev": "npm run prep:lib",
     "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
     "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",

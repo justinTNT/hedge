@@ -61,7 +61,13 @@ function ogMeta(title) {
 function siteConfig() {
   return {
     name: 'hedge-site-config',
-    transformIndexHtml(html, ctx) {
+    // 'pre' so __BASE__ resolves to a real path BEFORE vite scans the HTML for assets — this lets
+    // vite bundle the theme public/styles.css (and its @imports, e.g. identity.css) into a hashed,
+    // cache-busted asset instead of leaving an un-hashed static <link>. Matches apps/articles so
+    // hedge has ONE prescriptive CSS delivery. (Sub-path/BASE_PATH tenants: verify when idealist ships.)
+    transformIndexHtml: {
+    order: 'pre',
+    handler(html, ctx) {
       const isAdmin = ctx.filename.endsWith('admin.html');
       // Social-preview tags on the public front page only (not admin / other entries).
       const isIndex = ctx.filename.endsWith('index.html');
@@ -83,6 +89,7 @@ function siteConfig() {
         // or the tenant's marketing CSS (fonts, colours, masthead wordmark) leaks
         // onto every admin control.
         .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
+      }
     }
   };
 }

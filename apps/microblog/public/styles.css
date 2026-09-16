@@ -1,4 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&family=League+Gothic&display=swap');
+/* Shared identity control CSS (single source: packages/content-client/identity.css, copied to
+   public/identity.css by prep:lib). @import so vite inlines it into the bundled theme; tenant
+   overrides below (e.g. body.tenant-* .identity-area{color}) cascade after it. */
+@import "./identity.css";
 
 /* Base styles */
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -422,109 +426,14 @@ html.dark .owner-comment { background: #2a2a2a; }
 html.dark a { color: #6cb4ee; }
 html.dark header { border-bottom-color: #333; }
 
-/* Identity & Auth */
+/* Nav + login layout. The identity badge/switcher control's own CSS is shared and lives in
+   packages/content-client/identity.css (@import'd at the top of this file). */
 nav { display: flex; align-items: center; justify-content: space-between; }
 
-.login-options, .identity-area { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.login-options { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
 .anon-name { color: #888; white-space: nowrap; }
 .login-options .avatar { width: 2em; height: 2em; }
 
-.login-btn {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    text-decoration: none;
-    color: #fff;
-    white-space: nowrap;
-}
-.login-github { background: #333; }
-.login-google { background: #4285f4; }
-html.dark .login-github { background: #555; }
-
-.identity-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
-}
-.identity-badge:hover { background: #f0f0f0; }
-html.dark .identity-badge:hover { background: #333; }
-.identity-badge .avatar { width: 2em; height: 2em; }
-
-.identity-switcher {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 0.75rem;
-    min-width: 280px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    z-index: 100;
-}
-html.dark .identity-switcher { background: #2a2a2a; border-color: #444; }
-
-.identity-switcher h4 { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
-
-/* Anonymous-only sites (no OAuth): explanatory note under the panel heading */
-.switcher-note { font-size: 0.8rem; color: #555; margin: 0; line-height: 1.4; }
-html.dark .switcher-note { color: #bbb; }
-
-.identity-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 6px;
-}
-.identity-option.active { background: #f0f7ff; }
-html.dark .identity-option.active { background: #1a2a3a; }
-.identity-option.selectable { cursor: pointer; }
-.identity-option.selectable:hover { background: #f5f5f5; }
-html.dark .identity-option.selectable:hover { background: #333; }
-.identity-option.selected { background: #fff7e6; outline: 1px solid #f0c060; cursor: pointer; }
-html.dark .identity-option.selected { background: #3a2f1a; outline-color: #806020; }
-.identity-option .avatar { width: 2em; height: 2em; }
-.identity-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.identity-name { font-size: 0.85rem; font-weight: 600; }
-.identity-provider { font-size: 0.75rem; color: #888; }
-
-.identity-area { position: relative; }
-
-/* Connect options, inside the identity panel */
-.switcher-connect {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #eee;
-}
-html.dark .switcher-connect { border-top-color: #444; }
-
-.connect-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-}
-
-.btn-merge, .btn-abandon, .btn-disconnect {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-.btn-merge { background: #3b82f6; color: #fff; }
-.btn-merge:hover { background: #2563eb; }
-.btn-abandon { background: #e5e7eb; color: #333; }
-.btn-abandon:hover { background: #d1d5db; }
-html.dark .btn-abandon { background: #444; color: #ddd; }
-.btn-disconnect { background: transparent; color: #dc2626; padding: 0.5rem 0.6rem; }
-.btn-disconnect:hover { background: rgba(220, 38, 38, 0.08); }
-html.dark .btn-disconnect { color: #f87171; }
 
 /* Mobile */
 @media (max-width: 600px) {

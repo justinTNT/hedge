@@ -55,7 +55,11 @@ const siteFeatures = process.env.SITE_FEATURES || '';
 function siteConfig() {
   return {
     name: 'hedge-site-config',
-    transformIndexHtml(html, ctx) {
+    // 'pre' so __BASE__ resolves before vite scans the HTML → vite bundles the theme CSS (and its
+    // @imports, e.g. identity.css) into a hashed asset. One prescriptive CSS delivery across hedge.
+    transformIndexHtml: {
+    order: 'pre',
+    handler(html, ctx) {
       const isAdmin = ctx.filename.endsWith('admin.html');
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
@@ -70,6 +74,7 @@ function siteConfig() {
         .replace('<head>', `<head>\n    ${injected}`)
         // The deployment theme is for the public site only, never the shared admin tool.
         .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
+      }
     }
   };
 }
@@ -225,7 +230,7 @@ let private packageJsonTmpl = """{
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "prep:lib": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/ && cp ../../packages/hedge/lib/guest-session.js lib/guest-session.js",
+    "prep:lib": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/ && cp ../../packages/hedge/lib/guest-session.js lib/guest-session.js && cp ../../packages/content-client/identity.css public/identity.css",
     "predev": "npm run prep:lib",
     "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
     "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",
@@ -414,7 +419,9 @@ Program.mkProgram init update view
 
 let clientAppFs (appName: string) = clientAppTmpl.Replace("{{NAME}}", toPascalCase appName)
 
-let stylesCss = """/* Base styles */
+let stylesCss = """@import "./identity.css";
+
+/* Base styles */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
 .app { max-width: 800px; margin: 0 auto; padding: 1rem; }
