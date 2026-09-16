@@ -17,7 +17,11 @@ const siteSlug = process.env.SITE_SLUG || '';
 function siteConfig() {
   return {
     name: 'hedge-site-config',
-    transformIndexHtml(html, ctx) {
+    // 'pre' so __BASE__ resolves before vite scans → vite bundles the theme CSS into a hashed,
+    // cache-busted asset instead of an un-hashed static <link>. One prescriptive CSS delivery.
+    transformIndexHtml: {
+    order: 'pre',
+    handler(html, ctx) {
       const isAdmin = ctx.filename.endsWith('admin.html');
       const injected =
         `<script>window.BASE_PATH=${JSON.stringify(basePath)};` +
@@ -31,6 +35,7 @@ function siteConfig() {
         // Tenant theme is for the public site only — never the shared admin tool,
         // or the tenant's marketing CSS leaks onto every admin control.
         .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
+      }
     }
   };
 }
