@@ -36,6 +36,28 @@ module IdentityView =
 
     let private identitySwitcher (model: Identity.Model) (dispatch: Identity.Msg -> unit) =
         if not model.ShowIdentitySwitcher then Html.none
+        elif model.AvailableProviders.IsEmpty
+             && model.Identities |> List.forall (fun i -> i.Provider = "anonymous") then
+            // No OAuth configured *and* nothing but anonymous identities: no providers to connect and
+            // nothing to switch to, so the normal switcher would be an empty, dead panel (regression
+            // on anonymous-only tenants like usba.se). Say plainly this is anonymous. (If a real
+            // identity exists — e.g. OAuth was removed after someone linked — fall through to the
+            // normal switcher so it can still be managed.)
+            let name =
+                match model.GuestSession.Identity with
+                | Some identity -> identity.Name
+                | None -> model.GuestSession.DisplayName
+            let note =
+                if System.String.IsNullOrWhiteSpace name
+                then "No sign-in here — comment under a name we generate for you."
+                else sprintf "No sign-in here — you're commenting as %s." name
+            Html.div [
+                prop.className "identity-switcher"
+                prop.children [
+                    Html.h4 [ prop.text "Engaging anonymously" ]
+                    Html.p [ prop.className "switcher-note"; prop.text note ]
+                ]
+            ]
         else
             Html.div [
                 prop.className "identity-switcher"
