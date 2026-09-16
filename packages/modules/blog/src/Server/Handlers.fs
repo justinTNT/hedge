@@ -1,10 +1,10 @@
 module Blog.Handlers
 
-// The blog module's content handlers — feed, item, comments, tags. Extracted
-// from the microblog app; the identity/guest/OAuth layer is NOT here (it's the
-// shared, app-level `Server.Identity` these handlers delegate to). Table names
-// come via `Server.Db`'s generated statements + `Blog.Sql` (Tables-driven), so
-// the same code serves `items` standalone or `blog_items` mounted in a host.
+// The blog module's content handlers — feed, item, comments, tags. Content only: the
+// identity/guest/OAuth layer stays in the host and reaches these handlers as a resolved
+// author through Blog.Services (Services.Author; see Blog.Composition + the app's
+// Server.ModuleServices). Table names come via Blog.Db's generated statements + Blog.Sql
+// (Tables-driven), so the same code serves `items` standalone or `blog_items` mounted in a host.
 
 open Fable.Core
 open Fable.Core.JsInterop

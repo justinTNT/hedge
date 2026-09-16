@@ -1,11 +1,11 @@
 module Articles.Handlers
 
-// The articles module's content handlers — feed, post, comments. Extracted from
-// the articles app; the identity/guest/OAuth layer is NOT here (it's the shared,
-// app-level `Server.Identity` these handlers delegate to). Table names come via
-// `Server.Db`'s generated statements + `Articles.Sql` (Tables-driven), so the same
-// code serves `posts`/`comments` standalone or `articles_posts`/`articles_comments`
-// mounted in a host.
+// The articles module's content handlers — feed, post, comments. Content only: the
+// identity/guest/OAuth layer stays in the host and reaches these handlers as a resolved
+// author through Articles.Services (Services.Author; see Articles.Composition + the app's
+// Server.ModuleServices). Table names come via Articles.Db's generated statements +
+// Articles.Sql (Tables-driven), so the same code serves `posts`/`comments` standalone or
+// `articles_posts`/`articles_comments` mounted in a host.
 
 open Fable.Core
 open Thoth.Json

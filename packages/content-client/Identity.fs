@@ -12,6 +12,7 @@ namespace Content
 
 open Fable.Core.JsInterop
 open Elmish
+open Thoth.Json
 
 module GuestSession = Client.GuestSession
 
@@ -60,20 +61,42 @@ module Identity =
         /// An identity operation failed — the host surfaces the message to the user.
         | Failed of string
 
-    // -- Commands (the /api/auth/* endpoints are shared across every site) --
+    // -- Codecs + commands (the /api/auth/* endpoints are shared across every site). Typed with
+    //    Thoth (C2 item 4): request bodies escape their values — fallbackName is the
+    //    user-controlled DisplayName, so string-interpolating it into JSON was an injection risk
+    //    — and responses decode through explicit decoders instead of `?field |> unbox`. The wire
+    //    is unchanged: the same JSON keys and shapes as before. --
+
+    let private encodeRevert (identityId: string) (merge: bool) : string =
+        Encode.object [ "identityId", Encode.string identityId; "merge", Encode.bool merge ] |> Encode.toString 0
+
+    let private encodeDisconnect (identityId: string) (name: string) : string =
+        Encode.object [ "identityId", Encode.string identityId; "name", Encode.string name ] |> Encode.toString 0
+
+    let private providersDecoder : Decoder<string list> =
+        Decode.field "providers" (Decode.list Decode.string)
+
+    let private identityDecoder : Decoder<IdentityListItem> =
+        Decode.object (fun get ->
+            { Id = get.Required.Field "id" Decode.string
+              Provider = get.Required.Field "provider" Decode.string
+              Name = get.Required.Field "name" Decode.string
+              Picture = get.Required.Field "picture" Decode.string
+              ActivatedAt = get.Optional.Field "activatedAt" Decode.int })
+
+    let private identitiesDecoder : Decoder<IdentityListItem list> =
+        Decode.field "identities" (Decode.list identityDecoder)
 
     let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
-        let body = sprintf """{"identityId":"%s","merge":%s}""" identityId (if merge then "true" else "false")
         Cmd.OfPromise.either
-            (fun () -> Client.Api.postJsonRaw "/api/auth/revert" body)
+            (fun () -> Client.Api.postJsonRaw "/api/auth/revert" (encodeRevert identityId merge))
             ()
             GotRevertIdentity
             (fun ex -> GotRevertIdentity (Error ex.Message))
 
     let private disconnectIdentityCmd (identityId: string) (fallbackName: string) : Cmd<Msg> =
-        let body = sprintf """{"identityId":"%s","name":"%s"}""" identityId fallbackName
         Cmd.OfPromise.either
-            (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" body)
+            (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" (encodeDisconnect identityId fallbackName))
             ()
             GotDisconnect
             (fun ex -> GotDisconnect (Error ex.Message))
@@ -83,8 +106,10 @@ module Identity =
             (fun () ->
                 promise {
                     let! data = Client.Api.fetchJsonRaw "/api/auth/providers"
-                    let arr : string array = data?providers |> unbox
-                    return List.ofArray arr
+                    return
+                        match Decode.fromValue "$" providersDecoder data with
+                        | Ok providers -> providers
+                        | Error _ -> []
                 })
             ()
             GotProviders
@@ -94,14 +119,10 @@ module Identity =
             (fun () ->
                 promise {
                     let! data = Client.Api.fetchJsonRaw "/api/auth/identities"
-                    let arr : obj array = data?identities |> unbox
-                    return arr |> Array.map (fun o ->
-                        { Id = o?id |> unbox<string>
-                          Provider = o?provider |> unbox<string>
-                          Name = o?name |> unbox<string>
-                          Picture = o?picture |> unbox<string>
-                          ActivatedAt = let v = o?activatedAt in if isNull v then None else Some (unbox<int> v) }
-                    ) |> Array.toList
+                    return
+                        match Decode.fromValue "$" identitiesDecoder data with
+                        | Ok identities -> identities
+                        | Error _ -> []
                 })
             ()
             GotIdentities
