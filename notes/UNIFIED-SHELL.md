@@ -1,19 +1,35 @@
 # Unified shell — canonical implementation and consolidation plan
 
-Updated 15 September 2026, against source through 5884eaa. **This is the implementation authority for the unified shell and the architectural consolidation identified in the subsequent reviews.** It supersedes the 14 September sequencing where the implementation has advanced. [UNIFIED-SHELL-design.md](UNIFIED-SHELL-design.md) remains background; [MONOREPO.md](MONOREPO.md) supplies the framework philosophy. The executable handoff is [UNIFIED-SHELL-work-order.md](UNIFIED-SHELL-work-order.md).
+Updated 16 September 2026, against source through 4a05929. **This is the implementation authority for the unified shell and the architectural consolidation identified in the subsequent reviews.** It supersedes the 14 September sequencing where the implementation has advanced. [UNIFIED-SHELL-design.md](UNIFIED-SHELL-design.md) remains background; [MONOREPO.md](MONOREPO.md) supplies the framework philosophy. The executable handoff is [UNIFIED-SHELL-work-order.md](UNIFIED-SHELL-work-order.md).
 
-This revision is a plan, not a claim that its acceptance checks have passed. Implementation already includes the two-module Justat shell. Continue from that baseline; do not recreate the articles-only intermediate shell. No production deployment or database migration is part of this work.
+Sections 3–10 below are the plan as written; they remain accurate as the design record. Section 0 records what is now **implemented** against it. No production deployment or database migration is part of this work.
+
+## 0. Implementation status (16 September 2026)
+
+The consolidation — the completion of the state/lifetime contract (C1) and the standalone-host convergence (C5), plus the contract fixes surfaced by the two 2026-09-16 reviews ([functional](UNIFIED-SHELL-review-2026-09-16.md), [architectural](UNIFIED-SHELL-architecture-review-2026-09-16.md)) — is **implemented and gate-green** on `unified-shell-consolidation`. Browser acceptance (§9) is the remaining user-driven evidence; **C6 (alerts) is unstarted** and sequenced after it.
+
+| Checkpoint | Commit | What landed |
+| --- | --- | --- |
+| CP-A (finishes C1) | `eabbe62` | Per-content-module **request identity + resource lifetime**: `LoadGen` (monotonic read generation) + `DraftRev` (draft revision) + `invalidateInFlight` (host leave-hook). Each read completion (success *and* failure) applies only against its issuing generation; a write's draft-clear is gated on its revision; the shell invalidates the outgoing module's in-flight reads before disposal. Fixes the five reproduced races. Route/target checks are now a secondary defence, not the authority. Fixtures: `test/ReorderFixtures` (real `update` functions, reordered/stale/late completions), wired into `test.sh` Step 1j. |
+| CP-B (finishes C5) | `a21957e` | **Standalone-host convergence.** Two single-module hosts mirror the Justat shell: `apps/microblog/src/Client/Blog/{Host,Chrome}.fs` (darwin.news) and `apps/articles/src/Client/Articles/{Host,Chrome}.fs` (ndct). Each owns the router, the shared identity authority (`Content.Identity`/`IdentityView`), and its chrome, driving its module through the hosted surface only. Deleted the module-owned identity subsystems/UI/standalone `init·update·view` (~1130 lines), moved `ndctHero`→ndct host and `justatSidebar`→shell chrome, deleted `packages/content-client/ClaimHandoff.fs`. |
+| CP-C (finishes C2 injection) | `93fe556` | **Host-injected typed client.** A `Deps = { Ctx; Api }` per module; `Model.Error` and every read/write `Got*` payload are `Result<_, Hedge.Http.ApiError>`; pages call `deps.Api.*` and render via `Hedge.Http.renderError`. Hosts/shell build the client once (`createClient browserTransport`) and inject it; identity failures wrap as `HttpFailure(0, err)`. Deleted `module Api` (the browser-transport shim) from both `Shared.fs`. |
+| CP-D (C2/C3/C4 contract fixes) | `4a05929` | (a) Generated inserts take explicit `id`/`now` — `Gen/Program.fs` emits `insert<X> (db) (id) (now) (create)`; the two live callers pass `services.NewId()`/`services.Now()`; all `generated/Db.fs` re-baselined. (b) `browserTransport`/`extensionTransport` honour the Request's verb + headers. (c) Typed extension `Destination = { Url; Key }`. (d) microblog `Worker` uses `Blog.Snapshots.privatePrefix` (articles' site-shared Worker keeps the literal — ndct composes no blog). |
+| CP-E | *(this doc)* | Docs updated to the implemented owners + contracts; browser-acceptance evidence recorded in §9 as it is gathered. |
+
+**The single content-client architecture, as built:** a module is pure content — it exposes only the hosted surface (`emptyHosted`/`enterHosted`/`updateHosted`/`withSession`/`invalidateContent`/`invalidateInFlight`/`disposeHosted`/`contentView`) and owns feed/item/tag/new-item + comments. The **host** (Justat shell, or a single-module standalone host) owns the router, the one identity authority, the chrome, and constructs + injects the typed API client. Read/write validity is the module's `LoadGen`/`DraftRev` contract; the transport contract is `Hedge.Http` end to end; generated inserts are pure in `id`/`now`; the blog feature owns its private blob prefix.
 
 ## 1. Objective and current position
 
 Finish the shell's state/lifetime contract and make the framework/library/app division enforceable through typed interfaces and tests. The result must preserve current content, wire formats, URLs, themes and tenant composition while removing the conventions that caused the repeated review defects.
 
-| Original stage | Current position | Remaining obligation |
+Status per stage (see §0 for the commit mapping):
+
+| Original stage | Current position | Obligation |
 | --- | --- | --- |
-| 0 — Hosting interfaces | Present in both content modules | Make resource ownership and callback cancellation effective throughout page helpers. |
-| 1 — Articles-only shell | Superseded by the integrated implementation | Retain the established standalone entry choices for NDCT and microblog. |
-| 2 — Articles + blog in Justat | Integrated; acceptance remains incomplete | Preserve drafts and operation outcomes; establish per-request validity and scoped resources. C1 closes this stage's outstanding contract. |
-| 3 — Shared ownership | Content.Identity and IdentityView extracted; legacy ownership remains | Move standalone hosts onto the shared identity component and delete transitional module ownership in C5. |
+| 0 — Hosting interfaces | Present in both content modules | **Done** — resource ownership/cancellation effective; the hosted surface is now the *only* module surface (CP-B). |
+| 1 — Articles-only shell | Superseded by the integrated implementation | **Done** — NDCT/microblog keep single-module standalone hosts (CP-B), not the two-module shell. |
+| 2 — Articles + blog in Justat | Integrated | **Done** — per-request validity + scoped resources (CP-A); typed injected client (CP-C). Browser acceptance (§9) outstanding. |
+| 3 — Shared ownership | Converged | **Done** — both standalone hosts run on `Content.Identity`/`IdentityView`; module-owned identity deleted (CP-B). |
 | 4 — Optional expansion | Deferred | Generated client mount registries, persistent drafts and additional shell products remain separate work. |
 
 Recent fixes are the starting point: cached-feed loading resets, retained mutation errors, pinned extension destinations, admin FormSeq, archive-key blocking and the extension .NET build gate. Preserve their protection while replacing temporary implementations. The review of 7962bf6 was architectural; establish its runtime baseline in C0 rather than treating its commit message as verification.
@@ -253,6 +269,17 @@ Justat retains its sidebar on articles routes and omits it on blog routes. The s
 Existing path-mounted bundle support remains a framework capability even though Justat now uses integrated components. The old cross-document claim handoff is removed only after confirming no supported consumer still needs it; it is not reintroduced into Justat.
 
 Run targeted tests as each change lands and the existing complete pipeline at each mergeable checkpoint. Record SDK, commands, target composition and failures/unrun checks. A green .NET build is not evidence of a working Fable artifact or browser flow.
+
+### Browser acceptance — pending (user-driven), record results here
+
+CP-A–CP-D are gate-green; the following runtime flows are the remaining evidence. Check off with the observed result and date.
+
+- [ ] **Justat shell** — the §9 sequence: paginate articles → blog → paginate blog → open detail/reply and type → switch back → Back/Forward → return to the draft → submit while navigating. Assert: no document reload for hosted navigation; one header/main/identity control; sidebar on articles routes only; retained valid pages/drafts; correct outcomes; pagination continues.
+- [ ] **CP-A races (the reviewer's reproduction list)** — module-switch does not resurrect a disposed socket or rewrite the tab title (F1); a late comment success cannot erase a newer draft (F2); two reads of one route / paginate across leave+re-enter — no dup, no cross-view apply (F3); an obsolete read *failure* does not mutate the view (F4); blog `/new` submit does not strand the form behind a spinner (F5).
+- [ ] **darwin.news (microblog host)** — full flow: feed/item/comment; identity switch/merge/revert/disconnect; OAuth login + return-focus (claim consumed once).
+- [ ] **ndct (articles host)** — full flow incl. the home hero; identity flows as above; `/blog` absent (no blog composed).
+- [ ] **Snapshots** — capture + `/archive/<id>` serve; hostile-HTML isolation holds when opened directly; archive keys denied through the public `/blobs/` route (incl. percent-encoded).
+- [ ] **Extension smoke** — install the built extension; capture + publish an item to a pinned destination; verify the typed `Destination` reaches the background broker.
 
 ## 10. Delivery, rollback and definition of done
 

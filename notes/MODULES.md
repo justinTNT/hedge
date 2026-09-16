@@ -24,6 +24,18 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
   - **First merge uses path-mount:** ship `/blog` as a bundle beside the *untouched*
     live articles client (D4-consistent). The unified shell + articles-as-component is
     the paired follow-up (see below), when we're not under first-merge pressure.
+  - **Update (16 Sep 2026 — CP-B convergence, `a21957e`):** the sequencing above is
+    complete and has converged further. A module client is now purely a **hosted
+    component** — it exposes only the hosted surface (`emptyHosted`/`enterHosted`/
+    `updateHosted`/`withSession`/`invalidateContent`/`invalidateInFlight`/
+    `disposeHosted`/`contentView`) and owns no router, identity or chrome. There is no
+    module-owned standalone `App` any more: the "standalone entry" is an **app-level
+    single-module host** (`apps/microblog/src/Client/Blog/{Host,Chrome}.fs`,
+    `apps/articles/src/Client/Articles/{Host,Chrome}.fs`) that mirrors the Justat shell
+    (one router, one `Content.Identity`/`IdentityView` authority, its own chrome) and
+    drives the module through that surface. Identity + tenant chrome are host-owned; the
+    module's identity subsystem/UI and `ClaimHandoff` were deleted. See
+    [UNIFIED-SHELL.md §0](UNIFIED-SHELL.md).
 - **D2 — One D1 (justat-db).** Shared identity + every module's content and comments
   in one database (see D3 — shared identity needs joinable comments; two DBs would
   force cross-DB joins).
@@ -104,7 +116,9 @@ A module's parts relate differently to *generated* code, so wiring is a mix:
   (`<Compile Include="../../packages/modules/blog/Server/Handlers.fs" />`, exactly
   how shared `RichText.fs` is wired). NOT filesystem symlinks (npm-hostile), NOT a
   standalone library (can't see code generated into its consumer).
-- **Client** → compiles into the `/blog` bundle (component + standalone entry).
+- **Client** → a hosted **component** (its `.client.props` file-list), composed into a
+  host bundle. Post-CP-B there is no module-owned standalone entry; an app supplies the
+  single-module host (or the Justat shell) that runs it. See the D1 update above.
 - **Later refinement — split generation:** generate prefix-agnostic bits
   (row parsers, codecs, typed API client fns) *per-module* and only prefix-dependent
   bits (`Tables`, `schema`, `Routes`, admin registry) *per-site*; then modules become

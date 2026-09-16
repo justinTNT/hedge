@@ -81,6 +81,12 @@ app's `gen-modules.json`. Gen prefixes each module's tables/routes (e.g. `blog_`
 worked example: `articles` at the root + a `blog` mounted at `/blog`, one deploy,
 one database. See `notes/MODULES.md`.
 
+On the client, a content module is a pure **hosted component** (feed/item/comments +
+its hosted surface); the **host** owns the router, the one identity authority
+(`Content.Identity`/`IdentityView`), the chrome, and the injected typed API client. A
+host is either the multi-module **shell** (justat.at) or an app-level **single-module
+host** (darwin.news, ndct). See `notes/UNIFIED-SHELL.md` §0.
+
 ## Deeper docs
 
 - `notes/MONOREPO.md` — framework-vs-app boundary, the golden-model discipline
