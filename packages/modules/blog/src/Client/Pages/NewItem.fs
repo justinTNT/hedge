@@ -63,10 +63,17 @@ let update msg model =
         Cmd.OfPromise.either Blog.ClientGen.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
 
     | GotSubmitItem (Ok _) ->
-        model, Cmd.batch [
-            Cmd.ofMsg LoadFeed
-            Cmd.ofEffect (fun _dispatch -> RichText.clearEditor RichText.ownerCommentEditorId)
-        ]
+        // C1: the item is created server-side regardless; run the post-create effects
+        // (refresh the feed, clear the owner-comment editor) only if still on the "new"
+        // route — a stale success from a since-left form must not reload the feed or clear
+        // a different view's editor.
+        match model.Route with
+        | [ "new" ] ->
+            model, Cmd.batch [
+                Cmd.ofMsg LoadFeed
+                Cmd.ofEffect (fun _dispatch -> RichText.clearEditor RichText.ownerCommentEditorId)
+            ]
+        | _ -> model, Cmd.none
 
     | GotSubmitItem (Error err) ->
         { model with Error = Some err }, Cmd.none
