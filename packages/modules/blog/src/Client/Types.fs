@@ -38,6 +38,11 @@ type Model = {
     ItemForm: ItemForm
     CollapsedComments: Set<string>
     ReplyingTo: {| ItemId: string; ParentId: string option |} option
+    /// C1b: the in-progress comment as model state. The editor reports edits via onChange
+    /// into this field, so SubmitComment builds the request from the model — not a DOM read.
+    /// Cleared on confirmed submit and on navigation away from the item (no cross-item bleed);
+    /// preserved across a reply box close/reopen within the same item.
+    CommentDraft: string
     Identities: IdentityListItem list
     /// Providers the server has credentials for — the connections pane offers
     /// only these, so an unconfigured provider is never a dead button
@@ -75,6 +80,7 @@ type Msg =
     | GotSubmitItem of Result<SubmitItem.Response, string>
     | ToggleCollapse of string
     | SetReplyTo of itemId: string * parentId: string option
+    | SetCommentDraft of string
     | CancelReply
     | GotSessionSync of GuestSession.GuestSessionData
     | RevertIdentity of identityId: string * merge: bool

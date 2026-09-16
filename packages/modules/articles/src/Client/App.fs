@@ -89,6 +89,7 @@ let init () : Model * Cmd<Msg> =
           GuestSession = GuestSession.getSession ()
           CollapsedComments = Set.empty
           ReplyingTo = None
+          CommentDraft = ""
           Identities = []
           AvailableProviders = []
           ShowIdentitySwitcher = false
@@ -119,6 +120,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                     Route = route
                     CurrentItem = None
                     ReplyingTo = None
+                    CommentDraft = ""
                     CollapsedComments = Set.empty
                     ShowIdentitySwitcher = false
                     SelectedIdentity = None
@@ -140,7 +142,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | [] -> Cmd.batch [ cleanupCmd; resetTitleCmd; Cmd.ofMsg LoadFeed ]
             | [idOrSlug] -> Cmd.batch [ cleanupCmd; Cmd.ofMsg (LoadItem idOrSlug) ]
             | _ -> Cmd.batch [ cleanupCmd; resetTitleCmd ]
-        { model with Route = route; CurrentItem = None; ReplyingTo = None; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
+        { model with Route = route; CurrentItem = None; ReplyingTo = None; CommentDraft = ""; CollapsedComments = Set.empty; ShowIdentitySwitcher = showSwitcher; SelectedIdentity = selected; PendingClaimFocus = None }, cmd
 
     | DismissError ->
         { model with Error = None }, Cmd.none
@@ -148,7 +150,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
         Feed.update msg model
 
-    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply
+    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | SetCommentDraft _ | CancelReply
     | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
         Item.update standaloneCtx msg model
 
@@ -267,6 +269,7 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
       GuestSession = session
       CollapsedComments = Set.empty
       ReplyingTo = None
+      CommentDraft = ""
       Identities = []
       AvailableProviders = []
       ShowIdentitySwitcher = false
@@ -304,6 +307,7 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             Route = route
             CurrentItem = None
             ReplyingTo = None
+            CommentDraft = ""
             CollapsedComments = Set.empty
             // In-flight requests from the route we're leaving are invalidated (their results
             // are stale-dropped by the shell), so their loading flags must not linger — else a
@@ -326,7 +330,7 @@ let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * 
     match msg with
     | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
         Feed.update msg model
-    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | CancelReply
+    | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | SetCommentDraft _ | CancelReply
     | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
         Item.update ctx msg model
     | DismissError ->

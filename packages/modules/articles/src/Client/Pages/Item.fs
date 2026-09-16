@@ -56,11 +56,16 @@ let disconnectEventsCmd () : Cmd<Msg> =
 
 let mutable private commentEditorActive = false
 
-let initCommentEditorCmd : Cmd<Msg> =
+let initCommentEditorCmd (initial: string) : Cmd<Msg> =
     Cmd.ofEffect (fun dispatch ->
         if not commentEditorActive then
             commentEditorActive <- true
-            RichText.createEditorWithClose RichText.commentEditorId "" (fun () -> dispatch CancelReply)
+            // C1b: seed from the model draft, report edits back via onChange, and keep the
+            // guest upload endpoint the close-button editor used. Submission reads the model.
+            RichText.createEditorScoped RichText.commentEditorId initial
+                (fun text -> dispatch (SetCommentDraft text))
+                (fun () -> dispatch CancelReply)
+                "/api/blobs/guest"
     )
 
 /// Destroy the comment editor now (synchronous, idempotent). Plain function for
@@ -111,7 +116,8 @@ let update (ctx: Content.HostContext) msg model =
     | SubmitComment ->
         match model.CurrentItem with
         | Some response ->
-            let text = RichText.getEditorContent RichText.commentEditorId
+            // C1b: build from the model draft (kept current by SetCommentDraft), not a DOM read.
+            let text = model.CommentDraft
             let parentId =
                 match model.ReplyingTo with
                 | Some rt -> rt.ParentId
@@ -135,7 +141,9 @@ let update (ctx: Content.HostContext) msg model =
             let updatedItem =
                 if alreadyHas then r
                 else { r with Post = { r.Post with Comments = r.Post.Comments @ [ resp.Comment ] } }
-            { model with CurrentItem = Some updatedItem; ReplyingTo = None }, destroyCommentEditorCmd
+            // C1b: clear only the just-submitted draft (a stale success for another post can't
+            // reach here — guarded above — so this never discards a different post's draft).
+            { model with CurrentItem = Some updatedItem; ReplyingTo = None; CommentDraft = "" }, destroyCommentEditorCmd
         | _ -> model, Cmd.none
 
     | GotSubmitComment (Error err) ->
@@ -149,9 +157,14 @@ let update (ctx: Content.HostContext) msg model =
 
     | SetReplyTo (postId, parentId) ->
         { model with ReplyingTo = Some {| PostId = postId; ParentId = parentId |} },
-        Cmd.batch [ destroyCommentEditorCmd; initCommentEditorCmd ]
+        Cmd.batch [ destroyCommentEditorCmd; initCommentEditorCmd model.CommentDraft ]
+
+    | SetCommentDraft text ->
+        { model with CommentDraft = text }, Cmd.none
 
     | CancelReply ->
+        // Keep the draft — closing the reply box preserves in-progress text so reopening the
+        // box on the same post restores it. Navigation away clears it (App enterHosted/UrlChanged).
         { model with ReplyingTo = None }, destroyCommentEditorCmd
 
     | ConnectEvents postId ->

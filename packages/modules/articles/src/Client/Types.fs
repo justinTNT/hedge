@@ -26,6 +26,11 @@ type Model = {
     GuestSession: GuestSession.GuestSessionData
     CollapsedComments: Set<string>
     ReplyingTo: {| PostId: string; ParentId: string option |} option
+    /// C1b: the in-progress comment as model state. The editor reports edits via onChange
+    /// into this field, so SubmitComment builds the request from the model — not a DOM read.
+    /// Cleared on confirmed submit and on navigation away from the post (no cross-post bleed);
+    /// preserved across a reply box close/reopen within the same post.
+    CommentDraft: string
     Identities: IdentityListItem list
     /// Providers the server has credentials for.
     AvailableProviders: string list
@@ -49,6 +54,7 @@ type Msg =
     | GotSubmitComment of Result<SubmitComment.Response, string>
     | ToggleCollapse of string
     | SetReplyTo of postId: string * parentId: string option
+    | SetCommentDraft of string
     | CancelReply
     | ConnectEvents of string
     | DisconnectEvents
