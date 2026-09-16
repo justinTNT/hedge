@@ -66,6 +66,37 @@ let fetchJsonRaw (url: string) : JS.Promise<obj> =
         return JS.JSON.parse text
     }
 
+// -- Transport-neutral browser adapter (C2) --
+
+/// The browser Transport: runs a Hedge.Http.Request through fetch, applying the deployment
+/// base once and keeping the default same-origin cookie behaviour (identity/guest cookies
+/// ride along exactly as the helpers above). A completed HTTP response — whatever its status
+/// — comes back as Ok; only a request that never completes (network/CORS) becomes a
+/// TransportFailure, leaving status interpretation and decoding to the generated client via
+/// Http.sendDecode. Hedge.Http is fully qualified so `Response` never collides with Fetch's.
+/// (Custom per-request headers aren't forwarded: no browser endpoint emits any — the
+/// extension adapter carries its own credentials by a different path.)
+let browserTransport : Hedge.Http.Transport =
+    fun (req: Hedge.Http.Request) ->
+        promise {
+            let url = basePath + req.Path + buildQuery req.Query
+            let verb = if req.Method = "POST" then HttpMethod.POST else HttpMethod.GET
+            let props =
+                match req.Body with
+                | Some body ->
+                    [ Method verb
+                      requestHeaders [ ContentType "application/json" ]
+                      Body (BodyInit.Case3 body) ]
+                | None ->
+                    [ Method verb ]
+            try
+                let! response = fetch url props
+                let! text = response.text()
+                return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
+            with ex ->
+                return Error (Hedge.Http.TransportFailure ex.Message)
+        }
+
 // -- WebSocket --
 
 [<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
