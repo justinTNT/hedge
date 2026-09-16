@@ -1,0 +1,8 @@
+/* ============================================================
+   Tenant theme: wt.fail — SITE_SLUG=wtfail.
+   Opts out of the red default and keeps the original black/neutral look.
+   ============================================================ */
+body.tenant-wtfail .extract { border-left-color: #bbb; border-bottom-color: #bbb; background: #fafafa; }
+body.tenant-wtfail .feed-day-label { color: #111; }
+body.tenant-wtfail .feed-day::before { background: #111; }
+body.tenant-wtfail .feed-day::after { background: linear-gradient(to right, #111 0%, #d0d0d0 45%, transparent 100%); }

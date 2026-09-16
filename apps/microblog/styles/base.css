@@ -1,0 +1,348 @@
+/* ============================================================
+   Microblog — shared base styles.
+
+   Loaded on the PUBLIC site (index.html) for every deployment, with or
+   without a selected tenant. A deployment with no tenant remains fully
+   usable on these styles alone. Tenant files in tenants/ load AFTER this
+   and override through higher specificity (body.tenant-*). Admin has its
+   own dependency set (admin.css) — nothing here is admin-only.
+
+   See README.md for ownership, override order, and the cascade note.
+   ============================================================ */
+
+/* Shared identity control CSS — the single source is the library
+   (packages/content-client/identity.css); vite resolves + inlines this
+   @import at build, so there is no runtime fetch and no editable copy. */
+@import "../../../packages/content-client/identity.css";
+
+/* --- Reset + chrome --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
+.app { max-width: 800px; margin: 0 auto; padding: 1rem; }
+header { border-bottom: 0.5px solid #dadada; }
+h1 { font-size: 1.5rem; }
+.loading { color: #666; }
+.error { background: #fee; border: 1px solid #fcc; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+
+/* --- Feed --- */
+.feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
+.feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; margin-left: 0.75rem; }
+.feed-item a { color: #666; font-size: 0.875rem; }
+.item-detail h2 { margin-bottom: 1rem; margin-top: 1rem; }
+.item-image { max-width: 100%; }
+nav img { width: 100%; }
+.tags { margin-top: 0.5rem; }
+.main-link { text-decoration: none; }
+
+/* --- Extract cards ---
+   The red border/accent is the shared DEFAULT look (darwin uses it as-is;
+   idealist keeps the #911/#500 red borders; ntaidc keeps the red day
+   divider). Tenants that want another look override in their own file. */
+.extract {
+  padding: 1em;
+  border-left: 4px solid #911;
+  border-bottom: 4px solid #500;
+  border-radius: 9px;
+  background: #f8f0f0;
+}
+
+.extract span {
+  flex: 1;
+  min-width: 0;
+}
+
+.extract p {
+  margin: 0.5em;
+}
+
+.extract img {
+  margin-left: 1em;
+  width: 20%;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Feed extract pairs a teaser with a thumbnail side by side; item-detail
+   extract is flowing rich text, so flex only applies in the feed context. */
+.feed-item .extract { display: flex; }
+
+/* Standalone feed thumbnail: an item with an image but no extract. */
+.feed-item-thumb { margin-top: 0.5em; }
+.feed-item-thumb img {
+  width: 20%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* Date-grouped feed: one sticky divider per day, articles beneath it. */
+.feed-day {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 2.25rem 0 0.5rem;
+  padding: 0.4rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+}
+.feed-day:first-child { margin-top: 0.75rem; }
+.feed-day::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f00;
+  flex-shrink: 0;
+}
+.feed-day::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #911 0%, #d0d0d0 45%, transparent 100%);
+}
+.feed-day-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #911;
+  white-space: nowrap;
+}
+/* Non-zero height so IntersectionObserver reliably reports the sentinel as
+   intersecting (a zero-area target does not). */
+.feed-sentinel { height: 1px; }
+
+.owner-comment {
+    margin: 1em;
+    padding: 1em;
+    background: #eee;
+}
+
+/* Comment Thread Styling */
+.comment-thread {
+    position: relative;
+    margin-left: 32px;
+    padding-left: 20px;
+    margin-top: 16px;
+}
+
+/* Clickable collapse line */
+.comment-collapse-line {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+}
+
+.comment-collapse-line::before {
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: #ccc;
+    border-radius: 1px;
+}
+
+.comment-collapse-line:hover::before {
+    width: 4px;
+}
+
+/* Rainbow colors cycling through ROYGBIV based on depth */
+.comment-thread.depth-0 > .comment-collapse-line::before { background: #e74c3c; } /* Red */
+.comment-thread.depth-1 > .comment-collapse-line::before { background: #e67e22; } /* Orange */
+.comment-thread.depth-2 > .comment-collapse-line::before { background: #f1c40f; } /* Yellow */
+.comment-thread.depth-3 > .comment-collapse-line::before { background: #2ecc71; } /* Green */
+.comment-thread.depth-4 > .comment-collapse-line::before { background: #3498db; } /* Blue */
+.comment-thread.depth-5 > .comment-collapse-line::before { background: #9b59b6; } /* Indigo/Violet */
+.comment-thread.depth-6 > .comment-collapse-line::before { background: #e74c3c; } /* Red (cycle) */
+.comment-thread.depth-7 > .comment-collapse-line::before { background: #e67e22; } /* Orange */
+.comment-thread.depth-8 > .comment-collapse-line::before { background: #f1c40f; } /* Yellow */
+.comment-thread.depth-9 > .comment-collapse-line::before { background: #2ecc71; } /* Green */
+.comment-thread.depth-10 > .comment-collapse-line::before { background: #3498db; } /* Blue */
+.comment-thread.depth-11 > .comment-collapse-line::before { background: #9b59b6; } /* Violet */
+
+/* Comment content */
+.comment-content {
+    padding: 8px 0;
+}
+
+.comment-author {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.comment-body {
+    color: #444;
+    line-height: 1.5;
+}
+
+.comment-body p {
+    margin: 0 0 0.5em 0;
+}
+
+.comment-body p:last-child {
+    margin-bottom: 0;
+}
+
+.comment-meta {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 6px;
+}
+
+/* Inline collapse toggle (next to Reply) */
+.comment-collapse-toggle-inline {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.comment-collapse-toggle-inline:hover {
+    color: #333;
+}
+
+/* Collapsed state */
+.comment-thread.collapsed > .comment-children {
+    display: none;
+}
+
+/* Reply button */
+.comment-reply-btn {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  margin-top: 3em;
+}
+
+.comment-reply-btn:hover {
+    color: #333;
+}
+
+/* Root level comments (no indent) */
+.comment-thread.root-comment {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.comment-thread.root-comment::before {
+    display: none;
+}
+
+/* Tag pills */
+.tag {
+    display: inline-block;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.85em;
+    margin-right: 8px;
+    margin-bottom: 6px;
+    text-decoration: none;
+    transition: filter 0.2s, transform 0.1s;
+}
+
+.tag:hover {
+    filter: brightness(0.85);
+    transform: scale(1.05);
+}
+
+.tag-header {
+  margin-top: -1em;
+  margin-left: 80%;
+}
+
+/* Avatar */
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4em;
+    height: 4em;
+    border-radius: 50%;
+    font-size: 1em;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.commenting-as {
+    display: flex;
+    align-items: center;
+}
+
+.comment-author {
+    display: flex;
+    align-items: center;
+}
+
+/* Comment editor overrides */
+.comment-form {
+  margin-top: 2em;
+}
+
+.comment-form .hamlet-rt-content {
+    min-height: 80px;
+}
+
+.comment-form .hamlet-rt-content .ProseMirror {
+    min-height: 60px;
+}
+
+/* Remove ProseMirror focus outline */
+.ProseMirror-focused {
+    outline: none !important;
+}
+
+/* Dark mode.
+   NOTE: microblog does not currently toggle the `html.dark` class anywhere, so
+   these rules are dormant. Kept for parity/future use. If dark mode is ever
+   wired up, a tenant theme (loaded after this file) wins on equal-specificity
+   conflicts — which is the intended precedence (tenant themes are bespoke). */
+html.dark { background: #1a1a1a; color: #e0e0e0; }
+html.dark .feed-item { border-bottom-color: #333; }
+html.dark .feed-day { background: #1a1a1a; }
+html.dark .feed-day::before { background: #e0e0e0; }
+html.dark .feed-day::after { background: linear-gradient(to right, #e0e0e0 0%, #444 45%, transparent 100%); }
+html.dark .feed-day-label { color: #e0e0e0; }
+html.dark .extract { background: #252525; border-color: #444; }
+html.dark .owner-comment { background: #2a2a2a; }
+html.dark a { color: #6cb4ee; }
+html.dark header { border-bottom-color: #333; }
+
+/* Nav + login layout. The identity badge/switcher control's own CSS is shared and lives in
+   packages/content-client/identity.css (@import'd at the top of this file). */
+nav { display: flex; align-items: center; justify-content: space-between; }
+
+.login-options { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.anon-name { color: #888; white-space: nowrap; }
+.login-options .avatar { width: 2em; height: 2em; }
+
+/* Nonukes archive banner. The banner markup ships on every deployment (index.html);
+   it is hidden here by default and revealed only by tenants/nonukes.css. Keeping the
+   hide rule shared preserves the visibility gate independently of loading that tenant. */
+.nu-banner { display: none; }
+
+/* Mobile */
+@media (max-width: 600px) {
+    .extract { flex-direction: column; }
+    .extract img { width: 100%; margin-left: 0; margin-top: 1em; }
+    .feed-item-thumb img { width: 100%; }
+    .login-options { flex-wrap: wrap; }
+    .claim-actions { flex-direction: column; }
+}

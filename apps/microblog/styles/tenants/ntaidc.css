@@ -1,0 +1,7 @@
+/* ============================================================
+   Tenant theme: nt-ai-dc.info — SITE_SLUG=ntaidc.
+   Warm cream ground for the NT AI Centres blog (companion to the Project
+   Ares info page). Keeps base.css's red extract borders and red day divider.
+   ============================================================ */
+body.tenant-ntaidc { background: #efe7d8; }
+body.tenant-ntaidc .feed-day { background: #efe7d8; }

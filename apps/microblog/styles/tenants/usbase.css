@@ -1,0 +1,43 @@
+/* ============================================================
+   Tenant theme: usba.se — SITE_SLUG=usbase.
+   Revives the old usba.se identity: cream ground, slate-blue links,
+   yellow-green accent, big geometric (Kabel-substitute Jost) headlines,
+   and the tilted masthead.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&family=League+Gothic&display=swap');
+
+body.tenant-usbase {
+  background: #eee8dd;                 /* cream (#eed) */
+  font-family: 'Jost', system-ui, sans-serif;
+  color: #33302a;
+}
+body.tenant-usbase a { color: #607890; }              /* slate-blue */
+body.tenant-usbase .feed-item h2 {                     /* the big-text gimmick */
+  font-family: 'League Gothic', 'Jost', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 2.9rem;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  color: #201810;
+  margin-left: 0;
+}
+body.tenant-usbase .extract { background: #f6f4e6; border-color: #cabf8f; }
+/* Old usba.se "curled corner": drop + inset shadow with an asymmetric radius. */
+body.tenant-usbase .feed-item .extract {
+  border: none;
+  border-radius: 0 120px 120px / 0 0 6px 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.27), 0 0 40px rgba(0,0,0,0.06) inset;
+}
+/* sticky day divider on cream, accent recoloured to the #bf2 yellow-green */
+body.tenant-usbase .feed-day { background: #eee8dd; }
+body.tenant-usbase .feed-day::before { background: #99cc33; }
+body.tenant-usbase .feed-day::after {
+  background: linear-gradient(to right, #99cc33 0%, #cabf8f 45%, transparent 100%);
+}
+body.tenant-usbase .feed-day-label { color: #607890; }
+/* tilted masthead (perspective gives the rotate3d real depth) */
+body.tenant-usbase nav img {
+  width: 50%;
+  transform: perspective(600px) rotate3d(35, 20, 10, -23deg);
+  transform-origin: left center;
+}

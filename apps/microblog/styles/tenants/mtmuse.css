@@ -1,0 +1,53 @@
+/* ============================================================
+   Tenant theme: mtmu.se — SITE_SLUG=mtmuse.
+   Revives the old MT Muse look: clean white ground, geometric
+   (Kabel-substitute Jost) body, and dramatic slate-blue League Gothic
+   big-text headlines. Masthead pairs the "MT Muse" wordmark with the
+   face-cup logo. Reuses the usba.se big-text machinery (fitHeadlines).
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&family=League+Gothic&display=swap');
+
+body.tenant-mtmuse {
+  background: #fff;
+  font-family: 'Jost', system-ui, sans-serif;
+  color: #33302a;
+}
+body.tenant-mtmuse a { color: #607890; }              /* slate-blue */
+body.tenant-mtmuse .feed-item h2 {                     /* the big-text gimmick, slate-blue */
+  font-family: 'League Gothic', 'Jost', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 2.9rem;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  color: #607890;
+  margin-left: 0;
+}
+/* subtle near-white cards; neutral/slate borders instead of the red default */
+body.tenant-mtmuse .extract { background: #f4f8ff; border-left-color: #607890; border-bottom-color: #c3ccd4; }
+/* day divider recoloured to slate to match the headlines */
+body.tenant-mtmuse .feed-day { background: #fff; }
+body.tenant-mtmuse .feed-day-label { color: #607890; }
+body.tenant-mtmuse .feed-day::before { background: #607890; }
+body.tenant-mtmuse .feed-day::after {
+  background: linear-gradient(to right, #607890 0%, #d0d0d0 45%, transparent 100%);
+}
+/* masthead: "MT Muse" wordmark (Kabel-substitute Jost) beside the face-cup logo */
+body.tenant-mtmuse nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  text-decoration: none;
+}
+body.tenant-mtmuse nav a::before {
+  content: "MT Muse";
+  font-family: 'Jost', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #4a4f57;
+}
+body.tenant-mtmuse nav img {
+  width: auto;
+  height: 76px;
+}

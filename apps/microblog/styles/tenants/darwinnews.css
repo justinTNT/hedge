@@ -1,0 +1,10 @@
+/* ============================================================
+   Tenant theme: Darwin News (darwin.news) — SITE_SLUG=darwinnews.
+
+   Darwin News IS the shared default look: the red extract borders and red
+   day-divider accents in base.css are exactly its branding, and other
+   tenants override away from it. So Darwin needs no overrides of its own —
+   this file is intentionally (almost) empty. Add rules here if Darwin ever
+   wants to diverge from the base default; they cascade after base.css via
+   the body.tenant-darwinnews class.
+   ============================================================ */

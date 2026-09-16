@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { existsSync, readdirSync } from 'node:fs';
 
 // -- Per-deployment configuration --
 // Set at build time so one branch can produce every tenant's site:
@@ -12,9 +13,22 @@ const siteLogo = process.env.SITE_LOGO || '/public/darwinnews.png';
 // BCP-47 locale for date formatting (read via Hedge.Tenant). Defaults to the
 // estate's en-AU; a site can override, or set "" for the viewer's own locale.
 const siteLocale = process.env.SITE_LOCALE || 'en-AU';
-// Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
-// deploy-specific rules (e.g. body.tenant-usbase nav img { width: 50% }).
+// Tenant selection. Selects the tenant stylesheet (styles/tenants/<slug>.css)
+// and stamps `tenant-<slug>` on the public <body> so those rules scope to it.
 const siteSlug = process.env.SITE_SLUG || '';
+// A set SITE_SLUG must name an existing tenant stylesheet; unset/empty means
+// shared styles only (no tenant, no body class). Fail fast on anything else —
+// never silently fall back to a default theme.
+const tenantsDir = resolve(__dirname, 'styles/tenants');
+if (siteSlug) {
+  if (!/^[a-z0-9-]+$/.test(siteSlug)) {
+    throw new Error(`[hedge] SITE_SLUG "${siteSlug}" is malformed — expected lowercase letters, digits, and hyphens.`);
+  }
+  if (!existsSync(resolve(tenantsDir, `${siteSlug}.css`))) {
+    const known = readdirSync(tenantsDir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4)).sort();
+    throw new Error(`[hedge] SITE_SLUG "${siteSlug}" has no stylesheet styles/tenants/${siteSlug}.css. Known tenants: ${known.join(', ')}.`);
+  }
+}
 // Per-tenant feature flags (comma list, e.g. "bigText") — read via Hedge.Tenant.
 const siteFeatures = process.env.SITE_FEATURES || '';
 // Optional external info/companion page (e.g. a campaign page on Pages). When set,
@@ -61,10 +75,11 @@ function ogMeta(title) {
 function siteConfig() {
   return {
     name: 'hedge-site-config',
-    // 'pre' so __BASE__ resolves to a real path BEFORE vite scans the HTML for assets — this lets
-    // vite bundle the theme public/styles.css (and its @imports, e.g. identity.css) into a hashed,
-    // cache-busted asset instead of leaving an un-hashed static <link>. Matches apps/articles so
-    // hedge has ONE prescriptive CSS delivery. (Sub-path/BASE_PATH tenants: verify when idealist ships.)
+    // 'pre' so this runs BEFORE vite scans the HTML for assets — the injected <link>s (below)
+    // are then bundled into hashed, cache-busted assets. CSS is assembled per entry from
+    // styles/ (outside public/): index gets base + the selected tenant, admin gets its own
+    // self-contained set, rhyming keeps its inline styles. Relative hrefs resolve regardless
+    // of BASE_PATH (root or /st).
     transformIndexHtml: {
     order: 'pre',
     handler(html, ctx) {
@@ -80,15 +95,21 @@ function siteConfig() {
         `window.SITE_INFO_URL=${JSON.stringify(siteInfoUrl)};` +
         `window.SITE_INFO_LABEL=${JSON.stringify(siteInfoLabel)};` +
         `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};</script>`;
-      const headInject = isIndex ? `${injected}\n    ${ogMeta(siteTitle)}` : injected;
+      // Deterministic order: shared base first, then the deployment override.
+      const cssLinks =
+        isAdmin ? '<link rel="stylesheet" href="./styles/admin.css">'
+        : isIndex ? ('<link rel="stylesheet" href="./styles/base.css">'
+            + (siteSlug ? `\n    <link rel="stylesheet" href="./styles/tenants/${siteSlug}.css">` : ''))
+        : '';   // rhyming.html: self-contained inline styles — no theme attached.
+      const headInject = [cssLinks, injected, isIndex ? ogMeta(siteTitle) : '']
+        .filter(Boolean).join('\n    ');
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__BASE__/g, basePath)
         .replace('<head>', `<head>\n    ${headInject}`)
-        // Tenant theme is for the public site only — never the shared admin tool,
-        // or the tenant's marketing CSS (fonts, colours, masthead wordmark) leaks
-        // onto every admin control.
-        .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
+        // Tenant class + theme are for the public site only — never the admin tool
+        // (its marketing CSS would leak onto every control) or the standalone rhyming page.
+        .replace('<body>', (siteSlug && isIndex) ? `<body class="tenant-${siteSlug}">` : '<body>');
       }
     }
   };

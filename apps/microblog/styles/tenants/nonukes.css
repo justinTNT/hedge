@@ -1,0 +1,27 @@
+/* ============================================================
+   Tenant theme: archive.ntne.ws — SITE_SLUG=nonukes.
+   The anti-nuclear news archive. Reveals + styles the archive notice
+   banner and the once-per-browser archive modal. The banner/modal markup
+   ships in index.html on every deployment; base.css hides the banner by
+   default and this file (loaded only for nonukes) reveals + styles it.
+   The modal starts with the `hidden` attribute and is un-hidden by the
+   nonukes-only script in index.html.
+   ============================================================ */
+body.tenant-nonukes .nu-banner {
+  display: block; background: #7a1414; color: #fff; text-align: center;
+  font: 13px/1.45 Arial, Helvetica, sans-serif; padding: 6px 14px; border-bottom: 2px solid #000;
+}
+.nu-banner a { color: #ffd; }
+.nu-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.nu-modal[hidden] { display: none; }
+.nu-modal-box { background: #fff; max-width: 460px; border: 3px solid #7a1414;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5); padding: 1.6rem 1.8rem;
+  font: 15px/1.5 Georgia, serif; color: #222; }
+.nu-modal-box h2 { margin: 0 0 .1em; font: bold 22px Georgia, serif; color: #7a1414; }
+.nu-modal-box .nu-sub { color: #7a1414; font: bold 12px Arial, sans-serif;
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: .9rem; }
+.nu-modal-box p { margin: .6rem 0; }
+.nu-modal-box button { margin-top: .8rem; background: #7a1414; color: #fff; border: 0;
+  padding: .55rem 1.2rem; font: bold 14px Arial, sans-serif; cursor: pointer; border-radius: 3px; }
+.nu-modal-box button:hover { background: #601010; }
