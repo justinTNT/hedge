@@ -76,7 +76,9 @@ let private hideBrokenImg (e: Browser.Types.Event) : unit = jsNative
 
 // usba.se runs on the composed blog module, so its feed lives under the module's
 // /api/blog route prefix (the bare /api/feed path now falls through to the SPA).
-let private newsUrl = "https://usba.se/api/blog/feed/start"
+// First page omits ?cursor; a trailing /start path segment is NOT a route — it
+// falls through to the SPA (returns HTML), so keep the URL as the bare endpoint.
+let private newsUrl = "https://usba.se/api/blog/feed"
 
 let private decodeNews : Decoder<NewsItem list> =
     let item =
