@@ -15,12 +15,11 @@ open Hedge.Workers
 open Hedge.Router
 open Articles.Codecs
 open Articles.Api
-open Server.Env
 open Articles.Db
-
-// The shared, app-level identity layer. `Server.Handlers` reaches it as `Identity`
-// by namespace proximity; this module lives outside `Server`, so alias it.
-module Identity = Server.Identity
+// C3: the module's capabilities arrive through Articles.Services (built by the host), not the
+// app's Server.Env / Server.Identity. Author resolution comes via the content-server contract.
+open Articles.Services
+open Content.Server.Author
 
 // The feed SELECT is a lean column subset (no body), so read the row directly
 // rather than through the full parsePostRow.
@@ -47,7 +46,7 @@ let private toCommentItem (pictureOf: string -> string) (r: CommentRow) : Submit
 
 let private pageSize = 8   // small: load less, reload more
 
-let getFeed (query: GetFeed.Query) (env: Env) : JS.Promise<WorkerResponse> =
+let getFeed (query: GetFeed.Query) (services: Services) : JS.Promise<WorkerResponse> =
     promise {
         // Fetch pageSize+1 to know whether a further page exists without a count query.
         // No cursor => first page; a cursor is the opaque "<ts>_<id>" token from a
@@ -55,12 +54,12 @@ let getFeed (query: GetFeed.Query) (env: Env) : JS.Promise<WorkerResponse> =
         let stmt =
             match query.Cursor with
             | None ->
-                bind (env.DB.prepare Articles.Sql.feedFirstPage) [| box (pageSize + 1) |]
+                bind (services.DB.prepare Articles.Sql.feedFirstPage) [| box (pageSize + 1) |]
             | Some cursor ->
                 let sep = cursor.IndexOf('_')
                 let ts = int (cursor.Substring(0, sep))
                 let id = cursor.Substring(sep + 1)
-                bind (env.DB.prepare Articles.Sql.feedAfterCursor) [| box ts; box ts; box id; box (pageSize + 1) |]
+                bind (services.DB.prepare Articles.Sql.feedAfterCursor) [| box ts; box ts; box id; box (pageSize + 1) |]
         let! result = stmt.all()
         let rows = result.results |> Array.map toFeedItem |> Array.toList
         let hasMore = List.length rows > pageSize
@@ -79,11 +78,11 @@ let getFeed (query: GetFeed.Query) (env: Env) : JS.Promise<WorkerResponse> =
         return okJson body
     }
 
-let getPost (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
+let getPost (idOrSlug: string) (services: Services) : JS.Promise<WorkerResponse> =
     promise {
         let postStmt =
-            if isUuid idOrSlug then selectPost idOrSlug env.DB
-            else bind (env.DB.prepare Articles.Sql.postBySlug) [| box idOrSlug |]
+            if isUuid idOrSlug then selectPost idOrSlug services.DB
+            else bind (services.DB.prepare Articles.Sql.postBySlug) [| box idOrSlug |]
 
         let! postResult = postStmt.all()
         let rows = postResult.results
@@ -91,10 +90,10 @@ let getPost (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
             return notFound ()
         else
             let r = parsePostRow rows.[0]
-            let commentStmt = selectCommentsByPostId r.Id env.DB
-            let pictureStmt = bind (env.DB.prepare Articles.Sql.picturesForPostComments) [| box r.Id |]
+            let commentStmt = selectCommentsByPostId r.Id services.DB
+            let pictureStmt = bind (services.DB.prepare Articles.Sql.picturesForPostComments) [| box r.Id |]
 
-            let! results = env.DB.batch([| commentStmt; pictureStmt |])
+            let! results = services.DB.batch([| commentStmt; pictureStmt |])
             let pictures =
                 results.[1].results
                 |> Array.map (fun row -> rowStr row "id", rowStr row "picture")
@@ -118,7 +117,7 @@ let getPost (idOrSlug: string) (env: Env) : JS.Promise<WorkerResponse> =
     }
 
 let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
-    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
+    (services: Services) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> =
     promise {
         match Validate.articlesSubmitCommentReq req with
         | Error errors ->
@@ -126,29 +125,28 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         | Ok req ->
         let guest = resolveGuest request
         let guestId = guest.GuestId
-        let commentId = newId ()
-        let identityId = newId ()
-        let now = epochNow ()
+        let commentId = services.NewId ()
+        let identityId = services.NewId ()
+        let now = services.Now ()
         let author = req.Author |> Option.defaultValue "Anonymous"
         // Unwrap the typed request ids to plain strings for storage.
         let (ForeignKey postId) = req.PostId
         let parentId = req.ParentId |> Option.map (fun (ForeignKey p) -> p)
 
-        let! _ =
-            env.DB.batch([|
-                Identity.ensureGuestStmt env.DB guestId now
-                Identity.ensureAnonymousStmt env.DB identityId guestId author now
-            |])
-        let! active = Identity.activeFor env.DB guestId
-        let activeIdentityId = active |> Option.map (fun i -> i.Id) |> Option.defaultValue identityId
-        let activePicture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue ""
+        // C3: ensure the guest + anonymous identity and resolve the active author through the
+        // host-provided resolver (was Server.Identity.ensure*/activeFor inline).
+        let! resolved =
+            services.Author.ResolveAuthor
+                { GuestId = guestId; FallbackIdentityId = identityId; AuthorName = author; Now = now }
+        let activeIdentityId = resolved.IdentityId
+        let activePicture = resolved.Picture
 
         let insertComment =
             bind
-                (env.DB.prepare Articles.Sql.insertComment)
+                (services.DB.prepare Articles.Sql.insertComment)
                 [| box commentId; box postId; box activeIdentityId; optToDb parentId; box author; box req.Content; box 0; box now |]
 
-        let! _ = env.DB.batch([| insertComment |])
+        let! _ = services.DB.batch([| insertComment |])
 
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
@@ -165,7 +163,7 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
               ParentId = parentId |> Option.map ForeignKey; Author = author; Picture = activePicture
               Content = req.Content; Timestamp = now }
 
-        Hedge.Events.broadcast env.EVENTS ctx postId "NewComment" (Articles.Codecs.Encode.articlesNewCommentEvent event)
+        Hedge.Events.broadcast services.Events ctx postId "NewComment" (Articles.Codecs.Encode.articlesNewCommentEvent event)
 
         let body =
             Encode.object [ "comment", Encode.articlesCommentItem newComment ] |> Encode.toString 0

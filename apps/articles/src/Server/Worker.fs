@@ -26,7 +26,9 @@ let exports = createWorker {
         match authRoutes request e with
         | Some p -> Some p
         | None ->
-        match Server.Routes.dispatch request e ctx with
+        // C3: ModuleServices.dispatch binds each composed module's handler record from `env`
+        // and composes their (Server.Env-free) dispatches — site-selected (justat vs ndct).
+        match Server.ModuleServices.dispatch e request ctx with
         | Some p -> Some p
         | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->

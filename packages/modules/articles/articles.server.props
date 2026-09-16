@@ -15,7 +15,12 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)generated/Db.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Sql.fs" />
+    <!-- C3: Services (host capabilities) before Handlers; then the generated RouteContract
+         (Handlers record + dispatch) and the authored Composition.bind. -->
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Services.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Handlers.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
   </ItemGroup>
 </Project>

@@ -39,6 +39,10 @@
     <Compile Include="generated/Routes.fs" Condition="'$(HEDGE_SITE)' != 'ndct'" />
     <Compile Include="generated/Routes.ndct.fs" Condition="'$(HEDGE_SITE)' == 'ndct'" />
     <Compile Include="Meta.fs" />
+    <!-- C3: binds each composed module's Services from Env + composes their dispatches; site-
+         selected like the generated Routes (default = articles+blog; .ndct = articles-only). -->
+    <Compile Include="ModuleServices.fs" Condition="'$(HEDGE_SITE)' != 'ndct'" />
+    <Compile Include="ModuleServices.ndct.fs" Condition="'$(HEDGE_SITE)' == 'ndct'" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>

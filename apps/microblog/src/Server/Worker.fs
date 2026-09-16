@@ -41,7 +41,9 @@ let exports = createWorker {
         | None ->
         // After the API routes, before the framework's SPA fallback: item URLs
         // get the shell with Open Graph tags, everything else falls through.
-        match Server.Routes.dispatch request e ctx with
+        // C3: the site dispatch takes the blog module's handler record (bound over a Services
+        // built from this env), not env — the module no longer sees Server.Env.
+        match Server.Routes.dispatch (Blog.Composition.bind (Server.ModuleServices.blog e)) request ctx with
         | Some p -> Some p
         | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->

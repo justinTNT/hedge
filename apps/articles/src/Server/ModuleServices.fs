@@ -1,0 +1,40 @@
+module Server.ModuleServices
+
+// C3 — adapts this app's Env into each composed content module's Services and composes their
+// generated dispatches into one site dispatch. This is the DEFAULT (justat: articles + blog);
+// ndct (articles-only) uses ModuleServices.ndct.fs. Both expose `dispatch` with the same
+// signature, so the shared Worker stays site-agnostic (mirrors AttributionPolicy.fs / .ndct.fs).
+// It is the one place that knows both the app's Env / Server.Identity and the modules' Services.
+
+open Fable.Core
+open Hedge.Workers
+open Content.Server.Author
+open Server.Env
+
+/// Build the author resolver from the app's Server.Identity: ensure the guest + anonymous
+/// identity exist, then return the active (claimed) identity or the anon fallback.
+let private authorResolver (db: D1Database) : AuthorResolver =
+    { ResolveAuthor = fun (req: AuthorRequest) ->
+        promise {
+            let! _ =
+                db.batch([|
+                    Server.Identity.ensureGuestStmt db req.GuestId req.Now
+                    Server.Identity.ensureAnonymousStmt db req.FallbackIdentityId req.GuestId req.AuthorName req.Now
+                |])
+            let! active = Server.Identity.activeFor db req.GuestId
+            return
+                { IdentityId = active |> Option.map (fun i -> i.Id) |> Option.defaultValue req.FallbackIdentityId
+                  Picture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue "" }
+        } }
+
+let private articles (env: Env) : Articles.Services.Services =
+    { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB; NewId = newId; Now = epochNow }
+
+let private blog (env: Env) : Blog.Services.Services =
+    { DB = env.DB; Blobs = env.BLOBS; Events = env.EVENTS; AdminKey = env.ADMIN_KEY
+      Author = authorResolver env.DB; NewId = newId; Now = epochNow }
+
+/// Compose every composed content module's dispatch (articles + blog) over records bound from
+/// `env`, in the order the generated site Routes expects (articles then blog).
+let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    Server.Routes.dispatch (Articles.Composition.bind (articles env)) (Blog.Composition.bind (blog env)) request ctx

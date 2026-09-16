@@ -14,7 +14,14 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)generated/Db.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Sql.fs" />
+    <!-- C3: the module's Services record (host capabilities) before its Handlers; then the
+         generated RouteContract (Handlers record + dispatch) and the authored Composition.bind
+         that closes handlers over a Services. The app imports content-server/Author.fs (before
+         this props) and supplies the Services via Server.ModuleServices. -->
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Services.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Handlers.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
   </ItemGroup>
 </Project>

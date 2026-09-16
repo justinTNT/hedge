@@ -2,34 +2,8 @@
 module Server.Routes
 
 open Fable.Core
-open Thoth.Json
 open Hedge.Workers
-open Hedge.Router
-open Codecs
-open Articles.Codecs
-open Server.Env
 
-let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
+let dispatch (articlesHandlers: Articles.RouteContract.Handlers) (request: WorkerRequest) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
-    let route = parseRoute request
-    match route with
-    | GET path when matchPath "/api/articles/feed" path = Some (Exact "/api/articles/feed") ->
-        let query = ({ Cursor = (let v = (getQueryParam request.url "cursor") in if isNull v || v = "" then None else Some v) } : Articles.Api.GetFeed.Query)
-        Some (Articles.Handlers.getFeed query env)
-
-    | GET path ->
-        match matchPath "/api/articles/post/:id" path with
-        | Some (WithParam (_, id)) -> Some (Articles.Handlers.getPost id env)
-        | _ ->
-        None
-
-    | POST path when matchPath "/api/articles/comment" path = Some (Exact "/api/articles/comment") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.articlesSubmitCommentReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Articles.Handlers.submitComment req request env ctx
-        })
-
-    | _ -> None
+    Articles.RouteContract.dispatch articlesHandlers request ctx

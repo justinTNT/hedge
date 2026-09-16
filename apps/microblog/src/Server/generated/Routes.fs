@@ -2,51 +2,8 @@
 module Server.Routes
 
 open Fable.Core
-open Thoth.Json
 open Hedge.Workers
-open Hedge.Router
-open Codecs
-open Blog.Codecs
-open Server.Env
 
-let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
+let dispatch (blogHandlers: Blog.RouteContract.Handlers) (request: WorkerRequest) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
-    let route = parseRoute request
-    match route with
-    | GET path when matchPath "/api/blog/tags" path = Some (Exact "/api/blog/tags") ->
-        Some (Blog.Handlers.getTags env)
-
-    | GET path when matchPath "/api/blog/feed" path = Some (Exact "/api/blog/feed") ->
-        let query = ({ Cursor = (let v = (getQueryParam request.url "cursor") in if isNull v || v = "" then None else Some v) } : Blog.Api.GetFeed.Query)
-        Some (Blog.Handlers.getFeed query env)
-
-    | GET path ->
-        match matchPath "/api/blog/tags/:id/items" path with
-        | Some (WithParam (_, id)) ->
-            let query = ({ Cursor = (let v = (getQueryParam request.url "cursor") in if isNull v || v = "" then None else Some v) } : Blog.Api.GetItemsByTag.Query)
-            Some (Blog.Handlers.getItemsByTag id query env)
-        | _ ->
-        match matchPath "/api/blog/item/:id" path with
-        | Some (WithParam (_, id)) -> Some (Blog.Handlers.getItem id env)
-        | _ ->
-        None
-
-    | POST path when matchPath "/api/blog/item" path = Some (Exact "/api/blog/item") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.blogSubmitItemReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Blog.Handlers.submitItem req request env ctx
-        })
-
-    | POST path when matchPath "/api/blog/comment" path = Some (Exact "/api/blog/comment") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.blogSubmitCommentReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Blog.Handlers.submitComment req request env ctx
-        })
-
-    | _ -> None
+    Blog.RouteContract.dispatch blogHandlers request ctx

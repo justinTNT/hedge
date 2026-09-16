@@ -24,6 +24,9 @@
     <Compile Include="generated/Routes.fs" />
     <Compile Include="Meta.fs" />
     <Compile Include="Archive.fs" />
+    <!-- C3: adapts this app's Env into each content module's Services (uses Server.Identity +
+         content-server/Author). After the module props (needs Blog.Services), before Worker. -->
+    <Compile Include="ModuleServices.fs" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
