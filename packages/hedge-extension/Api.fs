@@ -42,24 +42,6 @@ let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promis
             return Error msg
     }
 
-/// Like postJson but pins the request to an explicit site ({url, key}) instead of letting
-/// the background resolve the current active site. A multi-request submission (image upload,
-/// item POST, archive POST) passes one pinned site so it can't be split across tenants if
-/// the active site changes mid-flight.
-let postJsonPinned<'T> (site: obj) (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
-    promise {
-        let parsed = JS.JSON.parse body
-        let! raw = sendMessage (createObj [ "type" ==> "api"; "method" ==> "POST"; "path" ==> url; "body" ==> parsed; "site" ==> site ])
-        let ok = raw?ok : bool
-        if ok then
-            let data = raw?data
-            let json = JS.JSON.stringify data
-            return Decode.fromString decoder json
-        else
-            let msg = errorToString (raw?error)
-            return Error msg
-    }
-
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 

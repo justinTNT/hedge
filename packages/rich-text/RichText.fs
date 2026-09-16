@@ -11,20 +11,13 @@ let ownerCommentEditorId = "owner-comment-editor"
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null }); })")>]
 let createEditorWhenReady (elementId: string) (initialContent: string) : unit = jsNative
 
-// The close-button editor is the public COMMENT editor (blog/articles reply box). Its image
-// uploads go to the guest endpoint (/api/blobs/guest — guest-session gated, raster-only,
-// size-capped), NOT the admin-gated /api/blobs, so a signed-in owner isn't required. Authoring
-// editors (createEditorWhenReady) keep the default admin endpoint.
-[<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: null, onClose: $2, uploadEndpoint: '/api/blobs/guest' }); })")>]
-let createEditorWithClose (elementId: string) (initialContent: string) (onClose: unit -> unit) : unit = jsNative
-
-/// C1b draft-model editor: reports content changes via `onChange` (draft text -> model) so
-/// submission builds from model state instead of a DOM read; `onClose` handles the reply
-/// box's close affordance (pass `ignore` when none); `uploadEndpoint` selects the blob
-/// endpoint ("" -> default admin `/api/blobs`; comments pass "/api/blobs/guest"). Deferred
-/// creation is cancellable via `destroyEditor` (the waitForElement poll self-cancels).
-/// Additive — createEditorWhenReady / createEditorWithClose remain for callers not yet
-/// migrated onto the draft model.
+/// The public COMMENT editor (blog/articles reply box). Reports content changes via `onChange`
+/// (draft text -> model) so submission builds from model state instead of a DOM read; `onClose`
+/// handles the reply box's close affordance (pass `ignore` when none); `uploadEndpoint` selects
+/// the blob endpoint ("" -> default admin `/api/blobs`; comments pass the guest-gated,
+/// raster-only, size-capped "/api/blobs/guest"). Deferred creation is cancellable via
+/// `destroyEditor` (the waitForElement poll self-cancels). The former fixed-onChange=null
+/// `createEditorWithClose` is gone (C5) — all comment editors use this draft-model form.
 [<Emit("window.HedgeRT.waitForElement($0, function() { window.HedgeRT.createRichTextEditor({ elementId: $0, initialContent: $1, onChange: $2, onClose: $3, uploadEndpoint: ($4 || undefined) }); })")>]
 let createEditorScoped (elementId: string) (initialContent: string) (onChange: string -> unit) (onClose: unit -> unit) (uploadEndpoint: string) : unit = jsNative
 
