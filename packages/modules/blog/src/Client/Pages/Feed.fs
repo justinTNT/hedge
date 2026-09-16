@@ -34,8 +34,14 @@ let update msg model =
         Cmd.OfPromise.either Blog.ClientGen.blogGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
 
     | GotFeed (Ok response) ->
-        { model with Feed = Some response; IsLoading = false; Error = None },
-        Cmd.batch [ continueCmd response.NextCursor.IsSome; fitCmd ]
+        // C1: apply only while the feed is the current view ([]) — a stale initial-load
+        // result from a route we've since left must not reset the retained (possibly
+        // paginated) feed. Validated against Route; the shell needs no staleDrop.
+        match model.Route with
+        | [] ->
+            { model with Feed = Some response; IsLoading = false; Error = None },
+            Cmd.batch [ continueCmd response.NextCursor.IsSome; fitCmd ]
+        | _ -> model, Cmd.none
 
     | GotFeed (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none

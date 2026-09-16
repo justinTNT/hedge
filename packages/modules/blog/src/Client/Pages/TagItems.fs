@@ -25,8 +25,14 @@ let update msg model =
         Cmd.OfPromise.either (Blog.ClientGen.blogGetItemsByTag tag) { Cursor = None } GotTagItems (fun ex -> GotTagItems (Error ex.Message))
 
     | GotTagItems (Ok response) ->
-        { model with TagItems = Some response; IsLoading = false; Error = None },
-        continueCmd response.NextCursor.IsSome
+        // C1: apply only if this is still the tag the route wants — a reverse-order resolve
+        // after switching tags (or leaving) must not replace the current tag view. Pairs with
+        // the tag-match guard on GotMoreTagItems below.
+        match model.Route with
+        | [ "tag"; name ] when name = response.Tag ->
+            { model with TagItems = Some response; IsLoading = false; Error = None },
+            continueCmd response.NextCursor.IsSome
+        | _ -> model, Cmd.none
 
     | GotTagItems (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
