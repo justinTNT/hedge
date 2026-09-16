@@ -84,34 +84,12 @@ let private mapArticles (activation: int) (cmd: Cmd<A.Msg>) : Cmd<Msg> =
 let private mapBlog (activation: int) (cmd: Cmd<B.Msg>) : Cmd<Msg> =
     cmd |> Cmd.map (fun m -> BlogMsg (activation, m))
 
-/// Content results that must not apply once their activation is superseded (the A -> B
-/// navigation that resolves B then A). Covers whole-view reads AND view-mutating/append +
-/// pagination results: the server write still happened; we only suppress the obsolete UI
-/// effect — e.g. appending A's new comment to a now-different item, or merging A's next
-/// page + cursor into another feed/tag. Activation bumps on every navigation, so a
-/// completion issued before you left arrives stale and is dropped here.
-///
-/// The exception is a mutation FAILURE (`GotSubmit* (Error _)`): its only effect is to set
-/// the module's Error field, which is not tied to the item we left and would otherwise be
-/// lost silently — the user must still learn the submit failed (it surfaces on the retained
-/// module, visible on return). Successful mutations carry the wrong-item append/nav effect
-/// and stay dropped. Identity/session results are deliberately absent — they apply
-/// regardless of which content view is active.
-let private articlesStaleDrop (m: A.Msg) =
-    match m with
-    | A.GotFeed _ | A.GotItem _
-    | A.GotMoreFeed _ | A.GotEvent _ -> true
-    | A.GotSubmitComment (Ok _) -> true
-    | A.GotSubmitComment (Error _) -> false
-    | _ -> false
-
-let private blogStaleDrop (m: B.Msg) =
-    match m with
-    | B.GotFeed _ | B.GotItem _ | B.GotTagItems _
-    | B.GotMoreFeed _ | B.GotMoreTagItems _ | B.GotEvent _ -> true
-    | B.GotSubmitComment (Ok _) | B.GotSubmitItem (Ok _) -> true
-    | B.GotSubmitComment (Error _) | B.GotSubmitItem (Error _) -> false
-    | _ -> false
+// C1: the shell no longer enumerates child result messages to decide staleness. Each
+// content module now validates every read/event/write against its own current target
+// (route / shown item / query) inside its update — a stale result cannot apply to the wrong
+// view by construction, whatever the message type, and a mutation FAILURE still surfaces
+// (the child keeps its Error). The shell just forwards messages to the retained child.
+// (`Activation` remains, but only as the LeaveCompleted transition barrier, not a filter.)
 
 let init () : Model * Cmd<Msg> =
     let route = Content.HostContext.routeOf articlesCtx (currentSegments ())
@@ -182,22 +160,17 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | _ ->
             model, Cmd.none   // superseded by a newer navigation
 
-    | ArticlesMsg (act, m) ->
-        if act <> model.Activation && articlesStaleDrop m then
-            model, Cmd.none
-        else
-            let articles, cmd = ArtApp.updateHosted articlesCtx m model.Articles
-            { model with Articles = articles }, mapArticles model.Activation cmd
+    | ArticlesMsg (_act, m) ->
+        // Forward to the retained child; it validates the result against its own target.
+        let articles, cmd = ArtApp.updateHosted articlesCtx m model.Articles
+        { model with Articles = articles }, mapArticles model.Activation cmd
 
-    | BlogMsg (act, m) ->
+    | BlogMsg (_act, m) ->
         match model.Blog with
         | None -> model, Cmd.none
         | Some blog0 ->
-            if act <> model.Activation && blogStaleDrop m then
-                model, Cmd.none
-            else
-                let blog, cmd = BlogApp.updateHosted blogCtx m blog0
-                { model with Blog = Some blog }, mapBlog model.Activation cmd
+            let blog, cmd = BlogApp.updateHosted blogCtx m blog0
+            { model with Blog = Some blog }, mapBlog model.Activation cmd
 
     | IdentityMsg m ->
         let idModel, idCmd, signal = Identity.update m model.Identity
