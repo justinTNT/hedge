@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    C3 exit check (see HostProbe.fs). A minimal host that composes BOTH content modules'
+    server layers — exactly via their own .server.props, plus the shared content-server
+    contract — with NO Server.Env / Server.Identity anywhere. `dotnet build` of this project
+    is the proof that the modules are decoupled from an app environment. Wired into test.sh.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The shared author-resolution contract, compiled once (as an app does) before the props. -->
+    <Compile Include="../../packages/content-server/Author.fs" />
+    <!-- Each module's generated Codecs (its Handlers/RouteContract open it). -->
+    <Compile Include="../../packages/modules/blog/generated/Codecs.fs" />
+  </ItemGroup>
+  <Import Project="../../packages/modules/blog/blog.server.props" />
+  <ItemGroup>
+    <Compile Include="../../packages/modules/articles/generated/Codecs.fs" />
+  </ItemGroup>
+  <Import Project="../../packages/modules/articles/articles.server.props" />
+  <ItemGroup>
+    <Compile Include="HostProbe.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+    <ProjectReference Include="../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+  </ItemGroup>
+</Project>

@@ -174,6 +174,17 @@ rm -rf "$ROOT/apps/articles/dist" "$ROOT/apps/articles/_site" "$ROOT/apps/articl
 echo "--- Justat shell production build OK (index boots the shell; blog hosted in-shell) ---"
 
 echo ""
+echo "=== Step 1i: C3 HostProbe (content-module decoupling) ==="
+# A minimal host that composes BOTH content modules' server layers (via their own .server.props
+# + the shared content-server contract) with NO Server.Env / Server.Identity. If it compiles,
+# the modules are decoupled from any app environment (the C3 exit check). This guards the
+# decoupling: re-adding an app-env dependency to a module handler fails the build here.
+cd "$ROOT"
+dotnet build test/HostProbe/HostProbe.fsproj -v q >/dev/null 2>&1 \
+    || { echo "!!! FAIL: HostProbe did not compile — a content module now depends on an app environment (Server.Env/Server.Identity)"; exit 1; }
+echo "--- HostProbe OK (both modules compile with no Server.Env/Server.Identity) ---"
+
+echo ""
 echo "=== Step 2: Scaffold pipeline ==="
 cd "$ROOT"
 rm -rf "$ROOT/apps/_test-app"
