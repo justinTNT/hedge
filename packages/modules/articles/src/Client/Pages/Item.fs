@@ -93,11 +93,17 @@ let update (ctx: Content.HostContext) msg model =
         Cmd.OfPromise.either Articles.ClientGen.articlesGetPost idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
-        { model with CurrentItem = Some response; IsLoading = false },
-        Cmd.batch [
-            Cmd.ofEffect (fun _ -> ctx.SetDocTitle response.Post.Title)
-            connectEventsCmd response.Post.Id
-        ]
+        // C1: accept only if this is still the post the route wants — a reverse-order resolve
+        // after switching posts (or leaving) must not replace the current view. Validated
+        // against Route (set by enterHosted / UrlChanged), so the shell needs no staleDrop.
+        match model.Route with
+        | [ idOrSlug ] when response.Post.Id = idOrSlug || response.Post.Slug = Some idOrSlug ->
+            { model with CurrentItem = Some response; IsLoading = false },
+            Cmd.batch [
+                Cmd.ofEffect (fun _ -> ctx.SetDocTitle response.Post.Title)
+                connectEventsCmd response.Post.Id
+            ]
+        | _ -> model, Cmd.none
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -120,13 +126,17 @@ let update (ctx: Content.HostContext) msg model =
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok resp) ->
-        // No live WS echo — append the returned comment locally so it shows now.
-        let updated =
-            match model.CurrentItem with
-            | Some r when r.Post.Comments |> List.exists (fun c -> c.Id = resp.Comment.Id) |> not ->
-                { model with CurrentItem = Some { r with Post = { r.Post with Comments = r.Post.Comments @ [ resp.Comment ] } } }
-            | _ -> model
-        { updated with ReplyingTo = None }, destroyCommentEditorCmd
+        // C1: append + clear the reply box only if the comment belongs to the post still
+        // shown — a stale success from a since-left post must not append to (or clear the
+        // reply draft of) a different post. No WS echo here, so the append happens on success.
+        match model.CurrentItem with
+        | Some r when r.Post.Id = resp.Comment.PostId ->
+            let alreadyHas = r.Post.Comments |> List.exists (fun c -> c.Id = resp.Comment.Id)
+            let updatedItem =
+                if alreadyHas then r
+                else { r with Post = { r.Post with Comments = r.Post.Comments @ [ resp.Comment ] } }
+            { model with CurrentItem = Some updatedItem; ReplyingTo = None }, destroyCommentEditorCmd
+        | _ -> model, Cmd.none
 
     | GotSubmitComment (Error err) ->
         { model with Error = Some err }, Cmd.none
