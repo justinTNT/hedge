@@ -95,7 +95,7 @@ let update (ctx: Content.HostContext) msg model =
     match msg with
     | LoadItem idOrSlug ->
         { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Articles.ClientGen.articlesGetPost idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
+        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetPost idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
         // C1: accept only if this is still the post the route wants — a reverse-order resolve
@@ -128,7 +128,7 @@ let update (ctx: Content.HostContext) msg model =
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
             model,
-            Cmd.OfPromise.either Articles.ClientGen.articlesSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotSubmitComment (Ok resp) ->

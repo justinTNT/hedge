@@ -22,7 +22,7 @@ let update msg model =
     match msg with
     | LoadFeed ->
         { model with IsLoading = true; FeedLoadingMore = false },
-        Cmd.OfPromise.either Articles.ClientGen.articlesGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
+        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
 
     | GotFeed (Ok response) ->
         // C1: apply only while the feed is the current view ([]) — a stale initial-load
@@ -41,7 +41,7 @@ let update msg model =
         match model.Feed with
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
             { model with FeedLoadingMore = true },
-            Cmd.OfPromise.either Articles.ClientGen.articlesGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
+            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
         | _ -> model, Cmd.none
 
     | GotMoreFeed (Ok response) ->
