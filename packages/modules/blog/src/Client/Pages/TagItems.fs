@@ -21,43 +21,45 @@ let private continueCmd (next: bool) : Cmd<Msg> =
 let update msg model =
     match msg with
     | LoadTagItems tag ->
-        { model with IsLoading = true; TagItems = None; TagLoadingMore = false },
-        Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag tag) { Cursor = None } GotTagItems (fun ex -> GotTagItems (Error ex.Message))
+        let gen = model.LoadGen + 1
+        { model with IsLoading = true; TagItems = None; TagLoadingMore = false; LoadGen = gen },
+        Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag tag) { Cursor = None }
+            (fun r -> GotTagItems (gen, r)) (fun ex -> GotTagItems (gen, Error ex.Message))
 
-    | GotTagItems (Ok response) ->
-        // C1: apply only if this is still the tag the route wants — a reverse-order resolve
-        // after switching tags (or leaving) must not replace the current tag view. Pairs with
-        // the tag-match guard on GotMoreTagItems below.
+    | GotTagItems (gen, _) when gen <> model.LoadGen -> model, Cmd.none
+
+    | GotTagItems (_, Ok response) ->
+        // Current gen: apply only if this is still the tag the route wants (secondary to gen).
         match model.Route with
         | [ "tag"; name ] when name = response.Tag ->
             { model with TagItems = Some response; IsLoading = false; Error = None },
             continueCmd response.NextCursor.IsSome
         | _ -> model, Cmd.none
 
-    | GotTagItems (Error err) ->
+    | GotTagItems (_, Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | LoadMoreTagItems ->
         match model.TagItems with
         | Some t when t.NextCursor.IsSome && not model.TagLoadingMore ->
-            { model with TagLoadingMore = true },
-            Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor } GotMoreTagItems (fun ex -> GotMoreTagItems (Error ex.Message))
+            let gen = model.LoadGen + 1
+            { model with TagLoadingMore = true; LoadGen = gen },
+            Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor }
+                (fun r -> GotMoreTagItems (gen, t.NextCursor, r)) (fun ex -> GotMoreTagItems (gen, t.NextCursor, Error ex.Message))
         | _ -> model, Cmd.none
 
-    | GotMoreTagItems (Ok response) ->
-        // Only merge a page whose tag matches the current view — a delayed page for a tag
-        // we've left must not append its items/cursor to a different tag (belt-and-suspenders
-        // with the shell's activation drop).
-        let merged =
-            match model.TagItems with
-            | Some existing when existing.Tag = response.Tag ->
-                { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
-            | Some existing -> existing
-            | None -> response
-        { model with TagItems = Some merged; TagLoadingMore = false },
-        continueCmd merged.NextCursor.IsSome
+    | GotMoreTagItems (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none
 
-    | GotMoreTagItems (Error _) ->
+    | GotMoreTagItems (_, cursor, Ok response) ->
+        // Merge only into the matching tag's cache, at the cursor we actually requested from.
+        match model.TagItems with
+        | Some existing when existing.Tag = response.Tag && existing.NextCursor = cursor ->
+            let merged = { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
+            { model with TagItems = Some merged; TagLoadingMore = false },
+            continueCmd merged.NextCursor.IsSome
+        | _ -> { model with TagLoadingMore = false }, Cmd.none
+
+    | GotMoreTagItems (_, _, Error _) ->
         { model with TagLoadingMore = false }, Cmd.none
 
     | _ -> model, Cmd.none

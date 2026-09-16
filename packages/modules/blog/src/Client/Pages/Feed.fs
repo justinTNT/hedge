@@ -30,42 +30,51 @@ let private fitCmd : Cmd<Msg> =
 let update msg model =
     match msg with
     | LoadFeed ->
-        { model with IsLoading = true; FeedLoadingMore = false },
-        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
+        let gen = model.LoadGen + 1
+        { model with IsLoading = true; FeedLoadingMore = false; LoadGen = gen },
+        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = None }
+            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error ex.Message))
 
-    | GotFeed (Ok response) ->
-        // C1: apply only while the feed is the current view ([]) — a stale initial-load
-        // result from a route we've since left must not reset the retained (possibly
-        // paginated) feed. Validated against Route; the shell needs no staleDrop.
+    // CP-A: a completion from a superseded read generation (newer load, navigation, or
+    // invalidation bumped LoadGen) is dropped — this is the correctness authority, not Route.
+    | GotFeed (gen, _) when gen <> model.LoadGen -> model, Cmd.none
+
+    | GotFeed (_, Ok response) ->
+        // Current gen: apply only while the feed is the current view ([]) (Route is secondary
+        // belt-and-suspenders to the gen check above).
         match model.Route with
         | [] ->
             { model with Feed = Some response; IsLoading = false; Error = None },
             Cmd.batch [ continueCmd response.NextCursor.IsSome; fitCmd ]
         | _ -> model, Cmd.none
 
-    | GotFeed (Error err) ->
+    | GotFeed (_, Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | LoadMoreFeed ->
-        // Safe on non-feed routes without a route check: the sentinel element
-        // only exists while the feed is rendered, so the watcher/fill no-op
+        // The sentinel exists only while the feed is rendered, so the watcher/fill no-op
         // elsewhere. (nextCursor guards the end; FeedLoadingMore guards overlap.)
         match model.Feed with
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
-            { model with FeedLoadingMore = true },
-            Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
+            let gen = model.LoadGen + 1
+            { model with FeedLoadingMore = true; LoadGen = gen },
+            Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = feed.NextCursor }
+                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error ex.Message))
         | _ -> model, Cmd.none
 
-    | GotMoreFeed (Ok response) ->
-        let merged =
-            match model.Feed with
-            | Some existing -> { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
-            | None -> response
-        { model with Feed = Some merged; FeedLoadingMore = false },
-        Cmd.batch [ continueCmd merged.NextCursor.IsSome; fitCmd ]
+    | GotMoreFeed (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none
 
-    | GotMoreFeed (Error _) ->
-        // Leave the loaded items in place; a later scroll can retry.
+    | GotMoreFeed (_, cursor, Ok response) ->
+        // Merge only into the cache whose cursor we actually requested from — never an
+        // obsolete page onto a feed that has since moved on.
+        match model.Feed with
+        | Some existing when existing.NextCursor = cursor ->
+            let merged = { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
+            { model with Feed = Some merged; FeedLoadingMore = false },
+            Cmd.batch [ continueCmd merged.NextCursor.IsSome; fitCmd ]
+        | _ -> { model with FeedLoadingMore = false }, Cmd.none
+
+    | GotMoreFeed (_, _, Error _) ->
         { model with FeedLoadingMore = false }, Cmd.none
 
     | _ -> model, Cmd.none

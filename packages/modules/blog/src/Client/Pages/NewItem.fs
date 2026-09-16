@@ -63,16 +63,16 @@ let update msg model =
         Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
 
     | GotSubmitItem (Ok _) ->
-        // C1: the item is created server-side regardless; run the post-create effects
-        // (refresh the feed, clear the owner-comment editor) only if still on the "new"
-        // route — a stale success from a since-left form must not reload the feed or clear
-        // a different view's editor.
+        // The item is created server-side regardless; post-create effects run only while still on
+        // "new". CP-A finding 5: do NOT dispatch LoadFeed here — it sets the shared IsLoading the
+        // "new" view renders as a spinner, and the []-guarded GotFeed then drops the response,
+        // stranding the form behind that spinner. Instead invalidate the cached feed (bumping
+        // LoadGen so any in-flight feed read is dropped); enterHosted's "Feed=None ⇒ LoadFeed"
+        // refetches it lazily on the next feed visit.
         match model.Route with
         | [ "new" ] ->
-            model, Cmd.batch [
-                Cmd.ofMsg LoadFeed
-                Cmd.ofEffect (fun _dispatch -> RichText.clearEditor RichText.ownerCommentEditorId)
-            ]
+            { model with Feed = None; LoadGen = model.LoadGen + 1 },
+            Cmd.ofEffect (fun _dispatch -> RichText.clearEditor RichText.ownerCommentEditorId)
         | _ -> model, Cmd.none
 
     | GotSubmitItem (Error err) ->

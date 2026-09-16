@@ -43,6 +43,14 @@ type Model = {
     /// Cleared on confirmed submit and on navigation away from the item (no cross-item bleed);
     /// preserved across a reply box close/reopen within the same item.
     CommentDraft: string
+    /// CP-A: monotonic read generation — bumped on each new read, on navigation/entry, and on
+    /// cache invalidation. Each read completion carries the gen it was issued under and applies
+    /// only while it still equals this, so late / reordered / obsolete reads (and read failures)
+    /// are dropped. The route/target checks remain as cheap secondary defence.
+    LoadGen: int
+    /// CP-A: comment-draft revision — bumped on each edit and on entry. A submit captures it; the
+    /// success clears the draft only if it's unchanged, so a late success can't erase a newer draft.
+    DraftRev: int
     Identities: IdentityListItem list
     /// Providers the server has credentials for — the connections pane offers
     /// only these, so an unconfigured provider is never a dead button
@@ -57,22 +65,22 @@ type Model = {
 type Msg =
     | UrlChanged of string list
     | LoadFeed
-    | GotFeed of Result<GetFeed.Response, string>
+    | GotFeed of gen: int * Result<GetFeed.Response, string>
     | LoadMoreFeed
-    | GotMoreFeed of Result<GetFeed.Response, string>
+    | GotMoreFeed of gen: int * cursor: string option * Result<GetFeed.Response, string>
     | LoadItem of string
-    | GotItem of Result<GetItem.Response, string>
+    | GotItem of gen: int * Result<GetItem.Response, string>
     | DismissError
     | ConnectEvents of string
     | DisconnectEvents
     | GotEvent of Blog.Ws.NewCommentEvent
     | EventError of string
     | LoadTagItems of string
-    | GotTagItems of Result<GetItemsByTag.Response, string>
+    | GotTagItems of gen: int * Result<GetItemsByTag.Response, string>
     | LoadMoreTagItems
-    | GotMoreTagItems of Result<GetItemsByTag.Response, string>
+    | GotMoreTagItems of gen: int * cursor: string option * Result<GetItemsByTag.Response, string>
     | SubmitComment
-    | GotSubmitComment of Result<SubmitComment.Response, string>
+    | GotSubmitComment of rev: int * Result<SubmitComment.Response, string>
     | SetNewItemTitle of string
     | SetNewItemLink of string
     | SetNewItemTags of string

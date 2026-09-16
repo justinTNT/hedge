@@ -98,20 +98,26 @@ let private richContent (className: string) (content: RichContent) =
 let update msg model =
     match msg with
     | LoadItem itemId ->
-        { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
+        let gen = model.LoadGen + 1
+        { model with IsLoading = true; CurrentItem = None; LoadGen = gen },
+        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetItem itemId
+            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error ex.Message))
 
-    | GotItem (Ok response) ->
-        // C1: accept only if this is still the item the route wants — a reverse-order resolve
-        // after switching items (or after leaving) must not replace the current view. Validated
-        // against Route (set by enterHosted / UrlChanged), so the shell needs no staleDrop.
+    // CP-A: drop a completion from a superseded read generation (a reverse-order resolve after
+    // switching items, or a read for an item we've since left). This is the correctness
+    // authority; the Route/id check below is secondary. It also stops the inactive-child
+    // resurrection: a stale GotItem never reaches connectEventsCmd / SetDocTitle.
+    | GotItem (gen, _) when gen <> model.LoadGen -> model, Cmd.none
+
+    | GotItem (_, Ok response) ->
         match model.Route with
         | [ idOrSlug ] when response.Item.Id = idOrSlug || response.Item.Slug = Some idOrSlug ->
-            { model with CurrentItem = Some response; IsLoading = false },
+            // Clear any prior Error so a stale failure can't linger behind a later success.
+            { model with CurrentItem = Some response; IsLoading = false; Error = None },
             connectEventsCmd response.Item.Id
         | _ -> model, Cmd.none
 
-    | GotItem (Error err) ->
+    | GotItem (_, Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | ConnectEvents itemId ->
@@ -160,22 +166,23 @@ let update msg model =
                   ParentId = parentId |> Option.map ForeignKey
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
+            let rev = model.DraftRev
             model,
-            Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitComment req
+                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error ex.Message))
         | None -> model, Cmd.none
 
-    | GotSubmitComment (Ok resp) ->
-        // C1: only tear down the reply box if the comment belongs to the item still shown
-        // (a stale success from a since-left item must not clear the current reply draft).
-        // The comment itself appends via the WS GotEvent, which also target-validates (above).
+    | GotSubmitComment (rev, Ok resp) ->
+        // The comment appends via the WS GotEvent; this only tears down the reply box. Writes are
+        // NOT gen-filtered (the outcome must deliver), but the draft is cleared only if the comment
+        // belongs to the item still shown AND no newer edit happened since this submit (rev
+        // unchanged) — so a late success can't erase a newer draft (CP-A finding 2).
         match model.CurrentItem with
-        | Some response when response.Item.Id = resp.Comment.ItemId ->
-            // C1b: clear only the just-submitted draft (a stale success for another item can't
-            // reach here — guarded above — so this never discards a different item's draft).
+        | Some response when response.Item.Id = resp.Comment.ItemId && rev = model.DraftRev ->
             { model with ReplyingTo = None; CommentDraft = "" }, destroyCommentEditorCmd
         | _ -> model, Cmd.none
 
-    | GotSubmitComment (Error err) ->
+    | GotSubmitComment (_, Error err) ->
         { model with Error = Some err }, Cmd.none
 
     | ToggleCollapse commentId ->
@@ -193,7 +200,8 @@ let update msg model =
         Cmd.batch [ cleanupCmd; initCmd ]
 
     | SetCommentDraft text ->
-        { model with CommentDraft = text }, Cmd.none
+        // Bump the draft revision so a submission already in flight won't clear this newer text.
+        { model with CommentDraft = text; DraftRev = model.DraftRev + 1 }, Cmd.none
 
     | CancelReply ->
         // Keep the draft — closing the reply box preserves in-progress text so reopening the

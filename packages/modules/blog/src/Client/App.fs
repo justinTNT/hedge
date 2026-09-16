@@ -92,6 +92,8 @@ let init () : Model * Cmd<Msg> =
           CollapsedComments = Set.empty
           ReplyingTo = None
           CommentDraft = ""
+          LoadGen = 0
+          DraftRev = 0
           Identities = []
           AvailableProviders = []
           ShowIdentitySwitcher = false
@@ -322,6 +324,8 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
       CollapsedComments = Set.empty
       ReplyingTo = None
       CommentDraft = ""
+      LoadGen = 0
+      DraftRev = 0
       Identities = []
       AvailableProviders = []
       ShowIdentitySwitcher = false
@@ -335,9 +339,17 @@ let withSession (session: GuestSession.GuestSessionData) (model: Model) : Model 
 
 /// C1: drop cached content so the next enterHosted refetches. A host calls this after an
 /// identity reattribution (merge/revert/disconnect), where a cached feed/item/tag carries
-/// now-obsolete authorship — re-entry must not silently reuse it.
+/// now-obsolete authorship — re-entry must not silently reuse it. Bumps LoadGen so a read already
+/// in flight against the pre-invalidation content can't repopulate the cache (CP-A finding 3).
 let invalidateContent (model: Model) : Model =
-    { model with Feed = None; CurrentItem = None; TagItems = None }
+    { model with Feed = None; CurrentItem = None; TagItems = None; LoadGen = model.LoadGen + 1 }
+
+/// CP-A: invalidate this module's in-flight reads when the HOST leaves it — a stale read arriving
+/// after we've left must not reopen a socket or set the tab title (finding 1). Bumps LoadGen and
+/// settles the loading flags; retained caches (Feed etc.) are untouched so a later re-entry can
+/// still reuse them. The host calls this on the OUTGOING module during navigation.
+let invalidateInFlight (model: Model) : Model =
+    { model with LoadGen = model.LoadGen + 1; IsLoading = false; FeedLoadingMore = false; TagLoadingMore = false }
 
 /// Synchronously dispose this instance's live resources — WebSocket + comment/owner
 /// editors. Idempotent (each teardown self-guards). A plain function so a host can
@@ -365,6 +377,9 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             TagItems = None
             ReplyingTo = None
             CommentDraft = ""
+            // CP-A: entry supersedes any read/draft issued before it.
+            LoadGen = model.LoadGen + 1
+            DraftRev = model.DraftRev + 1
             CollapsedComments = Set.empty
             // Any in-flight request from the route we're leaving is invalidated (its result
             // is stale-dropped by the shell), so its loading flag must not linger — else a

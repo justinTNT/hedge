@@ -21,38 +21,44 @@ let private continueCmd (next: bool) : Cmd<Msg> =
 let update msg model =
     match msg with
     | LoadFeed ->
-        { model with IsLoading = true; FeedLoadingMore = false },
-        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = None } GotFeed (fun ex -> GotFeed (Error ex.Message))
+        let gen = model.LoadGen + 1
+        { model with IsLoading = true; FeedLoadingMore = false; LoadGen = gen },
+        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = None }
+            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error ex.Message))
 
-    | GotFeed (Ok response) ->
-        // C1: apply only while the feed is the current view ([]) — a stale initial-load
-        // result from a route we've since left must not reset the retained (possibly
-        // paginated) feed. Validated against Route; the shell needs no staleDrop.
+    // CP-A: drop a completion from a superseded read generation (the correctness authority).
+    | GotFeed (gen, _) when gen <> model.LoadGen -> model, Cmd.none
+
+    | GotFeed (_, Ok response) ->
         match model.Route with
         | [] ->
             { model with Feed = Some response; IsLoading = false; Error = None },
             continueCmd response.NextCursor.IsSome
         | _ -> model, Cmd.none
 
-    | GotFeed (Error err) ->
+    | GotFeed (_, Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | LoadMoreFeed ->
         match model.Feed with
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
-            { model with FeedLoadingMore = true },
-            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = feed.NextCursor } GotMoreFeed (fun ex -> GotMoreFeed (Error ex.Message))
+            let gen = model.LoadGen + 1
+            { model with FeedLoadingMore = true; LoadGen = gen },
+            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = feed.NextCursor }
+                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error ex.Message))
         | _ -> model, Cmd.none
 
-    | GotMoreFeed (Ok response) ->
-        let merged =
-            match model.Feed with
-            | Some existing -> { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
-            | None -> response
-        { model with Feed = Some merged; FeedLoadingMore = false },
-        continueCmd merged.NextCursor.IsSome
+    | GotMoreFeed (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none
 
-    | GotMoreFeed (Error _) ->
+    | GotMoreFeed (_, cursor, Ok response) ->
+        match model.Feed with
+        | Some existing when existing.NextCursor = cursor ->
+            let merged = { existing with Items = existing.Items @ response.Items; NextCursor = response.NextCursor }
+            { model with Feed = Some merged; FeedLoadingMore = false },
+            continueCmd merged.NextCursor.IsSome
+        | _ -> { model with FeedLoadingMore = false }, Cmd.none
+
+    | GotMoreFeed (_, _, Error _) ->
         { model with FeedLoadingMore = false }, Cmd.none
 
     | _ -> model, Cmd.none

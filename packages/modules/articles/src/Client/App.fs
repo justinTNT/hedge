@@ -90,6 +90,8 @@ let init () : Model * Cmd<Msg> =
           CollapsedComments = Set.empty
           ReplyingTo = None
           CommentDraft = ""
+          LoadGen = 0
+          DraftRev = 0
           Identities = []
           AvailableProviders = []
           ShowIdentitySwitcher = false
@@ -270,6 +272,8 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
       CollapsedComments = Set.empty
       ReplyingTo = None
       CommentDraft = ""
+      LoadGen = 0
+      DraftRev = 0
       Identities = []
       AvailableProviders = []
       ShowIdentitySwitcher = false
@@ -285,7 +289,16 @@ let withSession (session: GuestSession.GuestSessionData) (model: Model) : Model 
 /// identity reattribution (merge/revert/disconnect), where a cached feed/post carries
 /// now-obsolete authorship — re-entry must not silently reuse it.
 let invalidateContent (model: Model) : Model =
-    { model with Feed = None; CurrentItem = None }
+    // CP-A: bump LoadGen so any read in flight when the cache is invalidated is dropped on
+    // arrival, and re-entry refetches rather than reusing now-obsolete content.
+    { model with Feed = None; CurrentItem = None; LoadGen = model.LoadGen + 1 }
+
+/// CP-A finding 1: invalidate the OUTGOING module's in-flight reads on a host switch. Bumps
+/// LoadGen (so a late read completing after we've left is dropped — no title write, no socket
+/// reopen) and clears the loading flags so nothing lingers. Content is left intact (a switch,
+/// unlike invalidateContent, keeps the cached view for a cheap return).
+let invalidateInFlight (model: Model) : Model =
+    { model with LoadGen = model.LoadGen + 1; IsLoading = false; FeedLoadingMore = false }
 
 /// Synchronously dispose this instance's live resources — WebSocket + comment editor.
 /// Idempotent (each teardown self-guards). A plain function so a host can dispose the
@@ -309,8 +322,14 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
             ReplyingTo = None
             CommentDraft = ""
             CollapsedComments = Set.empty
+            // CP-A: entry is a new read generation and a new draft revision — any read/submit
+            // still in flight from before we entered is dropped on arrival, and a late comment
+            // success can't clear the fresh draft. The load-issuing branch below re-arms via
+            // its own gen (LoadItem/LoadFeed compute LoadGen+1).
+            LoadGen = model.LoadGen + 1
+            DraftRev = model.DraftRev + 1
             // In-flight requests from the route we're leaving are invalidated (their results
-            // are stale-dropped by the shell), so their loading flags must not linger — else a
+            // are stale-dropped by generation), so their loading flags must not linger — else a
             // reused cached feed sits behind a spinner, or FeedLoadingMore=true wedges
             // pagination. The load-issuing branch below re-arms IsLoading via its message. #2.
             IsLoading = false

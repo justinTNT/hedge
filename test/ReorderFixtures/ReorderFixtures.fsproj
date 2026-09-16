@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    CP-A reordered-completion fixtures (see Program.fs). Composes BOTH content modules'
+    CLIENT layers exactly as an app does — the shared host client infra, each module's
+    generated codecs/ClientGen, then the module .client.props — and drives their real
+    `update` functions with reordered / stale / late completions. Fable-compiled + run
+    under node (via ../../test.sh Step 1j), so it exercises the actual message handling,
+    not a re-implementation. If the gen-gating (LoadGen) or draft-revision (DraftRev)
+    contract regresses, a fixture assertion fails and the gate goes red.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Shared client infra the generated ClientGen builds on (as the apps link it). -->
+    <Compile Include="../../packages/hedge/src/Client/GuestSession.fs" />
+    <Compile Include="../../packages/hedge/src/Client/Api.fs" />
+    <!-- Each module's generated codecs (Articles.Codecs / Blog.Codecs); their ClientGen opens them. -->
+    <Compile Include="../../packages/modules/articles/generated/Codecs.fs" />
+    <Compile Include="../../packages/modules/blog/generated/Codecs.fs" />
+    <Compile Include="../../packages/rich-text/RichText.fs" />
+    <!-- Shared content-client contract the module clients reference. -->
+    <Compile Include="../../packages/content-client/HostContext.fs" />
+    <Compile Include="../../packages/content-client/ClaimHandoff.fs" />
+  </ItemGroup>
+  <!-- The module client components (own their file lists) — the code under test. -->
+  <Import Project="../../packages/modules/articles/articles.client.props" />
+  <Import Project="../../packages/modules/blog/blog.client.props" />
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
+    <ProjectReference Include="../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Feliz" Version="2.9.0" />
+    <PackageReference Include="Feliz.Router" Version="4.0.0" />
+    <PackageReference Include="Fable.Elmish" Version="4.2.0" />
+    <PackageReference Include="Fable.Elmish.React" Version="4.0.0" />
+    <PackageReference Include="Fable.Elmish.HMR" Version="7.0.0" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+  </ItemGroup>
+</Project>

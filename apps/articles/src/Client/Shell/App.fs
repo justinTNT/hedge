@@ -134,11 +134,19 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             let target, subRoute = targetOf route
             let newAct = model.Activation + 1
             let idModel = Identity.consumeClaimFocus model.Identity
+            // CP-A finding 1: invalidate the OUTGOING module's in-flight reads (bump its LoadGen,
+            // clear its loading flags) so a read that completes after we've left is dropped by the
+            // child rather than reopening its socket / rewriting the tab title. disposeHosted below
+            // tears down its live resources; this stops the pending fetch from resurrecting them.
+            let model' =
+                match model.Active with
+                | Articles -> { model with Articles = ArtApp.invalidateInFlight model.Articles }
+                | Blog -> { model with Blog = model.Blog |> Option.map BlogApp.invalidateInFlight }
             let disposeOutgoing () =
                 match model.Active with
                 | Articles -> ArtApp.disposeHosted ()
                 | Blog -> BlogApp.disposeHosted ()
-            { model with Activation = newAct; Pending = Some (newAct, target, subRoute); Identity = idModel },
+            { model' with Activation = newAct; Pending = Some (newAct, target, subRoute); Identity = idModel },
             Cmd.ofEffect (fun dispatch ->
                 disposeOutgoing ()
                 dispatch (LeaveCompleted newAct))

@@ -6,6 +6,8 @@ dist/
 build/
 _site/
 .fable/
+# CP-A reorder fixtures: Fable output (test.sh Step 1j), cleaned after each run
+apps/articles/.reorder-fixtures/
 
 # Extension packaged builds
 apps/microblog/extension/dist-*/

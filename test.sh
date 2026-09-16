@@ -185,6 +185,31 @@ dotnet build test/HostProbe/HostProbe.fsproj -v q >/dev/null 2>&1 \
 echo "--- HostProbe OK (both modules compile with no Server.Env/Server.Identity) ---"
 
 echo ""
+echo "=== Step 1j: CP-A reordered-completion fixtures (request identity) ==="
+# The C1 fix (2872794) removed the shell's activation staleness filter; the review found five
+# race regressions because a child route/id match does NOT establish request identity. CP-A
+# re-established it inside each content module (LoadGen read-generation + DraftRev draft-revision
+# + invalidateInFlight). These fixtures drive the REAL module `update` functions with reordered /
+# stale / late completions (compiled exactly as an app composes them) and assert each race is
+# resolved — a stale read/failure is dropped, a late comment success can't erase a newer draft,
+# /new doesn't strand behind a spinner. If the gen/rev contract regresses, a fixture fails here.
+# Output lands under apps/articles/ so the compiled client's bare `react` import resolves from
+# that app's node_modules (the fixtures link the full module client, which references Feliz/React).
+cd "$ROOT"
+RF_OUT="$ROOT/apps/articles/.reorder-fixtures"
+rm -rf "$RF_OUT"
+dotnet fable test/ReorderFixtures/ReorderFixtures.fsproj -o "$RF_OUT" >/dev/null 2>&1
+cp test/ReorderFixtures/run.mjs "$RF_OUT/run.mjs"
+if ! node "$RF_OUT/run.mjs" | grep -q "reorder-fixtures:.*OK"; then
+    echo "!!! FAIL: CP-A reorder fixtures — a request-identity race regressed."
+    node "$RF_OUT/run.mjs" || true
+    rm -rf "$RF_OUT"
+    exit 1
+fi
+rm -rf "$RF_OUT"
+echo "--- CP-A reorder fixtures OK (stale/late completions handled; drafts preserved) ---"
+
+echo ""
 echo "=== Step 2: Scaffold pipeline ==="
 cd "$ROOT"
 rm -rf "$ROOT/apps/_test-app"

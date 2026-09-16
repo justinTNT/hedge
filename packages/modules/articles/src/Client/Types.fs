@@ -31,6 +31,12 @@ type Model = {
     /// Cleared on confirmed submit and on navigation away from the post (no cross-post bleed);
     /// preserved across a reply box close/reopen within the same post.
     CommentDraft: string
+    /// CP-A: monotonic read generation (see blog Types.fs) — each read completion carries the gen
+    /// it was issued under and applies only while it still equals this; late/reordered/obsolete
+    /// reads (and read failures) are dropped. Route/target checks are secondary.
+    LoadGen: int
+    /// CP-A: comment-draft revision — a submit's success clears the draft only if unchanged.
+    DraftRev: int
     Identities: IdentityListItem list
     /// Providers the server has credentials for.
     AvailableProviders: string list
@@ -44,14 +50,14 @@ type Model = {
 type Msg =
     | UrlChanged of string list
     | LoadFeed
-    | GotFeed of Result<GetFeed.Response, string>
+    | GotFeed of gen: int * Result<GetFeed.Response, string>
     | LoadMoreFeed
-    | GotMoreFeed of Result<GetFeed.Response, string>
+    | GotMoreFeed of gen: int * cursor: string option * Result<GetFeed.Response, string>
     | LoadItem of string
-    | GotItem of Result<GetPost.Response, string>
+    | GotItem of gen: int * Result<GetPost.Response, string>
     | DismissError
     | SubmitComment
-    | GotSubmitComment of Result<SubmitComment.Response, string>
+    | GotSubmitComment of rev: int * Result<SubmitComment.Response, string>
     | ToggleCollapse of string
     | SetReplyTo of postId: string * parentId: string option
     | SetCommentDraft of string

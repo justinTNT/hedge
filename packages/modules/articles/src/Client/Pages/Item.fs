@@ -94,23 +94,27 @@ let private richContent (className: string) (content: RichContent) =
 let update (ctx: Content.HostContext) msg model =
     match msg with
     | LoadItem idOrSlug ->
-        { model with IsLoading = true; CurrentItem = None },
-        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetPost idOrSlug GotItem (fun ex -> GotItem (Error ex.Message))
+        let gen = model.LoadGen + 1
+        { model with IsLoading = true; CurrentItem = None; LoadGen = gen },
+        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetPost idOrSlug
+            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error ex.Message))
 
-    | GotItem (Ok response) ->
-        // C1: accept only if this is still the post the route wants — a reverse-order resolve
-        // after switching posts (or leaving) must not replace the current view. Validated
-        // against Route (set by enterHosted / UrlChanged), so the shell needs no staleDrop.
+    // CP-A: drop a completion from a superseded read generation — the correctness authority.
+    // Gen-gating this also stops an inactive module from setting the tab title / reopening a
+    // socket after the host switched away (finding 1); the Route/id check is secondary.
+    | GotItem (gen, _) when gen <> model.LoadGen -> model, Cmd.none
+
+    | GotItem (_, Ok response) ->
         match model.Route with
         | [ idOrSlug ] when response.Post.Id = idOrSlug || response.Post.Slug = Some idOrSlug ->
-            { model with CurrentItem = Some response; IsLoading = false },
+            { model with CurrentItem = Some response; IsLoading = false; Error = None },
             Cmd.batch [
                 Cmd.ofEffect (fun _ -> ctx.SetDocTitle response.Post.Title)
                 connectEventsCmd response.Post.Id
             ]
         | _ -> model, Cmd.none
 
-    | GotItem (Error err) ->
+    | GotItem (_, Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
 
     | SubmitComment ->
@@ -127,26 +131,32 @@ let update (ctx: Content.HostContext) msg model =
                   ParentId = parentId |> Option.map ForeignKey
                   Content = text
                   Author = Some model.GuestSession.DisplayName }
+            // CP-A finding 2: capture the draft revision this submit belongs to.
+            let rev = model.DraftRev
             model,
-            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
+            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesSubmitComment req
+                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error ex.Message))
         | None -> model, Cmd.none
 
-    | GotSubmitComment (Ok resp) ->
-        // C1: append + clear the reply box only if the comment belongs to the post still
-        // shown — a stale success from a since-left post must not append to (or clear the
-        // reply draft of) a different post. No WS echo here, so the append happens on success.
+    | GotSubmitComment (rev, Ok resp) ->
+        // Append only if the comment belongs to the post still shown (a stale success from a
+        // since-left post must not append to a different post). No WS echo here, so the append
+        // happens on success — and a write must deliver even when late, so it is NOT gen-filtered.
         match model.CurrentItem with
         | Some r when r.Post.Id = resp.Comment.PostId ->
             let alreadyHas = r.Post.Comments |> List.exists (fun c -> c.Id = resp.Comment.Id)
             let updatedItem =
                 if alreadyHas then r
                 else { r with Post = { r.Post with Comments = r.Post.Comments @ [ resp.Comment ] } }
-            // C1b: clear only the just-submitted draft (a stale success for another post can't
-            // reach here — guarded above — so this never discards a different post's draft).
-            { model with CurrentItem = Some updatedItem; ReplyingTo = None; CommentDraft = "" }, destroyCommentEditorCmd
+            // CP-A finding 2: clear the draft/editor only if no newer edit happened since this
+            // submit (rev unchanged) — a late success must not erase a newer draft.
+            if rev = model.DraftRev then
+                { model with CurrentItem = Some updatedItem; ReplyingTo = None; CommentDraft = "" }, destroyCommentEditorCmd
+            else
+                { model with CurrentItem = Some updatedItem }, Cmd.none
         | _ -> model, Cmd.none
 
-    | GotSubmitComment (Error err) ->
+    | GotSubmitComment (_, Error err) ->
         { model with Error = Some err }, Cmd.none
 
     | ToggleCollapse commentId ->
@@ -160,7 +170,7 @@ let update (ctx: Content.HostContext) msg model =
         Cmd.batch [ destroyCommentEditorCmd; initCommentEditorCmd model.CommentDraft ]
 
     | SetCommentDraft text ->
-        { model with CommentDraft = text }, Cmd.none
+        { model with CommentDraft = text; DraftRev = model.DraftRev + 1 }, Cmd.none
 
     | CancelReply ->
         // Keep the draft — closing the reply box preserves in-progress text so reopening the
