@@ -270,16 +270,19 @@ Existing path-mounted bundle support remains a framework capability even though 
 
 Run targeted tests as each change lands and the existing complete pipeline at each mergeable checkpoint. Record SDK, commands, target composition and failures/unrun checks. A green .NET build is not evidence of a working Fable artifact or browser flow.
 
-### Browser acceptance — pending (user-driven), record results here
+### Browser acceptance — record results here
 
-CP-A–CP-D are gate-green; the following runtime flows are the remaining evidence. Check off with the observed result and date.
+CP-A–CP-D are gate-green. Results below observed against a local `wrangler dev` build with a seeded local D1 (22 articles + 22 blog items + comments), 2026-09-16.
 
-- [ ] **Justat shell** — the §9 sequence: paginate articles → blog → paginate blog → open detail/reply and type → switch back → Back/Forward → return to the draft → submit while navigating. Assert: no document reload for hosted navigation; one header/main/identity control; sidebar on articles routes only; retained valid pages/drafts; correct outcomes; pagination continues.
-- [ ] **CP-A races (the reviewer's reproduction list)** — module-switch does not resurrect a disposed socket or rewrite the tab title (F1); a late comment success cannot erase a newer draft (F2); two reads of one route / paginate across leave+re-enter — no dup, no cross-view apply (F3); an obsolete read *failure* does not mutate the view (F4); blog `/new` submit does not strand the form behind a spinner (F5).
-- [ ] **darwin.news (microblog host)** — full flow: feed/item/comment; identity switch/merge/revert/disconnect; OAuth login + return-focus (claim consumed once).
-- [ ] **ndct (articles host)** — full flow incl. the home hero; identity flows as above; `/blog` absent (no blog composed).
-- [ ] **Snapshots** — capture + `/archive/<id>` serve; hostile-HTML isolation holds when opened directly; archive keys denied through the public `/blobs/` route (incl. percent-encoded).
-- [ ] **Extension smoke** — install the built extension; capture + publish an item to a pinned destination; verify the typed `Destination` reaches the background broker.
+- [x] **Justat shell (2026-09-16)** — PASS. Shell boots clean (no console errors on load or during the session). One header/nav/identity control. In-SPA nav articles↔blog confirmed via a `window` marker surviving the switch (no document reload). Sidebar present on articles routes (`.js-sidebar` found), absent on `/blog`. Slug routes work (`/second-article`, `/blog/blog-item-22`). Item detail renders (owner comment via rich-text viewer). Back/Forward re-enter each route correctly (title + sidebar + content). Deep-dive checks below.
+- [x] **CP-A races — the testable-live subset (2026-09-16)** — F3 (no-dup pagination): infinite-scroll loaded all 22 blog items, `unique==count==22, duplicates==[]`, terminated cleanly. F1 (positive + reset): opening an article set `document.title` to "Second Article · Articles" via `deps.Ctx.SetDocTitle`; leaving reset it to "Articles". F2 (write path): guest comment typed → submitted → appended (via WS `GotEvent`) → editor destroyed on success. The timing-dependent *negatives* — F1 socket/title resurrection from a stale read, F2 late-success-vs-newer-draft, F3 reverse-order resolve, F4 obsolete-failure — are not reliably reproducible by hand and are covered deterministically by `test/ReorderFixtures` (test.sh Step 1j). F5 (`/new` spinner) needs admin auth; fixture-covered.
+- [x] **CP-C typed client (2026-09-16)** — PASS (implicit): the blog item read (`deps.Api.blogGetItem`), the comment write (`deps.Api.blogSubmitComment`), and articles' `deps.Ctx` title all worked through the injected client; no decode/transport errors surfaced.
+- [x] **Identity switcher UI (2026-09-16)** — PASS: the badge toggles the shared `Content.IdentityView` panel ("Switch identity" + the anonymous identity). OAuth-dependent flows below remain.
+- [x] **darwin.news (microblog blog-host) (2026-09-16)** — PASS (non-OAuth subset): boots to the darwin.news chrome (logo + shared identity badge; **no Web Log link, no sidebar** — correct for the blog-primary host); feed renders; item detail opens in-SPA (`/darwin-item-1`, owner comment via rich-text viewer); no console errors. The blog module keeps its `/api/blog/*` prefix even as the primary module (C2). Identity OAuth flows below.
+- [x] **ndct (articles-host) (2026-09-16)** — PASS (non-OAuth subset): boots to the ndct chrome with the **"NOW DO CHEMTRAILS" home hero** (moved to `Articles/Chrome.fs`, slug-gated) + shared identity badge; **no Web Log, no sidebar**; articles feed renders; `/blog` absent (no blog composed). No console errors.
+- [ ] **OAuth identity flows (all hosts)** — login, claim + return-focus (consumed once), merge/revert/disconnect + attribution refresh. NOT run: no OAuth provider configured in local dev and login is a real credentialed navigation.
+- [ ] **Snapshots** — capture + `/archive/<id>` serve; hostile-HTML isolation when opened directly; archive keys denied through the public `/blobs/` route (incl. percent-encoded).
+- [ ] **Extension smoke** — install the built extension; capture + publish to a pinned destination; verify the typed `Destination` reaches the background broker.
 
 ## 10. Delivery, rollback and definition of done
 
