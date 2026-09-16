@@ -97,8 +97,14 @@ let update msg model =
         Cmd.OfPromise.either Blog.ClientGen.blogGetItem itemId GotItem (fun ex -> GotItem (Error ex.Message))
 
     | GotItem (Ok response) ->
-        { model with CurrentItem = Some response; IsLoading = false },
-        connectEventsCmd response.Item.Id
+        // C1: accept only if this is still the item the route wants — a reverse-order resolve
+        // after switching items (or after leaving) must not replace the current view. Validated
+        // against Route (set by enterHosted / UrlChanged), so the shell needs no staleDrop.
+        match model.Route with
+        | [ idOrSlug ] when response.Item.Id = idOrSlug || response.Item.Slug = Some idOrSlug ->
+            { model with CurrentItem = Some response; IsLoading = false },
+            connectEventsCmd response.Item.Id
+        | _ -> model, Cmd.none
 
     | GotItem (Error err) ->
         { model with IsLoading = false; Error = Some err }, Cmd.none
@@ -152,9 +158,14 @@ let update msg model =
             Cmd.OfPromise.either Blog.ClientGen.blogSubmitComment req GotSubmitComment (fun ex -> GotSubmitComment (Error ex.Message))
         | None -> model, Cmd.none
 
-    | GotSubmitComment (Ok _) ->
-        { model with ReplyingTo = None },
-        destroyCommentEditorCmd
+    | GotSubmitComment (Ok resp) ->
+        // C1: only tear down the reply box if the comment belongs to the item still shown
+        // (a stale success from a since-left item must not clear the current reply draft).
+        // The comment itself appends via the WS GotEvent, which also target-validates (above).
+        match model.CurrentItem with
+        | Some response when response.Item.Id = resp.Comment.ItemId ->
+            { model with ReplyingTo = None }, destroyCommentEditorCmd
+        | _ -> model, Cmd.none
 
     | GotSubmitComment (Error err) ->
         { model with Error = Some err }, Cmd.none
