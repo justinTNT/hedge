@@ -4,8 +4,6 @@ module Client.ClientGen
 open Fable.Core
 open Thoth.Json
 open Codecs
-open Client.Api
 
-// --- HTTP API ---
 
 // --- WebSocket Events ---

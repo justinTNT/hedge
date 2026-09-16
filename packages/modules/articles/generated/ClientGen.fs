@@ -4,20 +4,7 @@ module Articles.ClientGen
 open Fable.Core
 open Thoth.Json
 open Articles.Codecs
-open Client.Api
 
-// --- HTTP API ---
-
-let articlesGetPost (id: string) =
-    fetchJson (sprintf "/api/articles/post/%s" id) Decode.articlesGetPostResponse
-
-let articlesSubmitComment (req: Articles.Api.SubmitComment.Request) =
-    let body = Encode.articlesSubmitCommentReq req |> Encode.toString 0
-    postJson "/api/articles/comment" body Decode.articlesSubmitCommentResponse
-
-let articlesGetFeed (query: Articles.Api.GetFeed.Query) =
-    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
-    fetchJson ("/api/articles/feed" + qs) Decode.articlesGetFeedResponse
 
 // --- Transport-neutral client (C2) ---
 

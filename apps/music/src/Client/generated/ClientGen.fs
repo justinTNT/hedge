@@ -6,12 +6,7 @@ open Thoth.Json
 open Models.Api
 open Models.Ws
 open Codecs
-open Client.Api
 
-// --- HTTP API ---
-
-let getAlbums () =
-    fetchJson "/api/albums" Decode.getAlbumsResponse
 
 // --- Transport-neutral client (C2) ---
 

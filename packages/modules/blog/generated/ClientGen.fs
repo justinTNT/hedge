@@ -4,35 +4,7 @@ module Blog.ClientGen
 open Fable.Core
 open Thoth.Json
 open Blog.Codecs
-open Client.Api
 
-// --- HTTP API ---
-
-let blogSubmitSnapshot (req: Blog.Api.SubmitSnapshot.Request) =
-    let body = Encode.blogSubmitSnapshotReq req |> Encode.toString 0
-    postJson "/api/blog/snapshot" body Decode.blogSubmitSnapshotResponse
-
-let blogGetItemsByTag (id: string) (query: Blog.Api.GetItemsByTag.Query) =
-    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
-    fetchJson (sprintf "/api/blog/tags/%s/items%s" id qs) Decode.blogGetItemsByTagResponse
-
-let blogGetTags () =
-    fetchJson "/api/blog/tags" Decode.blogGetTagsResponse
-
-let blogGetItem (id: string) =
-    fetchJson (sprintf "/api/blog/item/%s" id) Decode.blogGetItemResponse
-
-let blogSubmitItem (req: Blog.Api.SubmitItem.Request) =
-    let body = Encode.blogSubmitItemReq req |> Encode.toString 0
-    postJson "/api/blog/item" body Decode.blogSubmitItemResponse
-
-let blogSubmitComment (req: Blog.Api.SubmitComment.Request) =
-    let body = Encode.blogSubmitCommentReq req |> Encode.toString 0
-    postJson "/api/blog/comment" body Decode.blogSubmitCommentResponse
-
-let blogGetFeed (query: Blog.Api.GetFeed.Query) =
-    let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
-    fetchJson ("/api/blog/feed" + qs) Decode.blogGetFeedResponse
 
 // --- Transport-neutral client (C2) ---
 

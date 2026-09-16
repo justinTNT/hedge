@@ -54,9 +54,15 @@ let private initForRoute (model: Model) : Cmd<Msg> =
         | None -> Cmd.none
     | _ -> Cmd.ofEffect (fun _ -> pauseAmplitude ())
 
+// C5: use the transport-neutral generated client (over the browser transport), rendering the
+// typed ApiError back to the string this app's Msg carries — this app was the last consumer of
+// the bare ClientGen functions, so those + the `open Client.Api` codegen can now be removed.
+let private apiClient = Client.ClientGen.createClient Client.Api.browserTransport
+let private getAlbums () = promise { let! r = apiClient.getAlbums () in return Result.mapError Hedge.Http.renderError r }
+
 let init () =
     { Albums = []; Route = Router.currentUrl (); Loading = true; Error = None },
-    Cmd.OfPromise.either Client.ClientGen.getAlbums () GotAlbums (fun ex -> GotAlbums (Error ex.Message))
+    Cmd.OfPromise.either getAlbums () GotAlbums (fun ex -> GotAlbums (Error ex.Message))
 
 let update msg model =
     match msg with

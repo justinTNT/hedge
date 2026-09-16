@@ -6,15 +6,7 @@ open Thoth.Json
 open Models.Api
 open Models.Ws
 open Codecs
-open Client.Api
 
-// --- HTTP API ---
-
-let getPage (id: string) =
-    fetchJson (sprintf "/api/page/%s" id) Decode.getPageResponse
-
-let getSite () =
-    fetchJson "/api/site" Decode.getSiteResponse
 
 // --- Transport-neutral client (C2) ---
 

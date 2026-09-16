@@ -48,9 +48,16 @@ let private currentPageName (site: GetSite.Response) (route: string list) =
     | [] -> site.Home
     | segs -> String.concat "/" segs
 
+// C5: the generated client over the browser transport (rendering the typed ApiError back to the
+// string this app's Msgs carry). getPage/getSite were this app's last uses of the bare ClientGen
+// functions; the cross-origin news fetch below stays a direct Client.Api.fetchJson.
+let private apiClient = Client.ClientGen.createClient Client.Api.browserTransport
+let private getPage name = promise { let! r = apiClient.getPage name in return Result.mapError Hedge.Http.renderError r }
+let private getSite () = promise { let! r = apiClient.getSite () in return Result.mapError Hedge.Http.renderError r }
+
 let private loadPageCmd (site: GetSite.Response) (route: string list) : Cmd<Msg> =
     let name = currentPageName site route
-    Cmd.OfPromise.either Client.ClientGen.getPage name
+    Cmd.OfPromise.either getPage name
         (fun r -> GotPage(name, r))
         (fun ex -> GotPage(name, Error ex.Message))
 
@@ -97,7 +104,7 @@ let private loadForRoute (site: GetSite.Response) (route: string list) : Cmd<Msg
 let init () =
     { Site = None; Route = routeOf (Router.currentUrl ()); Page = PageLoading; Feed = None; MenuOpen = false; Error = None },
     Cmd.batch [
-        Cmd.OfPromise.either Client.ClientGen.getSite () GotSite (fun ex -> GotSite(Error ex.Message))
+        Cmd.OfPromise.either getSite () GotSite (fun ex -> GotSite(Error ex.Message))
         fetchNewsCmd
     ]
 

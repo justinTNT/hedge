@@ -989,9 +989,8 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
     let lines = ResizeArray<string>()
     let emit s = lines.Add(s)
 
-    // The (key, value option) expressions for a query record's fields — shared by the bare
-    // compatibility functions (wrapped in `buildQuery`) and the transport-neutral Client
-    // (which passes the raw pairs as Request.Query for the adapter to percent-encode).
+    // The (key, value option) expressions for a query record's fields — the transport-neutral
+    // Client passes the raw pairs as Request.Query for the adapter to percent-encode.
     let queryItems (recVar: string) (qt: Type) : string list =
         queryFields qt |> List.map (fun f ->
             match f.Kind with
@@ -1011,59 +1010,18 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
         emit (sprintf "open %s.Api" singleNs)
         emit (sprintf "open %s.Ws" singleNs)
     emit (sprintf "open %s" codecsModule)
-    emit "open Client.Api"
     emit ""
-    emit "// --- HTTP API ---"
 
-    for ep in endpoints do
-        // Function names are prefixed for non-root modules (both apps have
-        // `submitComment`/`events`); codec refs match the combined Codecs (also prefixed).
-        let funcName = genName ep.NamePrefix ep.ModuleName
-        let respName = genName ep.NamePrefix ep.ModuleName + "Response"
-        let reqName = genName ep.NamePrefix ep.ModuleName + "Req"
-        // Build the client-side query-string pairs from a `'query` record var: each
-        // field becomes a (key, value) option, filtered by `List.choose id`, then
-        // `buildQuery` (Client.Api) URL-encodes + joins into "?k=v&...".
-        let queryPairsExpr (recVar: string) (qt: Type) =
-            // `List.choose (fun p -> p)`, not `List.choose id`: the path param is
-            // named `id` in GetByQuery clients and would shadow the identity function.
-            "buildQuery (List.choose (fun p -> p) [ " + String.concat "; " (queryItems recVar qt) + " ])"
-        match ep.Method with
-        | EGet ->
-            emit ""
-            emit (sprintf "let %s () =" funcName)
-            emit (sprintf "    fetchJson \"%s\" Decode.%s" ep.Path respName)
-        | EGetBy ->
-            emit ""
-            emit (sprintf "let %s (id: string) =" funcName)
-            // Replace :id with %s in path for sprintf
-            let pathTemplate = ep.Path.Replace(":id", "%s")
-            emit (sprintf "    fetchJson (sprintf \"%s\" id) Decode.%s" pathTemplate respName)
-        | EGetQuery ->
-            emit ""
-            emit (sprintf "let %s (query: %s) =" funcName (apiTypeRef qualify ep "Query"))
-            emit (sprintf "    let qs = %s" (queryPairsExpr "query" ep.QueryType.Value))
-            emit (sprintf "    fetchJson (\"%s\" + qs) Decode.%s" ep.Path respName)
-        | EGetByQuery ->
-            emit ""
-            emit (sprintf "let %s (id: string) (query: %s) =" funcName (apiTypeRef qualify ep "Query"))
-            emit (sprintf "    let qs = %s" (queryPairsExpr "query" ep.QueryType.Value))
-            let fmt = ep.Path.Replace(":id", "%s") + "%s"
-            emit (sprintf "    fetchJson (sprintf \"%s\" id qs) Decode.%s" fmt respName)
-        | EPost ->
-            emit ""
-            emit (sprintf "let %s (req: %s) =" funcName (apiTypeRef qualify ep "Request"))
-            emit (sprintf "    let body = Encode.%s req |> Encode.toString 0" reqName)
-            emit (sprintf "    postJson \"%s\" body Decode.%s" ep.Path respName)
-
-    // Transport-neutral client (C2): a typed record (one field per endpoint) built by
+    // Transport-neutral client (C2/C5): a typed record (one field per endpoint) built by
     // `createClient` over an injected Hedge.Http.Transport. Each field constructs a
     // Hedge.Http.Request (relative path, raw query pairs, JSON body) and runs it through
-    // Http.sendDecode — no ambient Client.Api, window global or Chrome dependency. The bare
-    // functions above stay as compatibility wrappers until every consumer moves onto this
-    // record (removed before C5). Guarded on a non-empty endpoint set (an empty F# record is
-    // invalid syntax). The Hedge.Http.Request annotation resolves its fields even when a
-    // consumer namespace also opens an `Api` with same-named record fields.
+    // Http.sendDecode — no ambient Client.Api, window global or Chrome dependency. This is now
+    // the ONLY generated HTTP client surface: the former bare fetchJson/postJson functions (and
+    // the `open Client.Api` they needed) were removed in C5 once every consumer — content
+    // modules, extension, and the music/basewatch one-off apps — moved onto this record.
+    // Guarded on a non-empty endpoint set (an empty F# record is invalid syntax). The
+    // Hedge.Http.Request annotation resolves its fields even when a consumer namespace also
+    // opens an `Api` with same-named record fields.
     if not (List.isEmpty endpoints) then
         emit ""
         emit "// --- Transport-neutral client (C2) ---"

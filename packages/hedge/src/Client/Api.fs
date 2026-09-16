@@ -1,17 +1,17 @@
 module Client.Api
 
-// The framework's shared client HTTP helpers. One source, `<Compile Include>`'d by
-// every app's Client project (and relied on by content modules, which reference
-// `Client.Api`) — do not copy this per app. Typed API functions are in the app's
-// generated/ClientGen.fs, which opens Client.Api. Requests are basePath-prefixed so
+// The framework's shared client runtime. One source, `<Compile Include>`'d by every app's
+// Client project — do not copy this per app. Since C5 the generated clients are transport-
+// neutral (createClient over a Transport) and no longer `open Client.Api`; this module now
+// provides the browser Transport (browserTransport) plus the few direct helpers still used:
+// the identity /api/auth calls (postJsonRaw/fetchJsonRaw) and a couple of direct external
+// fetches (fetchJson — basewatch news, microblog rhymes). Requests are basePath-prefixed so
 // the app works mounted under a sub-path; basePath is "" for root deployments.
 
 open Fable.Core
 open Fable.Core.JsInterop
 open Fetch
 open Thoth.Json
-
-/// Framework HTTP helpers — typed API functions are in generated/ClientGen.fs.
 
 /// Sub-path this deployment is served under, e.g. "/st". Empty when at the
 /// root. Every request is prefixed so the app works mounted anywhere.
@@ -21,8 +21,8 @@ let basePath : string = jsNative
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 
-/// Build a "?k=v&..." query string from key/value pairs (values URL-encoded); an
-/// empty list yields "". Used by generated GetQuery/GetByQuery client functions.
+/// Build a "?k=v&..." query string from key/value pairs (values URL-encoded); an empty list
+/// yields "". Used by browserTransport to fold a Request's raw query pairs onto the URL.
 let buildQuery (pairs: (string * string) list) : string =
     match pairs with
     | [] -> ""
@@ -31,17 +31,6 @@ let buildQuery (pairs: (string * string) list) : string =
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
         let! response = fetch (basePath + url) []
-        let! text = response.text()
-        return Decode.fromString decoder text
-    }
-
-let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
-    promise {
-        let! response = fetch (basePath + url) [
-            Method HttpMethod.POST
-            requestHeaders [ ContentType "application/json" ]
-            Body (BodyInit.Case3 body)
-        ]
         let! text = response.text()
         return Decode.fromString decoder text
     }

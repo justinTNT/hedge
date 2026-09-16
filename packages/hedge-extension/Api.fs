@@ -2,7 +2,6 @@ module Client.Api
 
 open Fable.Core
 open Fable.Core.JsInterop
-open Thoth.Json
 
 /// Send a message to the background service worker and get the response.
 let private sendMessage (msg: obj) : JS.Promise<obj> =
@@ -15,41 +14,12 @@ let private sendMessage (msg: obj) : JS.Promise<obj> =
 [<Emit("(function(e){ if (e == null) return 'Request failed'; if (typeof e === 'string') return e; if (e.error) return String(e.error); if (Array.isArray(e.errors)) return e.errors.map(function(x){ return (x.field ? x.field + ': ' : '') + x.message; }).join('; '); try { return JSON.stringify(e); } catch (_) { return String(e); } })($0)")>]
 let private errorToString (err: obj) : string = jsNative
 
-let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
-    promise {
-        let! raw = sendMessage (createObj [ "type" ==> "api"; "method" ==> "GET"; "path" ==> url ])
-        let ok = raw?ok : bool
-        if ok then
-            let data = raw?data
-            let json = JS.JSON.stringify data
-            return Decode.fromString decoder json
-        else
-            let msg = errorToString (raw?error)
-            return Error msg
-    }
-
-let postJson<'T> (url: string) (body: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
-    promise {
-        let parsed = JS.JSON.parse body
-        let! raw = sendMessage (createObj [ "type" ==> "api"; "method" ==> "POST"; "path" ==> url; "body" ==> parsed ])
-        let ok = raw?ok : bool
-        if ok then
-            let data = raw?data
-            let json = JS.JSON.stringify data
-            return Decode.fromString decoder json
-        else
-            let msg = errorToString (raw?error)
-            return Error msg
-    }
-
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 
-/// Build a "?k=v&..." query string (values URL-encoded); "" when empty. Matches the browser
-/// Client.Api.buildQuery so the generated bare ClientGen functions — which reference it via
-/// `open Client.Api` — compile against this extension Client.Api too. (The extension uses the
-/// transport-neutral Client record below, not the bare functions, but the file must compile.)
-let buildQuery (pairs: (string * string) list) : string =
+/// Build a "?k=v&..." query string (values URL-encoded); "" when empty. Used by
+/// extensionTransport below to fold a Request's raw query pairs onto the path.
+let private buildQuery (pairs: (string * string) list) : string =
     match pairs with
     | [] -> ""
     | _ -> "?" + (pairs |> List.map (fun (k, v) -> k + "=" + uriEnc v) |> String.concat "&")
