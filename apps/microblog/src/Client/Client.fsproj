@@ -10,11 +10,7 @@
     <!-- Shared content-client contract (immutable host context) the blog content
          module references; linked once before the module .props (unified shell, Stage 0). -->
     <Compile Include="../../../../packages/content-client/HostContext.fs" />
-    <!-- One-use OAuth claim handoff (consumed by the blog module's session sync); unified
-         shell Stage 1. No handoff is ever written here, so consumption is a no-op. -->
-    <Compile Include="../../../../packages/content-client/ClaimHandoff.fs" />
-    <!-- Shared identity subsystem + UI (unified shell Stage 3). Linked so this app can
-         migrate its standalone blog host onto it; unused until then. -->
+    <!-- Shared identity subsystem + UI (CP-B: the single identity authority this app's host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />
   </ItemGroup>
@@ -22,6 +18,10 @@
        own content pages were removed. Blog is PRIMARY here, run at "/" by Blog/Main.fs. -->
   <Import Project="../../../../packages/modules/blog/blog.client.props" />
   <ItemGroup>
+    <!-- CP-B: the single-module host (chrome + shared identity + router) that runs the blog
+         module via its hosted surface, mirroring the Justat shell. Blog/Main.fs runs it. -->
+    <Compile Include="Blog/Chrome.fs" />
+    <Compile Include="Blog/Host.fs" />
     <Compile Include="Blog/Main.fs" />
     <!-- darwin.news-specific glue, a separate /rhymes bundle -->
     <Compile Include="Rhyming/App.fs" />

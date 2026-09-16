@@ -205,7 +205,7 @@ let update msg model =
 
     | CancelReply ->
         // Keep the draft — closing the reply box preserves in-progress text so reopening the
-        // box on the same item restores it. Navigation away clears it (App enterHosted/UrlChanged).
+        // box on the same item restores it. Navigation away clears it (App.enterHosted).
         { model with ReplyingTo = None },
         destroyCommentEditorCmd
 

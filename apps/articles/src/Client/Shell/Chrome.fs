@@ -12,6 +12,93 @@ module Identity = Content.Identity
 open Feliz
 open Articles.Client.Shell
 
+/// justat.at's static sidebar, ported verbatim from the old app's baseplate. Tenant-specific for
+/// now; a later per-tenant config would generalise it. CP-B: moved here from the shared articles
+/// module (Articles.Client.Shared) — only the Justat shell renders it, so it's app-level chrome.
+let private sidebarLink (href: string) (text: string) =
+    Html.a [ prop.href href; prop.text text ]
+
+let justatSidebar =
+    Html.aside [
+        prop.className "js-sidebar"
+        prop.children [
+            Html.div [
+                prop.className "js-masthead"
+                prop.children [
+                    Html.a [ prop.href "mailto:just@justat.at"; prop.text "just@justat.at" ]
+                ]
+            ]
+            Html.div [
+                prop.className "js-sections"
+                prop.children [
+                    Html.section [
+                        prop.children [
+                            Html.h5 "About"
+                            Html.p [
+                                prop.children [
+                                    Html.text "Yeah, I admit, it's a vanity blog. I never had one, til "
+                                    sidebarLink "http://hipstrider.com" "hipstrider"
+                                    Html.text " beat me to it. I do a bit of webdev work, and I've found this a useful place to test out new ideas in the wild."
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "My sites"
+                            Html.p [
+                                prop.children [
+                                    Html.text "For some years now I have maintained "
+                                    sidebarLink "http://darwin.news" "a "
+                                    sidebarLink "http://usba.se" "few "
+                                    sidebarLink "http://wt.fail" "web "
+                                    sidebarLink "http://mtmu.se" "logs, "
+                                    Html.text "I have kept alive an old nuclear news "
+                                    sidebarLink "http://ntne.ws/" "archive"
+                                    Html.text " : and I have a couple of "
+                                    sidebarLink "https://dont.saymay.be" "music "
+                                    sidebarLink "https://dont.saymay.be" "sites."
+                                    Html.text "."
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "Contact me"
+                            Html.p [
+                                prop.children [
+                                    Html.text "I'm contactable on "
+                                    sidebarLink "https://www.linkedin.com/in/justin-tutty-850b76301/" "linkedin"
+                                    Html.text "  and "
+                                    Html.text "via SMS (0424-028-741) or email (see above)."
+                                    Html.text " You can get your own "
+                                    sidebarLink "https://darwin.email" "darwin.email"
+                                ]
+                            ]
+                        ]
+                    ]
+                    Html.section [
+                        prop.children [
+                            Html.h5 "Links"
+                            Html.p [
+                                prop.children [
+                                    sidebarLink "https://nonewgasnt.org.au/" "nonewgasnt.org.au"
+                                    Html.text " | "
+                                    sidebarLink "https://nowdochemtrails.net/" "nowdochemtrails.net"
+                                    Html.text " | "
+                                    sidebarLink "https://edarwin.au/" "edarwin.au"
+                                    Html.text " | "
+                                    sidebarLink "https://ausbases.au/" "ausbases.au"
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+
 /// Intercept only an unmodified primary click; let cmd/ctrl/shift/alt and non-left
 /// buttons fall through so "open in a new tab" still works on these real hrefs.
 let private onPlainClick (navigate: unit -> unit) =
@@ -66,6 +153,6 @@ let shell
         prop.children [
             Html.header [ navWithSession idModel dispatchId navigateHome navigateBlog ]
             Html.main [ content ]
-            if showSidebar then Shared.justatSidebar else Html.none
+            if showSidebar then justatSidebar else Html.none
         ]
     ]

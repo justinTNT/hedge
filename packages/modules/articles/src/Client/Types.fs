@@ -7,14 +7,6 @@ module GuestSession = Client.GuestSession
 open Articles.Api
 open Articles.ClientGen
 
-type IdentityListItem = {
-    Id: string
-    Provider: string
-    Name: string
-    Picture: string
-    ActivatedAt: int option
-}
-
 type Model = {
     Route: string list
     Feed: GetFeed.Response option
@@ -37,18 +29,9 @@ type Model = {
     LoadGen: int
     /// CP-A: comment-draft revision — a submit's success clears the draft only if unchanged.
     DraftRev: int
-    Identities: IdentityListItem list
-    /// Providers the server has credentials for.
-    AvailableProviders: string list
-    ShowIdentitySwitcher: bool
-    /// Identity id awaiting a merge/fresh decision in the switcher.
-    SelectedIdentity: string option
-    /// Set on OAuth return; consumed by UrlChanged to open the switcher pre-selected.
-    PendingClaimFocus: string option
 }
 
 type Msg =
-    | UrlChanged of string list
     | LoadFeed
     | GotFeed of gen: int * Result<GetFeed.Response, string>
     | LoadMoreFeed
@@ -66,13 +49,3 @@ type Msg =
     | DisconnectEvents
     | GotEvent of Articles.Ws.NewCommentEvent
     | EventError of string
-    | GotSessionSync of GuestSession.GuestSessionData
-    | RevertIdentity of identityId: string * merge: bool
-    | GotRevertIdentity of Result<unit, string>
-    | LoadIdentities
-    | GotIdentities of IdentityListItem list
-    | GotProviders of string list
-    | ToggleIdentitySwitcher
-    | DisconnectIdentity of identityId: string
-    | GotDisconnect of Result<unit, string>
-    | SelectIdentity of identityId: string

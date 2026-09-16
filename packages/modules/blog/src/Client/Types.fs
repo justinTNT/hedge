@@ -15,14 +15,6 @@ type ItemForm = {
     Tags: string
 }
 
-type IdentityListItem = {
-    Id: string
-    Provider: string
-    Name: string
-    Picture: string
-    ActivatedAt: int option
-}
-
 type Model = {
     Route: string list
     Feed: GetFeed.Response option
@@ -51,19 +43,9 @@ type Model = {
     /// CP-A: comment-draft revision — bumped on each edit and on entry. A submit captures it; the
     /// success clears the draft only if it's unchanged, so a late success can't erase a newer draft.
     DraftRev: int
-    Identities: IdentityListItem list
-    /// Providers the server has credentials for — the connections pane offers
-    /// only these, so an unconfigured provider is never a dead button
-    AvailableProviders: string list
-    ShowIdentitySwitcher: bool
-    /// Identity id awaiting a merge/fresh decision in the switcher
-    SelectedIdentity: string option
-    /// Set on OAuth return; consumed by UrlChanged to open the switcher pre-selected
-    PendingClaimFocus: string option
 }
 
 type Msg =
-    | UrlChanged of string list
     | LoadFeed
     | GotFeed of gen: int * Result<GetFeed.Response, string>
     | LoadMoreFeed
@@ -90,15 +72,5 @@ type Msg =
     | SetReplyTo of itemId: string * parentId: string option
     | SetCommentDraft of string
     | CancelReply
-    | GotSessionSync of GuestSession.GuestSessionData
-    | RevertIdentity of identityId: string * merge: bool
-    | GotRevertIdentity of Result<unit, string>
-    | LoadIdentities
-    | GotIdentities of IdentityListItem list
-    | GotProviders of string list
-    | ToggleIdentitySwitcher
-    | DisconnectIdentity of identityId: string
-    | GotDisconnect of Result<unit, string>
-    | SelectIdentity of identityId: string
 
 let emptyItemForm = { Title = ""; Link = ""; Tags = "" }

@@ -22,7 +22,6 @@
     <Compile Include="../../packages/rich-text/RichText.fs" />
     <!-- Shared content-client contract the module clients reference. -->
     <Compile Include="../../packages/content-client/HostContext.fs" />
-    <Compile Include="../../packages/content-client/ClaimHandoff.fs" />
   </ItemGroup>
   <!-- The module client components (own their file lists) — the code under test. -->
   <Import Project="../../packages/modules/articles/articles.client.props" />

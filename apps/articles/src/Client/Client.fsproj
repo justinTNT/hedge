@@ -12,9 +12,7 @@
     <!-- Shared content-client contract (immutable host context) both content modules
          reference; linked once before the module .props (unified shell, Stage 0). -->
     <Compile Include="../../../../packages/content-client/HostContext.fs" />
-    <!-- One-use OAuth claim handoff (shell -> blog document); unified shell Stage 1. -->
-    <Compile Include="../../../../packages/content-client/ClaimHandoff.fs" />
-    <!-- Shared identity subsystem + UI (unified shell Stage 3 — one copy every host uses). -->
+    <!-- Shared identity subsystem + UI (CP-B: the single identity authority every host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />
   </ItemGroup>
@@ -25,8 +23,12 @@
   <Import Project="../../../../packages/modules/articles/articles.client.props" />
   <!-- blog client composed everywhere EXCEPT ndct (articles-only) — see Server.fsproj. -->
   <Import Project="../../../../packages/modules/blog/blog.client.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
-  <!-- ndct: articles standalone entry (no shell, no blog). -->
+  <!-- ndct: articles standalone (no shell, no blog). CP-B: the single-module host (chrome +
+       shared identity + router) that runs the articles module via its hosted surface, mirroring
+       the Justat shell. Articles/Main.fs runs it. -->
   <ItemGroup Condition="'$(HEDGE_SITE)' == 'ndct'">
+    <Compile Include="Articles/Chrome.fs" />
+    <Compile Include="Articles/Host.fs" />
     <Compile Include="Articles/Main.fs" />
   </ItemGroup>
   <!-- default/justat: the unified shell (Stage 2) hosts BOTH content modules — articles
