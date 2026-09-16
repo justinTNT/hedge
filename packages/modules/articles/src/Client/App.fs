@@ -99,13 +99,13 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
 
 /// Handle a CONTENT message. Browser routing and identity are host-owned (the host owns the
 /// router + Content.Identity), so no routing/identity messages reach here.
-let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
+let updateHosted (deps: Deps) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
-        Feed.update msg model
+        Feed.update deps msg model
     | LoadItem _ | GotItem _ | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | SetCommentDraft _ | CancelReply
     | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _ ->
-        Item.update ctx msg model
+        Item.update deps msg model
     | DismissError ->
         { model with Error = None }, Cmd.none
 
@@ -114,7 +114,7 @@ let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * 
 let contentView (ctx: Content.HostContext) (model: Model) dispatch =
     React.fragment [
         match model.Error with
-        | Some err -> Shared.error err dispatch
+        | Some err -> Shared.error (Hedge.Http.renderError err) dispatch
         | None -> Html.none
 
         if model.IsLoading then

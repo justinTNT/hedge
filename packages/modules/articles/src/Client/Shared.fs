@@ -14,20 +14,10 @@ open Hedge.Interface
 open Articles.Api
 open Articles.Client.Types
 
-// -- Transport-neutral API client (C2 migration) --
-// Articles' page updates call these instead of the ambient-transport bare ClientGen
-// functions: the generated Client record wired to the browser transport, with the typed
-// ApiError rendered back to the string the existing Msgs / Model.Error already carry (so Msg
-// and model shapes are unchanged). Compatibility shim binding the default browser transport;
-// consumers move to an injected client in C5. Mirrors Blog.Client.Shared.Api. Bonus:
-// Http.sendDecode checks status before decoding, so a 4xx surfaces the server's message.
-module Api =
-    let private client = Articles.ClientGen.createClient Client.Api.browserTransport
-    let private asString (p: JS.Promise<Result<'T, Hedge.Http.ApiError>>) : JS.Promise<Result<'T, string>> =
-        promise { let! r = p in return Result.mapError Hedge.Http.renderError r }
-    let articlesGetFeed query = asString (client.articlesGetFeed query)
-    let articlesGetPost id = asString (client.articlesGetPost id)
-    let articlesSubmitComment req = asString (client.articlesSubmitComment req)
+// CP-C: the API client is now host-injected (Articles.Client.Types.Deps.Api, built once by the
+// host from its chosen transport) and its typed Hedge.Http.ApiError flows through the page updates
+// and Model.Error unchanged. The old browser-transport shim (module Api rendering ApiError ->
+// string) is gone; this module keeps only view/content helpers.
 
 // -- Deployment configuration (injected at build time; see vite.config.js) --
 

@@ -32,7 +32,7 @@ let destroyOwnerCommentEditorCmd : Cmd<Msg> =
 
 // --- Update ---
 
-let update msg model =
+let update (deps: Deps) msg model =
     match msg with
     | SetNewItemTitle title ->
         { model with ItemForm = { model.ItemForm with Title = title } }, Cmd.none
@@ -60,7 +60,7 @@ let update msg model =
               OwnerComment = ownerComment
               Tags = tags }
         { model with ItemForm = emptyItemForm },
-        Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error ex.Message))
+        Cmd.OfPromise.either deps.Api.blogSubmitItem req GotSubmitItem (fun ex -> GotSubmitItem (Error (Hedge.Http.TransportFailure ex.Message)))
 
     | GotSubmitItem (Ok _) ->
         // The item is created server-side regardless; post-create effects run only while still on

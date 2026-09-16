@@ -106,19 +106,19 @@ let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) :
     | _ -> cleared, Cmd.batch [ disposeHostedCmd; resetTitle ]
 
 /// Handle a CONTENT message. Browser routing and identity are host-owned (the host owns the
-/// router + Content.Identity), so no routing/identity messages reach here.
-let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
-    ignore ctx   // blog content update needs no host context (no title/nav effects)
+/// router + Content.Identity), so no routing/identity messages reach here. `deps` carries the
+/// host context + the host-injected typed API client (CP-C), threaded into the page updates.
+let updateHosted (deps: Deps) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | LoadFeed | GotFeed _ | LoadMoreFeed | GotMoreFeed _ ->
-        Feed.update msg model
+        Feed.update deps msg model
     | LoadItem _ | GotItem _ | ConnectEvents _ | DisconnectEvents | GotEvent _ | EventError _
     | SubmitComment | GotSubmitComment _ | ToggleCollapse _ | SetReplyTo _ | SetCommentDraft _ | CancelReply ->
-        Item.update msg model
+        Item.update deps msg model
     | SetNewItemTitle _ | SetNewItemLink _ | SetNewItemTags _ | SubmitItem | GotSubmitItem _ ->
-        NewItem.update msg model
+        NewItem.update deps msg model
     | LoadTagItems _ | GotTagItems _ | LoadMoreTagItems | GotMoreTagItems _ ->
-        TagItems.update msg model
+        TagItems.update deps msg model
     | DismissError ->
         { model with Error = None }, Cmd.none
 
@@ -127,7 +127,7 @@ let updateHosted (ctx: Content.HostContext) (msg: Msg) (model: Model) : Model * 
 let contentView (ctx: Content.HostContext) (model: Model) dispatch =
     React.fragment [
         match model.Error with
-        | Some err -> Shared.error err dispatch
+        | Some err -> Shared.error (Hedge.Http.renderError err) dispatch
         | None -> Html.none
 
         if model.IsLoading then

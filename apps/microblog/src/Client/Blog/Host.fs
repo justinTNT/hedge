@@ -21,6 +21,11 @@ open Elmish
 // navigator, title set directly. Blog is primary (MOUNT_BASE=""), so it routes at the root.
 let private ctx : Content.HostContext = Content.HostContext.standalone Shared.navigateTo
 
+// CP-C: the host constructs the typed API client once (browser transport) and injects it, with
+// the host context, into the content update path. The module keeps the typed Hedge.Http.ApiError.
+let private api = Blog.ClientGen.createClient Client.Api.browserTransport
+let private deps : Blog.Client.Types.Deps = { Ctx = ctx; Api = api }
+
 type Model =
     { /// The blog module's own content route.
       Route: string list
@@ -87,7 +92,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             Cmd.map ContentMsg cmd
 
     | ContentMsg m ->
-        let content, cmd = BlogApp.updateHosted ctx m model.Content
+        let content, cmd = BlogApp.updateHosted deps m model.Content
         { model with Content = content }, Cmd.map ContentMsg cmd
 
     | IdentityMsg m ->
@@ -104,7 +109,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 let content, cmd = BlogApp.enterHosted ctx baseModel.Route content'
                 { baseModel with Content = content }, Cmd.map ContentMsg cmd
             | Identity.Failed err ->
-                { baseModel with Content = { baseModel.Content with Error = Some err } }, Cmd.none
+                // CP-C: the content model's Error is a typed ApiError; wrap the identity
+                // subsystem's string failure so one error type flows to the view.
+                { baseModel with Content = { baseModel.Content with Error = Some (Hedge.Http.HttpFailure (0, err)) } }, Cmd.none
             | Identity.NoSignal ->
                 baseModel, Cmd.none
         model', Cmd.batch [ Cmd.map IdentityMsg idCmd; extraCmd ]

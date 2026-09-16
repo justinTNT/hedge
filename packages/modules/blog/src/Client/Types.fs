@@ -25,7 +25,9 @@ type Model = {
     TagItems: GetItemsByTag.Response option
     TagLoadingMore: bool
     IsLoading: bool
-    Error: string option
+    /// CP-C: the typed API failure (host-injected client preserves Hedge.Http.ApiError end to end);
+    /// the view renders it via Hedge.Http.renderError. Identity failures are wrapped as HttpFailure.
+    Error: Hedge.Http.ApiError option
     GuestSession: GuestSession.GuestSessionData
     ItemForm: ItemForm
     CollapsedComments: Set<string>
@@ -47,30 +49,38 @@ type Model = {
 
 type Msg =
     | LoadFeed
-    | GotFeed of gen: int * Result<GetFeed.Response, string>
+    | GotFeed of gen: int * Result<GetFeed.Response, Hedge.Http.ApiError>
     | LoadMoreFeed
-    | GotMoreFeed of gen: int * cursor: string option * Result<GetFeed.Response, string>
+    | GotMoreFeed of gen: int * cursor: string option * Result<GetFeed.Response, Hedge.Http.ApiError>
     | LoadItem of string
-    | GotItem of gen: int * Result<GetItem.Response, string>
+    | GotItem of gen: int * Result<GetItem.Response, Hedge.Http.ApiError>
     | DismissError
     | ConnectEvents of string
     | DisconnectEvents
     | GotEvent of Blog.Ws.NewCommentEvent
     | EventError of string
     | LoadTagItems of string
-    | GotTagItems of gen: int * Result<GetItemsByTag.Response, string>
+    | GotTagItems of gen: int * Result<GetItemsByTag.Response, Hedge.Http.ApiError>
     | LoadMoreTagItems
-    | GotMoreTagItems of gen: int * cursor: string option * Result<GetItemsByTag.Response, string>
+    | GotMoreTagItems of gen: int * cursor: string option * Result<GetItemsByTag.Response, Hedge.Http.ApiError>
     | SubmitComment
-    | GotSubmitComment of rev: int * Result<SubmitComment.Response, string>
+    | GotSubmitComment of rev: int * Result<SubmitComment.Response, Hedge.Http.ApiError>
     | SetNewItemTitle of string
     | SetNewItemLink of string
     | SetNewItemTags of string
     | SubmitItem
-    | GotSubmitItem of Result<SubmitItem.Response, string>
+    | GotSubmitItem of Result<SubmitItem.Response, Hedge.Http.ApiError>
     | ToggleCollapse of string
     | SetReplyTo of itemId: string * parentId: string option
     | SetCommentDraft of string
     | CancelReply
+
+/// CP-C: dependencies a host injects into the content update path — the per-instance host context
+/// and the typed API client (built from the host's chosen transport). Replaces the module-owned
+/// browser-transport shim (was Shared.Api): pages call `deps.Api.*` and keep the typed ApiError.
+type Deps = {
+    Ctx: Content.HostContext
+    Api: Blog.ClientGen.Client
+}
 
 let emptyItemForm = { Title = ""; Link = ""; Tags = "" }

@@ -18,13 +18,13 @@ let private continueCmd (next: bool) : Cmd<Msg> =
 
 // --- Update ---
 
-let update msg model =
+let update (deps: Deps) msg model =
     match msg with
     | LoadTagItems tag ->
         let gen = model.LoadGen + 1
         { model with IsLoading = true; TagItems = None; TagLoadingMore = false; LoadGen = gen },
-        Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag tag) { Cursor = None }
-            (fun r -> GotTagItems (gen, r)) (fun ex -> GotTagItems (gen, Error ex.Message))
+        Cmd.OfPromise.either (deps.Api.blogGetItemsByTag tag) { Cursor = None }
+            (fun r -> GotTagItems (gen, r)) (fun ex -> GotTagItems (gen, Error (Hedge.Http.TransportFailure ex.Message)))
 
     | GotTagItems (gen, _) when gen <> model.LoadGen -> model, Cmd.none
 
@@ -44,8 +44,8 @@ let update msg model =
         | Some t when t.NextCursor.IsSome && not model.TagLoadingMore ->
             let gen = model.LoadGen + 1
             { model with TagLoadingMore = true; LoadGen = gen },
-            Cmd.OfPromise.either (Blog.Client.Shared.Api.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor }
-                (fun r -> GotMoreTagItems (gen, t.NextCursor, r)) (fun ex -> GotMoreTagItems (gen, t.NextCursor, Error ex.Message))
+            Cmd.OfPromise.either (deps.Api.blogGetItemsByTag t.Tag) { Cursor = t.NextCursor }
+                (fun r -> GotMoreTagItems (gen, t.NextCursor, r)) (fun ex -> GotMoreTagItems (gen, t.NextCursor, Error (Hedge.Http.TransportFailure ex.Message)))
         | _ -> model, Cmd.none
 
     | GotMoreTagItems (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none

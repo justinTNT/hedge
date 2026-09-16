@@ -18,13 +18,13 @@ let private fillCmd : Cmd<Msg> =
 let private continueCmd (next: bool) : Cmd<Msg> =
     if next then Cmd.batch [ watchCmd; fillCmd ] else Cmd.none
 
-let update msg model =
+let update (deps: Deps) msg model =
     match msg with
     | LoadFeed ->
         let gen = model.LoadGen + 1
         { model with IsLoading = true; FeedLoadingMore = false; LoadGen = gen },
-        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = None }
-            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error ex.Message))
+        Cmd.OfPromise.either deps.Api.articlesGetFeed { Cursor = None }
+            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error (Hedge.Http.TransportFailure ex.Message)))
 
     // CP-A: drop a completion from a superseded read generation (the correctness authority).
     | GotFeed (gen, _) when gen <> model.LoadGen -> model, Cmd.none
@@ -44,8 +44,8 @@ let update msg model =
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
             let gen = model.LoadGen + 1
             { model with FeedLoadingMore = true; LoadGen = gen },
-            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetFeed { Cursor = feed.NextCursor }
-                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error ex.Message))
+            Cmd.OfPromise.either deps.Api.articlesGetFeed { Cursor = feed.NextCursor }
+                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error (Hedge.Http.TransportFailure ex.Message)))
         | _ -> model, Cmd.none
 
     | GotMoreFeed (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none

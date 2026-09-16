@@ -95,13 +95,13 @@ let private richContent (className: string) (content: RichContent) =
 
 // --- Update ---
 
-let update msg model =
+let update (deps: Deps) msg model =
     match msg with
     | LoadItem itemId ->
         let gen = model.LoadGen + 1
         { model with IsLoading = true; CurrentItem = None; LoadGen = gen },
-        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetItem itemId
-            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error ex.Message))
+        Cmd.OfPromise.either deps.Api.blogGetItem itemId
+            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error (Hedge.Http.TransportFailure ex.Message)))
 
     // CP-A: drop a completion from a superseded read generation (a reverse-order resolve after
     // switching items, or a read for an item we've since left). This is the correctness
@@ -168,8 +168,8 @@ let update msg model =
                   Author = Some model.GuestSession.DisplayName }
             let rev = model.DraftRev
             model,
-            Cmd.OfPromise.either Blog.Client.Shared.Api.blogSubmitComment req
-                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error ex.Message))
+            Cmd.OfPromise.either deps.Api.blogSubmitComment req
+                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error (Hedge.Http.TransportFailure ex.Message)))
         | None -> model, Cmd.none
 
     | GotSubmitComment (rev, Ok resp) ->

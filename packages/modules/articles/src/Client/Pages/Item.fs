@@ -91,13 +91,13 @@ let private richContent (className: string) (content: RichContent) =
 
 // --- Update ---
 
-let update (ctx: Content.HostContext) msg model =
+let update (deps: Deps) msg model =
     match msg with
     | LoadItem idOrSlug ->
         let gen = model.LoadGen + 1
         { model with IsLoading = true; CurrentItem = None; LoadGen = gen },
-        Cmd.OfPromise.either Articles.Client.Shared.Api.articlesGetPost idOrSlug
-            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error ex.Message))
+        Cmd.OfPromise.either deps.Api.articlesGetPost idOrSlug
+            (fun r -> GotItem (gen, r)) (fun ex -> GotItem (gen, Error (Hedge.Http.TransportFailure ex.Message)))
 
     // CP-A: drop a completion from a superseded read generation — the correctness authority.
     // Gen-gating this also stops an inactive module from setting the tab title / reopening a
@@ -109,7 +109,7 @@ let update (ctx: Content.HostContext) msg model =
         | [ idOrSlug ] when response.Post.Id = idOrSlug || response.Post.Slug = Some idOrSlug ->
             { model with CurrentItem = Some response; IsLoading = false; Error = None },
             Cmd.batch [
-                Cmd.ofEffect (fun _ -> ctx.SetDocTitle response.Post.Title)
+                Cmd.ofEffect (fun _ -> deps.Ctx.SetDocTitle response.Post.Title)
                 connectEventsCmd response.Post.Id
             ]
         | _ -> model, Cmd.none
@@ -134,8 +134,8 @@ let update (ctx: Content.HostContext) msg model =
             // CP-A finding 2: capture the draft revision this submit belongs to.
             let rev = model.DraftRev
             model,
-            Cmd.OfPromise.either Articles.Client.Shared.Api.articlesSubmitComment req
-                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error ex.Message))
+            Cmd.OfPromise.either deps.Api.articlesSubmitComment req
+                (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error (Hedge.Http.TransportFailure ex.Message)))
         | None -> model, Cmd.none
 
     | GotSubmitComment (rev, Ok resp) ->

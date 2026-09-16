@@ -27,13 +27,13 @@ let private continueCmd (next: bool) : Cmd<Msg> =
 let private fitCmd : Cmd<Msg> =
     Cmd.ofEffect (fun _ -> if Hedge.Tenant.hasFeature "bigText" then fitHeadlines ())
 
-let update msg model =
+let update (deps: Deps) msg model =
     match msg with
     | LoadFeed ->
         let gen = model.LoadGen + 1
         { model with IsLoading = true; FeedLoadingMore = false; LoadGen = gen },
-        Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = None }
-            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error ex.Message))
+        Cmd.OfPromise.either deps.Api.blogGetFeed { Cursor = None }
+            (fun r -> GotFeed (gen, r)) (fun ex -> GotFeed (gen, Error (Hedge.Http.TransportFailure ex.Message)))
 
     // CP-A: a completion from a superseded read generation (newer load, navigation, or
     // invalidation bumped LoadGen) is dropped — this is the correctness authority, not Route.
@@ -58,8 +58,8 @@ let update msg model =
         | Some feed when feed.NextCursor.IsSome && not model.FeedLoadingMore ->
             let gen = model.LoadGen + 1
             { model with FeedLoadingMore = true; LoadGen = gen },
-            Cmd.OfPromise.either Blog.Client.Shared.Api.blogGetFeed { Cursor = feed.NextCursor }
-                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error ex.Message))
+            Cmd.OfPromise.either deps.Api.blogGetFeed { Cursor = feed.NextCursor }
+                (fun r -> GotMoreFeed (gen, feed.NextCursor, r)) (fun ex -> GotMoreFeed (gen, feed.NextCursor, Error (Hedge.Http.TransportFailure ex.Message)))
         | _ -> model, Cmd.none
 
     | GotMoreFeed (gen, _, _) when gen <> model.LoadGen -> model, Cmd.none

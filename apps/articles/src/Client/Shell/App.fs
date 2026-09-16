@@ -44,6 +44,14 @@ let private blogCtx : Content.HostContext =
         MountSegments = [ "blog" ]
         InstanceId = 2 }
 
+// CP-C: the shell builds each hosted module's typed API client once (browser transport) and
+// injects it, with that module's host context, into its content update path. The modules keep the
+// typed Hedge.Http.ApiError through to the view.
+let private articlesDeps : A.Deps =
+    { Ctx = articlesCtx; Api = Articles.ClientGen.createClient Client.Api.browserTransport }
+let private blogDeps : B.Deps =
+    { Ctx = blogCtx; Api = Blog.ClientGen.createClient Client.Api.browserTransport }
+
 // -- Route + OAuth-claim parsing (the shell owns routing). --
 
 [<Emit("window.location.pathname")>]
@@ -170,14 +178,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | ArticlesMsg (_act, m) ->
         // Forward to the retained child; it validates the result against its own target.
-        let articles, cmd = ArtApp.updateHosted articlesCtx m model.Articles
+        let articles, cmd = ArtApp.updateHosted articlesDeps m model.Articles
         { model with Articles = articles }, mapArticles model.Activation cmd
 
     | BlogMsg (_act, m) ->
         match model.Blog with
         | None -> model, Cmd.none
         | Some blog0 ->
-            let blog, cmd = BlogApp.updateHosted blogCtx m blog0
+            let blog, cmd = BlogApp.updateHosted blogDeps m blog0
             { model with Blog = Some blog }, mapBlog model.Activation cmd
 
     | IdentityMsg m ->
@@ -208,12 +216,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                         { baseModel with Blog = Some blog; Articles = articles' }, mapBlog baseModel.Activation cmd
                     | None -> { baseModel with Articles = articles'; Blog = blog' }, Cmd.none
             | Identity.Failed err ->
-                // Surface the failure in the active module's error area.
+                // Surface the failure in the active module's error area. CP-C: the content models'
+                // Error is a typed ApiError; wrap the identity subsystem's string failure.
+                let apiErr = Hedge.Http.HttpFailure (0, err)
                 match baseModel.Active with
-                | Articles -> { baseModel with Articles = { baseModel.Articles with Error = Some err } }, Cmd.none
+                | Articles -> { baseModel with Articles = { baseModel.Articles with Error = Some apiErr } }, Cmd.none
                 | Blog ->
                     match baseModel.Blog with
-                    | Some blog0 -> { baseModel with Blog = Some { blog0 with Error = Some err } }, Cmd.none
+                    | Some blog0 -> { baseModel with Blog = Some { blog0 with Error = Some apiErr } }, Cmd.none
                     | None -> baseModel, Cmd.none
             | Identity.NoSignal ->
                 baseModel, Cmd.none
