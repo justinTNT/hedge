@@ -209,12 +209,22 @@ type OAuthConfig = {
     OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete>
 }
 
+/// C4 — which R2 key prefixes are PRIVATE: objects under them are never served through the
+/// generic public /blobs/ route (a feature owns a dedicated, isolated route for them, e.g.
+/// blog's snapshot archive). The public route decodes the key once, then denies any whole
+/// private-prefix match. A content feature supplies its prefix; the consuming app configures
+/// the policy. `{ PrivatePrefixes = [] }` = nothing private (the default for apps without such
+/// a feature; the framework knows no feature-specific directory name).
+type BlobServingPolicy = { PrivatePrefixes: string list }
+
 type WorkerConfig = {
     Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
     Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
     OAuth: (obj -> OAuthConfig) option
     /// Extra client views mounted on other hosts of this same deploy (default []).
     Mounts: Mount list
+    /// R2 key prefixes never served through the public /blobs/ route (C4). See BlobServingPolicy.
+    BlobServing: BlobServingPolicy
 }
 
 let createWorker (config: WorkerConfig) =
@@ -387,12 +397,13 @@ let createWorker (config: WorkerConfig) =
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
                 let key = decodeUri (path.Substring(7))
-                // Foreign archived HTML is stored under the "archive/" key prefix and must
-                // NEVER be served through this generic public route (raw text/html, no CSP) —
-                // only via an app's sandboxed /archive/<id> route. Block it here, AFTER
-                // decoding, so an encoded key (…/archive%2F…) can't slip past. This route runs
-                // before config.Routes, so an app-level guard cannot cover it.
-                if key.StartsWith("archive/") then
+                // C4: objects under a configured PRIVATE prefix (e.g. blog's "archive/" snapshot
+                // HTML) must NEVER be served through this generic public route (raw bytes, no
+                // isolation) — only via the feature's own dedicated route. Check AFTER decoding,
+                // so an encoded key (…/archive%2F…) can't slip past. This route runs before
+                // config.Routes, so an app-level guard cannot cover it; the policy does. The
+                // framework knows no feature directory name — the app configures the prefixes.
+                if config.BlobServing.PrivatePrefixes |> List.exists (fun p -> key.StartsWith(p)) then
                     return notFound ()
                 else
                     return! handleBlobServe key blobs

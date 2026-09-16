@@ -16,4 +16,5 @@ let exports = createWorker {
         Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = None
     Mounts = []
+    BlobServing = { PrivatePrefixes = [] }
 }

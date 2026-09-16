@@ -49,4 +49,7 @@ let exports = createWorker {
     // ride the shared /api/events DO. Meta.fs reserves "blog" so it is never mistaken for
     // an article slug. (ndct composes no blog module, so /blog simply 404s→SPA there.)
     Mounts = []
+    // C4: composes blog (whose snapshot HTML uses "archive/"), so deny that public prefix —
+    // even though capture is disabled here (no such keys written), it's the correct policy.
+    BlobServing = { PrivatePrefixes = [ "archive/" ] }
 }
