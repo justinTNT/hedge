@@ -183,17 +183,22 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                     Articles = ArtApp.withSession session baseModel.Articles
                     Blog = baseModel.Blog |> Option.map (BlogApp.withSession session) }, Cmd.none
             | Identity.ReloadContent ->
-                // Reload the ACTIVE module's current route so authorship refreshes.
+                // C1: attribution changed globally, so invalidate BOTH modules' content
+                // caches first — then re-enter the ACTIVE route (now a real refetch, not a
+                // cache reuse), while the INACTIVE module refetches on its next entry rather
+                // than silently showing a feed/item with obsolete authorship.
+                let articles' = ArtApp.invalidateContent baseModel.Articles
+                let blog' = baseModel.Blog |> Option.map BlogApp.invalidateContent
                 match baseModel.Active with
                 | Articles ->
-                    let articles, cmd = ArtApp.enterHosted articlesCtx baseModel.Route baseModel.Articles
-                    { baseModel with Articles = articles }, mapArticles baseModel.Activation cmd
+                    let articles, cmd = ArtApp.enterHosted articlesCtx baseModel.Route articles'
+                    { baseModel with Articles = articles; Blog = blog' }, mapArticles baseModel.Activation cmd
                 | Blog ->
-                    match baseModel.Blog with
+                    match blog' with
                     | Some blog0 ->
                         let blog, cmd = BlogApp.enterHosted blogCtx baseModel.Route blog0
-                        { baseModel with Blog = Some blog }, mapBlog baseModel.Activation cmd
-                    | None -> baseModel, Cmd.none
+                        { baseModel with Blog = Some blog; Articles = articles' }, mapBlog baseModel.Activation cmd
+                    | None -> { baseModel with Articles = articles'; Blog = blog' }, Cmd.none
             | Identity.Failed err ->
                 // Surface the failure in the active module's error area.
                 match baseModel.Active with

@@ -330,6 +330,12 @@ let emptyHosted (session: GuestSession.GuestSessionData) : Model =
 let withSession (session: GuestSession.GuestSessionData) (model: Model) : Model =
     { model with GuestSession = session }
 
+/// C1: drop cached content so the next enterHosted refetches. A host calls this after an
+/// identity reattribution (merge/revert/disconnect), where a cached feed/item/tag carries
+/// now-obsolete authorship — re-entry must not silently reuse it.
+let invalidateContent (model: Model) : Model =
+    { model with Feed = None; CurrentItem = None; TagItems = None }
+
 /// Synchronously dispose this instance's live resources — WebSocket + comment/owner
 /// editors. Idempotent (each teardown self-guards). A plain function so a host can
 /// dispose the OUTGOING module in order, before entering the incoming one.
