@@ -48,6 +48,23 @@ Make small reviewable commits within each checkpoint. Keep consumers buildable d
 
 **Review gate:** all C1 checks in the canonical plan, including reverse-order responses, same-module navigation, retained drafts, late write outcomes, cancelled editor creation and independent resource contexts. Complete the original shell browser/routing acceptance before calling stage 2 finished.
 
+**C1 status (as built, 2026-09-16 — branch unified-shell-consolidation):** items 1, 2, 4, 5
+delivered and **browser-accepted in local dev** (seeded justat-db): reverse-order &
+same-module stale-drop (child self-validation against Route/shown-item/query; shell
+staleDrop removed), no-DOM-read comment drafts (onChange → CommentDraft; submit reads the
+model; cleared on confirmed submit + on navigation), identity-reattribution cache
+invalidation, and retained paginated feed across a module switch. Draft is a **single**
+in-progress comment (not keyed per target/revision) **by design** — draft-survival was
+explicitly out of scope, so the letter of "keyed/revisioned drafts" and "return to draft"
+is intentionally not met.
+**Deferred — item 3 (cancellable resource scopes owned by instance/activation) and the
+"independent resource contexts" gate check.** Present-day payoff is the multi-instance
+case, which line 123 defers; today each content module owns *separate* module-level
+socket/editor state and the shell keeps exactly one module active with ordered
+disposeHosted teardown, so there is no cross-instance contention to fix yet. Revisit when
+multi-instance content UI is actually introduced. The owner/admin authoring editor
+(NewItem.fs) also still uses a DOM read — same deferral (admin-gated, not guest-facing).
+
 ### C2 — Transport-neutral generated clients
 
 1. Add Hedge's typed request/response/transport and ApiError contract. Generate each module's Client record and create transport factory without an ambient Client.Api dependency.
