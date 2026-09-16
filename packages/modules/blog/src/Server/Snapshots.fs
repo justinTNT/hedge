@@ -71,7 +71,7 @@ let capture (req: SubmitSnapshot.Request) (request: WorkerRequest) (services: Se
                 let blobKey = sprintf "%s%s.html" privatePrefix (services.NewId ())
                 let! _ = r2PutText services.Blobs blobKey cleaned "text/html; charset=utf-8"
                 let ins =
-                    Blog.Db.insertItemSnapshot services.DB
+                    Blog.Db.insertItemSnapshot services.DB (services.NewId ()) (services.Now ())
                         { ItemId = itemId; Kind = "html"; BlobKey = blobKey
                           SourceUrl = sourceUrl; Status = "ok"; Error = None }
                 let! _ = ins.Stmt.run()

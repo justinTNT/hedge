@@ -41,9 +41,7 @@ let selectPages (db: D1Database) : D1PreparedStatement =
 let selectPage (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, name, title, teaser, body, created_at, updated_at, deleted_at FROM pages WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertPage (db: D1Database) (create: PageCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertPage (db: D1Database) (id: string) (now: int) (create: PageCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO pages (id, name, title, teaser, body, created_at) VALUES (?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Name; box create.Title; box create.Teaser; box create.Body; box now |]
@@ -96,9 +94,7 @@ let selectMenuItems (db: D1Database) : D1PreparedStatement =
 let selectMenuItem (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item, title, link, parent_item, ordinal, created_at, deleted_at FROM menu_items WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertMenuItem (db: D1Database) (create: MenuItemCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertMenuItem (db: D1Database) (id: string) (now: int) (create: MenuItemCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO menu_items (id, item, title, link, parent_item, ordinal, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Item; box create.Title; box create.Link; box create.ParentItem; box create.Ordinal; box now |]

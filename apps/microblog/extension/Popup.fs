@@ -374,9 +374,10 @@ let toggleConfig () =
 /// host permission needed to read cross-origin image bytes). Best-effort:
 /// returns None on any failure so submit falls back to the original URL, which
 /// the server then tries to rehost itself (tier 2) or keeps as-is (tier 3).
-let captureImageToBlob (site: obj) (url: string) : JS.Promise<string option> =
+let captureImageToBlob (dest: Client.Api.Destination) (url: string) : JS.Promise<string option> =
     promise {
         try
+            let site = createObj [ "url" ==> dest.Url; "key" ==> dest.Key ]
             let! raw = Chrome.sendMessage (createObj [ "type" ==> "captureImage"; "url" ==> url; "site" ==> site ])
             let ok: bool = raw?ok
             if ok then
@@ -429,11 +430,13 @@ let submit () : JS.Promise<unit> =
         // settings) would upload the image to one tenant and post it from another (a broken
         // relative /blobs URL). Resolve the site once here and pass it to every request;
         // disabling the selector is just the visible cue, not the guarantee.
-        let submitSite : obj =
+        // CP-D: a typed destination (was a raw {url,key} obj). The degenerate no-site case yields
+        // an empty destination, which the background rejects exactly as the old null did.
+        let submitSite : Client.Api.Destination =
             if activeSiteIndex >= 0 && activeSiteIndex < sites.Length then
                 let s = sites.[activeSiteIndex]
-                createObj [ "url" ==> s.Url; "key" ==> s.Key ]
-            else null
+                { Url = s.Url; Key = s.Key }
+            else { Url = ""; Key = "" }
         let siteSelect = elAs<HTMLSelectElement> "siteSelect"
         btn.disabled <- true
         siteSelect.disabled <- true

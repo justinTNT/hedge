@@ -573,10 +573,13 @@ let generateDbTable (m: TableMeta) : string list =
         let placeholders = insertCols |> Seq.map (fun _ -> "?") |> String.concat ", "
         let valList = insertVals |> String.concat "; "
 
+        // CP-D: the row id and creation timestamp are CALLER-supplied, not read from the ambient
+        // newId()/epochNow() here — so a composed Services can inject a deterministic id/clock and
+        // an insert becomes a pure function of its inputs. (Updates still stamp epochNow below.)
+        let idParam = if m.HasPk then " (id: string)" else ""
+        let nowParam = if m.HasCreateTs then " (now: int)" else ""
         emit ""
-        emit (sprintf "let insert%s (db: D1Database) (create: %sCreate) =" m.DisplayName m.DisplayName)
-        if m.HasPk then emit "    let id = newId()"
-        if m.HasCreateTs then emit "    let now = epochNow()"
+        emit (sprintf "let insert%s (db: D1Database)%s%s (create: %sCreate) =" m.DisplayName idParam nowParam m.DisplayName)
         emit "    let stmt ="
         emit (sprintf "        bind (db.prepare(\"INSERT INTO %s (%s) VALUES (%s)\"))" m.TableName colList placeholders)
         emit (sprintf "             [| %s |]" valList)

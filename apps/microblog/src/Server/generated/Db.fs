@@ -30,9 +30,7 @@ let selectGuests (db: D1Database) : D1PreparedStatement =
 let selectGuest (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertGuest (db: D1Database) (create: GuestCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertGuest (db: D1Database) (id: string) (now: int) (create: GuestCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"))
              [| box id; box create.SessionId; box now |]
@@ -88,9 +86,7 @@ let selectIdentitys (db: D1Database) : D1PreparedStatement =
 let selectIdentity (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?")) [| box id |]
 
-let insertIdentity (db: D1Database) (create: IdentityCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertIdentity (db: D1Database) (id: string) (now: int) (create: IdentityCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box now |]

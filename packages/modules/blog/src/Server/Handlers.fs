@@ -282,7 +282,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
             match req.Image with
             | Some url -> promise { let! u = rehostRemoteImage services.Blobs "items" allowedImageTypes url in return Some u }
             | None -> promise { return None }
-        let ins = insertItem services.DB
+        let ins = insertItem services.DB (services.NewId ()) (services.Now ())
                     { Title = req.Title; Link = req.Link; Image = rehostedImage
                       Extract = req.Extract; OwnerComment = req.OwnerComment
                       ArticleDate = submittedAt

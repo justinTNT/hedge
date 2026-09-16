@@ -57,27 +57,40 @@ let fetchJsonRaw (url: string) : JS.Promise<obj> =
 
 // -- Transport-neutral browser adapter (C2) --
 
+/// Map the Request's HTTP verb string onto Fetch's HttpMethod. CP-D: the adapter honours the
+/// verb the Request declares (the generated client emits GET/POST today, but PUT/PATCH/DELETE
+/// now pass through too) instead of collapsing everything non-POST to GET.
+let private methodOf (m: string) : HttpMethod =
+    match m.ToUpperInvariant() with
+    | "POST" -> HttpMethod.POST
+    | "PUT" -> HttpMethod.PUT
+    | "PATCH" -> HttpMethod.PATCH
+    | "DELETE" -> HttpMethod.DELETE
+    | "HEAD" -> HttpMethod.HEAD
+    | "OPTIONS" -> HttpMethod.OPTIONS
+    | _ -> HttpMethod.GET
+
 /// The browser Transport: runs a Hedge.Http.Request through fetch, applying the deployment
 /// base once and keeping the default same-origin cookie behaviour (identity/guest cookies
 /// ride along exactly as the helpers above). A completed HTTP response — whatever its status
 /// — comes back as Ok; only a request that never completes (network/CORS) becomes a
 /// TransportFailure, leaving status interpretation and decoding to the generated client via
 /// Http.sendDecode. Hedge.Http is fully qualified so `Response` never collides with Fetch's.
-/// (Custom per-request headers aren't forwarded: no browser endpoint emits any — the
-/// extension adapter carries its own credentials by a different path.)
+/// CP-D: the Request's declared verb and headers are honoured (the contract), not dropped; a
+/// JSON body still adds Content-Type. No browser endpoint emits custom headers today, so header
+/// forwarding is future-proofing rather than a behaviour change.
 let browserTransport : Hedge.Http.Transport =
     fun (req: Hedge.Http.Request) ->
         promise {
             let url = basePath + req.Path + buildQuery req.Query
-            let verb = if req.Method = "POST" then HttpMethod.POST else HttpMethod.GET
+            let headerList =
+                [ if req.Body.IsSome then ContentType "application/json"
+                  for (k, v) in req.Headers -> HttpRequestHeaders.Custom (k, box v) ]
+            let baseProps = [ Method (methodOf req.Method); requestHeaders headerList ]
             let props =
                 match req.Body with
-                | Some body ->
-                    [ Method verb
-                      requestHeaders [ ContentType "application/json" ]
-                      Body (BodyInit.Case3 body) ]
-                | None ->
-                    [ Method verb ]
+                | Some body -> baseProps @ [ Body (BodyInit.Case3 body) ]
+                | None -> baseProps
             try
                 let! response = fetch url props
                 let! text = response.text()

@@ -26,18 +26,27 @@ let private buildQuery (pairs: (string * string) list) : string =
 
 // -- Transport-neutral extension adapter (C2) --
 
+/// A pinned submission destination: the target site's base URL + its write key. CP-D: typed
+/// (was a raw obj) so the popup can't hand the transport a malformed site; serialized to the
+/// `{ url, key }` shape the background worker expects at the IPC boundary.
+type Destination = { Url: string; Key: string }
+
 /// The extension Transport: brokers a Hedge.Http.Request through the background service
-/// worker (which does the real fetch), pinned to one destination (`site` = {url, key}) so a
-/// whole submission — image, item, snapshot — can't split across tenants if the active site
-/// changes mid-flight. The background returns {ok,data} for 2xx, {ok:false,status,error} for
-/// an HTTP error, or {ok:false,error} (no status) when the fetch itself threw. We map the
-/// first two to a completed Response (status interpreted by Http.sendDecode) and the last to
-/// a TransportFailure. Multipart image upload stays a distinct captureImage message, not this.
-let extensionTransport (site: obj) : Hedge.Http.Transport =
+/// worker (which does the real fetch), pinned to one Destination so a whole submission — image,
+/// item, snapshot — can't split across tenants if the active site changes mid-flight. The
+/// background returns {ok,data} for 2xx, {ok:false,status,error} for an HTTP error, or
+/// {ok:false,error} (no status) when the fetch itself threw. We map the first two to a completed
+/// Response (status interpreted by Http.sendDecode) and the last to a TransportFailure. Multipart
+/// image upload stays a distinct captureImage message, not this.
+let extensionTransport (dest: Destination) : Hedge.Http.Transport =
     fun (req: Hedge.Http.Request) ->
         promise {
             let path = req.Path + buildQuery req.Query
-            let baseFields = [ "type" ==> "api"; "method" ==> req.Method; "path" ==> path; "site" ==> site ]
+            let site = createObj [ "url" ==> dest.Url; "key" ==> dest.Key ]
+            // CP-D: forward the Request's declared verb (already sent) and headers (the Transport
+            // contract). No submission sends custom headers today, so `headers` is future-proofing.
+            let headers = createObj [ for (k, v) in req.Headers -> k ==> box v ]
+            let baseFields = [ "type" ==> "api"; "method" ==> req.Method; "path" ==> path; "site" ==> site; "headers" ==> headers ]
             let msg =
                 match req.Body with
                 | Some body -> createObj (baseFields @ [ "body" ==> JS.JSON.parse body ])

@@ -50,9 +50,7 @@ let selectPosts (db: D1Database) : D1PreparedStatement =
 let selectPost (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, title, teaser, body, image, article_date, slug, created_at, updated_at, view_count, deleted_at FROM articles_posts WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertPost (db: D1Database) (create: PostCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertPost (db: D1Database) (id: string) (now: int) (create: PostCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO articles_posts (id, title, teaser, body, image, article_date, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Title; optToDb create.Teaser; box create.Body; optToDb create.Image; box create.ArticleDate; optToDb create.Slug; box create.ViewCount; box now |]
@@ -108,9 +106,7 @@ let selectComments (db: D1Database) : D1PreparedStatement =
 let selectComment (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, post_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM articles_comments WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertComment (db: D1Database) (create: CommentCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertComment (db: D1Database) (id: string) (now: int) (create: CommentCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO articles_comments (id, post_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.PostId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box now |]

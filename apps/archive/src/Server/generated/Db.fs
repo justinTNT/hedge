@@ -53,9 +53,7 @@ let selectArticles (db: D1Database) : D1PreparedStatement =
 let selectArticle (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, aid, title, body, section, article_date, attrib, source, created_at, updated_at, view_count, deleted_at FROM articles WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertArticle (db: D1Database) (create: ArticleCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertArticle (db: D1Database) (id: string) (now: int) (create: ArticleCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO articles (id, aid, title, body, section, article_date, attrib, source, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Aid; box create.Title; box create.Body; box create.Section; box create.ArticleDate; box create.Attrib; box create.Source; box create.ViewCount; box now |]

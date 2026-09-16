@@ -41,9 +41,7 @@ let selectAlbums (db: D1Database) : D1PreparedStatement =
 let selectAlbum (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, title, slug, cover, release_date, created_at, updated_at, deleted_at FROM albums WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertAlbum (db: D1Database) (create: AlbumCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertAlbum (db: D1Database) (id: string) (now: int) (create: AlbumCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO albums (id, title, slug, cover, release_date, created_at) VALUES (?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Title; box create.Slug; optToDb create.Cover; box create.ReleaseDate; box now |]
@@ -96,9 +94,7 @@ let selectTracks (db: D1Database) : D1PreparedStatement =
 let selectTrack (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, album_id, title, url, track_index, plays, created_at, deleted_at FROM tracks WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertTrack (db: D1Database) (create: TrackCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertTrack (db: D1Database) (id: string) (now: int) (create: TrackCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO tracks (id, album_id, title, url, track_index, plays, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.AlbumId; box create.Title; box create.Url; box create.TrackIndex; box create.Plays; box now |]

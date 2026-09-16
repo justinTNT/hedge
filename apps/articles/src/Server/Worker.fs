@@ -49,7 +49,10 @@ let exports = createWorker {
     // ride the shared /api/events DO. Meta.fs reserves "blog" so it is never mistaken for
     // an article slug. (ndct composes no blog module, so /blog simply 404s→SPA there.)
     Mounts = []
-    // C4: composes blog (whose snapshot HTML uses "archive/"), so deny that public prefix —
-    // even though capture is disabled here (no such keys written), it's the correct policy.
+    // C4: the default build composes blog (whose snapshot HTML uses "archive/"), so deny that
+    // public prefix — even though capture is disabled here (no such keys written), it's the
+    // correct policy. CP-D: this literal must equal Blog.Snapshots.privatePrefix. Unlike microblog
+    // (which references it directly), this Worker is site-shared and ndct composes NO blog module,
+    // so Blog.Snapshots isn't in scope in the ndct build — hence the literal, not the constant.
     BlobServing = { PrivatePrefixes = [ "archive/" ] }
 }

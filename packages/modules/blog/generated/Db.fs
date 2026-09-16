@@ -53,9 +53,7 @@ let selectItems (db: D1Database) : D1PreparedStatement =
 let selectItem (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, title, link, image, extract, owner_comment, article_date, slug, created_at, updated_at, view_count, deleted_at FROM blog_items WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertItem (db: D1Database) (create: ItemCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertItem (db: D1Database) (id: string) (now: int) (create: ItemCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO blog_items (id, title, link, image, extract, owner_comment, article_date, slug, view_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.Title; optToDb create.Link; optToDb create.Image; optToDb create.Extract; box create.OwnerComment; box create.ArticleDate; optToDb create.Slug; box create.ViewCount; box now |]
@@ -111,9 +109,7 @@ let selectItemComments (db: D1Database) : D1PreparedStatement =
 let selectItemComment (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item_id, identity_id, parent_id, author, content, removed, created_at, deleted_at FROM blog_comments WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertItemComment (db: D1Database) (create: ItemCommentCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertItemComment (db: D1Database) (id: string) (now: int) (create: ItemCommentCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO blog_comments (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.ItemId; box create.IdentityId; optToDb create.ParentId; box create.Author; box create.Content; box create.Removed; box now |]
@@ -162,9 +158,7 @@ let selectTags (db: D1Database) : D1PreparedStatement =
 let selectTag (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, name, created_at, deleted_at FROM blog_tags WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertTag (db: D1Database) (create: TagCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertTag (db: D1Database) (id: string) (now: int) (create: TagCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO blog_tags (id, name, created_at) VALUES (?, ?, ?)"))
              [| box id; box create.Name; box now |]
@@ -205,8 +199,7 @@ let selectItemTags (db: D1Database) : D1PreparedStatement =
 let selectItemTag (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item_id, tag_id, deleted_at FROM blog_item_tags WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertItemTag (db: D1Database) (create: ItemTagCreate) =
-    let id = newId()
+let insertItemTag (db: D1Database) (id: string) (create: ItemTagCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO blog_item_tags (id, item_id, tag_id) VALUES (?, ?, ?)"))
              [| box id; box create.ItemId; box create.TagId |]
@@ -267,9 +260,7 @@ let selectItemSnapshots (db: D1Database) : D1PreparedStatement =
 let selectItemSnapshot (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, item_id, kind, blob_key, source_url, status, error, created_at, deleted_at FROM blog_snapshots WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
-let insertItemSnapshot (db: D1Database) (create: ItemSnapshotCreate) =
-    let id = newId()
-    let now = epochNow()
+let insertItemSnapshot (db: D1Database) (id: string) (now: int) (create: ItemSnapshotCreate) =
     let stmt =
         bind (db.prepare("INSERT INTO blog_snapshots (id, item_id, kind, blob_key, source_url, status, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"))
              [| box id; box create.ItemId; box create.Kind; box create.BlobKey; box create.SourceUrl; box create.Status; optToDb create.Error; box now |]

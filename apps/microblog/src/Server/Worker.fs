@@ -60,7 +60,8 @@ let exports = createWorker {
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
     // darwin.news/rhymes: a second view over the same items, paired by rhyme-* tags.
     Mounts = [ { On = OnPath "/rhymes"; Shell = "/rhyming.html"; When = fun _ -> true } ]
-    // C4: blog snapshot HTML lives under "archive/" — never served through the public /blobs/
-    // route (only via the sandboxed /archive/<id> feature route).
-    BlobServing = { PrivatePrefixes = [ "archive/" ] }
+    // C4: blog snapshot HTML lives under the blog feature's own private prefix — never served
+    // through the public /blobs/ route (only via the sandboxed /archive/<id> feature route).
+    // CP-D: the prefix is owned by the feature (Blog.Snapshots.privatePrefix), not a literal here.
+    BlobServing = { PrivatePrefixes = [ Blog.Snapshots.privatePrefix ] }
 }
