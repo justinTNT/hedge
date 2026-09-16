@@ -13,4 +13,14 @@ open Client.Api
 let getAlbums () =
     fetchJson "/api/albums" Decode.getAlbumsResponse
 
+// --- Transport-neutral client (C2) ---
+
+type Client = {
+    getAlbums: unit -> JS.Promise<Result<GetAlbums.Response, Hedge.Http.ApiError>>
+}
+
+let createClient (transport: Hedge.Http.Transport) : Client = {
+    getAlbums = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/albums"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getAlbumsResponse
+}
+
 // --- WebSocket Events ---

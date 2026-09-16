@@ -19,6 +19,20 @@ let articlesGetFeed (query: Articles.Api.GetFeed.Query) =
     let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
     fetchJson ("/api/articles/feed" + qs) Decode.articlesGetFeedResponse
 
+// --- Transport-neutral client (C2) ---
+
+type Client = {
+    articlesGetPost: string -> JS.Promise<Result<Articles.Api.GetPost.Response, Hedge.Http.ApiError>>
+    articlesSubmitComment: Articles.Api.SubmitComment.Request -> JS.Promise<Result<Articles.Api.SubmitComment.Response, Hedge.Http.ApiError>>
+    articlesGetFeed: Articles.Api.GetFeed.Query -> JS.Promise<Result<Articles.Api.GetFeed.Response, Hedge.Http.ApiError>>
+}
+
+let createClient (transport: Hedge.Http.Transport) : Client = {
+    articlesGetPost = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/articles/post/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.articlesGetPostResponse
+    articlesSubmitComment = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/articles/comment"; Query = []; Headers = []; Body = Some (Encode.articlesSubmitCommentReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.articlesSubmitCommentResponse
+    articlesGetFeed = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/articles/feed"; Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.articlesGetFeedResponse
+}
+
 // --- WebSocket Events ---
 
 type ArticlesWsEvent =

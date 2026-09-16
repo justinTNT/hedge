@@ -16,4 +16,16 @@ let getPage (id: string) =
 let getSite () =
     fetchJson "/api/site" Decode.getSiteResponse
 
+// --- Transport-neutral client (C2) ---
+
+type Client = {
+    getPage: string -> JS.Promise<Result<GetPage.Response, Hedge.Http.ApiError>>
+    getSite: unit -> JS.Promise<Result<GetSite.Response, Hedge.Http.ApiError>>
+}
+
+let createClient (transport: Hedge.Http.Transport) : Client = {
+    getPage = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/page/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPageResponse
+    getSite = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/site"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getSiteResponse
+}
+
 // --- WebSocket Events ---
