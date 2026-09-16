@@ -13,6 +13,7 @@
     <Compile Include="Schema.fs" />
     <Compile Include="SchemaCodec.fs" />
     <Compile Include="Validate.fs" />
+    <Compile Include="Http.fs" />
     <Compile Include="Codec.fs" />
     <Compile Include="Workers.fs" />
     <Compile Include="OAuth.fs" />
