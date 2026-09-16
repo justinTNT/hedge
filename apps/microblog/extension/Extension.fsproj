@@ -5,12 +5,13 @@
   <ItemGroup>
     <Compile Include="../src/Codecs/generated/Codecs.fs" Link="Codecs.fs" />
     <Compile Include="../src/Client/generated/ClientGen.fs" Link="ClientGen.fs" />
-    <!-- The blog module owns its own generated codecs post split-gen; the app-level
-         ClientGen no longer carries the blog surface. Pull in the blog codecs so the
-         extension can encode a SubmitItem request / decode its response. It POSTs via
-         the minimal Client.Api directly rather than the blog ClientGen, which needs
-         buildQuery/wsBase helpers this extension's Client.Api doesn't provide. -->
+    <!-- The blog module owns its own generated codecs + client surface post split-gen.
+         Pull in the blog codecs (encode/decode) and, since C2, the blog ClientGen: the
+         extension composes Blog.ClientGen.createClient with the extension transport
+         (Client.Api.extensionTransport) instead of hand-posting. The bare ClientGen
+         functions compile here because the extension Client.Api now provides buildQuery. -->
     <Compile Include="../../../packages/modules/blog/generated/Codecs.fs" Link="BlogCodecs.fs" />
+    <Compile Include="../../../packages/modules/blog/generated/ClientGen.fs" Link="BlogClientGen.fs" />
     <Compile Include="Popup.fs" />
   </ItemGroup>
   <ItemGroup>

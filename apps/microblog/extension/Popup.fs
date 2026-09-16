@@ -463,11 +463,13 @@ let submit () : JS.Promise<unit> =
             Tags = tags
         }
 
-        // POST directly through the minimal extension Client.Api (the blog module's
-        // generated ClientGen needs query/ws helpers this extension doesn't ship);
-        // the blog codecs give the wire-correct encode/decode.
-        let body = Blog.Codecs.Encode.blogSubmitItemReq req |> Thoth.Json.Encode.toString 0
-        let! result = Client.Api.postJsonPinned submitSite "/api/blog/item" body Blog.Codecs.Decode.blogSubmitItemResponse
+        // C2: submit through the blog module's transport-neutral client, bound to the
+        // extension transport pinned to this submission's destination ({url, key}). The
+        // generated client owns the path + request/response codecs; the typed ApiError
+        // renders to the status string. (Image capture above and the snapshot below share
+        // the same pinned destination so the whole submission stays on one tenant.)
+        let blogClient = Blog.ClientGen.createClient (Client.Api.extensionTransport submitSite)
+        let! result = blogClient.blogSubmitItem req
 
         match result with
         | Ok resp ->
@@ -485,8 +487,8 @@ let submit () : JS.Promise<unit> =
                     ]
                 Client.Api.postJsonPinned submitSite "/api/blog/snapshot" (JS.JSON.stringify snapshotBody) (Thoth.Json.Decode.succeed ())
                 |> ignore
-        | Error msg ->
-            setStatus msg "error"
+        | Error apiErr ->
+            setStatus (Hedge.Http.renderError apiErr) "error"
 
         btn.disabled <- false
         siteSelect.disabled <- false

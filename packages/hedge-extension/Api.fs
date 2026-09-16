@@ -59,3 +59,49 @@ let postJsonPinned<'T> (site: obj) (url: string) (body: string) (decoder: Decode
             let msg = errorToString (raw?error)
             return Error msg
     }
+
+[<Emit("encodeURIComponent($0)")>]
+let private uriEnc (s: string) : string = jsNative
+
+/// Build a "?k=v&..." query string (values URL-encoded); "" when empty. Matches the browser
+/// Client.Api.buildQuery so the generated bare ClientGen functions — which reference it via
+/// `open Client.Api` — compile against this extension Client.Api too. (The extension uses the
+/// transport-neutral Client record below, not the bare functions, but the file must compile.)
+let buildQuery (pairs: (string * string) list) : string =
+    match pairs with
+    | [] -> ""
+    | _ -> "?" + (pairs |> List.map (fun (k, v) -> k + "=" + uriEnc v) |> String.concat "&")
+
+// -- Transport-neutral extension adapter (C2) --
+
+/// The extension Transport: brokers a Hedge.Http.Request through the background service
+/// worker (which does the real fetch), pinned to one destination (`site` = {url, key}) so a
+/// whole submission — image, item, snapshot — can't split across tenants if the active site
+/// changes mid-flight. The background returns {ok,data} for 2xx, {ok:false,status,error} for
+/// an HTTP error, or {ok:false,error} (no status) when the fetch itself threw. We map the
+/// first two to a completed Response (status interpreted by Http.sendDecode) and the last to
+/// a TransportFailure. Multipart image upload stays a distinct captureImage message, not this.
+let extensionTransport (site: obj) : Hedge.Http.Transport =
+    fun (req: Hedge.Http.Request) ->
+        promise {
+            let path = req.Path + buildQuery req.Query
+            let baseFields = [ "type" ==> "api"; "method" ==> req.Method; "path" ==> path; "site" ==> site ]
+            let msg =
+                match req.Body with
+                | Some body -> createObj (baseFields @ [ "body" ==> JS.JSON.parse body ])
+                | None -> createObj baseFields
+            try
+                let! raw = sendMessage msg
+                let ok = raw?ok : bool
+                if ok then
+                    return Ok ({ Status = 200; Headers = []; Body = JS.JSON.stringify (raw?data) }: Hedge.Http.Response)
+                else
+                    let statusVal : obj = raw?status
+                    if isNullOrUndefined statusVal then
+                        // No HTTP status → the background fetch itself failed (network/IPC).
+                        return Error (Hedge.Http.TransportFailure (errorToString (raw?error)))
+                    else
+                        return Ok ({ Status = unbox<int> statusVal; Headers = []; Body = JS.JSON.stringify (raw?error) }: Hedge.Http.Response)
+            with ex ->
+                return Error (Hedge.Http.TransportFailure ex.Message)
+        }
