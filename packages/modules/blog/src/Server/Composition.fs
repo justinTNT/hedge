@@ -14,4 +14,5 @@ let bind (services: Services) : Handlers =
       getItem = fun id -> Blog.Handlers.getItem id services
       submitItem = fun req request ctx -> Blog.Handlers.submitItem req request services ctx
       submitComment = fun req request ctx -> Blog.Handlers.submitComment req request services ctx
+      submitSnapshot = fun req request _ctx -> Blog.Snapshots.capture req request services
       getFeed = fun query -> Blog.Handlers.getFeed query services }

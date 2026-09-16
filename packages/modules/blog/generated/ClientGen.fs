@@ -8,6 +8,10 @@ open Client.Api
 
 // --- HTTP API ---
 
+let blogSubmitSnapshot (req: Blog.Api.SubmitSnapshot.Request) =
+    let body = Encode.blogSubmitSnapshotReq req |> Encode.toString 0
+    postJson "/api/blog/snapshot" body Decode.blogSubmitSnapshotResponse
+
 let blogGetItemsByTag (id: string) (query: Blog.Api.GetItemsByTag.Query) =
     let qs = buildQuery (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ])
     fetchJson (sprintf "/api/blog/tags/%s/items%s" id qs) Decode.blogGetItemsByTagResponse
@@ -33,6 +37,7 @@ let blogGetFeed (query: Blog.Api.GetFeed.Query) =
 // --- Transport-neutral client (C2) ---
 
 type Client = {
+    blogSubmitSnapshot: Blog.Api.SubmitSnapshot.Request -> JS.Promise<Result<Blog.Api.SubmitSnapshot.Response, Hedge.Http.ApiError>>
     blogGetItemsByTag: string -> Blog.Api.GetItemsByTag.Query -> JS.Promise<Result<Blog.Api.GetItemsByTag.Response, Hedge.Http.ApiError>>
     blogGetTags: unit -> JS.Promise<Result<Blog.Api.GetTags.Response, Hedge.Http.ApiError>>
     blogGetItem: string -> JS.Promise<Result<Blog.Api.GetItem.Response, Hedge.Http.ApiError>>
@@ -42,6 +47,7 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
+    blogSubmitSnapshot = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/blog/snapshot"; Query = []; Headers = []; Body = Some (Encode.blogSubmitSnapshotReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.blogSubmitSnapshotResponse
     blogGetItemsByTag = fun id query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/blog/tags/%s/items" id); Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetItemsByTagResponse
     blogGetTags = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/blog/tags"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetTagsResponse
     blogGetItem = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/blog/item/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetItemResponse

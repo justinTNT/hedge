@@ -21,11 +21,12 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
     // deliberately hand-written (not a reflected/gen endpoint).
     | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
         Some (Server.Handlers.getRhymes env)
-    // Source-page archive: the extension POSTs a captured snapshot; readers view it sandboxed.
-    | POST path when matchPath "/api/blog/snapshot" path = Some (Exact "/api/blog/snapshot") ->
-        Some (Server.Archive.handleSnapshot request env)
+    // Source-page archive (C4): capture is now the reflected blog endpoint POST
+    // /api/blog/snapshot (dispatched via Server.ModuleServices below); only the raw-HTML
+    // reference serve is mounted here, isolated in a CSP sandbox by the blog module over its
+    // Services. (Justat mounts no /archive route — capture disabled there.)
     | GET path when path.StartsWith("/archive/") ->
-        Some (Server.Archive.handleArchiveServe (path.Substring(9)) env)
+        Some (Blog.Snapshots.serveArchive (path.Substring(9)) (Server.ModuleServices.blog env))
     // NB: blocking raw /blobs/archive/* is NOT done here — authRoutes runs inside
     // config.Routes, which the framework reaches AFTER its own /blobs/ handler, so a guard
     // here is unreachable. The block lives in the framework blob route (Router.fs), before

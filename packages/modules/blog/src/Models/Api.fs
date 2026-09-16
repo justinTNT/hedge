@@ -125,5 +125,21 @@ module GetItemsByTag =
 
     let endpoint : GetByQuery<Query, Response> = GetByQuery (sprintf "/api/tags/%s/items")
 
+module SubmitSnapshot =
+    // C4 — the source-page archive capture, now a typed blog endpoint (moved from the app-local
+    // Archive handler). Wire keys itemId/sourceUrl/html are preserved; itemId is a typed item
+    // reference; sourceUrl omitted/null stores as ""; the response is { id } (the snapshot row).
+    type Request = {
+        ItemId: ForeignKey<Blog.Domain.Item>
+        SourceUrl: string option
+        Html: string
+    }
+
+    type Response = {
+        Id: string
+    }
+
+    let endpoint : Post<Request, Response> = Post "/api/snapshot"
+
 module Events =
     let endpoint : Get<unit> = Get "/api/events"

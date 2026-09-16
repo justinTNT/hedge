@@ -24,4 +24,7 @@ type Services =
       /// Fresh id generator (framework `newId` by default; a test can supply a deterministic one).
       NewId: unit -> string
       /// Clock (framework `epochNow` by default; a test can supply a deterministic one).
-      Now: unit -> int }
+      Now: unit -> int
+      /// C4: whether source-snapshot capture is enabled for this host (microblog: true;
+      /// Justat: false → POST /api/blog/snapshot returns 404 and writes nothing).
+      CaptureEnabled: bool }

@@ -33,4 +33,5 @@ let blog (env: Env) : Blog.Services.Services =
       AdminKey = env.ADMIN_KEY
       Author = authorResolver env.DB
       NewId = newId
-      Now = epochNow }
+      Now = epochNow
+      CaptureEnabled = true }

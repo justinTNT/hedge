@@ -479,14 +479,14 @@ let submit () : JS.Promise<unit> =
             // a snapshot failure must not surface as a submit error. Initiated while
             // the site is still locked so it targets the same tenant as the post.
             if documentHtml <> "" then
-                let snapshotBody =
-                    createObj [
-                        "itemId" ==> resp.Item.Id
-                        "sourceUrl" ==> pageUrl
-                        "html" ==> documentHtml
-                    ]
-                Client.Api.postJsonPinned submitSite "/api/blog/snapshot" (JS.JSON.stringify snapshotBody) (Thoth.Json.Decode.succeed ())
-                |> ignore
+                // C4: snapshot capture is now a typed blog endpoint — post it through the same
+                // generated client (pinned to submitSite), not a hand-built body. Best-effort:
+                // the result is ignored so a snapshot failure never surfaces as a submit error.
+                let snapReq : Blog.Api.SubmitSnapshot.Request =
+                    { ItemId = Hedge.Interface.ForeignKey resp.Item.Id
+                      SourceUrl = (if pageUrl = "" then None else Some pageUrl)
+                      Html = documentHtml }
+                blogClient.blogSubmitSnapshot snapReq |> ignore
         | Error apiErr ->
             setStatus (Hedge.Http.renderError apiErr) "error"
 

@@ -10,6 +10,7 @@ open Blog.Codecs
 // The decoded-argument delegates for each endpoint, bound by Composition.bind over the
 // module's Services. No Server.Env dependency: the host supplies behaviour via Services.
 type Handlers = {
+    submitSnapshot: Blog.Api.SubmitSnapshot.Request -> WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>
     getItemsByTag: string -> Blog.Api.GetItemsByTag.Query -> JS.Promise<WorkerResponse>
     getTags: unit -> JS.Promise<WorkerResponse>
     getItem: string -> JS.Promise<WorkerResponse>
@@ -39,6 +40,15 @@ let dispatch (handlers: Handlers) (request: WorkerRequest) (ctx: ExecutionContex
         | Some (WithParam (_, id)) -> Some (handlers.getItem id)
         | _ ->
         None
+
+    | POST path when matchPath "/api/blog/snapshot" path = Some (Exact "/api/blog/snapshot") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.blogSubmitSnapshotReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! handlers.submitSnapshot req request ctx
+        })
 
     | POST path when matchPath "/api/blog/item" path = Some (Exact "/api/blog/item") ->
         Some (promise {

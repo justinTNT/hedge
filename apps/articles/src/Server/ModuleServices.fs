@@ -31,8 +31,10 @@ let private articles (env: Env) : Articles.Services.Services =
     { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB; NewId = newId; Now = epochNow }
 
 let private blog (env: Env) : Blog.Services.Services =
+    // Justat keeps snapshot capture DISABLED (CaptureEnabled = false → POST /api/blog/snapshot
+    // returns 404, no write; the /archive route is not mounted below).
     { DB = env.DB; Blobs = env.BLOBS; Events = env.EVENTS; AdminKey = env.ADMIN_KEY
-      Author = authorResolver env.DB; NewId = newId; Now = epochNow }
+      Author = authorResolver env.DB; NewId = newId; Now = epochNow; CaptureEnabled = false }
 
 /// Compose every composed content module's dispatch (articles + blog) over records bound from
 /// `env`, in the order the generated site Routes expects (articles then blog).

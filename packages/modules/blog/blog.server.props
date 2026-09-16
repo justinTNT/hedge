@@ -20,6 +20,8 @@
          this props) and supplies the Services via Server.ModuleServices. -->
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Services.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Handlers.fs" />
+    <!-- C4: the source-snapshot feature (capture + /archive serve), module-owned, on Services. -->
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Snapshots.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />

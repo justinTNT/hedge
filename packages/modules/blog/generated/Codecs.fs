@@ -20,6 +20,7 @@ module Encode =
     let inline blogFeedItem (v: Blog.Api.GetFeed.FeedItem) = encode v
 
     // -- API request encoders --
+    let inline blogSubmitSnapshotReq (v: Blog.Api.SubmitSnapshot.Request) = encode v
     let inline blogSubmitItemReq (v: Blog.Api.SubmitItem.Request) = encode v
     let inline blogSubmitCommentReq (v: Blog.Api.SubmitComment.Request) = encode v
 
@@ -41,6 +42,7 @@ module Decode =
     let blogFeedItem : Decoder<Blog.Api.GetFeed.FeedItem> = decode<Blog.Api.GetFeed.FeedItem>()
 
     // -- API response decoders --
+    let blogSubmitSnapshotResponse : Decoder<Blog.Api.SubmitSnapshot.Response> = decode<Blog.Api.SubmitSnapshot.Response>()
     let blogGetItemsByTagResponse : Decoder<Blog.Api.GetItemsByTag.Response> = decode<Blog.Api.GetItemsByTag.Response>()
     let blogGetTagsResponse : Decoder<Blog.Api.GetTags.Response> = decode<Blog.Api.GetTags.Response>()
     let blogGetItemResponse : Decoder<Blog.Api.GetItem.Response> = decode<Blog.Api.GetItem.Response>()
@@ -49,6 +51,7 @@ module Decode =
     let blogGetFeedResponse : Decoder<Blog.Api.GetFeed.Response> = decode<Blog.Api.GetFeed.Response>()
 
     // -- API request decoders --
+    let blogSubmitSnapshotReq : Decoder<Blog.Api.SubmitSnapshot.Request> = decode<Blog.Api.SubmitSnapshot.Request>()
     let blogSubmitItemReq : Decoder<Blog.Api.SubmitItem.Request> = decode<Blog.Api.SubmitItem.Request>()
     let blogSubmitCommentReq : Decoder<Blog.Api.SubmitComment.Request> = decode<Blog.Api.SubmitComment.Request>()
 
@@ -59,6 +62,15 @@ module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
+
+    let blogSubmitSnapshotSchema =
+        schema "Blog.Api.SubmitSnapshot.Request" [
+            fieldWith "ItemId" FString [Required; Trim]
+            fieldWith "SourceUrl" (FOption FString) [Trim]
+            fieldWith "Html" FString [Required; Trim]
+        ]
+
+    let inline blogSubmitSnapshotReq (r: Blog.Api.SubmitSnapshot.Request) = validate blogSubmitSnapshotSchema r
 
     let blogSubmitItemSchema =
         schema "Blog.Api.SubmitItem.Request" [
