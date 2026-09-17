@@ -170,7 +170,8 @@ let private fieldsToJson (schema: TypeSchema) (fields: Map<string, string>) : st
                 | FInt ->
                     if v = "" then box 0 else box (int v)
                 | FBool ->
-                    box (v = "true")
+                    // "1"/"0" (as loaded from the DB) or "true"/"false" (from the checkbox) — both map.
+                    box (v = "true" || v = "1")
                 | _ -> box v
             Some (key, value))
     |> createObj
@@ -654,6 +655,23 @@ module View =
                             prop.alt "preview"
                             prop.style [ style.maxWidth 200; style.marginTop 8; style.display.block ]
                         ]
+                ]
+            ]
+        // Booleans edit as a checkbox (was a text box via the catch-all). The stored value arrives
+        // as "1"/"0" or "true"/"false"; either counts as checked, and the change dispatches a
+        // canonical "true"/"false" (the server's mutableArgs binds it back to 0/1).
+        | FBool | FOption FBool ->
+            let v = values |> Map.tryFind field.Name |> Option.defaultValue ""
+            Html.div [
+                prop.className "admin-field admin-field-bool"
+                prop.children [
+                    Html.label [ prop.text field.Name ]
+                    Html.input [
+                        prop.type' "checkbox"
+                        prop.isChecked (v = "true" || v = "1")
+                        prop.disabled isReadOnly
+                        prop.onChange (fun (isOn: bool) -> dispatch (FieldChanged (field.Name, (if isOn then "true" else "false"))))
+                    ]
                 ]
             ]
         | FString | FOption FString ->
