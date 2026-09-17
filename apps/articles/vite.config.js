@@ -95,10 +95,15 @@ function siteConfig() {
       // site (Justat/default) boots the unified shell. Only index.html carries the
       // placeholder, so this is a no-op for admin.html / blog.html.
       const clientMain = hedgeSite === 'ndct' ? 'Articles/Main.js' : 'Shell/Main.js';
-      // Deterministic order: shared base first, then the deployment override.
+      // Deterministic order: shared base (which @imports the articles module CSS),
+      // then the blog module CSS when this site composes blog (justat/default, not
+      // ndct), then the deployment override. Module CSS is scoped under .article-content
+      // / .blog-content, so the two never collide; tenant rules come last and win.
+      const composesBlog = hedgeSite !== 'ndct';
       const cssLinks =
         isAdmin ? '<link rel="stylesheet" href="./styles/admin.css">'
         : isIndex ? ('<link rel="stylesheet" href="./styles/base.css">'
+            + (composesBlog ? '\n    <link rel="stylesheet" href="../../packages/modules/blog/blog.css">' : '')
             + (siteSlug ? `\n    <link rel="stylesheet" href="./styles/tenants/${siteSlug}.css">` : ''))
         : '';
       const headInject = [cssLinks, injected, isIndex ? ogMeta(siteTitle) : '']

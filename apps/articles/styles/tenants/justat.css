@@ -4,7 +4,15 @@
    wood-plank frame, centred aged-paper two-column, lime email masthead,
    Georgia serif, warm palette, date badges. Textures live in /public/justat/.
    Uses only system fonts (Georgia/Arial) — no web-font import.
+
+   SPLIT for the unified shell: site frame/branding (body, links, .app grid,
+   header/nav, main paper, .js-sidebar) stays site-wide (body.tenant-justat …);
+   article CONTENT (feed cards, date badges, extract, article body, comments)
+   is scoped under `.article-content` so it doesn't reach the /blog mount —
+   which renders the Blog module's own look (.blog-content).
    ============================================================ */
+
+/* --- Site frame + branding (applies to the whole justat site, incl. /blog) --- */
 body.tenant-justat {
   margin: 0;
   background:
@@ -53,7 +61,7 @@ body.tenant-justat .nav-blog {
 }
 body.tenant-justat .identity-area { color: #cfcabf; }
 
-/* left column: aged-paper content */
+/* left column: aged-paper content container (the module content sits inside) */
 body.tenant-justat main {
   grid-area: main;
   margin-top: 0;
@@ -68,44 +76,7 @@ body.tenant-justat main:has(.article-detail) {
   background-size: 100% 100%;
 }
 
-/* day divider styled as the old month/day date badge (two rows, on the date tab) */
-body.tenant-justat .feed-day { margin: 0 0 0 -5.5em; }
-body.tenant-justat .feed-day-label {
-  display: inline-block;
-  width: 53px; min-height: 45px; padding: 4px 0 0;
-  background: url(/public/justat/date.gif) no-repeat top center;
-  color: #737852; text-align: center;
-}
-body.tenant-justat .fd-month { display: block; font: normal .7rem Georgia, serif; text-transform: uppercase; line-height: 1; margin-top: -0.4em; }
-body.tenant-justat .fd-day { display: block; font: italic 1.15rem Georgia, serif; line-height: 1.05; }
-body.tenant-justat .fd-year { display: block; font: normal .68rem Georgia, serif; line-height: 1; }
-
-/* posts on the real crumpled-paper card (featured.png) — its curled top-right
-   corner + drop shadow are baked in; stretched to each card's height. */
-body.tenant-justat .feed-item {
-  position: relative;
-  margin: -3em -1em 0em -2.4em;
-  padding: 3px 46px 46px 34px;                             /* keep text off the baked-in curl + bottom shadow */
-  border: none;
-  background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
-  background-size: 100% 100%;
-}
-body.tenant-justat .feed-item h2 {
-  font: bold 1.9rem/1.15 Georgia, "Times New Roman", Times, serif;
-  color: #3b3632; margin-bottom: .55rem;
-}
-body.tenant-justat .feed-item .extract { color: #6c6159; font-size: 1.05rem; }
-body.tenant-justat .feed-item .extract img { border-radius: 2px; }
-
-/* single article */
-body.tenant-justat .article-title { font: bold 2.5rem/1.1 Arial, Helvetica, sans-serif; color: #3b3632; margin-bottom: 1rem; }
-body.tenant-justat .body { font-size: 1.12rem; line-height: 1.85; color: #4a423a; }
-body.tenant-justat .article-body p { padding-top: 0.5em; }
-body.tenant-justat blockquote, body.tenant-justat .box {
-  padding: 10px 20px; background: #f1eddb; border: 1px solid #e0d9b9; color: #928071;
-}
-
-/* right column: lime masthead + cream sidebar */
+/* right column: lime masthead + cream sidebar (shell chrome, outside content) */
 body.tenant-justat .js-sidebar {
   grid-area: side;
   margin-top: 0;
@@ -132,14 +103,53 @@ body.tenant-justat .js-sections h5 {
 body.tenant-justat .js-sections p { margin: 0; }
 body.tenant-justat .js-sections a { color: #706cf5; font-weight: normal; }
 
+/* --- Article CONTENT (scoped so it never reaches the /blog mount) --- */
+
+/* day divider styled as the old month/day date badge (two rows, on the date tab) */
+body.tenant-justat .article-content .feed-day { margin: 0 0 0 -5.5em; }
+body.tenant-justat .article-content .feed-day-label {
+  display: inline-block;
+  width: 53px; min-height: 45px; padding: 4px 0 0;
+  background: url(/public/justat/date.gif) no-repeat top center;
+  color: #737852; text-align: center;
+}
+body.tenant-justat .article-content .fd-month { display: block; font: normal .7rem Georgia, serif; text-transform: uppercase; line-height: 1; margin-top: -0.4em; }
+body.tenant-justat .article-content .fd-day { display: block; font: italic 1.15rem Georgia, serif; line-height: 1.05; }
+body.tenant-justat .article-content .fd-year { display: block; font: normal .68rem Georgia, serif; line-height: 1; }
+
+/* posts on the real crumpled-paper card (featured.png) — its curled top-right
+   corner + drop shadow are baked in; stretched to each card's height. */
+body.tenant-justat .article-content .feed-item {
+  position: relative;
+  margin: -3em -1em 0em -2.4em;
+  padding: 3px 46px 46px 34px;                             /* keep text off the baked-in curl + bottom shadow */
+  border: none;
+  background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
+  background-size: 100% 100%;
+}
+body.tenant-justat .article-content .feed-item h2 {
+  font: bold 1.9rem/1.15 Georgia, "Times New Roman", Times, serif;
+  color: #3b3632; margin-bottom: .55rem;
+}
+body.tenant-justat .article-content .feed-item .extract { color: #6c6159; font-size: 1.05rem; }
+body.tenant-justat .article-content .feed-item .extract img { border-radius: 2px; }
+
+/* single article */
+body.tenant-justat .article-content .article-title { font: bold 2.5rem/1.1 Arial, Helvetica, sans-serif; color: #3b3632; margin-bottom: 1rem; }
+body.tenant-justat .article-content .body { font-size: 1.12rem; line-height: 1.85; color: #4a423a; }
+body.tenant-justat .article-content .article-body p { padding-top: 0.5em; }
+body.tenant-justat .article-content blockquote, body.tenant-justat .article-content .box {
+  padding: 10px 20px; background: #f1eddb; border: 1px solid #e0d9b9; color: #928071;
+}
+
 /* comments on the paper */
-body.tenant-justat .comments { border-top: 1px solid #d8d2b6; margin-top: 2rem; }
-body.tenant-justat .comment-author { color: #002; font-style: italic; }
+body.tenant-justat .article-content .comments { border-top: 1px solid #d8d2b6; margin-top: 2rem; }
+body.tenant-justat .article-content .comment-author { color: #002; font-style: italic; }
 
 /* fold to a single column on narrow screens (the fixed frame can't follow) */
 @media (max-width: 900px) {
   body.tenant-justat .app { grid-template-columns: 1fr; grid-template-areas: "nav" "main" "side"; max-width: 640px; }
   body.tenant-justat main { margin-top: 90px; }
-  body.tenant-justat .feed-day { margin-left: 0; }
+  body.tenant-justat .article-content .feed-day { margin-left: 0; }
   body.tenant-justat .js-sidebar { margin-top: 1rem; }
 }

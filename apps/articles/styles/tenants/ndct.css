@@ -3,9 +3,15 @@
    Recreates the Ghost site's HTML5UP "Massively" look: fixed contrails
    hero background, full-screen intro banner, Source Sans / Merriweather,
    #18bfef cyan accent, posts on a centred white panel. Assets in /public/ndct/.
+
+   ndct is articles-only (no blog mount), but its content is scoped under
+   `.article-content` too, for consistency with the module-ownership model.
+   Site frame/branding (body hero, header/nav, main panel, .ndct-hero) stays
+   site-wide (body.tenant-ndct …).
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,700;1,300;1,700&family=Source+Sans+3:wght@400;900&display=swap');
 
+/* --- Site frame + branding --- */
 body.tenant-ndct {
   margin: 0;
   color: #212931;
@@ -23,7 +29,7 @@ body.tenant-ndct a { color: #18bfef; text-decoration: none; }
 body.tenant-ndct a:hover { text-decoration: underline; }
 body.tenant-ndct .app { max-width: none; margin: 0; padding: 0; display: block; }
 
-/* full-screen intro banner */
+/* full-screen intro banner (host chrome) */
 body.tenant-ndct .ndct-hero {
   min-height: 100vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -57,38 +63,38 @@ body.tenant-ndct nav > a::after {
 }
 body.tenant-ndct nav > a:hover::after { color: #18bfef; }
 body.tenant-ndct .identity-area { color: #7f888f; }
-
-/* article body: give paragraphs breathing room */
-body.tenant-ndct .article-body p { padding: 1em; }
 body.tenant-ndct main { background: #fff; margin: 0 auto; max-width: 1000px; padding: 2.5rem 3.5rem 4rem; }
 
+/* --- Article CONTENT (scoped) --- */
+body.tenant-ndct .article-content .article-body p { padding: 1em; }
+
 /* date label */
-body.tenant-ndct .feed-day { margin: 1.4rem 0 .2rem; }
-body.tenant-ndct .feed-day-label {
+body.tenant-ndct .article-content .feed-day { margin: 1.4rem 0 .2rem; }
+body.tenant-ndct .article-content .feed-day-label {
   font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.2em; font-size: 0.7rem; color: #18bfef;
 }
 
 /* posts as Massively cards: heavy caps title, serif excerpt, full-width feature image */
-body.tenant-ndct .feed-item { display: block; border: none; border-top: 1px solid #efefef; padding: 2.5rem 0; margin: 0; }
-body.tenant-ndct .feed-item h2 {
+body.tenant-ndct .article-content .feed-item { display: block; border: none; border-top: 1px solid #efefef; padding: 2.5rem 0; margin: 0; }
+body.tenant-ndct .article-content .feed-item h2 {
   font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.08em; font-size: 1.9rem; line-height: 1.15; color: #212931; margin: 0 0 .6rem;
 }
-body.tenant-ndct .feed-item .extract { display: block; color: #212931; }
-body.tenant-ndct .feed-item .extract span { display: block; }
-body.tenant-ndct .feed-item .extract img {
+body.tenant-ndct .article-content .feed-item .extract { display: block; color: #212931; }
+body.tenant-ndct .article-content .feed-item .extract span { display: block; }
+body.tenant-ndct .article-content .feed-item .extract img {
   width: 100%; height: auto; max-height: 420px; object-fit: cover;
   margin-top: 1.4rem; border-radius: 0; float: none; display: block;
 }
 
 /* article detail */
-body.tenant-ndct .article-title {
+body.tenant-ndct .article-content .article-title {
   font-family: "Source Sans 3", sans-serif; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.06em; font-size: 2.3rem; line-height: 1.1; color: #212931; margin-bottom: 1.2rem;
 }
-body.tenant-ndct .article-body { font-size: 1.05rem; line-height: 1.9; }
-body.tenant-ndct .comments { border-top: 1px solid #efefef; }
+body.tenant-ndct .article-content .article-body { font-size: 1.05rem; line-height: 1.9; }
+body.tenant-ndct .article-content .comments { border-top: 1px solid #efefef; }
 
 @media (max-width: 760px) {
   body.tenant-ndct header, body.tenant-ndct main { padding-left: 1.4rem; padding-right: 1.4rem; }
