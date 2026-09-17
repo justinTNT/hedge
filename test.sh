@@ -91,6 +91,26 @@ rm -rf "$RT_OUT"
 echo "--- SchemaCodec round-trip OK ---"
 
 echo ""
+echo "=== Step 1e2: Signed guest-cookie envelope (crypto contract) ==="
+# The signed guest credential (Hedge.GuestCookie) is the security core of the
+# signed-guest-cookies work. Fable-compile the fixture and run it under node so it
+# exercises the REAL WebCrypto sign/verify path: tamper, expiry, wrong audience/key,
+# key rotation/retirement, malformed-signed (no legacy fallback), legacy, and bounds
+# all behave as specified. A regression in the envelope contract fails here.
+cd "$ROOT"
+GC_OUT="$ROOT/test/GuestCookie/dist"
+rm -rf "$GC_OUT"
+dotnet fable test/GuestCookie/GuestCookie.fsproj -o "$GC_OUT" >/dev/null 2>&1
+if ! node "$GC_OUT/Program.js" | grep -q "guest-cookie:.*OK"; then
+    echo "!!! FAIL: signed guest-cookie envelope — sign/verify/tamper/expiry/audience/key contract regressed."
+    node "$GC_OUT/Program.js" || true
+    rm -rf "$GC_OUT"
+    exit 1
+fi
+rm -rf "$GC_OUT"
+echo "--- Signed guest-cookie envelope OK ---"
+
+echo ""
 echo "=== Step 1f: Populated table recreate (P3) ==="
 # A schema change that forces a table rebuild (a column type/drop or any FK change)
 # emits copy -> DROP -> RENAME. On a populated DB with self-FKs (comments.parent_id) or

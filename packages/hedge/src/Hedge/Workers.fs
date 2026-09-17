@@ -334,6 +334,22 @@ let hmacSha256 (secret: string) (message: string) : JS.Promise<string> =
         return bufferToHex signature
     }
 
+// Bytes from a lowercase-hex string; a malformed (odd-length / non-hex) input yields empty
+// bytes, so verification fails rather than throwing (bounded parsing).
+[<Emit("(/^[0-9a-f]*$/.test($0) && $0.length % 2 === 0) ? Uint8Array.from($0.match(/../g) || [], h => parseInt(h, 16)) : new Uint8Array(0)")>]
+let private hexToBytes (hex: string) : obj = jsNative
+
+[<Emit("crypto.subtle.verify('HMAC', $0, $1, $2)")>]
+let private hmacVerifyRaw (key: obj) (signature: obj) (data: obj) : JS.Promise<bool> = jsNative
+
+/// Constant-time verify of a hex HMAC-SHA256 over `message` with `secret` (WebCrypto).
+/// A malformed hex mac verifies as false rather than throwing.
+let hmacVerify (secret: string) (message: string) (hexMac: string) : JS.Promise<bool> =
+    promise {
+        let! key = importHmacKey (textEncode secret)
+        return! hmacVerifyRaw key (hexToBytes hexMac) (textEncode message)
+    }
+
 /// Fetch a remote image and copy it into R2, returning a local "/blobs/<key>" path (or the
 /// original url on any failure). Content-addressed by source URL (`keyPrefix/<hash>`), so
 /// re-hosting the same URL is idempotent and dedup'd — which keeps handleBlobServe's immutable

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Signed guest-cookie envelope fixtures (see packages/hedge/src/Hedge/GuestCookie.fs and
+    notes/SIGNED-GUEST-COOKIES-work-order.md). Fable-compiled + run under node (via ../../test.sh),
+    so it exercises the real WebCrypto sign/verify path — tamper, expiry, wrong audience/key, key
+    rotation/retirement, malformed-signed (no legacy fallback), legacy, and bounds all fail/parse as
+    specified. If the envelope contract regresses, an assertion fails and the gate goes red.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+  </ItemGroup>
+</Project>
