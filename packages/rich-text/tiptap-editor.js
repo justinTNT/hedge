@@ -152,7 +152,14 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
     if (!isGuestUpload) {
         try { xhr.setRequestHeader('X-Admin-Key', (window.localStorage && localStorage.getItem('adminKey')) || '') } catch (e) {}
     }
-    xhr.send(formData)
+    // A guest upload authorizes with the signed hedge_guest cookie, so make sure session bootstrap
+    // has completed (single-flight) before sending — otherwise a first upload on a fresh page/deep
+    // link races /api/auth/me and 401s. Admin uploads don't need it.
+    if (isGuestUpload && window.HedgeGuest && window.HedgeGuest.ensureSession) {
+        window.HedgeGuest.ensureSession().then(function () { xhr.send(formData) }, function () { xhr.send(formData) })
+    } else {
+        xhr.send(formData)
+    }
 }
 
 /**

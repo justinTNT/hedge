@@ -149,43 +149,97 @@
     var h = hash(author || '');
     return makeAvatar(pickH(colors, h).hex, pickH(emojis, h >>> 5).c);
   }
-  function syncSession() {
+  // Reset the local presentation session (name/avatar) to the anonymous values derived from its
+  // own guest id, dropping any claimed-identity overlay. Used when the server reports no identity.
+  function toAnon(current) {
+    var h = hash(current.guestId);
+    var c = pickH(colors, h);
+    var e = pickH(emojis, h >>> 5);
+    current.identity = null;
+    current.displayName = pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n;
+    current.avatarHex = c.hex;
+    current.avatarChar = e.c;
+    current.avatarUrl = makeAvatar(c.hex, e.c);
+    return current;
+  }
+  // Reconcile the local DISPLAY session against the server's /api/auth/me body. Never touches typed
+  // drafts (they live in the editor/model, not here). data.guest may be null: the server established
+  // or confirmed a guest but exposes no identity (a fresh or anonymous guest), in which case any
+  // stale claimed-identity display state is cleared.
+  function applyServer(data) {
+    var current = getSession();
+    if (data && data.guest) {
+      if (current.guestId !== data.guest.guestId) {
+        var h = hash(data.guest.guestId);
+        var c = pickH(colors, h);
+        var e = pickH(emojis, h >>> 5);
+        current = {
+          guestId: data.guest.guestId,
+          displayName: pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n,
+          avatarHex: c.hex,
+          avatarChar: e.c,
+          avatarUrl: makeAvatar(c.hex, e.c),
+          createdAt: Math.floor(Date.now() / 1000)
+        };
+      }
+      if (data.guest.identity) {
+        var id = data.guest.identity;
+        current.identity = id;
+        current.displayName = id.name;
+        // Don't fall back to the cached avatarUrl — it may belong to a previously active identity.
+        current.avatarUrl = id.picture || avatarForAuthor(id.name);
+      } else {
+        current = toAnon(current);
+      }
+      localStorage.setItem(KEY, JSON.stringify(current));
+      return current;
+    }
+    // Guest established/confirmed with no identity: clear any obsolete claimed-identity state.
+    if (current.identity) {
+      current = toAnon(current);
+      localStorage.setItem(KEY, JSON.stringify(current));
+    }
+    return current;
+  }
+
+  // Single-flight bootstrap. `readyPromise` holds the last SUCCESSFUL /api/auth/me (the signed
+  // cookie is set, the session is ready); a failure is not cached, so a later call retries.
+  var readyPromise = null;
+
+  // Fetch /api/auth/me and resolve an explicit readiness result. `ready` is true ONLY on an HTTP
+  // success (the server bootstrapped/renewed the session and set the signed cookie); a network
+  // error or non-2xx yields ready:false with the cached session for DISPLAY only. Never rejects,
+  // so callers get a definite answer to gate writes on.
+  function fetchMe() {
     var basePath = window.BASE_PATH || '';
     return fetch(basePath + '/api/auth/me', { credentials: 'same-origin' })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data && data.guest) {
-          var current = getSession();
-          if (current.guestId !== data.guest.guestId) {
-            var h = hash(data.guest.guestId);
-            var c = pickH(colors, h);
-            var e = pickH(emojis, h >>> 5);
-            current = {
-              guestId: data.guest.guestId,
-              displayName: pickH(adjectives, h >>> 10) + ' ' + c.name + ' ' + e.n,
-              avatarHex: c.hex,
-              avatarChar: e.c,
-              avatarUrl: makeAvatar(c.hex, e.c),
-              createdAt: Math.floor(Date.now() / 1000)
-            };
-          }
-          // Overlay identity if present
-          if (data.guest.identity) {
-            var id = data.guest.identity;
-            current.identity = id;
-            current.displayName = id.name;
-            // Don't fall back to the cached avatarUrl — it may belong to a
-            // previously active identity. Derive from the name like comments do.
-            current.avatarUrl = id.picture || avatarForAuthor(id.name);
-          } else {
-            current.identity = null;
-          }
-          localStorage.setItem(KEY, JSON.stringify(current));
-          return current;
-        }
-        return getSession();
+      .then(function(r) {
+        if (!r.ok) return { ready: false, session: getSession() };
+        return r.json().then(function(data) { return { ready: true, session: applyServer(data) }; });
       })
-      .catch(function() { return getSession(); });
+      .catch(function() { return { ready: false, session: getSession() }; });
   }
-  window.HedgeGuest = { getSession: getSession, avatarForAuthor: avatarForAuthor, syncSession: syncSession };
+
+  // Always fetch fresh (a display sync or a re-sync after an identity op needs current server
+  // state), and refresh the single-flight readiness cache from the result.
+  function refresh() {
+    readyPromise = fetchMe().then(function(res) { if (!res.ready) readyPromise = null; return res; });
+    return readyPromise;
+  }
+
+  // Readiness gate for writes: reuse the in-flight/succeeded bootstrap if there is one, else start
+  // one. The FIRST comment/upload (including a deep link) awaits this, so the signed cookie exists
+  // before the write. Resolves { ready, session }; ready:false means the write should not proceed.
+  function ensureSession() { return readyPromise || refresh(); }
+
+  // Display sync (identity component boot + post-merge/disconnect re-sync): always fresh, returns
+  // the session object, and (re)establishes readiness for write gating.
+  function syncSession() { return refresh().then(function(res) { return res.session; }); }
+
+  window.HedgeGuest = {
+    getSession: getSession,
+    avatarForAuthor: avatarForAuthor,
+    syncSession: syncSession,
+    ensureSession: ensureSession
+  };
 })();

@@ -138,8 +138,16 @@ let update (deps: Deps) msg model =
                   Author = Some model.GuestSession.DisplayName }
             // CP-A finding 2: capture the draft revision this submit belongs to.
             let rev = model.DraftRev
+            // Ensure the signed guest session is bootstrapped (single-flight) before the write, so a
+            // first comment on a deep-linked page doesn't race /api/auth/me and get rejected. The
+            // draft is preserved on any error (GotSubmitComment Error), so the user can resubmit.
+            let submit () =
+                promise {
+                    let! _ = GuestSession.ensureSession ()
+                    return! deps.Api.articlesSubmitComment req
+                }
             model,
-            Cmd.OfPromise.either deps.Api.articlesSubmitComment req
+            Cmd.OfPromise.either submit ()
                 (fun r -> GotSubmitComment (rev, r)) (fun ex -> GotSubmitComment (rev, Error (Hedge.Http.TransportFailure ex.Message)))
         | None -> model, Cmd.none
 
