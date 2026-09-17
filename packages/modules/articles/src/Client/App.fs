@@ -112,21 +112,26 @@ let updateHosted (deps: Deps) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 /// Render module content only — no router, header, identity switcher, sidebar, or outer
 /// <main>. The host supplies the frame and places this inside its own <main>.
 let contentView (ctx: Content.HostContext) (model: Model) dispatch =
-    React.fragment [
-        match model.Error with
-        | Some err -> Shared.error (Hedge.Http.renderError err) dispatch
-        | None -> Html.none
+    // Module root: scopes this module's component CSS (.article-content …) so it never
+    // collides with Blog's identically-named classes in the unified shell.
+    Html.div [
+        prop.className "article-content"
+        prop.children [
+            match model.Error with
+            | Some err -> Shared.error (Hedge.Http.renderError err) dispatch
+            | None -> Html.none
 
-        if model.IsLoading then
-            Shared.loading
-        else
-            match model.Route with
-            | [_] ->
-                match model.CurrentItem with
-                | Some response -> Item.view response model dispatch
-                | None -> Html.p [ prop.text "Post not found." ]
-            | _ ->
-                match model.Feed with
-                | Some response -> Feed.view ctx response
-                | None -> Html.p [ prop.text "No posts yet." ]
+            if model.IsLoading then
+                Shared.loading
+            else
+                match model.Route with
+                | [_] ->
+                    match model.CurrentItem with
+                    | Some response -> Item.view response model dispatch
+                    | None -> Html.p [ prop.text "Post not found." ]
+                | _ ->
+                    match model.Feed with
+                    | Some response -> Feed.view ctx response
+                    | None -> Html.p [ prop.text "No posts yet." ]
+        ]
     ]

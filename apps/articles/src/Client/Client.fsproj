@@ -15,6 +15,8 @@
     <!-- Shared identity subsystem + UI (CP-B: the single identity authority every host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />
+    <!-- Shared comments renderer (Content.Comments) both content modules consume. -->
+    <Compile Include="../../../../packages/content-client/Comments.fs" />
   </ItemGroup>
   <!-- Content module clients, composed via each module's own .props (it owns its
        file list). Imported after ClientGen/RichText; then the thin entries run each

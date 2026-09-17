@@ -13,6 +13,8 @@
     <!-- Shared identity subsystem + UI (CP-B: the single identity authority this app's host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />
+    <!-- Shared comments renderer (Content.Comments) the blog content module consumes. -->
+    <Compile Include="../../../../packages/content-client/Comments.fs" />
   </ItemGroup>
   <!-- Content client comes from the composed blog module (its own .props); this app's
        own content pages were removed. Blog is PRIMARY here, run at "/" by Blog/Main.fs. -->

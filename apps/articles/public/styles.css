@@ -3,6 +3,10 @@
    public/identity.css by prep:lib). @import so vite inlines it into the bundled theme; the tenant
    overrides below (body.tenant-* .identity-area{color}) cascade after it. */
 @import "./identity.css";
+/* Shared comments renderer CSS (Content.Comments) — functional/structural defaults
+   (incl. the collapse-hide rule Articles was missing). Articles' own comment
+   presentation (below + tenant overrides) layers on top. Source import (no copy). */
+@import "../../../packages/content-client/comments.css";
 
 /* ===================================================================
    Base styles — shared by every articles tenant (kept plain/neutral).

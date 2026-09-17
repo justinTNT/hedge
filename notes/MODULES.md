@@ -44,7 +44,12 @@ articles at the root, a blog at `/blog`, one deploy, one D1.
     OAuth, guest-session client, attribution/avatars). A visitor is one identity
     everywhere on the site.
   - Per content module: only its `*_comments` table + SubmitComment handler +
-    comment-thread UI, FK-ing the shared `identities`.
+    comment state (draft/DraftRev/collapse/reply, live-event vs response append),
+    FK-ing the shared `identities`. The comment-thread **presentation** is delegated
+    to the shared `Content.Comments` renderer (packages/content-client/Comments.fs +
+    comments.css): the module maps its rows to presentation records and wires
+    callbacks; the module keeps ownership of persistence, requests, and the editor
+    lifecycle. So the two modules share one comment UI without depending on each other.
   - So the **blog module is lean**: `blog_items`/`blog_tags`/`blog_item_tags` +
     `blog_comments` + its client. It sheds its own guest/identity stack and reuses
     the shared one.

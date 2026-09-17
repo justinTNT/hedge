@@ -1,0 +1,67 @@
+/* Shared comments presentation (Content.Comments) — SINGLE SOURCE OF TRUTH for
+   the comment renderer's required/functional styling. Both Blog and Articles
+   @import this; each app + tenant adds its own presentation on top
+   (.comments, .blog-content .comments, .article-content .comments).
+
+   This holds only what the component needs to WORK and be usable — not a skin.
+   Deliberate per-deployment looks stay with the app/tenant:
+   Microblog owns its threaded gutter + rainbow depth lines + base avatar;
+   Articles owns its simpler indentation; both keep their tenant colours. */
+
+/* Comment content + author row (avatar beside name). */
+.comment-content { padding: 8px 0; }
+.comment-author { display: flex; align-items: center; }
+
+/* Comment body (rich text). */
+.comment-body { color: #444; line-height: 1.5; }
+.comment-body p { margin: 0 0 0.5em 0; }
+.comment-body p:last-child { margin-bottom: 0; }
+
+/* Meta row: collapse/expand + reply controls (text buttons, not boxes). */
+.comment-meta { font-size: 0.8em; color: #888; margin-top: 6px; }
+.comment-collapse-toggle-inline {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+.comment-collapse-toggle-inline:hover { color: #333; }
+.comment-reply-btn {
+    font-size: 0.8em;
+    color: #666;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    margin-top: 3em;
+}
+.comment-reply-btn:hover { color: #333; }
+
+/* Required state: collapsing a thread hides its replies (Articles was missing
+   this — a functional bug the extraction fixes). */
+.comment-thread.collapsed > .comment-children { display: none; }
+
+/* Reply form: "Commenting as …" row + the editor mount + submit. */
+.comment-form { margin-top: 2em; }
+.comment-form .hamlet-rt-content { min-height: 80px; }
+.comment-form .hamlet-rt-content .ProseMirror { min-height: 60px; }
+.commenting-as { display: flex; align-items: center; }
+
+/* Comment author avatars — scoped under .comments so this never restyles the
+   shared identity badge's avatar (which is sized in identity.css). */
+.comments .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4em;
+    height: 4em;
+    border-radius: 50%;
+    font-size: 1em;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}

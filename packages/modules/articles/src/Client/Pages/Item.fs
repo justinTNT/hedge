@@ -56,13 +56,18 @@ let disconnectEventsCmd () : Cmd<Msg> =
 
 let mutable private commentEditorActive = false
 
+// Module-owned editor mount id — distinct from Blog's so both comment views can
+// coexist without both grabbing the same element. Used for create/destroy AND passed
+// to the shared Content.Comments renderer as its EditorId.
+let private commentEditorId = "article-comment-editor"
+
 let initCommentEditorCmd (initial: string) : Cmd<Msg> =
     Cmd.ofEffect (fun dispatch ->
         if not commentEditorActive then
             commentEditorActive <- true
             // C1b: seed from the model draft, report edits back via onChange, and keep the
             // guest upload endpoint the close-button editor used. Submission reads the model.
-            RichText.createEditorScoped RichText.commentEditorId initial
+            RichText.createEditorScoped commentEditorId initial
                 (fun text -> dispatch (SetCommentDraft text))
                 (fun () -> dispatch CancelReply)
                 "/api/blobs/guest"
@@ -72,7 +77,7 @@ let initCommentEditorCmd (initial: string) : Cmd<Msg> =
 /// ordered host-driven disposal (see disconnectEvents).
 let destroyCommentEditor () : unit =
     if commentEditorActive then
-        RichText.destroyEditor RichText.commentEditorId
+        RichText.destroyEditor commentEditorId
         commentEditorActive <- false
 
 let destroyCommentEditorCmd : Cmd<Msg> =
@@ -212,111 +217,37 @@ let update (deps: Deps) msg model =
 
 // --- Views ---
 
-let private filterRootComments (comments: SubmitComment.CommentItem list) =
-    comments |> List.filter (fun c -> c.ParentId.IsNone)
-
-let private filterChildComments parentId (comments: SubmitComment.CommentItem list) =
-    comments |> List.filter (fun c -> c.ParentId = Some parentId)
-
-let rec private countAllReplies parentId (comments: SubmitComment.CommentItem list) =
-    let children = filterChildComments parentId comments
-    children.Length + (children |> List.sumBy (fun c -> countAllReplies c.Id comments))
-
-let private replyForm (model: Model) (parentId: string option) dispatch =
-    let isActive =
+/// Map this module's comment rows to the shared presentation records and render
+/// the whole `.comments` section through Content.Comments. Draft/collapse/reply
+/// state, the submit request, and the editor lifecycle stay in this module (the
+/// adapter just wires callbacks); the parent post id is captured here.
+let private commentsSection (response: GetPost.Response) (model: Model) dispatch =
+    let comments =
+        response.Post.Comments
+        |> List.map (fun c ->
+            { Content.Comments.Id = c.Id
+              Content.Comments.ParentId = c.ParentId
+              Content.Comments.Author = c.Author
+              Content.Comments.AvatarUrl =
+                if c.Picture <> "" then c.Picture else GuestSession.avatarForAuthor c.Author
+              Content.Comments.Body = c.Content })
+    let active =
         match model.ReplyingTo with
-        | Some rt -> rt.ParentId = parentId
-        | None -> false
-    if isActive then
-        Html.div [
-            prop.className "comment-form"
-            prop.children [
-                Html.div [
-                    prop.className "commenting-as"
-                    prop.children [
-                        avatar model.GuestSession.AvatarUrl
-                        Html.span [ prop.text (sprintf "Commenting as %s" model.GuestSession.DisplayName) ]
-                    ]
-                ]
-                Html.div [ prop.id RichText.commentEditorId ]
-                Html.button [
-                    prop.text "Submit"
-                    prop.onClick (fun _ -> dispatch SubmitComment)
-                ]
-            ]
-        ]
-    else
-        Html.none
-
-let rec private commentView (model: Model) (allComments: SubmitComment.CommentItem list) (depth: int) dispatch (comment: SubmitComment.CommentItem) =
-    let children = filterChildComments comment.Id allComments
-    let hasChildren = not children.IsEmpty
-    let isCollapsed = Set.contains comment.Id model.CollapsedComments
-    let isRoot = depth = 0
-    let depthClass = sprintf "depth-%d" (depth % 12)
-    let classes =
-        [ "comment-thread"
-          depthClass
-          if isRoot then "root-comment"
-          if isCollapsed then "collapsed" ]
-        |> String.concat " "
-    Html.div [
-        prop.className classes
-        prop.children [
-            if not isRoot then
-                Html.div [
-                    prop.className "comment-collapse-line"
-                    prop.onClick (fun _ -> dispatch (ToggleCollapse comment.Id))
-                ]
-            Html.div [
-                prop.className "comment-content"
-                prop.children [
-                    Html.div [
-                        prop.className "comment-author"
-                        prop.children [
-                            avatar (if comment.Picture <> "" then comment.Picture else GuestSession.avatarForAuthor comment.Author)
-                            Html.span [ prop.text comment.Author ]
-                        ]
-                    ]
-                    richContent "comment-body" comment.Content
-                    Html.div [
-                        prop.className "comment-meta"
-                        prop.children [
-                            if hasChildren then
-                                Html.button [
-                                    prop.className "comment-collapse-toggle-inline"
-                                    prop.text (if isCollapsed then "+" else "-")
-                                    prop.onClick (fun _ -> dispatch (ToggleCollapse comment.Id))
-                                ]
-                            if isCollapsed then
-                                let replyCount = countAllReplies comment.Id allComments
-                                Html.span [
-                                    prop.className "comment-collapse-toggle-inline"
-                                    prop.text (sprintf "(%d)" replyCount)
-                                ]
-                            if not isCollapsed then
-                                Html.button [
-                                    prop.className "comment-reply-btn"
-                                    prop.text "reply"
-                                    prop.onClick (fun _ ->
-                                        match model.CurrentItem with
-                                        | Some response -> dispatch (SetReplyTo (response.Post.Id, Some comment.Id))
-                                        | None -> ()
-                                    )
-                                ]
-                        ]
-                    ]
-                    replyForm model (Some comment.Id) dispatch
-                ]
-            ]
-            Html.div [
-                prop.className "comment-children"
-                prop.children (
-                    children |> List.map (commentView model allComments (depth + 1) dispatch)
-                )
-            ]
-        ]
-    ]
+        | None -> Content.Comments.NoReply
+        | Some rt ->
+            match rt.ParentId with
+            | None -> Content.Comments.ReplyRoot
+            | Some cid -> Content.Comments.ReplyTo cid
+    Content.Comments.view
+        { Comments = comments
+          Collapsed = model.CollapsedComments
+          Active = active
+          CurrentAuthor = model.GuestSession.DisplayName
+          CurrentAuthorAvatarUrl = model.GuestSession.AvatarUrl
+          EditorId = commentEditorId
+          OnToggleCollapse = fun id -> dispatch (ToggleCollapse id)
+          OnBeginReply = fun parentId -> dispatch (SetReplyTo (response.Post.Id, parentId))
+          OnSubmit = fun () -> dispatch SubmitComment }
 
 let view (response: GetPost.Response) (model: Model) dispatch =
     let post = response.Post
@@ -328,21 +259,6 @@ let view (response: GetPost.Response) (model: Model) dispatch =
             // only for the feed thumbnail, and the teaser is the list preview —
             // showing either here would double the body's opening/image.
             richContent "article-body" post.Body
-            Html.div [
-                prop.className "comments"
-                prop.children [
-                    if post.Comments.Length > 0 then
-                        Html.h3 [ prop.text (sprintf "Comments (%d)" post.Comments.Length) ]
-                    yield! filterRootComments post.Comments
-                           |> List.map (commentView model post.Comments 0 dispatch)
-                    replyForm model None dispatch
-                    if model.ReplyingTo.IsNone then
-                        Html.button [
-                            prop.className "comment-reply-btn"
-                            prop.text "Leave a comment"
-                            prop.onClick (fun _ -> dispatch (SetReplyTo (post.Id, None)))
-                        ]
-                ]
-            ]
+            commentsSection response model dispatch
         ]
     ]

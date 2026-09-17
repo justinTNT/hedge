@@ -14,6 +14,9 @@
    (packages/content-client/identity.css); vite resolves + inlines this
    @import at build, so there is no runtime fetch and no editable copy. */
 @import "../../../packages/content-client/identity.css";
+/* Shared comments renderer CSS (Content.Comments) — functional/structural defaults;
+   microblog keeps its own comment skin (threaded gutter + rainbow depth lines) below. */
+@import "../../../packages/content-client/comments.css";
 
 /* --- Reset + chrome --- */
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -167,11 +170,8 @@ nav img { width: 100%; }
 .comment-thread.depth-10 > .comment-collapse-line::before { background: #3498db; } /* Blue */
 .comment-thread.depth-11 > .comment-collapse-line::before { background: #9b59b6; } /* Violet */
 
-/* Comment content */
-.comment-content {
-    padding: 8px 0;
-}
-
+/* Comment author line — microblog's presentation on top of the shared
+   .comment-author {display:flex} structure (in comments.css). */
 .comment-author {
     font-weight: 600;
     font-size: 0.9em;
@@ -179,60 +179,9 @@ nav img { width: 100%; }
     margin-bottom: 4px;
 }
 
-.comment-body {
-    color: #444;
-    line-height: 1.5;
-}
-
-.comment-body p {
-    margin: 0 0 0.5em 0;
-}
-
-.comment-body p:last-child {
-    margin-bottom: 0;
-}
-
-.comment-meta {
-    font-size: 0.8em;
-    color: #888;
-    margin-top: 6px;
-}
-
-/* Inline collapse toggle (next to Reply) */
-.comment-collapse-toggle-inline {
-    font-size: 0.8em;
-    color: #666;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-}
-
-.comment-collapse-toggle-inline:hover {
-    color: #333;
-}
-
-/* Collapsed state */
-.comment-thread.collapsed > .comment-children {
-    display: none;
-}
-
-/* Reply button */
-.comment-reply-btn {
-    font-size: 0.8em;
-    color: #666;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-  margin-top: 3em;
-}
-
-.comment-reply-btn:hover {
-    color: #333;
-}
+/* .comment-content, .comment-body, .comment-meta, the collapse/reply controls, and
+   the .comment-thread.collapsed > .comment-children hide rule now live in the shared
+   packages/content-client/comments.css (@import'd above). */
 
 /* Root level comments (no indent) */
 .comment-thread.root-comment {
@@ -281,30 +230,10 @@ nav img { width: 100%; }
     flex-shrink: 0;
 }
 
-.commenting-as {
-    display: flex;
-    align-items: center;
-}
+/* .commenting-as, .comment-author {display:flex}, and the .comment-form editor
+   sizing now live in the shared comments.css (@import'd at the top). */
 
-.comment-author {
-    display: flex;
-    align-items: center;
-}
-
-/* Comment editor overrides */
-.comment-form {
-  margin-top: 2em;
-}
-
-.comment-form .hamlet-rt-content {
-    min-height: 80px;
-}
-
-.comment-form .hamlet-rt-content .ProseMirror {
-    min-height: 60px;
-}
-
-/* Remove ProseMirror focus outline */
+/* Remove ProseMirror focus outline (any rich-text editor, not just comments) */
 .ProseMirror-focused {
     outline: none !important;
 }
