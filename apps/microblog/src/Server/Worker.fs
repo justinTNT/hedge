@@ -68,4 +68,7 @@ let exports = createWorker {
     // through the public /blobs/ route (only via the sandboxed /archive/<id> feature route).
     // CP-D: the prefix is owned by the feature (Blog.Snapshots.privatePrefix), not a literal here.
     BlobServing = { PrivatePrefixes = [ Blog.Snapshots.privatePrefix ] }
+    // C6: wired to Server.ModuleServices.scheduled in Part 4 (idealist runs the alerts cron;
+    // every other tenant resolves to None). Part 1 leaves it inert.
+    Scheduled = None
 }

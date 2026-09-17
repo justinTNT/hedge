@@ -142,6 +142,8 @@ let exports = createWorker {
     GuestSession = None
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
+    // No cron handler by default; set to Some to run a scheduled job (needs a [triggers] block).
+    Scheduled = None
 }
 """
 
