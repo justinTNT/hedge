@@ -97,9 +97,12 @@ runtime host automatically, so the table value is documentation, not config.)
 - **Slice G — graceful key rotation via a keyring (ROADMAP, wanted).** Rotating without logging every
   guest out means holding more than one live key at once (the active signer + not-yet-retired
   verifiers), so the single `GUEST_SECRET` becomes a **keyring**. The envelope +
-  `Hedge.GuestCookie.keyFor` already implement key selection + retirement, and slice A's fixture
-  already covers rotation/retirement — this slice is purely the app-config wiring plus a fixture
-  asserting an old-key token still verifies until retirement while the new key signs.
+  `Hedge.GuestCookie.keyFor` already implement key selection + retirement, but this slice is more
+  than config wiring — it also needs **migrate-on-use** (see the corrected rotation note below):
+  `verify` must report WHICH key verified a token (today `Verification.Signed of Claims` discards it,
+  and `Claims` carries no keyId), and `requireGuest` must re-sign a cookie that verified against a
+  *previous* (retiring) key onto the active key. Fixtures: an old-key token verifies until retirement,
+  a token verified by a previous key is re-signed onto the active key, and a new-key token signs.
 
   **Decided storage shape:** one JSON secret `GUEST_KEYRING` (a Cloudflare *secret*, all of it
   sensitive), e.g. `{"active":"k2","keys":{"k2":{"secret":"…"},"k1":{"secret":"…","retireAt":<epoch>}}}`.
@@ -110,12 +113,18 @@ runtime host automatically, so the table value is documentation, not config.)
   previous — so nothing already deployed changes until it actually rotates.
 
   **To rotate:** add a new active key, move the outgoing key to `keys` with `retireAt = now + window`,
-  deploy; drop the retired entry after the window. Two properties make the window cheap: (1) **renewal
-  auto-migrates active guests** — a still-valid token is re-signed with the *active* key on next use
-  (30-day renewal window), so a ~30–90 day retirement quietly moves regular visitors onto the new key
-  and only genuinely dormant guests reset; (2) `retireAt` is the dial between honouring old tokens
-  longer vs. how long a compromised old key stays valid (compromise → retire immediately = the
-  current in-place-change behaviour).
+  deploy; drop the retired entry after the window.
+
+  **Correction (reviewer B, finding 3):** an earlier draft claimed the existing 30-day *renewal*
+  would migrate active guests during the window. It does not. `needsRenewal` fires only when a token
+  is within 30 days of its EXPIRY (`Expiry - now < 30d`), and cookies live 365 days — so a
+  recently-issued cookie stays on its old key for ~11 months regardless of how often the guest
+  visits. Preserving active visitors across a rotation therefore requires the **migrate-on-use**
+  behaviour above (re-sign whenever the verifying key ≠ the active key), which is part of Slice G,
+  not a property of today's renewal. With migrate-on-use, any visit during the window moves the guest
+  to the new key, so the window resets only guests who don't visit at all within it. `retireAt` is
+  then the dial between honouring dormant guests' old tokens longer vs. how long a compromised old
+  key stays valid (compromise → retire immediately = the current in-place-change behaviour).
 
   **Until this lands, treat any `GUEST_SECRET` change as a full guest reset** (see the rotation
   caveat under "Configuration surface").
