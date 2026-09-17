@@ -1,11 +1,11 @@
 module Program
 
-// Exercises the shared guest-session policy (Content.Server.GuestSession) with a real signing
-// Config (node WebCrypto), fake DB lookups, and an injected clock/id. See the .fsproj header.
+// Exercises the shared guest-session policy (Hedge.GuestSession) with a real signing Config
+// (node WebCrypto), fake DB lookups, and an injected clock/id. See the .fsproj header.
 
 open Fable.Core
 open Hedge.GuestCookie
-open Content.Server.GuestSession
+open Hedge.GuestSession
 
 let mutable failures = 0
 let mutable checks = 0

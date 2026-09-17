@@ -1,11 +1,13 @@
-module Content.Server.GuestSession
+module Hedge.GuestSession
 
 // Shared guest-session policy — the ONE implementation of "who is this guest, and what cookie do we
 // set back", built on the signed envelope (Hedge.GuestCookie) plus injected app primitives (DB
-// legacy lookups, clock, id generation). Apps bind it once and expose the module-facing `Service`
-// via their Services record; content modules and app auth handlers call it and never parse the
-// cookie, read a secret, or import an app Env. A future identity module can move this policy while
-// keeping the same contract. Mirrors packages/content-server/Author.fs.
+// legacy lookups, clock, id generation). Lives at the Hedge layer because Hedge.Router's own auth
+// handlers (/api/auth/me, OAuth) consume it as well as the content modules' comment/upload handlers;
+// content-server (Author.fs) sits above Hedge, so the policy can't live there. Apps bind the Deps
+// once and expose the module-facing `Service` via their Services record; nobody downstream parses
+// the cookie, reads a secret, or hard-codes the policy. A future identity module can move this
+// implementation while keeping the contract.
 
 open Fable.Core
 open Hedge.GuestCookie
