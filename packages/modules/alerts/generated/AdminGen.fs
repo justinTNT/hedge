@@ -44,7 +44,7 @@ let pendingPost : AdminTable =
             fieldWith "OwnerComment" FString [RichContent]
             fieldWith "CreatedAt" FInt [CreateTimestamp]
         ]
-      SelectAll = "SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts ORDER BY created_at DESC LIMIT 100"
+      SelectAll = "SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts WHERE approved = 0 AND rejected = 0 ORDER BY published_at ASC LIMIT 500"
       SelectOne = "SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts WHERE id = ?"
       Insert = "INSERT INTO alerts_pending_posts (id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true

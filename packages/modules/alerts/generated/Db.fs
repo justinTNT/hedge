@@ -91,7 +91,7 @@ let parsePendingPostRow (row: obj) : PendingPostRow =
       CreatedAt = rowInt row "created_at" }
 
 let selectPendingPosts (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts WHERE approved = 0 AND rejected = 0 ORDER BY published_at ASC LIMIT 500")
 
 let selectPendingPost (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, source_id, entry_key, title, link, snippet, published_at, approved, rejected, owner_comment, created_at FROM alerts_pending_posts WHERE id = ?")) [| box id |]

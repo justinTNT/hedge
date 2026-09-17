@@ -250,6 +250,7 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
 type ParsedType = {
     Name: string
     Table: string option
+    AdminList: string option
     Fields: FieldSchema list
 }
 
@@ -258,7 +259,11 @@ let reflectToParsedType (t: Type) : ParsedType =
         match t.GetCustomAttribute<TableAttribute>() with
         | null -> None
         | attr -> Some attr.Name
-    { Name = t.Name; Table = tableName; Fields = getFieldSchemas t }
+    let adminList =
+        match t.GetCustomAttribute<AdminListAttribute>() with
+        | null -> None
+        | attr -> Some attr.Query
+    { Name = t.Name; Table = tableName; AdminList = adminList; Fields = getFieldSchemas t }
 
 // ============================================================
 // Shared table metadata — used by AdminGen, Db, and Schema.sql
@@ -320,10 +325,16 @@ let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
             then Some (toSnakeCase f.Name) else None)
     let liveFilter = match sdCol with Some c -> sprintf " WHERE %s IS NULL" c | None -> ""
     let selectAll =
-        if hasCreatedAtCol then
-            sprintf "SELECT %s FROM %s%s ORDER BY created_at DESC LIMIT 100" colStr tableName liveFilter
-        else
-            sprintf "SELECT %s FROM %s%s LIMIT 100" colStr tableName liveFilter
+        match parsed.AdminList with
+        // [<AdminList>] override: the type supplies the whole tail (WHERE/ORDER/LIMIT) — e.g. a
+        // curation queue that filters completed rows out. Replaces the default ordering/limit
+        // (and the soft-delete liveFilter — the override must include any filtering it needs).
+        | Some tail -> sprintf "SELECT %s FROM %s %s" colStr tableName tail
+        | None ->
+            if hasCreatedAtCol then
+                sprintf "SELECT %s FROM %s%s ORDER BY created_at DESC LIMIT 100" colStr tableName liveFilter
+            else
+                sprintf "SELECT %s FROM %s%s LIMIT 100" colStr tableName liveFilter
     let selectOne =
         match sdCol with
         | Some c -> sprintf "SELECT %s FROM %s WHERE %s = ? AND %s IS NULL" colStr tableName pkCol c

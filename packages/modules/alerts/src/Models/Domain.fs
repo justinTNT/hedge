@@ -22,6 +22,13 @@ type AlertSource = {
 /// A polled feed entry awaiting curation. Rejected rows persist as tombstones so the EntryKey
 /// unique index + INSERT OR IGNORE block re-import. Promotion is tracked in `Promotion`, not a
 /// flag here, so the admin PUT has nothing to clobber.
+///
+/// The generic admin list is an authored QUEUE: only undecided entries (not approved, not
+/// rejected), oldest-first, so it excludes completed rows (rejected tombstones + approved/promoted
+/// ones — promotion implies approved=1) and actioning a visible row uncovers the next of the
+/// backlog instead of burying it under the newest 100. The 500 cap only bites on a large unactioned
+/// backlog, which draining clears.
+[<AdminList("WHERE approved = 0 AND rejected = 0 ORDER BY published_at ASC LIMIT 500")>]
 type PendingPost = {
     Id: PrimaryKey<string>
     SourceId: ForeignKey<AlertSource>
