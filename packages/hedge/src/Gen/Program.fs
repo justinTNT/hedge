@@ -1147,6 +1147,12 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
     emit "// The decoded-argument delegates for each endpoint, bound by Composition.bind over the"
     emit "// module's Services. No Server.Env dependency: the host supplies behaviour via Services."
     emit "type Handlers = {"
+    // An API-less module (admin+cron only, e.g. alerts) has no endpoints. F# has no empty record,
+    // so emit a single unit placeholder; dispatch's `| _ -> None` below already covers it.
+    if List.isEmpty endpoints then
+        emit "    /// No HTTP endpoints — this module contributes no routes (dispatch always returns"
+        emit "    /// None). The field exists only because F# has no empty record."
+        emit "    NoEndpoints: unit"
     for ep in endpoints do
         let name = toCamelCase ep.ModuleName
         let resp = "JS.Promise<WorkerResponse>"

@@ -9,5 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+    <!-- C6: alerts Models loadable by the module-surface generator + the idealist site gen. -->
+    <ProjectReference Include="../../../../packages/modules/alerts/src/Models/AlertsModels.fsproj" />
   </ItemGroup>
 </Project>

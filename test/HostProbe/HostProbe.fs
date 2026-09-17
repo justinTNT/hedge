@@ -50,6 +50,23 @@ let articlesHandlers (env: ProbeEnv) : Articles.RouteContract.Handlers =
         ({ DB = env.Db; Events = env.Events; Author = probeAuthor; Guest = probeGuest; NewId = newId; Now = epochNow }
          : Articles.Services.Services)
 
+/// The alerts module (admin+cron only) composed the same way: the host supplies PromoteToFeed — the
+/// bridge into its content feed — without alerts naming a content table. Here it's a compile-only
+/// stub; the real idealist host implements it against blog's create surface. Proves the alerts
+/// server layer builds with no Server.Env dependency.
+let private alertsServices (env: ProbeEnv) : Alerts.Services.Services =
+    { DB = env.Db
+      NewId = newId
+      Now = epochNow
+      PromoteToFeed = fun (_input: Alerts.Services.PromotionInput) -> {| Stmts = [||]; ItemId = newId () |} }
+
+let alertsHandlers (env: ProbeEnv) : Alerts.RouteContract.Handlers =
+    Alerts.Composition.bind (alertsServices env)
+
+/// The cron entry point, referenced so its whole server chain (Sql/Cron/promote) is compiled.
+let alertsCron (env: ProbeEnv) (ctx: ExecutionContext) : JS.Promise<unit> =
+    Alerts.Cron.run (alertsServices env) ctx
+
 /// A whole site dispatch composed from the probe-built module records — the shape an app's
 /// generated Server.Routes takes, but assembled here with no app environment in sight.
 let dispatch (env: ProbeEnv) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =

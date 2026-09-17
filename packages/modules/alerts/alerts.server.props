@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    The alerts module's server layer, for a consuming app to compose (Condition'd on
+    $(HEDGE_SITE) == 'idealist' in microblog). Paths are $(MSBuildThisFileDirectory)-rooted so they
+    resolve from any consumer. Admin + cron only: no content Handlers, no Snapshots, no client.
+
+    Ordering: Alerts.Db (generated) provides Tables + rows for Alerts.Sql; Services before the cron
+    logic (Alerts.Cron) that consumes it; the generated RouteContract (no-op Handlers + dispatch)
+    then the authored Composition.bind; Alerts.AdminGen last (its registry is appended by the app's
+    site generated/AdminGen.idealist.fs). Import AFTER the app's generated Db, BEFORE the app's own
+    generated/AdminGen + generated/Routes. Alerts.Codecs is composed via alerts.codecs.props into the
+    app's Codecs project (RouteContract/AdminGen open it).
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Db.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Sql.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Services.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Alerts.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
+  </ItemGroup>
+</Project>

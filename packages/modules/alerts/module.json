@@ -1,0 +1,8 @@
+{
+  "assembly": "AlertsModels",
+  "namespace": "Alerts",
+  "tablePrefix": "alerts_",
+  "routePrefix": "/api/alerts",
+  "handlerNs": "Alerts.Handlers",
+  "namePrefix": "alerts"
+}
