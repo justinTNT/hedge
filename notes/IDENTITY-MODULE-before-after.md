@@ -12,11 +12,11 @@ changes?** Consumes the session boundary the signed-guest-cookie work already es
 
 | Owner | Owns |
 | --- | --- |
-| **Identity module** (`packages/modules/identity`) | Guest/Identity schema + DDL; identity SQL + operations (anonymous/provider policy, activate, merge, fresh, disconnect); identity API/codecs; the OAuth-completion/adoption policy; client Elmish state + signals; badge/switcher UI; **default** component CSS. |
-| **Framework / libraries** (Hedge) | Generic routing; the signed-cookie crypto + `Hedge.GuestSession` policy; transport; OAuth **provider-protocol** mechanisms (`Hedge.OAuth`). Kept as-is. |
+| **Identity module** (`packages/modules/identity`) | Guest/Identity schema + DDL; identity SQL + operations (anonymous/provider policy, activate, merge, fresh, disconnect); identity API/codecs; the OAuth-completion/adoption policy; client Elmish state + signals; badge/switcher UI; **default** component CSS; **the guest-signing key configuration — reading the host's keyring env and wiring `Active`+`Previous` into the signed-cookie policy (Slice G).** |
+| **Framework / libraries** (Hedge) | Generic routing; the signed-cookie crypto + `Hedge.GuestSession` policy; transport; OAuth **provider-protocol** mechanisms (`Hedge.OAuth`). **Plus, for Slice G: the keyring smart constructor + migrate-on-use rotation in the session policy** (see §Slice G) — generic mechanisms, so they stay framework-level. |
 | **Host / app author** | Compose one identity instance; supply environment resources + which providers exist; place the control in chrome; wire the client child + fan its signals to content modules; **compose the attribution capability from its selected content modules.** |
 | **Content modules** (blog, articles) | Their own comments, `IdentityRef` author references, and the statements that count/reassign their content — exposed to identity through a narrow host-composed capability, never enumerated by identity. |
-| **Deployment author** | Provider secrets (via `wrangler secret`), and identity CSS overrides through documented theme hooks. Nothing else. |
+| **Deployment author** | Provider secrets (via `wrangler secret`), **the signing keyring secret (`GUEST_KEYRING`, or `GUEST_SECRET` for a single key), and rotation ops** (add a key, retire the old one), and identity CSS overrides through documented theme hooks. Nothing else. |
 
 App-author vs deployment-author line: the **app author** picks the module + providers and writes the
 composition once; the **deployment author** only sets secrets and colours/fonts.
@@ -68,8 +68,10 @@ capability composed from the host's content modules:
 let private identity =
     Identity.compose
         { Db          = fun (e: Env) -> e.DB
-          Secret      = fun (e: Env) -> e.OAUTH_SECRET
-          GuestCookie = fun (e: Env) req -> GuestConfig.deps e req      // the signed-cookie policy
+          Secret      = fun (e: Env) -> e.OAUTH_SECRET                   // OAuth state signing
+          // Slice G: the host hands over its signing KEYRING; the module parses it (Active+Previous)
+          // and wires the signed-cookie policy. `GUEST_KEYRING` JSON, or `GUEST_SECRET` = one key.
+          Keyring     = fun (e: Env) -> e.GUEST_KEYRING
           Providers   = fun (e: Env) ->                                  // which providers exist here
               [ Identity.google e.GOOGLE_CLIENT_ID e.GOOGLE_CLIENT_SECRET
                 Identity.github e.GITHUB_CLIENT_ID e.GITHUB_CLIENT_SECRET ]
@@ -147,6 +149,55 @@ signal fan-out, and the UI placement. That's the whole integration surface.
      manifest + the `compose` call; the scaffold can offer an `--identity` flag instead of shipping
      dead artifacts.
 
+## Slice G — graceful key rotation, folded into the module
+
+Rotating `GUEST_SECRET` in place today invalidates every cookie at once (safe, but a full guest
+reset — fine for compromise, costly for a routine roll). The cookie envelope (`Hedge.GuestCookie`)
+already supports multiple live keys (`Config.Active` + `Config.Previous` with retirement epochs,
+selected by `keyFor`); Slice G finishes it and lands **with** the identity module so the module ships
+graceful rotation from day one. Two parts:
+
+**G1 — Framework (Hedge, generic mechanisms): migrate-on-use + a keyring constructor.**
+- `verify` must report WHICH key verified a token. Today `Verification.Signed of Claims` discards the
+  key id (the envelope's `keyId` segment is known at verify but dropped). Change to
+  `Signed of Claims * keyId: string` — the only shape change; match sites are
+  `GuestSession.requireGuest`/`resolveOrBootstrap` + the fixtures.
+- `requireGuest`/`resolveOrBootstrap` re-sign with the active key when `keyId <> Config.Active.KeyId`
+  (a retiring key), **in addition to** the existing `needsRenewal` (expiry) rule. That is
+  migrate-on-use: any visit re-signs a still-valid old-key cookie onto the active key. It is what
+  actually preserves active guests during a rotation window — the 30-day renewal does **not** (it
+  fires only < 30 days before a 365-day expiry, per reviewer B's finding 3). The replacement rides the
+  existing `Authorized.Replacement`/bootstrap cookie path, so no handler changes.
+- `Hedge.GuestSession.configFromKeyring : keyringJson -> audience -> Config` — a smart constructor
+  parsing `{"active":"k2","keys":{"k2":{"secret":…},"k1":{"secret":…,"retireAt":<epoch>}}}` into
+  `Active` + `Previous`. **Back-compat:** a plain (non-JSON) value = a ring of one active key `k1`, no
+  previous — so today's `GUEST_SECRET` deployments keep working untouched. Fails closed on a
+  malformed/empty ring or a sub-32-byte active secret (reusing `configFor`'s validation).
+- Fixtures (extend slice A/B): old-key token → verify reports its key → requireGuest re-signs onto the
+  active key (Replacement Some, new token verifies as active); active-key token not near expiry → no
+  re-sign; a `Previous` key past `retireAt` → `Invalid`; keyring parse/round-trip + back-compat.
+
+G1 is small, contained, and has **no module dependency** — it could land earlier to de-risk a
+rotation before the module. Bundled here per the decision to ship it with the module.
+
+**G2 — Ownership (identity module): the keyring is the module's host-config surface.**
+- Per-app `Server.GuestConfig` (today `configFor "k1" env.GUEST_SECRET host []`) becomes the identity
+  module's guest-signing config: the module reads the host-supplied `Keyring` value (the
+  `Identity.compose { Keyring = … }` field above) and calls `configFromKeyring keyring host` to build
+  `Deps`. The host supplies only the env value; the deployment author supplies the secret and runs
+  rotations.
+- The migration params (`GUEST_MIGRATION_START`/`GUEST_BRIDGE_UNTIL`, today in `GuestConfig`) move
+  with it as module config.
+
+**Rotation runbook (deployment author, once G ships):** add a new active key to `GUEST_KEYRING`
+(`active:"k2"`, keep `k1` under `keys` with `retireAt = now + window`), deploy; drop the retired `k1`
+after the window. Migrate-on-use moves any guest who visits within the window; only never-visiting
+guests reset. `retireAt = now` reproduces an immediate hard reset (compromise).
+
+**Sequencing:** land G1 in extraction step 4 (server behaviour, when the module takes over the session
+config) so the module owns G2 from the start; G1's fixtures run in the Hedge fixture set. If a
+production rotation is needed before the module lands, pull G1 forward standalone (Hedge-only).
+
 ## Compatibility preserved (non-negotiable during extraction)
 
 Same `hedge_guest` signed cookie + `Hedge.GuestSession` policy; same `guests`/`identities` tables,
@@ -161,8 +212,11 @@ disconnect, duplicate resolution) run against exactly the composed participants.
 **Done when:** all three host shapes (Microblog, Justat shell, NDCT) consume **one** identity
 implementation with **no copied identity behaviour**, through the small documented surface above
 (manifest entry + `compose` + client wiring + placement); an empty deployment stylesheet renders a
-usable control; and schema/generated output shows no unintended diffs. **Out of scope:** alternative
-auth backends, a general plugin/lifecycle system, upload controls, and any new identity feature.
+usable control; schema/generated output shows no unintended diffs; **and (Slice G) a keyring rotation
+migrates a visiting guest onto the new key with no reset — covered by the G1 fixtures plus one live
+rotation check.** **Out of scope:** alternative auth backends, a general plugin/lifecycle system,
+upload controls, and any new identity feature (Slice G is rotation of the *existing* credential, not a
+new feature).
 
 ## Does this make Hedge easier to use? (the verdict this example tests)
 

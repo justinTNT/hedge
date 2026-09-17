@@ -94,7 +94,16 @@ runtime host automatically, so the table value is documentation, not config.)
 
 ## Deferred (not in this release)
 
-- **Slice G — graceful key rotation via a keyring (ROADMAP, wanted).** Rotating without logging every
+- **Slice G — graceful key rotation via a keyring (ROADMAP, wanted; now sequenced WITH the identity
+  module).** Decision 2026-09-17: Slice G ships as part of the identity-module extraction — its config
+  half (the keyring) becomes the module's host-config surface. Full plan +
+  ownership split in [IDENTITY-MODULE-before-after.md](IDENTITY-MODULE-before-after.md) §"Slice G". In
+  short: **G1** (migrate-on-use + `configFromKeyring`) is a Hedge-only change with no module
+  dependency — pull it forward standalone if a rotation is needed before the module lands; **G2** (the
+  module reads the host `Keyring` value and builds the signing `Config`) rides the extraction. The
+  detail below is the design G1/G2 implement.
+
+  Rotating without logging every
   guest out means holding more than one live key at once (the active signer + not-yet-retired
   verifiers), so the single `GUEST_SECRET` becomes a **keyring**. The envelope +
   `Hedge.GuestCookie.keyFor` already implement key selection + retirement, but this slice is more
