@@ -56,7 +56,8 @@ let private mergeDuplicateIdentities (db: D1Database) (guestId: string) : JS.Pro
                     rows
                     |> Array.map (fun r ->
                         promise {
-                            let! row = (bind (db.prepare Sql.countCommentsForIdentity) [| box r.Id |]).first()
+                            let countSql = Attribution.countCommentsSql AttributionPolicy.commentTables
+                            let! row = (bind (db.prepare countSql) [| for _ in AttributionPolicy.commentTables -> box r.Id |]).first()
                             let n = if isNull (box row) then 0 else row?n |> unbox<int>
                             return r, n
                         })
@@ -66,7 +67,7 @@ let private mergeDuplicateIdentities (db: D1Database) (guestId: string) : JS.Pro
                     |> Array.sortBy (fun (r, n) -> -n, r.CreatedAt)
                 let survivor = fst ordered.[0]
                 for (dup, _) in ordered.[1..] do
-                    do! Attribution.reassign db dup.Id survivor.Id
+                    do! Attribution.reassign db AttributionPolicy.reassignStatements dup.Id survivor.Id
                     let! _ = (bind (db.prepare Sql.deleteIdentityById) [| box dup.Id |]).run()
                     moved <- moved |> Map.add dup.Id survivor.Id
         return moved
@@ -88,7 +89,8 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
         // signing in on a second machine should join the identity you already
         // have rather than mint a parallel one.
         let findExisting =
-            bind (db.prepare Sql.findIdentityByProviderGlobal) [| box provider; box providerUserId |]
+            let sql = Attribution.findByProviderGlobalSql AttributionPolicy.commentTables
+            bind (db.prepare sql) [| box provider; box providerUserId |]
         let! existing = findExisting.first()
 
         let ownerGuestId =
@@ -169,7 +171,7 @@ let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<Work
             let! active = Identity.activeFor env.DB guest.GuestId
             match active with
             | Some current when current.Id <> identityId ->
-                do! Attribution.reassign env.DB current.Id identityId
+                do! Attribution.reassign env.DB AttributionPolicy.reassignStatements current.Id identityId
             | _ -> ()
 
         do! Identity.setActive env.DB identityId now

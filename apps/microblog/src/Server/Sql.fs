@@ -40,27 +40,14 @@ let ensureAnonymousIdentity = """
 let findIdentityByProvider =
     "SELECT id FROM identities WHERE guest_id = ? AND provider = ? AND provider_user_id = ?"
 
-/// A provider account, regardless of which guest currently holds it. This is
-/// what makes one identity usable from several machines: the second machine
-/// finds the existing identity instead of minting a parallel one.
-/// Ordered by history, not age: pre-fix data can hold several rows for one
-/// provider account (one per browser that ever signed in), and the canonical
-/// one is whichever actually carries the comments — which is not necessarily
-/// the oldest. Earliest created breaks ties.
-let findIdentityByProviderGlobal = """
-    SELECT i.id, i.guest_id
-    FROM identities i
-    WHERE i.provider = ? AND i.provider_user_id = ?
-    ORDER BY (SELECT COUNT(*) FROM blog_comments c WHERE c.identity_id = i.id) DESC, i.created_at ASC
-    LIMIT 1"""
+// The provider-account global lookup (ranked by comment history) is now built by
+// Server.Attribution.findByProviderGlobalSql from AttributionPolicy.commentTables — one
+// implementation shared with the articles host — so the single-table literal is gone.
 
 /// Fold one guest's identities into another (their comments follow, since
 /// comments are attributed to the identity, not the guest).
 let moveIdentitiesToGuest =
     "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
-
-let countCommentsForIdentity =
-    "SELECT COUNT(*) AS n FROM blog_comments WHERE identity_id = ?"
 
 /// Park a single identity on another guest. Disconnect uses this to abandon a
 /// credentialed identity onto a fresh empty guest: its comments stay attached,
@@ -117,12 +104,9 @@ let legacyGuestEligible =
 let guestHasLinkedIdentity =
     "SELECT 1 FROM identities WHERE guest_id = ? AND provider <> 'anonymous' LIMIT 1"
 
-// ---- Attribution (see Server.Attribution) ----
-
-let reassignComments = """
-    UPDATE blog_comments
-    SET identity_id = ?, author = (SELECT name FROM identities WHERE id = ?)
-    WHERE identity_id = ?"""
+// Comment re-attribution on merge is module-owned (Blog.Sql.reassignComments), composed via
+// Server.AttributionPolicy.reassignStatements and run by Server.Attribution.reassign — the same
+// seam the articles host uses. The app-level blog_comments literal is gone.
 
 // ---- darwin.news glue over the blog module's content tables ----
 

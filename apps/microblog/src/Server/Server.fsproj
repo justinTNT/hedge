@@ -22,6 +22,10 @@
        Db/Identity above and dispatches (via Routes below) to Blog.Handlers. -->
   <Import Project="../../../../packages/modules/blog/blog.server.props" />
   <ItemGroup>
+    <!-- The merge policy composes each composed module's own reassignComments + comment table
+         (Tables-driven); after the module props (needs Blog.Sql / Blog.Db), before Handlers
+         (which calls it). Mirrors the articles host — one identity attribution seam across hosts. -->
+    <Compile Include="AttributionPolicy.fs" />
     <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
