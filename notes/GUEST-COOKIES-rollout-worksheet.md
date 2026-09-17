@@ -31,8 +31,19 @@ worksheet + config-driven migration mode). `./test.sh` green throughout.
 | `GUEST_MIGRATION_START` | Only to enable a bridge | Absolute epoch seconds; legacy guests created before this may be eligible. |
 | `GUEST_BRIDGE_UNTIL` | Only to enable a bridge | Absolute epoch seconds; the bridge is active only while `now < this` **and** `GUEST_MIGRATION_START` is set. Absent/expired → **hard cutover**. |
 
-`keyId` is `"k1"` (rotation appends retiring previous keys in `Server.GuestConfig`); audience is the
-request host automatically. `Secure` is set except when `ENVIRONMENT = "development"`.
+`keyId` is currently the fixed literal `"k1"` and `Previous = []` in `Server.GuestConfig.deps`.
+Audience is the request host automatically. `Secure` is set except when `ENVIRONMENT = "development"`.
+
+> **Rotation caveat (see Deferred → Slice G).** The *envelope* supports graceful key rotation
+> (`Config.Previous` verifies old tokens against retired keys until their retirement epoch while the
+> active key signs new ones), but `Server.GuestConfig` does **not** yet source keyId/previous keys
+> from config. So **changing `GUEST_SECRET` in place today invalidates every existing cookie at
+> once**: an old-secret `v1.k1.…` token fails the MAC → `Invalid` → the guest is silently
+> re-bootstrapped to a fresh guest (a write in flight 401s, then the client's `ensureSession`
+> re-bootstraps and retries). It fails safe (never accepted/forged), comments/identities are intact,
+> and OAuth-linked identities recover via re-login — i.e. an estate-wide hard cutover at rotation
+> time. That is the desired behaviour for **key compromise**, but costly for a routine roll. Do
+> graceful rotations only after Slice G wires it.
 
 Provision the secret (the operator does this — Claude cannot set secrets):
 
@@ -83,6 +94,31 @@ runtime host automatically, so the table value is documentation, not config.)
 
 ## Deferred (not in this release)
 
+- **Slice G — graceful key rotation via a keyring (ROADMAP, wanted).** Rotating without logging every
+  guest out means holding more than one live key at once (the active signer + not-yet-retired
+  verifiers), so the single `GUEST_SECRET` becomes a **keyring**. The envelope +
+  `Hedge.GuestCookie.keyFor` already implement key selection + retirement, and slice A's fixture
+  already covers rotation/retirement — this slice is purely the app-config wiring plus a fixture
+  asserting an old-key token still verifies until retirement while the new key signs.
+
+  **Decided storage shape:** one JSON secret `GUEST_KEYRING` (a Cloudflare *secret*, all of it
+  sensitive), e.g. `{"active":"k2","keys":{"k2":{"secret":"…"},"k1":{"secret":"…","retireAt":<epoch>}}}`.
+  One encrypted binding, atomic rotation (put the new ring + deploy), no dynamic `env["GUEST_SECRET_"+id]`
+  lookups. `Server.GuestConfig.deps` parses it into `Hedge.GuestSession.configFor`'s `Active` +
+  `Previous` (replacing the hardcoded `"k1"` / `[]`); malformed/empty → `configFor` throws → fails
+  closed. Keep plain `GUEST_SECRET` as back-compat shorthand for a ring of one active key `k1`, no
+  previous — so nothing already deployed changes until it actually rotates.
+
+  **To rotate:** add a new active key, move the outgoing key to `keys` with `retireAt = now + window`,
+  deploy; drop the retired entry after the window. Two properties make the window cheap: (1) **renewal
+  auto-migrates active guests** — a still-valid token is re-signed with the *active* key on next use
+  (30-day renewal window), so a ~30–90 day retirement quietly moves regular visitors onto the new key
+  and only genuinely dormant guests reset; (2) `retireAt` is the dial between honouring old tokens
+  longer vs. how long a compromised old key stays valid (compromise → retire immediately = the
+  current in-place-change behaviour).
+
+  **Until this lands, treat any `GUEST_SECRET` change as a full guest reset** (see the rotation
+  caveat under "Configuration surface").
 - **In-place image-URL re-key / backfill of old objects** — explicitly deferred by the work order;
   old URLs keep serving, new keys are credential-free, so no rename is needed for safety.
 - Upload grants, per-user quotas, attachment metadata, scheduled cleanup, broader file validation
@@ -98,5 +134,6 @@ runtime host automatically, so the table value is documentation, not config.)
 4. Move to the next tenant. **idealist stays HELD for C6.**
 
 Rollback keeps signed-cookie support and any fixed cutoff; **never restore unsigned acceptance.** Key
-compromise → rotate via `keyId` + a retiring previous key (the envelope already supports it), and
-report the resulting reauthentication.
+compromise today → change `GUEST_SECRET` in place, which invalidates all cookies at once (safe, but a
+full guest reset — see the rotation caveat). Graceful, windowed rotation needs the keyring wiring in
+**Slice G** (Deferred); report the resulting reauthentication either way.
