@@ -111,6 +111,26 @@ rm -rf "$GC_OUT"
 echo "--- Signed guest-cookie envelope OK ---"
 
 echo ""
+echo "=== Step 1e3: Guest-session policy (migration decisions) ==="
+# The shared guest-session policy (Content.Server.GuestSession) decides accept/renew/upgrade/reject/
+# bootstrap over the signed envelope + injected DB lookups. Fable→node with a real signing config +
+# fake lookups exercises the migration rules: signed accept/renew, eligible-anonymous legacy bridge
+# upgrade, linked-legacy reject (re-login), ineligible/cutover/past-window/missing/expired reject,
+# bootstrap mint, and OAuth adoption. A policy regression fails here.
+cd "$ROOT"
+GS_OUT="$ROOT/test/GuestSession/dist"
+rm -rf "$GS_OUT"
+dotnet fable test/GuestSession/GuestSession.fsproj -o "$GS_OUT" >/dev/null 2>&1
+if ! node "$GS_OUT/Program.js" | grep -q "guest-session:.*OK"; then
+    echo "!!! FAIL: guest-session policy — a migration/authorization decision regressed."
+    node "$GS_OUT/Program.js" || true
+    rm -rf "$GS_OUT"
+    exit 1
+fi
+rm -rf "$GS_OUT"
+echo "--- Guest-session policy OK ---"
+
+echo ""
 echo "=== Step 1f: Populated table recreate (P3) ==="
 # A schema change that forces a table rebuild (a column type/drop or any FK change)
 # emits copy -> DROP -> RENAME. On a populated DB with self-FKs (comments.parent_id) or

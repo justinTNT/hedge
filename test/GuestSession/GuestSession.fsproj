@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Shared guest-session POLICY fixtures (see packages/content-server/GuestSession.fs). Fable→node
+    with a real signing Config (WebCrypto) and fake DB lookups + injected clock/id, so the migration
+    decisions are exercised deterministically: signed→accept(+renew), eligible-anonymous legacy under
+    an active bridge→accept+upgrade, eligible-LINKED legacy→reject (re-login), ineligible/hard-cutover/
+    expired-bridge/missing/expired/invalid→reject, bootstrap mints a fresh signed guest, adopt issues
+    a signed cookie for the adopted subject. Wired into ../../test.sh.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../packages/content-server/GuestSession.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+  </ItemGroup>
+</Project>
