@@ -35,9 +35,10 @@ run_module_surface() { # <host-app> <module-path>
 }
 run_module_surface microblog ../../packages/modules/blog
 run_module_surface articles ../../packages/modules/articles
-if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated; then
+run_module_surface microblog ../../packages/modules/alerts   # C6: admin+cron module (0 endpoints)
+if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated; then
     echo "!!! FAIL: a module's generated surface differs from committed. Regenerate + commit:"
-    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated
+    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated
     exit 1
 fi
 echo "--- module surfaces match committed ---"
@@ -57,6 +58,26 @@ if ! git diff --quiet -- $ndct_paths; then
 fi
 echo "--- articles ndct glue matches committed ---"
 
+# C6: idealist is microblog's per-site superset (blog + alerts). Its gen writes only *.idealist.*
+# and schema.idealist.sql — never the default (blog-only) files, so the 6 other tenants are untouched.
+echo ""
+echo "=== Step 1c2: Per-site glue (idealist) + blog schema untouched ==="
+( cd "$ROOT/apps/microblog" && HEDGE_SITE=idealist npm run gen >/dev/null 2>&1 )
+idealist_paths="apps/microblog/src/Server/generated/Routes.idealist.fs apps/microblog/src/Server/generated/AdminGen.idealist.fs apps/microblog/schema.idealist.sql"
+if ! git diff --quiet -- $idealist_paths; then
+    echo "!!! FAIL: microblog idealist glue differs from committed. Regenerate + commit:"
+    git --no-pager diff --stat -- $idealist_paths
+    exit 1
+fi
+# Promotion dedup is the module-owned alerts_promotions table, so composing alerts must NOT stamp
+# alerts_* tables or origin_entry_key onto the DEFAULT (blog-only) microblog schema — every non-
+# idealist tenant's schema stays byte-identical.
+if grep -qE "alerts_|origin_entry_key" "$ROOT/apps/microblog/schema.sql"; then
+    echo "!!! FAIL: default microblog schema.sql contains alerts_/origin_entry_key (must be blog-only)"
+    exit 1
+fi
+echo "--- microblog idealist glue matches committed; default schema blog-only ---"
+
 echo ""
 echo "=== Step 1b: Microblog golden model (SQL + build) ==="
 cd "$ROOT/apps/microblog"
@@ -64,6 +85,15 @@ cd "$ROOT/apps/microblog"
 dotnet build src/Server/Server.fsproj
 dotnet build src/Client/Client.fsproj
 echo "--- Microblog OK ---"
+
+# C6: the idealist variant (blog + alerts) must also compile. Clean obj/bin so the HEDGE_SITE
+# conditionals re-evaluate (the file set differs), build, then clean again so later default-variant
+# steps aren't served the idealist evaluation.
+echo "--- building microblog idealist variant (blog + alerts) ---"
+rm -rf src/Server/obj src/Server/bin src/Codecs/obj src/Codecs/bin
+HEDGE_SITE=idealist dotnet build src/Server/Server.fsproj
+rm -rf src/Server/obj src/Server/bin src/Codecs/obj src/Codecs/bin
+echo "--- Microblog idealist (blog + alerts) OK ---"
 
 # Articles composes two modules (Articles + Blog); check its SQL too.
 cd "$ROOT/apps/articles"
