@@ -21,25 +21,40 @@
        Handlers.fs because the app's bespoke getRhymes reads Blog.Sql; it needs
        Db/Identity above and dispatches (via Routes below) to Blog.Handlers. -->
   <Import Project="../../../../packages/modules/blog/blog.server.props" />
+  <!-- C6: alerts (admin+cron) is composed ONLY into the idealist tenant. HEDGE_SITE drives both
+       this import and the gen manifest (gen-modules.idealist.json adds alerts), so every other
+       microblog tenant's generated Routes/AdminGen never reference Alerts. -->
+  <Import Project="../../../../packages/modules/alerts/alerts.server.props" Condition="'$(HEDGE_SITE)' == 'idealist'" />
   <ItemGroup>
     <!-- The merge policy composes each composed module's own reassignComments + comment table
          (Tables-driven); after the module props (needs Blog.Sql / Blog.Db), before Handlers
-         (which calls it). Mirrors the articles host — one identity attribution seam across hosts. -->
+         (which calls it). Mirrors the articles host — one identity attribution seam across hosts.
+         Same for every microblog site (only blog has comments), so unconditional. -->
     <Compile Include="AttributionPolicy.fs" />
     <Compile Include="Handlers.fs" />
-    <Compile Include="generated/AdminGen.fs" />
+    <!-- Per-composition glue committed per HEDGE_SITE: the default files are the blog-only set (the
+         6 existing tenants); .idealist adds alerts (superset). schema.sql is suffixed the same way. -->
+    <Compile Include="generated/AdminGen.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
+    <Compile Include="generated/AdminGen.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
     <Compile Include="AdminConfig.fs" />
-    <Compile Include="generated/Routes.fs" />
+    <Compile Include="generated/Routes.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
+    <Compile Include="generated/Routes.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
     <Compile Include="Meta.fs" />
-    <!-- C3: adapts this app's Env into each content module's Services (uses Server.Identity +
-         content-server/Author). After the module props (needs Blog.Services), before Worker. -->
-    <Compile Include="ModuleServices.fs" />
+    <!-- C3: adapts this app's Env into each content module's Services + composes their dispatch and
+         the cron. Site-selected: default = blog only (scheduled = None); .idealist = blog + alerts
+         (scheduled = Some the alerts cron). Both expose `dispatch`/`scheduled` so Worker.fs stays
+         site-agnostic. After the module props (needs Blog/Alerts Services), before Worker. -->
+    <Compile Include="ModuleServices.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
+    <Compile Include="ModuleServices.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+    <!-- C6: AlertsModels available for the idealist build (its server props + ModuleServices.idealist
+         reference Alerts.Db/Domain). Harmless for other tenants — the server props aren't imported. -->
+    <ProjectReference Include="../../../../packages/modules/alerts/src/Models/AlertsModels.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

@@ -1,9 +1,13 @@
 module Server.ModuleServices
 
-// C3 — the single place that adapts this app's environment into each content module's Services.
-// It is the only server file that knows BOTH the app's Env / Server.Identity AND a module's
-// Services type, so the module itself stays ignorant of the app.
+// C3 — the single place that adapts this app's environment into each content module's Services,
+// and (C6) composes the site dispatch + cron. It is the only server file that knows BOTH the app's
+// Env / Server.Identity AND a module's Services type, so the module itself stays ignorant of the
+// app. This is the DEFAULT (blog-only) variant — every microblog tenant except idealist;
+// ModuleServices.idealist.fs is the blog+alerts superset. Both expose `blog`/`dispatch`/`scheduled`
+// so Worker.fs is site-agnostic (selected by HEDGE_SITE in Server.fsproj).
 
+open Fable.Core
 open Hedge.Workers
 open Content.Server.Author
 open Server.Env
@@ -37,3 +41,10 @@ let blog (env: Env) (request: WorkerRequest) : Blog.Services.Services =
       NewId = newId
       Now = epochNow
       CaptureEnabled = true }
+
+/// The site dispatch (blog only) — moved here from Worker.fs so the Worker stays site-agnostic.
+let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    Server.Routes.dispatch (Blog.Composition.bind (blog env request)) request ctx
+
+/// No cron on the default microblog tenants (idealist runs the alerts cron — see the .idealist variant).
+let scheduled : (ScheduledController -> obj -> ExecutionContext -> JS.Promise<unit>) option = None

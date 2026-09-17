@@ -7,10 +7,13 @@
   </ItemGroup>
   <!-- Composed module codecs (Blog.Codecs) live with the module, not per-app. -->
   <Import Project="../../../../packages/modules/blog/blog.codecs.props" />
+  <!-- C6: alerts codecs only on idealist (its RouteContract/AdminGen open Alerts.Codecs). -->
+  <Import Project="../../../../packages/modules/alerts/alerts.codecs.props" Condition="'$(HEDGE_SITE)' == 'idealist'" />
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/alerts/src/Models/AlertsModels.fsproj" Condition="'$(HEDGE_SITE)' == 'idealist'" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />
