@@ -142,11 +142,11 @@
 .blog-content .comment-thread.depth-11 > .comment-collapse-line::before { background: #9b59b6; } /* Violet */
 
 /* Comment author line — blog's presentation on top of the shared
-   .comment-author {display:flex} structure (in comments.css). */
+   .comment-author {display:flex} structure (in comments.css). Colour inherits
+   from the .comments root; the bold weight is the intentional distinction. */
 .blog-content .comment-author {
     font-weight: 600;
     font-size: 0.9em;
-    color: #333;
     margin-bottom: 4px;
 }
 

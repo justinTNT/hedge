@@ -61,16 +61,27 @@ body.tenant-justat .nav-blog {
 }
 body.tenant-justat .identity-area { color: #cfcabf; }
 
-/* left column: aged-paper content container (the module content sits inside) */
+/* left column: content container (the module content sits inside). Layout for
+   both mounts; the paper texture is scoped per mount below. */
 body.tenant-justat main {
   grid-area: main;
   margin-top: 0;
   padding: 4px 30px 40px 38px;
-  background: #efe9d3 url(/public/justat/content-back.gif) repeat-y top center;
   min-height: 240px;
 }
 
-/* the single-article page uses the cleaner post.gif paper instead of content-back */
+/* aged-paper only on articles pages */
+body.tenant-justat main:has(.article-content) {
+  background: #efe9d3 url(/public/justat/content-back.gif) repeat-y top center;
+}
+
+/* the /blog mount sits on a flat cream ground (no articles paper texture) */
+body.tenant-justat main:has(.blog-content) {
+  background: #e9e9cf;
+}
+
+/* the single-article page uses the cleaner post.gif paper instead of content-back
+   (sits after the article-content rule so an open article overrides it) */
 body.tenant-justat main:has(.article-detail) {
   background: #f3efe0 url(/public/justat/post.gif) no-repeat bottom center;
   background-size: 100% 100%;

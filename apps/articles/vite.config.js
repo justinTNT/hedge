@@ -103,7 +103,7 @@ function siteConfig() {
       const cssLinks =
         isAdmin ? '<link rel="stylesheet" href="./styles/admin.css">'
         : isIndex ? ('<link rel="stylesheet" href="./styles/base.css">'
-            + (composesBlog ? '\n    <link rel="stylesheet" href="../../packages/modules/blog/blog.css">' : '')
+            + (composesBlog ? '\n    <link rel="stylesheet" href="./styles/blog-mount.css">' : '')
             + (siteSlug ? `\n    <link rel="stylesheet" href="./styles/tenants/${siteSlug}.css">` : ''))
         : '';
       const headInject = [cssLinks, injected, isIndex ? ogMeta(siteTitle) : '']

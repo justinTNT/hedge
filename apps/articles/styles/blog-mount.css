@@ -1,0 +1,5 @@
+/* App-local entry for the blog module's content CSS, loaded only when this site
+   composes blog (justat/default, not ndct — see vite.config.js). It's an
+   in-app file so the dev server serves it and resolves the @import; a direct
+   <link> to the module path would resolve outside the served root in dev. */
+@import "../../../packages/modules/blog/blog.css";

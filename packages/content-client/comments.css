@@ -8,12 +8,18 @@
    Microblog owns its threaded gutter + rainbow depth lines + base avatar;
    Articles owns its simpler indentation; both keep their tenant colours. */
 
+/* Root foreground: ordinary comment text (body, author) INHERITS this, so a
+   deployment re-colours all comment text with one rule — `.comments { color: … }`
+   or `.blog-content .comments` / `.article-content .comments`. Intentional
+   exceptions (muted meta) keep their own colour below. */
+.comments { color: #444; }
+
 /* Comment content + author row (avatar beside name). */
 .comment-content { padding: 8px 0; }
 .comment-author { display: flex; align-items: center; }
 
-/* Comment body (rich text). */
-.comment-body { color: #444; line-height: 1.5; }
+/* Comment body (rich text) — colour inherits from .comments. */
+.comment-body { line-height: 1.5; }
 .comment-body p { margin: 0 0 0.5em 0; }
 .comment-body p:last-child { margin-bottom: 0; }
 
