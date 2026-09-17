@@ -7,6 +7,7 @@ open Hedge.Interface
 open Hedge.Validate
 open Hedge.Workers
 open Hedge.Router
+open Hedge.GuestSession
 open Codecs
 open Blog.Api
 open Server.Env
@@ -148,7 +149,11 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
 /// /api/auth/revert (switch) — the policy is identical.
 let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let guest = resolveGuest request
+        // Identity mutation is a WRITE: require an accepted signed guest, never create one.
+        let! authz = Server.GuestConfig.require env request
+        match authz with
+        | Rejected -> return unauthorized ()
+        | Accepted guest ->
         let! bodyText = request.text()
         let parsed = JS.JSON.parse bodyText
         let identityId : string = parsed?identityId
@@ -168,7 +173,9 @@ let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<Work
             | _ -> ()
 
         do! Identity.setActive env.DB identityId now
-        return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
+        match guest.Replacement with
+        | Some c -> return okJsonWithCookie """{"ok":true}""" c
+        | None -> return okJson """{"ok":true}"""
     }
 
 /// Abandon a credentialed identity: it's parked on a fresh, cookieless guest
@@ -181,7 +188,11 @@ let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<Work
 /// had one — which happens when someone signed in before ever commenting.
 let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let guest = resolveGuest request
+        // Identity mutation is a WRITE: require an accepted signed guest, never create one.
+        let! authz = Server.GuestConfig.require env request
+        match authz with
+        | Rejected -> return unauthorized ()
+        | Accepted guest ->
         let! bodyText = request.text()
         let parsed = JS.JSON.parse bodyText
         let identityId : string = parsed?identityId
@@ -224,7 +235,9 @@ let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         if wasActive then
             do! Identity.setActive env.DB anonId now
 
-        return okJsonWithCookie """{"ok":true}""" (guestCookieValue guest)
+        match guest.Replacement with
+        | Some c -> return okJsonWithCookie """{"ok":true}""" c
+        | None -> return okJson """{"ok":true}"""
     }
 
 let activateIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
@@ -235,10 +248,13 @@ let revertIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespon
 
 let getIdentities (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let guest = resolveGuest request
-        if guest.IsNew then
-            return okJson """{"identities":[]}"""
-        else
+        // Identity listing requires an accepted credential (it exposes a guest's linked accounts).
+        // Without one, return an empty list rather than bootstrapping — the client establishes a
+        // session via /api/auth/me first, then lists.
+        let! authz = Server.GuestConfig.require env request
+        match authz with
+        | Rejected -> return okJson """{"identities":[]}"""
+        | Accepted guest ->
         let! rows = Identity.listFor env.DB guest.GuestId
         let identities =
             rows |> Array.map (fun i ->
@@ -247,7 +263,9 @@ let getIdentities (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
                 sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s%s}""" i.Id i.Provider i.Name i.Picture emailJson activeJson
             )
         let body = sprintf """{"identities":[%s]}""" (identities |> String.concat ",")
-        return okJsonWithCookie body (guestCookieValue guest)
+        match guest.Replacement with
+        | Some c -> return okJsonWithCookie body c
+        | None -> return okJson body
     }
 
 let private toFeedItem (r: ItemRow) : GetFeed.FeedItem =

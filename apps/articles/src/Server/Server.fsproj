@@ -12,6 +12,10 @@
     <Compile Include="generated/Db.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Attribution.fs" />
+    <!-- Binds this app's Env + Server.Identity into the shared guest-session policy
+         (Hedge.GuestSession). After Identity (uses it); before the module props, Handlers,
+         ModuleServices and Worker (all consume it). -->
+    <Compile Include="GuestConfig.fs" />
   </ItemGroup>
   <!-- Content module server layers, composed via each module's own .props (it owns
        its file list). Imports sit between ItemGroups so the module files land here in

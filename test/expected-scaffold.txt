@@ -348,6 +348,9 @@ let exports = createWorker {
     Admin = Some (fun request env route ->
         Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = None
+    // No guest identity/comments by default; wire Server.GuestConfig.deps (and a GUEST_SECRET
+    // binding) when the app adds guest commenting/uploads.
+    GuestSession = None
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
 }

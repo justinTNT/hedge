@@ -24,8 +24,10 @@ let private authorResolver (db: D1Database) : AuthorResolver =
                   Picture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue "" }
         } }
 
-let private articles (env: Env) : Articles.Services.Services =
-    { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB; NewId = newId; Now = epochNow }
+let private articles (env: Env) (request: WorkerRequest) : Articles.Services.Services =
+    { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB
+      Guest = Hedge.GuestSession.service (fun () -> Server.GuestConfig.deps env request)
+      NewId = newId; Now = epochNow }
 
 let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
-    Server.Routes.dispatch (Articles.Composition.bind (articles env)) request ctx
+    Server.Routes.dispatch (Articles.Composition.bind (articles env request)) request ctx

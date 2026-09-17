@@ -6,6 +6,7 @@ open Thoth.Json
 open Hedge.Workers
 open Hedge.Validate
 open Hedge.OAuth
+open Hedge.GuestSession
 
 /// Minimal router for Workers.
 /// Pattern matches on method + path to dispatch to handlers.
@@ -156,15 +157,19 @@ let logoutResponse () : WorkerResponse =
     ]
     WorkerResponse.create(body, options)
 
-let redirectResponse (url: string) (cookie: string) : WorkerResponse =
+/// 302 redirect, attaching Set-Cookie only when there is one to set. Guest bootstrap/renewal/adoption
+/// yields a replacement cookie sometimes (fresh/renewed/adopted) and None when the existing signed
+/// credential is still good — re-setting it needlessly is avoided.
+let redirectResponseOpt (url: string) (cookie: string option) : WorkerResponse =
+    let headers = [ "Location" ==> url ]
+    let headers = match cookie with Some c -> headers @ [ "Set-Cookie" ==> c ] | None -> headers
     let options = createObj [
         "status" ==> 302
-        "headers" ==> createObj [
-            "Location" ==> url
-            "Set-Cookie" ==> cookie
-        ]
+        "headers" ==> createObj headers
     ]
     WorkerResponse.create("", options)
+
+let redirectResponse (url: string) (cookie: string) : WorkerResponse = redirectResponseOpt url (Some cookie)
 
 let corsPreflightResponse () : WorkerResponse =
     let options = createObj [
@@ -221,6 +226,11 @@ type WorkerConfig = {
     Routes: WorkerRequest -> obj -> ExecutionContext -> JS.Promise<WorkerResponse> option
     Admin: (WorkerRequest -> obj -> Route -> JS.Promise<WorkerResponse> option) option
     OAuth: (obj -> OAuthConfig) option
+    /// Signed-guest-cookie policy, bound per request from env (audience = request host). `None` for
+    /// deployments with no guest identity (they acquire no secret requirement). Built LAZILY inside
+    /// each guest route so a missing/short GUEST_SECRET fails only guest operations, not content
+    /// reads. Independent of OAuth: a host with no providers still issues/verifies signed guests.
+    GuestSession: (obj -> WorkerRequest -> Hedge.GuestSession.Deps) option
     /// Extra client views mounted on other hosts of this same deploy (default []).
     Mounts: Mount list
     /// R2 key prefixes never served through the public /blobs/ route (C4). See BlobServingPolicy.
@@ -254,22 +264,34 @@ let createWorker (config: WorkerConfig) =
 
             match route with
             | GET path when matchPath "/api/auth/me" path = Some (Exact "/api/auth/me") ->
-                let guest = resolveGuest request
-                if guest.IsNew then
-                    return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
-                else
-                    match oauthCfg with
-                    | Some oauth ->
-                        let db : D1Database = env?DB
-                        let! identityJson = oauth.ResolveIdentity db guest.GuestId
-                        match identityJson with
-                        | Some json ->
-                            let body = sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guest.GuestId json
-                            return okJsonWithCookie body (guestCookieValue guest)
+                match config.GuestSession with
+                | None ->
+                    // No guest identity configured on this deployment → anonymous, no cookie set.
+                    return okJson """{"guest":null}"""
+                | Some guestOf ->
+                    // Bootstrap: verify the signed cookie, mint a fresh signed guest if none is
+                    // acceptable, renew if due. resolveOrBootstrap carries the replacement (if any).
+                    let! boot = resolveOrBootstrap (guestOf env request) (readCookie request)
+                    let attach body =
+                        match boot.Replacement with
+                        | Some c -> okJsonWithCookie body c
+                        | None -> okJson body
+                    if boot.IsNew then
+                        // A brand-new guest is not revealed to the client — identity is established
+                        // but the id stays in the httpOnly cookie only (unchanged /api/auth/me shape).
+                        return attach """{"guest":null}"""
+                    else
+                        match oauthCfg with
+                        | Some oauth ->
+                            let db : D1Database = env?DB
+                            let! identityJson = oauth.ResolveIdentity db boot.GuestId
+                            match identityJson with
+                            | Some json ->
+                                return attach (sprintf """{"guest":{"guestId":"%s","identity":%s}}""" boot.GuestId json)
+                            | None ->
+                                return attach """{"guest":null}"""
                         | None ->
-                            return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
-                    | None ->
-                        return okJsonWithCookie """{"guest":null}""" (guestCookieValue guest)
+                            return attach """{"guest":null}"""
             | _ ->
 
             // Which providers can actually complete a login: known to the
@@ -304,16 +326,21 @@ let createWorker (config: WorkerConfig) =
                 let providerName = match (matchPath "/api/auth/:id/login" path).Value with WithParam (_, p) -> p | Exact _ -> ""
                 match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
                 | Some providerCfg, Some creds ->
-                    let guest = resolveGuest request
-                    let returnTo = getQueryParam request.url "returnTo"
-                    let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
-                    let! state = OAuth.generateState oauth.Secret guest.GuestId returnTo
-                    let redirectUri =
-                        let url = createUrl request.url
-                        let origin : string = url?origin
-                        sprintf "%s/api/auth/%s/callback" origin providerName
-                    let authUrl = OAuth.generateAuthUrl providerCfg creds.ClientId redirectUri state
-                    return redirectResponse authUrl (guestCookieValue guest)
+                    match config.GuestSession with
+                    | None -> return serverError "Guest signing is not configured"
+                    | Some guestOf ->
+                        // Bootstrap the guest (mint a signed one if none), then bind its id into the
+                        // HMAC-signed OAuth state so the callback can require the same subject.
+                        let! boot = resolveOrBootstrap (guestOf env request) (readCookie request)
+                        let returnTo = getQueryParam request.url "returnTo"
+                        let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
+                        let! state = OAuth.generateState oauth.Secret boot.GuestId returnTo
+                        let redirectUri =
+                            let url = createUrl request.url
+                            let origin : string = url?origin
+                            sprintf "%s/api/auth/%s/callback" origin providerName
+                        let authUrl = OAuth.generateAuthUrl providerCfg creds.ClientId redirectUri state
+                        return redirectResponseOpt authUrl boot.Replacement
                 | _ ->
                     return badRequest (sprintf "Unknown provider: %s" providerName)
 
@@ -321,36 +348,51 @@ let createWorker (config: WorkerConfig) =
                 let providerName = match (matchPath "/api/auth/:id/callback" path).Value with WithParam (_, p) -> p | Exact _ -> ""
                 match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
                 | Some providerCfg, Some creds ->
-                    let guest = resolveGuest request
-                    let code = getQueryParam request.url "code"
-                    let stateParam = getQueryParam request.url "state"
-                    if isNull code || code = "" then
-                        return badRequest "Missing code parameter"
-                    elif isNull stateParam || stateParam = "" then
-                        return badRequest "Missing state parameter"
-                    else
-                        let! stateResult = OAuth.verifyState oauth.Secret stateParam
-                        match stateResult with
-                        | Error err ->
-                            return badRequest (sprintf "Invalid state: %s" err)
-                        | Ok (stateGuestId, returnTo) ->
-                            if stateGuestId <> guest.GuestId then
-                                return badRequest "State mismatch"
-                            else
-                                let redirectUri =
-                                    let url = createUrl request.url
-                                    let origin : string = url?origin
-                                    sprintf "%s/api/auth/%s/callback" origin providerName
-                                let! accessToken = OAuth.exchangeCode providerCfg code redirectUri creds.ClientId creds.ClientSecret
-                                let! userInfo = OAuth.fetchUserinfo providerCfg accessToken
-                                let db : D1Database = env?DB
-                                let blobs : R2Bucket = env?BLOBS
-                                let! completion = oauth.OnOAuthComplete db blobs guest.GuestId (box userInfo) returnTo
-                                let cookieGuest =
-                                    match completion.AdoptGuestId with
-                                    | Some adopted -> { guest with GuestId = adopted }
-                                    | None -> guest
-                                return redirectResponse completion.RedirectUrl (guestCookieValue cookieGuest)
+                    match config.GuestSession with
+                    | None -> return serverError "Guest signing is not configured"
+                    | Some guestOf ->
+                        let deps = guestOf env request
+                        // The callback must run under an accepted (signed / bridge-upgraded) credential
+                        // — never sign a callback's unverified subject. It is not a bootstrap route.
+                        let! required = requireGuest deps (readCookie request)
+                        let code = getQueryParam request.url "code"
+                        let stateParam = getQueryParam request.url "state"
+                        if isNull code || code = "" then
+                            return badRequest "Missing code parameter"
+                        elif isNull stateParam || stateParam = "" then
+                            return badRequest "Missing state parameter"
+                        else
+                            let! stateResult = OAuth.verifyState oauth.Secret stateParam
+                            match stateResult with
+                            | Error err ->
+                                return badRequest (sprintf "Invalid state: %s" err)
+                            | Ok (stateGuestId, returnTo) ->
+                                match required with
+                                | Rejected ->
+                                    // In-flight login whose guest cookie expired or fell to a cutover
+                                    // between start and callback — the flow must be restarted.
+                                    return badRequest "Session expired during login; please retry"
+                                | Accepted a ->
+                                    if stateGuestId <> a.GuestId then
+                                        return badRequest "State mismatch"
+                                    else
+                                        let redirectUri =
+                                            let url = createUrl request.url
+                                            let origin : string = url?origin
+                                            sprintf "%s/api/auth/%s/callback" origin providerName
+                                        let! accessToken = OAuth.exchangeCode providerCfg code redirectUri creds.ClientId creds.ClientSecret
+                                        let! userInfo = OAuth.fetchUserinfo providerCfg accessToken
+                                        let db : D1Database = env?DB
+                                        let blobs : R2Bucket = env?BLOBS
+                                        let! completion = oauth.OnOAuthComplete db blobs a.GuestId (box userInfo) returnTo
+                                        // Adoption is the privileged re-sign: issue a signed cookie for
+                                        // the adopted subject, but only after OnOAuthComplete's verified
+                                        // provider-ownership check. Otherwise carry any renewal cookie.
+                                        let! cookie =
+                                            match completion.AdoptGuestId with
+                                            | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
+                                            | None -> promise { return a.Replacement }
+                                        return redirectResponseOpt completion.RedirectUrl cookie
                 | _ ->
                     return badRequest (sprintf "Unknown provider: %s" providerName)
 

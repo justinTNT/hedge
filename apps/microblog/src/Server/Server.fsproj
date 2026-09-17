@@ -12,6 +12,10 @@
     <Compile Include="generated/Db.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Attribution.fs" />
+    <!-- Binds this app's Env + Server.Identity into the shared guest-session policy
+         (Hedge.GuestSession). After Identity (uses it); before Handlers, ModuleServices and
+         Worker (all consume it). -->
+    <Compile Include="GuestConfig.fs" />
   </ItemGroup>
   <!-- Blog module server layer, composed via the module's .props. Placed before
        Handlers.fs because the app's bespoke getRhymes reads Blog.Sql; it needs

@@ -20,6 +20,7 @@ open Blog.Db
 // Server.Env / Server.Identity. Author resolution comes via the content-server contract.
 open Blog.Services
 open Content.Server.Author
+open Hedge.GuestSession
 
 let private toFeedItem (r: ItemRow) : GetFeed.FeedItem =
     { Id = r.Id
@@ -151,7 +152,12 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         | Error errors ->
             return validationErrorResponse errors
         | Ok req ->
-        let guest = resolveGuest request
+        // Comment is a WRITE: require an accepted (signed / bridge-upgraded) guest — never create one
+        // on this path. A rejected credential is refused before any side effect.
+        let! authz = services.Guest.Require request
+        match authz with
+        | Rejected -> return unauthorized ()
+        | Accepted guest ->
         let guestId = guest.GuestId
         let commentId = services.NewId ()
         let identityId = services.NewId ()
@@ -199,7 +205,11 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
                 "comment", Encode.blogCommentItem newComment
             ] |> Encode.toString 0
 
-        return okJsonWithCookie body (guestCookieValue guest)
+        // Attach the signed replacement cookie only when the policy issued one (fresh renewal or a
+        // bridge upgrade); a still-valid credential needs no re-set.
+        match guest.Replacement with
+        | Some c -> return okJsonWithCookie body c
+        | None -> return okJson body
     }
 
 let getTags (services: Services) : JS.Promise<WorkerResponse> =

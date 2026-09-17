@@ -42,6 +42,10 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
+    // Signed guest cookies (independent of OAuth). Bound per request so the audience is the host;
+    // the single builder Server.GuestConfig.deps is shared with the identity handlers and module
+    // comment services, so there is one policy for this app.
+    GuestSession = Some (fun env request -> Server.GuestConfig.deps (env :?> Env) request)
     // No path-mounts: the unified shell (Stage 2) hosts blog at /blog in-document, so
     // GET /blog[/*] falls through to the single-page-application asset fallback (the
     // shell's index.html — see wrangler.toml [assets] not_found_handling), which routes

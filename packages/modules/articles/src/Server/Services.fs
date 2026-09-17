@@ -15,6 +15,9 @@ type Services =
       Events: DurableObjectNamespace
       /// Resolves a new comment's author from the guest identity (was Server.Identity inline).
       Author: AuthorResolver
+      /// Resolves + authorizes the guest for a comment WRITE via the shared signed-cookie policy.
+      /// The module calls `Guest.Require request`; it never reads the cookie, a secret, or the key.
+      Guest: Hedge.GuestSession.Service
       /// Fresh id generator (framework `newId` by default; a test can supply a deterministic one).
       NewId: unit -> string
       /// Clock (framework `epochNow` by default; a test can supply a deterministic one).

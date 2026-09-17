@@ -24,17 +24,30 @@ let private probeAuthor : AuthorResolver =
     { ResolveAuthor = fun (req: AuthorRequest) ->
         promise { return { IdentityId = req.FallbackIdentityId; Picture = "" } } }
 
+/// The host binds the shared guest-session policy (a Hedge type) from ITS OWN environment — the
+/// module only sees Hedge.GuestSession.Service, never the app's Env or a secret. Deferred, so this
+/// stand-in's configFor never runs in this compile-only probe.
+let private probeGuest : Hedge.GuestSession.Service =
+    Hedge.GuestSession.service (fun () ->
+        { Config = Hedge.GuestSession.configFor "k1" "probe-secret-000000000000000000000000000000" "probe" []
+          Bridge = Hedge.GuestSession.HardCutover
+          Secure = false
+          Now = epochNow
+          NewGuestId = newId
+          LegacyEligible = (fun _ -> promise { return false })
+          LegacyHasLinkedIdentity = (fun _ -> promise { return false }) })
+
 /// Blog's handler record, bound over a Services built from the probe env (no Server.Env).
 let blogHandlers (env: ProbeEnv) : Blog.RouteContract.Handlers =
     Blog.Composition.bind
         ({ DB = env.Db; Blobs = env.Blobs; Events = env.Events; AdminKey = env.Key
-           Author = probeAuthor; NewId = newId; Now = epochNow; CaptureEnabled = true }
+           Author = probeAuthor; Guest = probeGuest; NewId = newId; Now = epochNow; CaptureEnabled = true }
          : Blog.Services.Services)
 
 /// Articles' handler record, likewise.
 let articlesHandlers (env: ProbeEnv) : Articles.RouteContract.Handlers =
     Articles.Composition.bind
-        ({ DB = env.Db; Events = env.Events; Author = probeAuthor; NewId = newId; Now = epochNow }
+        ({ DB = env.Db; Events = env.Events; Author = probeAuthor; Guest = probeGuest; NewId = newId; Now = epochNow }
          : Articles.Services.Services)
 
 /// A whole site dispatch composed from the probe-built module records — the shape an app's

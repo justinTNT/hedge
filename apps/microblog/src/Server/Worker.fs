@@ -26,7 +26,7 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
     // reference serve is mounted here, isolated in a CSP sandbox by the blog module over its
     // Services. (Justat mounts no /archive route — capture disabled there.)
     | GET path when path.StartsWith("/archive/") ->
-        Some (Blog.Snapshots.serveArchive (path.Substring(9)) (Server.ModuleServices.blog env))
+        Some (Blog.Snapshots.serveArchive (path.Substring(9)) (Server.ModuleServices.blog env request))
     // NB: blocking raw /blobs/archive/* is NOT done here — authRoutes runs inside
     // config.Routes, which the framework reaches AFTER its own /blobs/ handler, so a guard
     // here is unreachable. The block lives in the framework blob route (Router.fs), before
@@ -44,7 +44,7 @@ let exports = createWorker {
         // get the shell with Open Graph tags, everything else falls through.
         // C3: the site dispatch takes the blog module's handler record (bound over a Services
         // built from this env), not env — the module no longer sees Server.Env.
-        match Server.Routes.dispatch (Blog.Composition.bind (Server.ModuleServices.blog e)) request ctx with
+        match Server.Routes.dispatch (Blog.Composition.bind (Server.ModuleServices.blog e request)) request ctx with
         | Some p -> Some p
         | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->
@@ -58,6 +58,10 @@ let exports = createWorker {
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })
+    // Signed guest cookies (independent of OAuth). Bound per request so the audience is the host;
+    // the single builder Server.GuestConfig.deps is shared with the identity handlers and module
+    // comment services, so there is one policy for this app.
+    GuestSession = Some (fun env request -> Server.GuestConfig.deps (env :?> Env) request)
     // darwin.news/rhymes: a second view over the same items, paired by rhyme-* tags.
     Mounts = [ { On = OnPath "/rhymes"; Shell = "/rhyming.html"; When = fun _ -> true } ]
     // C4: blog snapshot HTML lives under the blog feature's own private prefix — never served

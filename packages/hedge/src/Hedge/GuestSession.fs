@@ -10,6 +10,7 @@ module Hedge.GuestSession
 // implementation while keeping the contract.
 
 open Fable.Core
+open Hedge.Workers
 open Hedge.GuestCookie
 
 /// Remembered-guest lifetime and renewal threshold (seconds).
@@ -52,6 +53,25 @@ type RequireResult =
 /// Outcome for a BOOTSTRAP path (/api/auth/me, OAuth start): always a subject; a fresh signed one
 /// is minted when nothing acceptable was presented.
 type BootstrapResult = { GuestId: string; IsNew: bool; Replacement: string option }
+
+/// Build a validated signing Config, failing CLOSED on weak/missing configuration (work order:
+/// "Guest-enabled deployments fail closed on missing signing configuration"; ">= 32 random bytes;
+/// no fallback to an admin key, OAuth secret, empty key, or committed development constant"). The
+/// >= 32 check is on the raw string length: a hex/base64-encoded 32-byte secret is longer still, so
+/// this is a floor, never a false pass. Apps call this from their bound deps builder; it throws when
+/// the secret is absent/short so the misconfiguration is loud rather than silently unsigned.
+let configFor (keyId: string) (secret: string) (audience: string) (previous: (SigningKey * int) list) : Config =
+    if isNull (box secret) || secret.Length < 32 then
+        failwith "guest signing: GUEST_SECRET missing or shorter than 32 bytes (fail closed)"
+    if isNull (box keyId) || keyId = "" then failwith "guest signing: key id missing"
+    if isNull (box audience) || audience = "" then failwith "guest signing: audience missing"
+    { Active = { KeyId = keyId; Secret = secret }; Audience = audience; Previous = previous }
+
+/// Read the raw `hedge_guest` cookie value from a request (transport only — interpretation is the
+/// policy's job, in `verify`). The single point that names the cookie for reading; issuing names it
+/// in `cookieHeader`. Consumers never touch the cookie themselves.
+let readCookie (request: WorkerRequest) : string option =
+    parseCookie CookieName (getCookieHeader request)
 
 /// The one place cookie attributes are formatted. Secure is set in production.
 let cookieHeader (secure: bool) (token: string) : string =
@@ -113,9 +133,14 @@ let resolveOrBootstrap (deps: Deps) (cookieValue: string option) : JS.Promise<Bo
 let adopt (deps: Deps) (guestId: string) : JS.Promise<string> =
     issueHeader deps (deps.Now()) guestId
 
-/// The minimal, module-facing capability: resolve a write's guest. A content module holds this in
-/// its Services and calls it; it exposes no signing key and no arbitrary Sign(guestId).
-type Service = { Require: string option -> JS.Promise<RequireResult> }
+/// The minimal, module-facing capability: resolve a write's guest straight from the request. A
+/// content module holds this in its Services and calls it with the request; it never reads the
+/// cookie, a secret, or the signing key, and there is no arbitrary Sign(guestId) here.
+type Service = { Require: WorkerRequest -> JS.Promise<RequireResult> }
 
-/// Build the module-facing service from bound deps.
-let service (deps: Deps) : Service = { Require = requireGuest deps }
+/// Build the module-facing service from a DEFERRED deps builder. The thunk runs (and its
+/// fail-closed `configFor` validation fires) only when `Require` is actually called on a write —
+/// never at service construction — so a feed read that builds Services but never comments does not
+/// trip on a missing secret. Bind audience/DB adapters per request inside the thunk.
+let service (getDeps: unit -> Deps) : Service =
+    { Require = fun request -> requireGuest (getDeps ()) (readCookie request) }

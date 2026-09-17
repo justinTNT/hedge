@@ -20,6 +20,7 @@ open Articles.Db
 // app's Server.Env / Server.Identity. Author resolution comes via the content-server contract.
 open Articles.Services
 open Content.Server.Author
+open Hedge.GuestSession
 
 // The feed SELECT is a lean column subset (no body), so read the row directly
 // rather than through the full parsePostRow.
@@ -123,7 +124,12 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         | Error errors ->
             return validationErrorResponse errors
         | Ok req ->
-        let guest = resolveGuest request
+        // Comment is a WRITE: require an accepted (signed / bridge-upgraded) guest — never create one
+        // on this path. A rejected credential is refused before any side effect.
+        let! authz = services.Guest.Require request
+        match authz with
+        | Rejected -> return unauthorized ()
+        | Accepted guest ->
         let guestId = guest.GuestId
         let commentId = services.NewId ()
         let identityId = services.NewId ()
@@ -168,5 +174,9 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let body =
             Encode.object [ "comment", Encode.articlesCommentItem newComment ] |> Encode.toString 0
 
-        return okJsonWithCookie body (guestCookieValue guest)
+        // Attach the signed replacement cookie only when the policy issued one (fresh renewal or a
+        // bridge upgrade); a still-valid credential needs no re-set.
+        match guest.Replacement with
+        | Some c -> return okJsonWithCookie body c
+        | None -> return okJson body
     }

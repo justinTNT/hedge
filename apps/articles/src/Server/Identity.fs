@@ -42,3 +42,20 @@ let ensureGuestStmt (db: D1Database) (guestId: string) (now: int) : D1PreparedSt
 /// guest already has an active one.
 let ensureAnonymousStmt (db: D1Database) (identityId: string) (guestId: string) (name: string) (now: int) : D1PreparedStatement =
     bind (db.prepare Sql.ensureAnonymousIdentity) [| box identityId; box guestId; box name; box now; box now; box guestId |]
+
+/// Signed-cookie migration: is this presented legacy cookie value an eligible existing guest — a
+/// non-deleted row created before `migrationStartEpoch` whose stored session value matches? Injected
+/// into Hedge.GuestSession.Deps.LegacyEligible; only ever consulted under an active Bridge.
+let legacyEligible (db: D1Database) (value: string) (migrationStartEpoch: int) : JS.Promise<bool> =
+    promise {
+        let! row = (bind (db.prepare Sql.legacyGuestEligible) [| box value; box value; box migrationStartEpoch |]).first()
+        return not (isNull (box row))
+    }
+
+/// Signed-cookie migration: does this guest have a linked (non-anonymous) identity? Injected into
+/// Hedge.GuestSession.Deps.LegacyHasLinkedIdentity — linked guests re-login instead of auto-upgrading.
+let hasLinkedIdentity (db: D1Database) (guestId: string) : JS.Promise<bool> =
+    promise {
+        let! row = (bind (db.prepare Sql.guestHasLinkedIdentity) [| box guestId |]).first()
+        return not (isNull (box row))
+    }

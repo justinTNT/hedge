@@ -102,6 +102,21 @@ let identityBelongsToGuest =
 let setIdentityActive =
     "UPDATE identities SET activated_at = ? WHERE id = ?"
 
+// ---- Signed-guest-cookie migration (legacy upgrade eligibility) ----
+
+/// Legacy-cookie migration eligibility: a non-deleted guest created BEFORE migration start whose
+/// stored session value exactly matches the presented legacy cookie. Identity creation stores the
+/// same value in guests.id and guests.session_id (see ensureGuest), so both must match. An unknown
+/// value never matches a row — row existence is required, never fabricated (work-order rule 2/6).
+let legacyGuestEligible =
+    "SELECT 1 FROM guests WHERE id = ? AND session_id = ? AND created_at < ? AND deleted_at IS NULL LIMIT 1"
+
+/// Whether a guest has any linked (claimed, non-anonymous) identity. Such guests do NOT auto-upgrade
+/// an unsigned legacy cookie — they recover a linked provider identity through verified OAuth
+/// adoption; only anonymous ownership bridges (work-order rule 5).
+let guestHasLinkedIdentity =
+    "SELECT 1 FROM identities WHERE guest_id = ? AND provider <> 'anonymous' LIMIT 1"
+
 // ---- Attribution (see Server.Attribution) ----
 
 let reassignComments = """

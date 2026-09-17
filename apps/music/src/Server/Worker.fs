@@ -12,6 +12,8 @@ let exports = createWorker {
     Admin = Some (fun request env route ->
         Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request (env :?> Env) route)
     OAuth = None
+    // No guest identity/comments on this deployment (acquires no GUEST_SECRET requirement).
+    GuestSession = None
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
 }

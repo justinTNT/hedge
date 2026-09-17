@@ -27,16 +27,24 @@ let private authorResolver (db: D1Database) : AuthorResolver =
                   Picture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue "" }
         } }
 
-let private articles (env: Env) : Articles.Services.Services =
-    { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB; NewId = newId; Now = epochNow }
+// The guest-session service each module gets — the shared signed-cookie policy bound from this
+// app's Env + Server.Identity (Server.GuestConfig), deferred so a missing GUEST_SECRET fails only
+// a comment write, not a feed read. `request` supplies the audience (host).
+let private guestService (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Service =
+    Hedge.GuestSession.service (fun () -> Server.GuestConfig.deps env request)
 
-let private blog (env: Env) : Blog.Services.Services =
+let private articles (env: Env) (request: WorkerRequest) : Articles.Services.Services =
+    { DB = env.DB; Events = env.EVENTS; Author = authorResolver env.DB
+      Guest = guestService env request; NewId = newId; Now = epochNow }
+
+let private blog (env: Env) (request: WorkerRequest) : Blog.Services.Services =
     // Justat keeps snapshot capture DISABLED (CaptureEnabled = false → POST /api/blog/snapshot
     // returns 404, no write; the /archive route is not mounted below).
     { DB = env.DB; Blobs = env.BLOBS; Events = env.EVENTS; AdminKey = env.ADMIN_KEY
-      Author = authorResolver env.DB; NewId = newId; Now = epochNow; CaptureEnabled = false }
+      Author = authorResolver env.DB; Guest = guestService env request
+      NewId = newId; Now = epochNow; CaptureEnabled = false }
 
 /// Compose every composed content module's dispatch (articles + blog) over records bound from
-/// `env`, in the order the generated site Routes expects (articles then blog).
+/// `env` + `request`, in the order the generated site Routes expects (articles then blog).
 let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
-    Server.Routes.dispatch (Articles.Composition.bind (articles env)) (Blog.Composition.bind (blog env)) request ctx
+    Server.Routes.dispatch (Articles.Composition.bind (articles env request)) (Blog.Composition.bind (blog env request)) request ctx

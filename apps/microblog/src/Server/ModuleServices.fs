@@ -25,13 +25,15 @@ let private authorResolver (db: D1Database) : AuthorResolver =
                   Picture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue "" }
         } }
 
-/// The blog module's Services, adapted from this app's Env.
-let blog (env: Env) : Blog.Services.Services =
+/// The blog module's Services, adapted from this app's Env + request (the request supplies the
+/// guest-session audience; the guest service is deferred so it costs nothing on a read).
+let blog (env: Env) (request: WorkerRequest) : Blog.Services.Services =
     { DB = env.DB
       Blobs = env.BLOBS
       Events = env.EVENTS
       AdminKey = env.ADMIN_KEY
       Author = authorResolver env.DB
+      Guest = Hedge.GuestSession.service (fun () -> Server.GuestConfig.deps env request)
       NewId = newId
       Now = epochNow
       CaptureEnabled = true }
