@@ -1,0 +1,10 @@
+/* ============================================================
+   Articles — admin styles (admin.html only).
+
+   Articles has no admin-specific presentation of its own, so this is just
+   the framework admin stylesheet, bundled from the library source (no copy,
+   no separate runtime <link>). It is self-contained: .admin-* plus .app /
+   .error / .loading all live in the framework sheet. NO tenant stylesheet
+   or tenant font ever enters this graph.
+   ============================================================ */
+@import "../../../packages/hedge/src/Admin/admin.css";

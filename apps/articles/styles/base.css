@@ -1,0 +1,52 @@
+/* ============================================================
+   Articles — shared base styles.
+
+   Loaded on the PUBLIC site (index.html) for every deployment, with or
+   without a selected tenant. A deployment with no tenant remains usable on
+   these styles alone. Tenant files in tenants/ load AFTER this and override
+   through higher specificity (body.tenant-*). Admin has its own set
+   (admin.css). See README.md.
+
+   Two independent axes: HEDGE_SITE selects composition + client entry
+   (shell vs ndct standalone); SITE_SLUG selects presentation (this + a
+   tenant file). They never affect each other.
+   ============================================================ */
+
+/* Shared component CSS from the library (single source; vite inlines the
+   @import at build, so there's no runtime fetch and no editable copy). */
+@import "../../../packages/content-client/identity.css";
+@import "../../../packages/content-client/comments.css";
+
+/* Base styles — shared by every articles tenant (kept plain/neutral). */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; color: #222; background: #fff; }
+.app { max-width: 820px; margin: 0 auto; padding: 1rem; }
+a { color: #33608a; }
+img { max-width: 100%; }
+.loading { color: #666; padding: 2rem 0; }
+.error { background: #fee; border: 1px solid #fcc; padding: .5rem; border-radius: 4px; margin-bottom: 1rem; }
+
+nav { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+nav img { max-height: 60px; width: auto; }
+
+.feed-day { margin: 1.6rem 0 .4rem; }
+.feed-day-label { font-weight: 700; color: #888; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.feed-item { display: block; padding: 1rem 0; border-bottom: 1px solid #eee; text-decoration: none; color: inherit; }
+.feed-item h2 { font-size: 1.4rem; margin-bottom: .4rem; }
+.extract { display: flex; gap: 1rem; align-items: flex-start; color: #444; }
+.extract span { flex: 1; min-width: 0; }
+.extract img { width: 150px; height: auto; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+
+.article-detail { max-width: 100%; }
+.article-title { font-size: 2rem; margin-bottom: 1rem; }
+.item-image { max-width: 100%; margin-bottom: 1rem; }
+.body { line-height: 1.7; }
+.body p { margin: 0 0 1rem; }
+.body img { margin: 1rem 0; }
+
+/* Articles' comment presentation, on top of the shared comments.css defaults.
+   (Tenant colour tweaks for comments live in the tenant files.) */
+.comments { margin-top: 2.5rem; border-top: 1px solid #ddd; padding-top: 1rem; }
+.comment-author { font-weight: 700; }
+.comment-meta { color: #999; font-size: .8rem; }
+.comment-children { margin-left: 1.5rem; }

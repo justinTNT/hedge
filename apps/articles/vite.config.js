@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { existsSync, readdirSync } from 'node:fs';
 
 // -- Per-deployment configuration --
 // Set at build time so one branch can produce every tenant's site:
@@ -12,9 +13,23 @@ const siteLogo = process.env.SITE_LOGO || '/public/logo.png';
 const siteLocale = process.env.SITE_LOCALE || 'en-AU';
 // Per-tenant feature flags (comma list, e.g. "blog") — read via Hedge.Tenant.hasFeature.
 const siteFeatures = process.env.SITE_FEATURES || '';
-// Per-tenant CSS hook: adds `tenant-<slug>` to <body> so styles.css can scope
-// deploy-specific rules.
+// Tenant selection (presentation). Selects the tenant stylesheet
+// (styles/tenants/<slug>.css) and stamps `tenant-<slug>` on the public <body>.
+// Independent of HEDGE_SITE (composition) below.
 const siteSlug = process.env.SITE_SLUG || '';
+// A set SITE_SLUG must name an existing tenant stylesheet; unset/empty means
+// shared styles only (no tenant, no body class). Fail fast on anything else —
+// never silently borrow a theme.
+const tenantsDir = resolve(__dirname, 'styles/tenants');
+if (siteSlug) {
+  if (!/^[a-z0-9-]+$/.test(siteSlug)) {
+    throw new Error(`[hedge] SITE_SLUG "${siteSlug}" is malformed — expected lowercase letters, digits, and hyphens.`);
+  }
+  if (!existsSync(resolve(tenantsDir, `${siteSlug}.css`))) {
+    const known = readdirSync(tenantsDir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4)).sort();
+    throw new Error(`[hedge] SITE_SLUG "${siteSlug}" has no stylesheet styles/tenants/${siteSlug}.css. Known tenants: ${known.join(', ')}.`);
+  }
+}
 // Which modules this site composes (see Server/Client fsproj + gen-modules.<site>.json).
 // ndct is articles-only, so it doesn't bundle the blog shell.
 const hedgeSite = process.env.HEDGE_SITE || '';
@@ -58,8 +73,11 @@ function ogMeta(title) {
 function siteConfig() {
   return {
     name: 'hedge-site-config',
-    // 'pre' so the __CLIENT_MAIN__ entry placeholder is resolved to a real path BEFORE
-    // vite scans <script src> for rollup inputs (otherwise the build can't resolve it).
+    // 'pre' so this runs BEFORE vite scans the HTML: the __CLIENT_MAIN__ entry
+    // placeholder resolves to a real path (so rollup can find the client bundle), and
+    // the injected <link>s (below) get bundled into hashed, cache-busted assets. CSS is
+    // assembled per entry from styles/ (outside public/): index = base + selected tenant;
+    // admin = its own set; other entries get none. Relative hrefs resolve at any BASE_PATH.
     transformIndexHtml: {
     order: 'pre',
     handler(html, ctx) {
@@ -77,15 +95,22 @@ function siteConfig() {
       // site (Justat/default) boots the unified shell. Only index.html carries the
       // placeholder, so this is a no-op for admin.html / blog.html.
       const clientMain = hedgeSite === 'ndct' ? 'Articles/Main.js' : 'Shell/Main.js';
-      const headInject = isIndex ? `${injected}\n    ${ogMeta(siteTitle)}` : injected;
+      // Deterministic order: shared base first, then the deployment override.
+      const cssLinks =
+        isAdmin ? '<link rel="stylesheet" href="./styles/admin.css">'
+        : isIndex ? ('<link rel="stylesheet" href="./styles/base.css">'
+            + (siteSlug ? `\n    <link rel="stylesheet" href="./styles/tenants/${siteSlug}.css">` : ''))
+        : '';
+      const headInject = [cssLinks, injected, isIndex ? ogMeta(siteTitle) : '']
+        .filter(Boolean).join('\n    ');
       return html
         .replace(/__SITE_TITLE__/g, isAdmin ? adminTitle : siteTitle)
         .replace(/__CLIENT_MAIN__/g, clientMain)
         .replace(/__BASE__/g, basePath)
         .replace('<head>', `<head>\n    ${headInject}`)
-        // Tenant theme is for the public site only — never the shared admin tool,
-        // or the tenant's marketing CSS leaks onto every admin control.
-        .replace('<body>', (siteSlug && !isAdmin) ? `<body class="tenant-${siteSlug}">` : '<body>');
+        // Tenant class + theme are for the public site only — never the admin tool
+        // (its marketing CSS would leak onto every control).
+        .replace('<body>', (siteSlug && isIndex) ? `<body class="tenant-${siteSlug}">` : '<body>');
     }
     }
   };

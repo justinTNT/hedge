@@ -1,0 +1,145 @@
+/* ============================================================
+   Tenant theme: justat.at — SITE_SLUG=justat.
+   Faithful port of the old apps/justat/browser/justat.css: dark-brown
+   wood-plank frame, centred aged-paper two-column, lime email masthead,
+   Georgia serif, warm palette, date badges. Textures live in /public/justat/.
+   Uses only system fonts (Georgia/Arial) — no web-font import.
+   ============================================================ */
+body.tenant-justat {
+  margin: 0;
+  background:
+    url(/public/justat/main-top.gif) no-repeat top center,
+    url(/public/justat/main-back.gif) no-repeat top center,
+    #29231d url(/public/justat/background.gif) repeat-x top center;
+  background-attachment: fixed;
+  font: normal 100%/1.6 Georgia, "Times New Roman", Times, serif;
+  color: #6c6159;
+}
+body.tenant-justat a { color: #4a413a; font-weight: 700; text-decoration: none; }
+body.tenant-justat a:hover { text-decoration: underline; }
+
+/* two-column frame: nav spans the top, then main + sidebar */
+body.tenant-justat .app {
+  max-width: 955px;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 632px 315px;
+  grid-template-areas: "nav nav" "main side";
+  align-items: start;
+}
+
+/* The blog mount (/blog on justat) renders no sidebar, so the two-column grid
+   leaves a dead 315px column — fall back to a single block flow there. */
+body.tenant-justat .app:not(:has(.js-sidebar)) {
+  display: block;
+}
+
+/* top nav sits over the decorative header art (dark) */
+body.tenant-justat header { grid-area: nav; padding: 46px 8px 0; }
+body.tenant-justat nav { min-height: 60px; }
+body.tenant-justat nav > a:first-child img { display: none; }   /* no logo image — masthead is in the sidebar */
+/* Only the first nav link is the "Home" label; other links (Web Log, Info) keep their own text. */
+body.tenant-justat nav > a:first-child::before {
+  content: "Home";
+  font: normal 1.1rem Georgia, serif; color: #c4c4c3;
+}
+/* "Web Log" sits on the dark header too — the default link colour (#4a413a) is
+   camouflaged against the dark art, so give it a light, visible colour. */
+body.tenant-justat .nav-blog {
+  color: #c4c4c3;
+  font: normal 1.1rem Georgia, serif;
+  margin-left: 1rem;
+}
+body.tenant-justat .identity-area { color: #cfcabf; }
+
+/* left column: aged-paper content */
+body.tenant-justat main {
+  grid-area: main;
+  margin-top: 0;
+  padding: 4px 30px 40px 38px;
+  background: #efe9d3 url(/public/justat/content-back.gif) repeat-y top center;
+  min-height: 240px;
+}
+
+/* the single-article page uses the cleaner post.gif paper instead of content-back */
+body.tenant-justat main:has(.article-detail) {
+  background: #f3efe0 url(/public/justat/post.gif) no-repeat bottom center;
+  background-size: 100% 100%;
+}
+
+/* day divider styled as the old month/day date badge (two rows, on the date tab) */
+body.tenant-justat .feed-day { margin: 0 0 0 -5.5em; }
+body.tenant-justat .feed-day-label {
+  display: inline-block;
+  width: 53px; min-height: 45px; padding: 4px 0 0;
+  background: url(/public/justat/date.gif) no-repeat top center;
+  color: #737852; text-align: center;
+}
+body.tenant-justat .fd-month { display: block; font: normal .7rem Georgia, serif; text-transform: uppercase; line-height: 1; margin-top: -0.4em; }
+body.tenant-justat .fd-day { display: block; font: italic 1.15rem Georgia, serif; line-height: 1.05; }
+body.tenant-justat .fd-year { display: block; font: normal .68rem Georgia, serif; line-height: 1; }
+
+/* posts on the real crumpled-paper card (featured.png) — its curled top-right
+   corner + drop shadow are baked in; stretched to each card's height. */
+body.tenant-justat .feed-item {
+  position: relative;
+  margin: -3em -1em 0em -2.4em;
+  padding: 3px 46px 46px 34px;                             /* keep text off the baked-in curl + bottom shadow */
+  border: none;
+  background: #e9e7cf url(/public/justat/featured.png) no-repeat top center;
+  background-size: 100% 100%;
+}
+body.tenant-justat .feed-item h2 {
+  font: bold 1.9rem/1.15 Georgia, "Times New Roman", Times, serif;
+  color: #3b3632; margin-bottom: .55rem;
+}
+body.tenant-justat .feed-item .extract { color: #6c6159; font-size: 1.05rem; }
+body.tenant-justat .feed-item .extract img { border-radius: 2px; }
+
+/* single article */
+body.tenant-justat .article-title { font: bold 2.5rem/1.1 Arial, Helvetica, sans-serif; color: #3b3632; margin-bottom: 1rem; }
+body.tenant-justat .body { font-size: 1.12rem; line-height: 1.85; color: #4a423a; }
+body.tenant-justat .article-body p { padding-top: 0.5em; }
+body.tenant-justat blockquote, body.tenant-justat .box {
+  padding: 10px 20px; background: #f1eddb; border: 1px solid #e0d9b9; color: #928071;
+}
+
+/* right column: lime masthead + cream sidebar */
+body.tenant-justat .js-sidebar {
+  grid-area: side;
+  margin-top: 0;
+  font: 1rem/1.35 Arial, Helvetica, sans-serif; color: #797a67;
+  /* lime masthead + floral (logo-back, 323px) layered over a cream fill so the
+     lower sections stay on paper rather than the dark frame */
+  background: url(/public/justat/logo-back.png) no-repeat top center, #e7e4cc;
+  min-height: 100%;
+}
+body.tenant-justat .js-masthead { padding: 52px 0 0; height: 100px; }
+body.tenant-justat .js-masthead a {
+  display: block; margin-left: 21px;
+  font: bolder 24pt Arial, Helvetica, sans-serif; color: #edeabc;
+}
+body.tenant-justat .js-sections { padding: 40px 22px 22px 24px; }
+body.tenant-justat .js-sections section {
+  padding: 6px 8px 18px 0;
+  background: url(/public/justat/sidebar-divider.gif) no-repeat bottom right;
+  margin-bottom: 10px;
+}
+body.tenant-justat .js-sections h5 {
+  margin: 0 0 8px; font: 1.7rem Georgia, "Times New Roman", Times, serif; color: #453c2f; font-weight: normal;
+}
+body.tenant-justat .js-sections p { margin: 0; }
+body.tenant-justat .js-sections a { color: #706cf5; font-weight: normal; }
+
+/* comments on the paper */
+body.tenant-justat .comments { border-top: 1px solid #d8d2b6; margin-top: 2rem; }
+body.tenant-justat .comment-author { color: #002; font-style: italic; }
+
+/* fold to a single column on narrow screens (the fixed frame can't follow) */
+@media (max-width: 900px) {
+  body.tenant-justat .app { grid-template-columns: 1fr; grid-template-areas: "nav" "main" "side"; max-width: 640px; }
+  body.tenant-justat main { margin-top: 90px; }
+  body.tenant-justat .feed-day { margin-left: 0; }
+  body.tenant-justat .js-sidebar { margin-top: 1rem; }
+}
