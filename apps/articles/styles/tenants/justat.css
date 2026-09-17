@@ -160,7 +160,7 @@ body.tenant-justat .article-content blockquote, body.tenant-justat .article-cont
 }
 
 /* comments on the paper */
-body.tenant-justat .article-content .comments { border-top: 1px solid #d8d2b6; margin-top: 2rem; }
+body.tenant-justat .article-content .comments { border-top: 1px solid #d8d2b6; }
 body.tenant-justat .article-content .comment-author { color: #002; font-style: italic; }
 
 /* fold to a single column on narrow screens (the fixed frame can't follow) */
