@@ -88,6 +88,9 @@ let placeholderId = 0
  */
 function uploadAndInsertImage(editor, file, container, insertPos) {
     const endpoint = container._hamletUploadEndpoint || '/api/blobs'
+    // Guest comment path authorizes with the httpOnly signed hedge_guest cookie (sent automatically
+    // same-origin), not an admin key. Computed up here so both the load handler and the send gate use it.
+    const isGuestUpload = /\/api\/blobs\/guest$/.test(endpoint)
     const id = `upload-${++placeholderId}`
 
     // Determine insert position
@@ -133,6 +136,12 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
                 removePlaceholder(editor, id)
             }
         } else {
+            // 401 on the guest path = the signed cookie was rejected (expired/cleared/key changed).
+            // Drop the cached bootstrap so the next upload re-establishes a session instead of
+            // resending the same rejected credential.
+            if (xhr.status === 401 && isGuestUpload && window.HedgeGuest && window.HedgeGuest.invalidateSession) {
+                window.HedgeGuest.invalidateSession()
+            }
             console.error(`[hamlet-rt] Upload failed: ${xhr.status}`)
             removePlaceholder(editor, id)
         }
@@ -145,18 +154,31 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
 
     xhr.open('POST', endpoint)
     // Admin uploads authorize with the admin key from localStorage (present only in the owner's
-    // browser after signing into /admin). The guest comment path (/api/blobs/guest) authorizes with
-    // the httpOnly signed hedge_guest cookie instead — sent automatically for this same-origin
-    // request — so never attach an admin key there.
-    const isGuestUpload = /\/api\/blobs\/guest$/.test(endpoint)
+    // browser after signing into /admin). The guest comment path authorizes with the httpOnly signed
+    // hedge_guest cookie instead — sent automatically for this same-origin request — so never attach
+    // an admin key there.
     if (!isGuestUpload) {
         try { xhr.setRequestHeader('X-Admin-Key', (window.localStorage && localStorage.getItem('adminKey')) || '') } catch (e) {}
     }
-    // A guest upload authorizes with the signed hedge_guest cookie, so make sure session bootstrap
-    // has completed (single-flight) before sending — otherwise a first upload on a fresh page/deep
-    // link races /api/auth/me and 401s. Admin uploads don't need it.
-    if (isGuestUpload && window.HedgeGuest && window.HedgeGuest.ensureSession) {
-        window.HedgeGuest.ensureSession().then(function () { xhr.send(formData) }, function () { xhr.send(formData) })
+    // A guest upload authorizes with the signed cookie, so bootstrap the session first (single-flight)
+    // and only send when it is READY — otherwise a first upload on a fresh page/deep link races
+    // /api/auth/me, and a failed bootstrap would upload with no credential. On not-ready, drop the
+    // placeholder rather than fire a doomed request; the user can retry once connectivity returns.
+    if (isGuestUpload) {
+        const gate = (window.HedgeGuest && window.HedgeGuest.ensureSession)
+            ? window.HedgeGuest.ensureSession()
+            : Promise.resolve({ ready: true })
+        gate.then(function (res) {
+            if (res && res.ready) {
+                xhr.send(formData)
+            } else {
+                console.error('[hamlet-rt] Upload skipped: guest session not ready')
+                removePlaceholder(editor, id)
+            }
+        }, function () {
+            console.error('[hamlet-rt] Upload skipped: guest session bootstrap failed')
+            removePlaceholder(editor, id)
+        })
     } else {
         xhr.send(formData)
     }

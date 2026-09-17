@@ -138,13 +138,17 @@ let update (deps: Deps) msg model =
                   Author = Some model.GuestSession.DisplayName }
             // CP-A finding 2: capture the draft revision this submit belongs to.
             let rev = model.DraftRev
-            // Ensure the signed guest session is bootstrapped (single-flight) before the write, so a
-            // first comment on a deep-linked page doesn't race /api/auth/me and get rejected. The
-            // draft is preserved on any error (GotSubmitComment Error), so the user can resubmit.
+            // Gate the write on session readiness (single-flight bootstrap, so a first comment on a
+            // deep-linked page doesn't race /api/auth/me). If bootstrap failed, DON'T post a doomed
+            // request — surface a retryable failure; the draft is kept (GotSubmitComment Error), so
+            // the user can retry once a session is established.
             let submit () =
                 promise {
-                    let! _ = GuestSession.ensureSession ()
-                    return! deps.Api.articlesSubmitComment req
+                    let! ready = GuestSession.ensureSession ()
+                    if not ready.Ready then
+                        return Error (Hedge.Http.TransportFailure "Couldn't start a session — check your connection and try again.")
+                    else
+                        return! deps.Api.articlesSubmitComment req
                 }
             model,
             Cmd.OfPromise.either submit ()
@@ -170,7 +174,15 @@ let update (deps: Deps) msg model =
         | _ -> model, Cmd.none
 
     | GotSubmitComment (_, Error err) ->
-        { model with Error = Some err }, Cmd.none
+        // A 401 means the signed cookie was rejected (expired/cleared/key changed since bootstrap) —
+        // invalidate the cached session and re-bootstrap, so the next submit uses a fresh credential
+        // instead of resending the rejected one. The draft is kept; we don't auto-replay the write.
+        let recoverCmd =
+            match err with
+            | Hedge.Http.HttpFailure (401, _) ->
+                Cmd.ofEffect (fun _ -> GuestSession.invalidateSession (); GuestSession.ensureSession () |> ignore)
+            | _ -> Cmd.none
+        { model with Error = Some err }, recoverCmd
 
     | ToggleCollapse commentId ->
         let collapsed =

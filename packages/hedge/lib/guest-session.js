@@ -232,6 +232,13 @@
   // before the write. Resolves { ready, session }; ready:false means the write should not proceed.
   function ensureSession() { return readyPromise || refresh(); }
 
+  // Drop the cached bootstrap so the next ensureSession re-fetches /api/auth/me. Call this when a
+  // write is rejected with 401 (the cookie expired, was cleared, or the signing key changed since
+  // bootstrap): the cached readyPromise would otherwise keep resending the same rejected credential
+  // until a full page reload. After invalidation the next attempt re-bootstraps (a fresh signed
+  // guest if the old cookie is gone) and can succeed.
+  function invalidateSession() { readyPromise = null; }
+
   // Display sync (identity component boot + post-merge/disconnect re-sync): always fresh, returns
   // the session object, and (re)establishes readiness for write gating.
   function syncSession() { return refresh().then(function(res) { return res.session; }); }
@@ -240,6 +247,7 @@
     getSession: getSession,
     avatarForAuthor: avatarForAuthor,
     syncSession: syncSession,
-    ensureSession: ensureSession
+    ensureSession: ensureSession,
+    invalidateSession: invalidateSession
   };
 })();

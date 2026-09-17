@@ -83,3 +83,9 @@ let ensureSession () : JS.Promise<SessionReadiness> =
         let! raw = rawEnsureSession ()
         return { Ready = raw?ready; Session = parseSession raw?session }
     }
+
+/// Drop the cached bootstrap so the next `ensureSession` re-fetches. Call on a write's 401 (the
+/// cookie expired/was cleared/the key changed since bootstrap) so the client re-establishes a
+/// session instead of resending the rejected credential until reload.
+[<Emit("window.HedgeGuest.invalidateSession()")>]
+let invalidateSession () : unit = jsNative
