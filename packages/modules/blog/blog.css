@@ -52,7 +52,11 @@
   border-radius: 6px;
 }
 
-/* Date-grouped feed: one sticky divider per day, articles beneath it. */
+/* Date-grouped feed: one sticky divider per day, articles beneath it.
+   The background is REQUIRED — the divider is sticky, so it must be opaque to
+   hide items scrolling underneath the pinned header. It defaults to white; a
+   deployment on a non-white ground overrides it to MATCH that ground (see the
+   tenant files, e.g. usba.se cream, and justat's blog mount #e9e9cf). */
 .blog-content .feed-day {
   display: flex;
   align-items: center;

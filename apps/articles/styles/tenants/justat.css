@@ -79,6 +79,12 @@ body.tenant-justat main:has(.article-content) {
 body.tenant-justat main:has(.blog-content) {
   background: #e9e9cf;
 }
+/* the blog mount's sticky day divider must MATCH that cream ground — it stays
+   opaque (to hide items scrolling under the pinned header), just recoloured
+   from the blog default #fff to the same #e9e9cf as the ground above. */
+body.tenant-justat .blog-content .feed-day {
+  background: #e9e9cf;
+}
 
 /* the single-article page uses the cleaner post.gif paper instead of content-back
    (sits after the article-content rule so an open article overrides it) */
