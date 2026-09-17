@@ -6,6 +6,16 @@ matrix (all 7 tenants + absent/empty + invalid/malformed-fail + idealist
 other tenants byte-identical), and a browser render of usbase. Not deployed
 (none required); code-only, no DB migration.
 
+Follow-up (post-review): an independent CSS review (`agent-b-css-review.md`)
+found that the initial 66-assertion matrix cleaned `_site` between builds, so it
+missed a whole-output isolation gap — `build:site` wrote to `_site${BASE_PATH}`
+but never cleaned `_site`, so a root build then a `/st` build left BOTH tenants'
+CSS in the deployable tree Wrangler uploads. Fixed by cleaning `_site` at the
+start of `build:site` (root redirect preserved), verified with a both-directions
+cross-prefix regression check. That whole-output isolation acceptance item is
+now genuinely satisfied. (The same review also fixed a shared identity-badge
+hover-contrast regression — see `agent-b-css-review.md`.)
+
 Recorded: 17 September 2026.
 
 ## Outcome

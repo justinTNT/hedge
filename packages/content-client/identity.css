@@ -12,8 +12,13 @@
   display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
   padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem;
 }
-.identity-badge:hover { background: #f0f0f0; }
-html.dark .identity-badge:hover { background: #333; }
+/* Host-neutral hover surface: a translucent tint, not an opaque colour, so it
+   works over any tenant header. On a white header it composites to #f0f0f0 (the
+   original light-header look); on a dark header (e.g. Justat's) the backdrop
+   shows through darkened, so light identity text stays readable instead of being
+   washed out on near-white. */
+.identity-badge:hover { background: rgba(0, 0, 0, 0.06); }
+html.dark .identity-badge:hover { background: rgba(255, 255, 255, 0.10); }
 .identity-badge .avatar { width: 2em; height: 2em; }
 
 .identity-switcher {
