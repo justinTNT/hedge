@@ -206,6 +206,12 @@ let guestImageTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp"
 [<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
 let private r2PutTyped (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) : JS.Promise<obj> = jsNative
 
+/// Same as r2PutTyped but also records the owning guest in PRIVATE R2 custom metadata. customMetadata
+/// is never served through the public /blobs/ route (handleBlobServe copies only the content type),
+/// so ownership is retained for abuse cleanup without putting the guest id in the object key or URL.
+[<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 }, customMetadata: { guest: $4 } })")>]
+let private r2PutTypedOwned (blobs: R2Bucket) (key: string) (body: obj) (contentType: string) (guest: string) : JS.Promise<obj> = jsNative
+
 /// Store a string (e.g. captured/cleaned HTML) in R2 with a content type — the public
 /// counterpart to the internal typed put used by the blob-upload / rehost paths.
 [<Emit("$0.put($1, $2, { httpMetadata: { contentType: $3 } })")>]
@@ -242,10 +248,12 @@ let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<Wor
 /// comment-image path. Admin uploads are uncapped (trusted).
 let guestUploadMaxBytes = 5.0 * 1024.0 * 1024.0
 
-/// Guest image upload for comments: no admin key (the route gates on the guest session),
-/// raster-only (no SVG — see guestImageTypes) and size-capped. Keyed under
-/// comment/<guestId>/… so uploads are attributable for abuse cleanup.
-let handleGuestBlobUpload (request: WorkerRequest) (blobs: R2Bucket) (guestId: string) : JS.Promise<WorkerResponse> =
+/// Guest image upload for comments: no admin key (the route gates on the accepted signed guest),
+/// raster-only (no SVG — see guestImageTypes) and size-capped. The public object key carries NO
+/// guest id or credential — `comment/<randomObjectId>/<safeFilename>` — so the URL discloses no
+/// upgradeable identifier; the owning guest is kept in private R2 custom metadata for cleanup only.
+/// `replacement` is the policy's optional renewal/upgrade cookie, attached to the success response.
+let handleGuestBlobUpload (request: WorkerRequest) (blobs: R2Bucket) (guestId: string) (replacement: string option) : JS.Promise<WorkerResponse> =
     let errJson (msg: string) (status: int) =
         let options = createObj [ "status" ==> status; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
         WorkerResponse.create(sprintf """{"error":"%s"}""" msg, options)
@@ -262,10 +270,13 @@ let handleGuestBlobUpload (request: WorkerRequest) (blobs: R2Bucket) (guestId: s
                 return errJson "Image too large (max 5 MB)" 413
             else
                 let name = safeName (fileName file)
-                let key = sprintf "comment/%s/%s/%s" (safeName guestId) (newId ()) name
-                let! _ = r2PutTyped blobs key file mime
+                // Credential-free key: a random object id, never the guest id (work-order upload rule).
+                let key = sprintf "comment/%s/%s" (newId ()) name
+                let! _ = r2PutTypedOwned blobs key file mime guestId
                 let body = sprintf """{"url":"/blobs/%s"}""" key
-                let options = createObj [ "status" ==> 200; "headers" ==> createObj [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ] ]
+                let baseHeaders = [ "Content-Type" ==> "application/json"; "Access-Control-Allow-Origin" ==> "*" ]
+                let headers = match replacement with Some c -> baseHeaders @ [ "Set-Cookie" ==> c ] | None -> baseHeaders
+                let options = createObj [ "status" ==> 200; "headers" ==> createObj headers ]
                 return WorkerResponse.create(body, options)
     }
 

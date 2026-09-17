@@ -144,9 +144,14 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
     })
 
     xhr.open('POST', endpoint)
-    // The blob endpoint requires the admin key; send it from localStorage (present
-    // only in the owner's browser after signing into /admin).
-    try { xhr.setRequestHeader('X-Admin-Key', (window.localStorage && localStorage.getItem('adminKey')) || '') } catch (e) {}
+    // Admin uploads authorize with the admin key from localStorage (present only in the owner's
+    // browser after signing into /admin). The guest comment path (/api/blobs/guest) authorizes with
+    // the httpOnly signed hedge_guest cookie instead — sent automatically for this same-origin
+    // request — so never attach an admin key there.
+    const isGuestUpload = /\/api\/blobs\/guest$/.test(endpoint)
+    if (!isGuestUpload) {
+        try { xhr.setRequestHeader('X-Admin-Key', (window.localStorage && localStorage.getItem('adminKey')) || '') } catch (e) {}
+    }
     xhr.send(formData)
 }
 

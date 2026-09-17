@@ -19,9 +19,9 @@ type ResolvedAuthor =
       Picture: string }
 
 /// The inputs a module hands the host to resolve a comment's author. Mirrors what the module
-/// already computes inline today: the guest id (from Hedge.Router.resolveGuest), a fresh id to
-/// create the anonymous identity with if the guest has none yet, the display name for that
-/// anonymous identity, and the epoch to stamp the ensure/create with.
+/// already computes inline today: the guest id (from the accepted Hedge.GuestSession credential),
+/// a fresh id to create the anonymous identity with if the guest has none yet, the display name
+/// for that anonymous identity, and the epoch to stamp the ensure/create with.
 type AuthorRequest =
     { GuestId: string
       FallbackIdentityId: string

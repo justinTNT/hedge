@@ -57,23 +57,10 @@ let matchPath (pattern: string) (path: string) : RouteMatch option =
         Some (Exact path)
     else None
 
-/// Guest identity — resolved from httpOnly cookie, generated if absent.
-type GuestContext = {
-    GuestId: string
-    IsNew: bool
-}
-
-let private guestCookieName = "hedge_guest"
-let private guestCookieMaxAge = 31536000
-
-let resolveGuest (request: WorkerRequest) : GuestContext =
-    let cookieHeader = getCookieHeader request
-    match parseCookie guestCookieName cookieHeader with
-    | Some id -> { GuestId = id; IsNew = false }
-    | None -> { GuestId = newId (); IsNew = true }
-
-let guestCookieValue (guest: GuestContext) : string =
-    sprintf "%s=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" guestCookieName guest.GuestId guestCookieMaxAge
+// The old unsigned guest resolver (GuestContext/resolveGuest/guestCookieValue — a raw arbitrary-id
+// cookie) is gone: every reader/writer now goes through the signed policy Hedge.GuestSession, bound
+// per app via WorkerConfig.GuestSession and the modules' Services.Guest. No authenticated route
+// accepts an arbitrary client-supplied guest id any more.
 
 [<Emit("$0.ASSETS.fetch($1)")>]
 let private fetchFromAssets (env: obj) (request: WorkerRequest) : JS.Promise<WorkerResponse> = jsNative
@@ -425,17 +412,20 @@ let createWorker (config: WorkerConfig) =
                 else
                     return unauthorized ()
             | POST path when matchPath "/api/blobs/guest" path = Some (Exact "/api/blobs/guest") ->
-                // Public (guest) comment-image upload — NOT admin-gated. Tied to the guest
-                // session instead: require the hedge_guest cookie (set on page load by
-                // /api/auth/me), and handleGuestBlobUpload enforces raster-only (no SVG) +
-                // a size cap. NB: the cookie isn't signed yet, so this is an app-workflow
-                // gate, not strong auth — signing is carded (notes/guest-uploads-signed-cookie.md).
-                let guest = resolveGuest request
-                if guest.IsNew then
-                    return unauthorized ()
-                else
-                    let blobs : R2Bucket = env?BLOBS
-                    return! handleGuestBlobUpload request blobs guest.GuestId
+                // Guest comment-image upload — NOT admin-gated. A WRITE: require an ACCEPTED signed
+                // (or bridge-upgraded) guest via the shared policy, never create one on this path,
+                // and reject before touching storage otherwise. handleGuestBlobUpload enforces
+                // raster-only (no SVG) + a size cap, keys the object WITHOUT the guest id, and stores
+                // the subject only in private R2 metadata. Any renewal/upgrade cookie is attached.
+                match config.GuestSession with
+                | None -> return unauthorized ()
+                | Some guestOf ->
+                    let! required = requireGuest (guestOf env request) (readCookie request)
+                    match required with
+                    | Rejected -> return unauthorized ()
+                    | Accepted a ->
+                        let blobs : R2Bucket = env?BLOBS
+                        return! handleGuestBlobUpload request blobs a.GuestId a.Replacement
             | GET path when path.StartsWith("/blobs/") ->
                 let blobs : R2Bucket = env?BLOBS
                 let key = decodeUri (path.Substring(7))
