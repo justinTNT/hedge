@@ -86,14 +86,25 @@ dotnet build src/Server/Server.fsproj
 dotnet build src/Client/Client.fsproj
 echo "--- Microblog OK ---"
 
-# C6: the idealist variant (blog + alerts) must also compile. Clean obj/bin so the HEDGE_SITE
-# conditionals re-evaluate (the file set differs), build, then clean again so later default-variant
-# steps aren't served the idealist evaluation.
-echo "--- building microblog idealist variant (blog + alerts) ---"
-rm -rf src/Server/obj src/Server/bin src/Codecs/obj src/Codecs/bin
-HEDGE_SITE=idealist dotnet build src/Server/Server.fsproj
-rm -rf src/Server/obj src/Server/bin src/Codecs/obj src/Codecs/bin
-echo "--- Microblog idealist (blog + alerts) OK ---"
+# C6 (reviewer B P1): Fable's compile cache does NOT invalidate on a HEDGE_SITE change, so switching
+# compositions in a shared build dir without clearing it can ship the wrong module set (e.g. a tenant
+# deploy reusing idealist's cached source list — alerts admin + cron). Every microblog deploy script
+# runs clean:site; verify the whole round trip here via the REAL Fable path: build the idealist
+# composition (blog + alerts — also its compile check), then build the DEFAULT exactly as a tenant
+# deploy does (clean:site first), and assert no alerts wiring leaked into the default server.
+echo "--- C6 composition cache-safety (idealist -> clean -> default, via Fable) ---"
+HEDGE_SITE=idealist npm run build:server >/dev/null 2>&1 \
+    || { echo "!!! FAIL: idealist server (blog + alerts) did not compile"; exit 1; }
+npm run clean:site >/dev/null 2>&1
+HEDGE_SITE= npm run build:server >/dev/null 2>&1 \
+    || { echo "!!! FAIL: default microblog server did not compile"; exit 1; }
+if grep -rq "alert_sources" dist/server 2>/dev/null; then
+    echo "!!! FAIL: default microblog server carries alerts wiring after an idealist build —"
+    echo "    Fable cache leak across compositions; a deploy must run clean:site (it does)."
+    exit 1
+fi
+npm run clean:site >/dev/null 2>&1
+echo "--- Microblog idealist compiles; default composition alerts-free after switch ---"
 
 # Articles composes two modules (Articles + Blog); check its SQL too.
 cd "$ROOT/apps/articles"
