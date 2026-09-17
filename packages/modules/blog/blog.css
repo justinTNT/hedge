@@ -13,7 +13,7 @@
 
 /* --- Feed --- */
 .blog-content .feed-item { border-bottom: 1px solid #eee; padding: 1rem 0; }
-.blog-content .feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; margin-left: 0.75rem; }
+.blog-content .feed-item h2 { font-size: 1.1rem; margin-bottom: 0.25rem; margin-left: 0.75rem; font-family: var(--font-head, inherit); }
 .blog-content .feed-item a { color: #666; font-size: 0.875rem; }
 .blog-content .item-detail h2 { margin-bottom: 1rem; margin-top: 1rem; }
 .blog-content .item-image { max-width: 100%; }

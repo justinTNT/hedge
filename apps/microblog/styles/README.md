@@ -73,3 +73,10 @@ does, the tenant theme (loaded last) wins — the intended precedence.
 Do **not** move the intentionally per-deployment content look (extract cards,
 day dividers, the red default) out of base into a "shared" abstraction beyond
 what's here — tenants differ by design (darwin's red cards vs mtmuse's slate).
+
+## Customising a tenant
+
+See [notes/CSS-CUSTOMISATION.md](../../../notes/CSS-CUSTOMISATION.md) — the
+authoritative guide to the semantic tokens (`--font-body`, `--font-head`,
+`--accent`) and the stable selector hooks. Blog content lives under the
+`.blog-content` root and is owned by `packages/modules/blog/blog.css`.

@@ -19,8 +19,11 @@
 @import "../../../packages/modules/blog/blog.css";
 
 /* --- Reset + document baseline --- */
+/* Customisation tokens (see notes/CSS-CUSTOMISATION.md): a tenant sets these on
+   body.tenant-<slug> to re-theme common concerns without touching module CSS.
+   --font-body (here), --font-head (headlines, in blog.css), --accent (links). */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
+body { font-family: var(--font-body, system-ui, -apple-system, sans-serif); line-height: 1.5; }
 .app { max-width: 800px; margin: 0 auto; padding: 1rem; }
 header { border-bottom: 0.5px solid #dadada; }
 h1 { font-size: 1.5rem; }

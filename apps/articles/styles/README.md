@@ -69,3 +69,11 @@ rules (`body.tenant-<slug> …`) also out-specify the base `.class` rules, so
 appearance doesn't depend on load order. Comment presentation comes from the
 shared `comments.css` (via base) + articles' own `.comment-*` in base + tenant
 colour tweaks.
+
+## Customising a tenant
+
+See [notes/CSS-CUSTOMISATION.md](../../../notes/CSS-CUSTOMISATION.md) — the
+authoritative guide to the semantic tokens (`--font-body`, `--font-head`,
+`--accent`) and the stable selector hooks. Articles content lives under the
+`.article-content` root and is owned by `packages/modules/articles/articles.css`;
+the blog mount (justat) renders under `.blog-content` from the blog module.

@@ -13,13 +13,13 @@
 .article-content .feed-day { margin: 1.6rem 0 .4rem; }
 .article-content .feed-day-label { font-weight: 700; color: #888; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
 .article-content .feed-item { display: block; padding: 1rem 0; border-bottom: 1px solid #eee; text-decoration: none; color: inherit; }
-.article-content .feed-item h2 { font-size: 1.4rem; margin-bottom: .4rem; }
+.article-content .feed-item h2 { font-size: 1.4rem; margin-bottom: .4rem; font-family: var(--font-head, inherit); }
 .article-content .extract { display: flex; gap: 1rem; align-items: flex-start; color: #444; }
 .article-content .extract span { flex: 1; min-width: 0; }
 .article-content .extract img { width: 150px; height: auto; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
 
 .article-content .article-detail { max-width: 100%; }
-.article-content .article-title { font-size: 2rem; margin-bottom: 1rem; }
+.article-content .article-title { font-size: 2rem; margin-bottom: 1rem; font-family: var(--font-head, inherit); }
 .article-content .item-image { max-width: 100%; margin-bottom: 1rem; }
 .article-content .body { line-height: 1.7; }
 .article-content .body p { margin: 0 0 1rem; }

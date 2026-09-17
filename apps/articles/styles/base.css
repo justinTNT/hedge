@@ -20,10 +20,13 @@
 @import "../../../packages/modules/articles/articles.css";
 
 /* --- Reset + document baseline --- */
+/* Customisation tokens (see notes/CSS-CUSTOMISATION.md): a tenant sets these on
+   body.tenant-<slug> to re-theme common concerns without touching module CSS.
+   --font-body (here), --accent (links, here), --font-head (headlines, in articles.css). */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; color: #222; background: #fff; }
+body { font-family: var(--font-body, system-ui, -apple-system, sans-serif); line-height: 1.5; color: #222; background: #fff; }
 .app { max-width: 820px; margin: 0 auto; padding: 1rem; }
-a { color: #33608a; }
+a { color: var(--accent, #33608a); }
 img { max-width: 100%; }
 .loading { color: #666; padding: 2rem 0; }
 .error { background: #fee; border: 1px solid #fcc; padding: .5rem; border-radius: 4px; margin-bottom: 1rem; }
