@@ -68,7 +68,9 @@
   z-index: 2;
   background: #fff;
 }
-.blog-content .feed-day:first-child { margin-top: 0.75rem; }
+/* only the very first divider gets the reduced top margin — each divider is now
+   the first child of its .feed-day-group, so scope to the first group. */
+.blog-content .feed-day-group:first-child .feed-day { margin-top: 0.75rem; }
 .blog-content .feed-day::before {
   content: "";
   width: 8px;

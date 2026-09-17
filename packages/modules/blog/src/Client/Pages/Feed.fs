@@ -83,9 +83,19 @@ let view (ctx: Content.HostContext) (response: GetFeed.Response) =
     Html.div [
         prop.className "feed"
         prop.children [
+            // Each day in its own group so the sticky day divider is bounded by
+            // its day: it pins while you scroll that day, then scrolls up and out
+            // as you pass the day's last item (rather than the next day's divider
+            // covering it at the top).
             for (day, items) in groupByDay response.Items do
-                dayDivider day
-                yield! (items |> List.map (feedItem ctx))
+                Html.div [
+                    prop.key day
+                    prop.className "feed-day-group"
+                    prop.children [
+                        dayDivider day
+                        yield! (items |> List.map (feedItem ctx))
+                    ]
+                ]
             // Infinite-scroll sentinel: keyed so React preserves the same node
             // across appends, keeping its IntersectionObserver alive. Always
             // rendered; LoadMoreFeed self-guards on NextCursor once exhausted.
