@@ -28,6 +28,11 @@ let private logError (s: string) (detail: string) : unit = jsNative
 [<Emit("Number.isFinite($0)")>]
 let private isFinite (x: int) : bool = jsNative
 
+/// The upstream response status, so a non-2xx (e.g. a 500 error page) is logged + skipped rather
+/// than silently handed to parseFeed as if it were a feed.
+[<Emit("$0.status")>]
+let private respStatus (r: WorkerResponse) : int = jsNative
+
 /// Decode HTML/XML entities, including numeric ones. `&amp;` last so an already-decoded `&` isn't
 /// re-consumed. One Emit to avoid relying on Fable's regex-replace-with-evaluator for numeric cases.
 [<Emit("""$0.replace(/&#x([0-9a-fA-F]+);/g, function(_, h){return String.fromCharCode(parseInt(h,16));}).replace(/&#([0-9]+);/g, function(_, d){return String.fromCharCode(parseInt(d,10));}).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')""")>]
@@ -113,17 +118,24 @@ let ingestEntries (services: Services) (source: AlertSourceRow) (entries: FeedEn
 let pollSource (services: Services) (source: AlertSourceRow) : JS.Promise<unit> =
     promise {
         try
-            let opts = createObj [ "headers" ==> createObj [ "User-Agent" ==> "hedge-alerts/1.0" ] ]
+            // Google Alerts (the primary source) 500s the bare "hedge-alerts/1.0" agent; a
+            // compatible-prefixed UA is accepted (still honestly identifies hedge-alerts).
+            let opts = createObj [ "headers" ==> createObj [ "User-Agent" ==> "Mozilla/5.0 (compatible; hedge-alerts/1.0)" ] ]
             let! resp = fetchRaw source.FeedUrl opts
-            let! body = responseText resp
-            if body.Length > 2_000_000 then
-                logWarn (sprintf "alerts: feed too large (%d bytes): %s" body.Length source.FeedUrl)
+            let status = respStatus resp
+            if status >= 400 then
+                // Don't hand an error page to parseFeed (it would silently parse to 0 entries).
+                logWarn (sprintf "alerts: feed HTTP %d (skipped): %s" status source.FeedUrl)
             else
-                let entries = parseFeed body
-                let! imported = ingestEntries services source entries
-                log (sprintf "alerts: topic=%s bytes=%d parsed=%d imported=%d" source.Topic body.Length entries.Length imported)
-                if entries.Length = 0 && body.Length > 500 then
-                    logWarn (sprintf "alerts: non-empty body but 0 entries (feed drift?): %s" source.FeedUrl)
+                let! body = responseText resp
+                if body.Length > 2_000_000 then
+                    logWarn (sprintf "alerts: feed too large (%d bytes): %s" body.Length source.FeedUrl)
+                else
+                    let entries = parseFeed body
+                    let! imported = ingestEntries services source entries
+                    log (sprintf "alerts: topic=%s bytes=%d parsed=%d imported=%d" source.Topic body.Length entries.Length imported)
+                    if entries.Length = 0 && body.Length > 500 then
+                        logWarn (sprintf "alerts: non-empty body but 0 entries (feed drift?): %s" source.FeedUrl)
         with ex ->
             logError (sprintf "alerts: poll failed %s" source.FeedUrl) ex.Message
     }
