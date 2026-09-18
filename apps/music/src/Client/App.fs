@@ -151,6 +151,30 @@ let private albumView (a: GetAlbums.AlbumItem) =
         ]
     ]
 
+/// Which saymay.be site this build is (window.SITE_SLUG, injected by vite: "just" | "dont").
+[<Emit("window.SITE_SLUG || ''")>]
+let private siteSlug : string = jsNative
+
+/// Cross-link badge, fixed in the bottom-right corner of every page: each site shows the OTHER
+/// site's art and links across. just.saymay.be (homebrew) → mixtapes on dont; dont.saymay.be
+/// (mixtapes) → homebrew on just.
+let private cornerLogo =
+    let target =
+        match siteSlug with
+        | "just" -> Some ("https://dont.saymay.be", "/public/mixtape.png", "mixtapes")
+        | "dont" -> Some ("https://just.saymay.be", "/public/homebrew.png", "homebrew")
+        | _ -> None
+    match target with
+    | Some (href, img, label) ->
+        Html.a [
+            prop.className "corner-logo"
+            prop.href href
+            prop.title label
+            prop.ariaLabel label
+            prop.children [ Html.img [ prop.src img; prop.alt label ] ]
+        ]
+    | None -> Html.none
+
 let private appView (model: Model) =
     Html.div [
         prop.className "app"
@@ -166,6 +190,7 @@ let private appView (model: Model) =
                     | Some a -> albumView a
                     | None -> Html.p [ prop.text "Album not found." ]
                 | _ -> homeView model.Albums
+            cornerLogo
         ]
     ]
 

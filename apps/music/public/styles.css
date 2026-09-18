@@ -70,3 +70,16 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 .pb-album { color: var(--dim); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-time { color: var(--dim); font-size: .72rem; font-variant-numeric: tabular-nums; }
 .pb-slider { flex: 2; min-width: 80px; max-width: 320px; accent-color: var(--accent); cursor: pointer; }
+
+/* ===== cross-site corner badge (fixed bottom-right, every page) ===== */
+.corner-logo {
+  position: fixed; right: 16px; bottom: 16px; z-index: 30;
+  line-height: 0; opacity: .82; transition: opacity .15s ease, transform .15s ease;
+}
+.corner-logo:hover { opacity: 1; transform: translateY(-2px); }
+.corner-logo img {
+  width: 60px; height: auto; display: block;
+  border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+/* lift clear of the sticky player bar while an album is open */
+.app:has(.player-bar) .corner-logo { bottom: calc(56px + 16px); }
