@@ -48,6 +48,12 @@ let private plainText (s: string) : string = jsNative
 let private truncate (n: int) (s: string) =
     if s.Length <= n then s else s.[.. n - 1].TrimEnd() + "…"
 
+/// og:image must be an absolute URL for crawlers; the stored value is a root-relative "/blobs/…"
+/// path (or an absolute external URL). Prefix relative paths with this request's origin — blobs
+/// serve at the root, so no base path applies. Absolute and protocol-relative URLs pass through.
+let private absoluteImage (reqUrl: string) (src: string) : string =
+    if src.StartsWith("/") && not (src.StartsWith("//")) then originOf reqUrl + src else src
+
 /// Paths the SPA owns that are not articles. "blog" is reserved so the unified shell's
 /// blog mount (/blog[/*]) is never treated as an article slug — it falls through to the
 /// single-page-application fallback, which the shell routes to the hosted blog module.
@@ -95,7 +101,7 @@ let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
                         rowStrOpt row "teaser"
                         |> Option.map (plainText >> truncate 200)
                         |> Option.defaultValue ""
-                    let image = rowStrOpt row "image"
+                    let image = rowStrOpt row "image" |> Option.map (absoluteImage request.url)
                     let slug = rowStrOpt row "slug" |> Option.defaultValue (rowStr row "id")
                     let canonical =
                         sprintf "%s%s/%s" (originOf request.url) (basePathOf (box env)) slug

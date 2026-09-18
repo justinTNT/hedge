@@ -71,6 +71,12 @@ let private plainText (s: string) : string = jsNative
 let private truncate (n: int) (s: string) =
     if s.Length <= n then s else s.[.. n - 1].TrimEnd() + "…"
 
+/// og:image must be an absolute URL for crawlers; the stored value is a root-relative "/blobs/…"
+/// path (or an absolute external URL). Prefix relative paths with this request's origin — blobs
+/// serve at the root, so no base path applies. Absolute and protocol-relative URLs pass through.
+let private absoluteImage (reqUrl: string) (src: string) : string =
+    if src.StartsWith("/") && not (src.StartsWith("//")) then originOf reqUrl + src else src
+
 /// Paths the SPA owns that are not items. Mirrors Handlers.reservedSlugs, which
 /// already refuses to mint a slug colliding with any of these.
 let private reserved = set [ "tag"; "new"; "feed"; "api"; "blobs"; "public"; "admin"; "rhymes"; "archive" ]
@@ -126,7 +132,7 @@ let handleRequest (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
                         rowStrOpt row "extract"
                         |> Option.map (plainText >> truncate 200)
                         |> Option.defaultValue ""
-                    let image = rowStrOpt row "image"
+                    let image = rowStrOpt row "image" |> Option.map (absoluteImage request.url)
                     let slug = rowStrOpt row "slug" |> Option.defaultValue (rowStr row "id")
                     let canonical =
                         sprintf "%s%s/%s" (originOf request.url) (basePathOf (box env)) slug
