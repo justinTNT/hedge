@@ -78,7 +78,15 @@ let private hideBrokenImg (e: Browser.Types.Event) : unit = jsNative
 // /api/blog route prefix (the bare /api/feed path now falls through to the SPA).
 // First page omits ?cursor; a trailing /start path segment is NOT a route — it
 // falls through to the SPA (returns HTML), so keep the URL as the bare endpoint.
-let private newsUrl = "https://usba.se/api/blog/feed"
+let private newsOrigin = "https://usba.se"
+let private newsUrl = newsOrigin + "/api/blog/feed"
+
+/// Feed image URLs are usba.se-relative ("/blobs/…"); basewatch is a different origin, so the
+/// browser would resolve them against basewatch.org (→ 404, hidden by hideBrokenImg). Prefix the
+/// feed origin. Absolute URLs (external images, rehost fallbacks) and protocol-relative "//…" pass
+/// through unchanged.
+let private resolveNewsImage (src: string) : string =
+    if src.StartsWith("/") && not (src.StartsWith("//")) then newsOrigin + src else src
 
 let private decodeNews : Decoder<NewsItem list> =
     let item =
@@ -88,8 +96,8 @@ let private decodeNews : Decoder<NewsItem list> =
             let extract = get.Optional.Field "extract" Decode.string
             let t = extract |> Option.map plainText |> Option.defaultValue ""
             { Title = get.Required.Field "title" Decode.string
-              Href = "https://usba.se/" + (slug |> Option.defaultValue id)
-              Image = get.Optional.Field "image" Decode.string
+              Href = newsOrigin + "/" + (slug |> Option.defaultValue id)
+              Image = get.Optional.Field "image" Decode.string |> Option.map resolveNewsImage
               Teaser = if t.Length > 200 then t.[..199].TrimEnd() + "…" else t })
     Decode.field "items" (Decode.list item)
 
