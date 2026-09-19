@@ -1,0 +1,4 @@
+node_modules/
+package-lock.json
+# Ephemeral consultation HTML, copied from ~/Documents at deploy time — never committed.
+public/

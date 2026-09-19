@@ -1,0 +1,22 @@
+name = "ntaidc-front"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+# Static front page for nt-ai-dc.info (+ www). Assets-only Worker — no code, no D1, no build.
+# Content is copied at deploy time from the consultation working dir (see package.json `prep`),
+# so ephemeral HTML that ages out never lands in the repo.
+#   /            -> index.html (the "Gigawatt Submission Builder")
+#   /lodge.html  -> lodge.html ("Lodging Your Submission")
+# No SPA fallback: unknown paths 404 (the blog now lives on blog.nt-ai-dc.info).
+[assets]
+directory = "./public"
+
+# Naked domain + www both serve this static front page. (The blog worker `ntaidc` released these
+# when it moved to blog.nt-ai-dc.info; a custom domain binds to only one worker at a time.)
+[[routes]]
+pattern = "nt-ai-dc.info"
+custom_domain = true
+
+[[routes]]
+pattern = "www.nt-ai-dc.info"
+custom_domain = true

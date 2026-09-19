@@ -1,0 +1,12 @@
+{
+  "name": "ntaidc-front",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "prep": "mkdir -p public && cp \"$HOME/Documents/NEPAgentix/investigations/Getting It Right/getting-it-right-builder.html\" public/index.html && cp \"$HOME/Documents/NEPAgentix/investigations/Getting It Right/lodge.html\" public/lodge.html",
+    "deploy": "npm run prep && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.67.0"
+  }
+}

@@ -91,14 +91,14 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# -- NT AI Centres (worker "ntaidc") — the blog at nt-ai-dc.info; the old single
-#    page (Project Ares) lives on as ares.nt-ai-dc.info (a Pages custom domain). --
+# -- NT AI Centres (worker "ntaidc") — the blog at blog.nt-ai-dc.info. The naked domain + www now
+#    serve the static consultation front page via the separate `ntaidc-front` worker
+#    (apps/ntaidc-front); Project Ares still lives on ares.nt-ai-dc.info (a Pages custom domain). --
 [env.ntaidc]
 name = "ntaidc"
 workers_dev = true
 routes = [
-    { pattern = "nt-ai-dc.info", custom_domain = true },
-    { pattern = "www.nt-ai-dc.info", custom_domain = true }
+    { pattern = "blog.nt-ai-dc.info", custom_domain = true }
 ]
 
 [env.ntaidc.vars]
