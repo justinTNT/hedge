@@ -1,15 +1,19 @@
 name = "ntaidc-front"
-compatibility_date = "2024-01-01"
+main = "worker.js"
+compatibility_date = "2024-11-01"
 workers_dev = true
 
-# Static front page for nt-ai-dc.info (+ www). Assets-only Worker — no code, no D1, no build.
-# Content is copied at deploy time from the consultation working dir (see package.json `prep`),
-# so ephemeral HTML that ages out never lands in the repo.
+# Static front page for nt-ai-dc.info (+ www). Content is copied at deploy time from the consultation
+# working dir (see package.json `prep`), so ephemeral HTML that ages out never lands in the repo.
 #   /            -> index.html (the "Gigawatt Submission Builder")
 #   /lodge.html  -> lodge.html ("Lodging Your Submission")
 # No SPA fallback: unknown paths 404 (the blog now lives on blog.nt-ai-dc.info).
+# worker.js runs first (run_worker_first) only to pin charset=utf-8 on HTML — CF serves .html without
+# a charset and the source HTML has no <meta charset>, which otherwise garbles UTF-8 (→ etc).
 [assets]
 directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
 
 # Naked domain + www both serve this static front page. (The blog worker `ntaidc` released these
 # when it moved to blog.nt-ai-dc.info; a custom domain binds to only one worker at a time.)
