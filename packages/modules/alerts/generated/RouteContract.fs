@@ -10,13 +10,50 @@ open Alerts.Codecs
 // The decoded-argument delegates for each endpoint, bound by Composition.bind over the
 // module's Services. No Server.Env dependency: the host supplies behaviour via Services.
 type Handlers = {
-    /// No HTTP endpoints — this module contributes no routes (dispatch always returns
-    /// None). The field exists only because F# has no empty record.
-    NoEndpoints: unit
+    editFraming: Alerts.Api.EditFraming.Request -> WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>
+    dismiss: Alerts.Api.Dismiss.Request -> WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>
+    approve: Alerts.Api.Approve.Request -> WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>
+    queue: Alerts.Api.Queue.Request -> WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>
 }
 
 let dispatch (handlers: Handlers) (request: WorkerRequest) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
+    | POST path when matchPath "/api/alerts/curation/framing" path = Some (Exact "/api/alerts/curation/framing") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.alertsEditFramingReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! handlers.editFraming req request ctx
+        })
+
+    | POST path when matchPath "/api/alerts/curation/dismiss" path = Some (Exact "/api/alerts/curation/dismiss") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.alertsDismissReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! handlers.dismiss req request ctx
+        })
+
+    | POST path when matchPath "/api/alerts/curation/approve" path = Some (Exact "/api/alerts/curation/approve") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.alertsApproveReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! handlers.approve req request ctx
+        })
+
+    | POST path when matchPath "/api/alerts/curation/queue" path = Some (Exact "/api/alerts/curation/queue") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.alertsQueueReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! handlers.queue req request ctx
+        })
+
     | _ -> None

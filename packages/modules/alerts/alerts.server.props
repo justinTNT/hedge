@@ -17,6 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Services.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Alerts.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Curator.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
   </ItemGroup>
