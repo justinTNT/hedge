@@ -17,13 +17,18 @@ routes = [
 port = 8787
 local_protocol = "http"
 
-# basewatch.org — a structured pages site. Read-only public + hedge admin.
+# basewatch.org — a structured pages site. Public + hedge admin.
 [[d1_databases]]
 binding = "DB"
 database_name = "basewatch-db"
 database_id = "a1a76bc5-4678-4266-8cce-b13ae02de49a"
 
-# Static assets (the SPA + admin). No R2, no Durable Objects.
+# Blob storage for admin image uploads in the rich-text editor (served back at /blobs/<key>).
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "basewatch-blobs"
+
+# Static assets (the SPA + admin). No Durable Objects.
 [assets]
 directory = "./_site"
 binding = "ASSETS"
