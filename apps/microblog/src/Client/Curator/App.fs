@@ -196,9 +196,9 @@ let private loginView (providers: string list) dispatch =
                 prop.className "cx-providers"
                 prop.children [
                     if List.isEmpty providers then
-                        Html.p [ prop.className "cx-dim"; prop.text "No sign-in providers are configured." ]
-                    for p in providers ->
-                        Html.button [
+                        yield Html.p [ prop.className "cx-dim"; prop.text "No sign-in providers are configured." ]
+                    for p in providers do
+                        yield Html.button [
                             prop.className "cx-btn"
                             prop.text (sprintf "Sign in with %s" p)
                             prop.onClick (fun _ ->
@@ -222,36 +222,46 @@ let private itemView (model: Model) dispatch (it: QueueItem) =
                     Html.span [ prop.className "cx-date"; prop.text (fmtDate it.PublishedAt) ]
                 ]
             ]
-            match editing with
-            | Some d ->
-                Html.input [
-                    prop.className "cx-input"; prop.value d.Title
-                    prop.onChange (fun (v: string) -> dispatch (DraftTitle v))
-                ]
-                Html.textarea [
-                    prop.className "cx-textarea"; prop.value d.Snippet; prop.rows 3
-                    prop.onChange (fun (v: string) -> dispatch (DraftSnippet v))
-                ]
-                Html.label [ prop.className "cx-label"; prop.text "Owner comment" ]
-                Html.div [ prop.id Client.RichText.ownerCommentEditorId; prop.className "cx-editor" ]
+            (match editing with
+             | Some d ->
                 Html.div [
-                    prop.className "cx-actions"
+                    prop.className "cx-edit"
                     prop.children [
-                        Html.button [ prop.className "cx-btn"; prop.disabled busy; prop.text "Save"; prop.onClick (fun _ -> dispatch SaveFraming) ]
-                        Html.button [ prop.className "cx-btn cx-ghost"; prop.text "Cancel"; prop.onClick (fun _ -> dispatch CancelEdit) ]
+                        Html.input [
+                            prop.className "cx-input"; prop.value d.Title
+                            prop.onChange (fun (v: string) -> dispatch (DraftTitle v))
+                        ]
+                        Html.textarea [
+                            prop.className "cx-textarea"; prop.value d.Snippet; prop.rows 3
+                            prop.onChange (fun (v: string) -> dispatch (DraftSnippet v))
+                        ]
+                        Html.label [ prop.className "cx-label"; prop.text "Owner comment" ]
+                        Html.div [ prop.id Client.RichText.ownerCommentEditorId; prop.className "cx-editor" ]
+                        Html.div [
+                            prop.className "cx-actions"
+                            prop.children [
+                                Html.button [ prop.className "cx-btn"; prop.disabled busy; prop.text "Save"; prop.onClick (fun _ -> dispatch SaveFraming) ]
+                                Html.button [ prop.className "cx-btn cx-ghost"; prop.text "Cancel"; prop.onClick (fun _ -> dispatch CancelEdit) ]
+                            ]
+                        ]
                     ]
                 ]
-            | None ->
-                Html.a [ prop.className "cx-title"; prop.href it.Link; prop.target "_blank"; prop.text it.Title ]
-                if it.Snippet <> "" then Html.p [ prop.className "cx-snippet"; prop.text it.Snippet ]
+             | None ->
                 Html.div [
-                    prop.className "cx-actions"
+                    prop.className "cx-view"
                     prop.children [
-                        Html.button [ prop.className "cx-btn cx-approve"; prop.disabled busy; prop.text "Approve"; prop.onClick (fun _ -> dispatch (Act(it.Id, "approve"))) ]
-                        Html.button [ prop.className "cx-btn cx-dismiss"; prop.disabled busy; prop.text "Dismiss"; prop.onClick (fun _ -> dispatch (Act(it.Id, "dismiss"))) ]
-                        Html.button [ prop.className "cx-btn cx-ghost"; prop.disabled busy; prop.text "Edit framing"; prop.onClick (fun _ -> dispatch (StartEdit it.Id)) ]
+                        Html.a [ prop.className "cx-title"; prop.href it.Link; prop.target "_blank"; prop.text it.Title ]
+                        (if it.Snippet <> "" then Html.p [ prop.className "cx-snippet"; prop.text it.Snippet ] else Html.none)
+                        Html.div [
+                            prop.className "cx-actions"
+                            prop.children [
+                                Html.button [ prop.className "cx-btn cx-approve"; prop.disabled busy; prop.text "Approve"; prop.onClick (fun _ -> dispatch (Act(it.Id, "approve"))) ]
+                                Html.button [ prop.className "cx-btn cx-dismiss"; prop.disabled busy; prop.text "Dismiss"; prop.onClick (fun _ -> dispatch (Act(it.Id, "dismiss"))) ]
+                                Html.button [ prop.className "cx-btn cx-ghost"; prop.disabled busy; prop.text "Edit framing"; prop.onClick (fun _ -> dispatch (StartEdit it.Id)) ]
+                            ]
+                        ]
                     ]
-                ]
+                ])
         ]
     ]
 
@@ -266,11 +276,11 @@ let private queueView (model: Model) dispatch =
                     Html.button [ prop.className "cx-btn cx-ghost"; prop.text "Reload"; prop.onClick (fun _ -> dispatch Reload) ]
                 ]
             ]
-            match model.Notice with Some n -> Html.div [ prop.className "cx-notice"; prop.text n ] | None -> Html.none
-            if List.isEmpty model.Items then
+            (match model.Notice with Some n -> Html.div [ prop.className "cx-notice"; prop.text n ] | None -> Html.none)
+            (if List.isEmpty model.Items then
                 Html.p [ prop.className "cx-dim"; prop.text "Nothing to review — the queue is empty." ]
-            else
-                for it in model.Items -> itemView model dispatch it
+             else
+                Html.div [ prop.className "cx-list"; prop.children (model.Items |> List.map (itemView model dispatch)) ])
         ]
     ]
 
