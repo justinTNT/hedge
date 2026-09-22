@@ -59,4 +59,6 @@ let exports = createWorker {
     // (which references it directly), this Worker is site-shared and ndct composes NO blog module,
     // so Blog.Snapshots isn't in scope in the ndct build — hence the literal, not the constant.
     BlobServing = { PrivatePrefixes = [ "archive/" ] }
+    // No cron on articles (C6 alerts is idealist-only, on microblog).
+    Scheduled = None
 }

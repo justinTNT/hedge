@@ -42,9 +42,9 @@ let exports = createWorker {
         | None ->
         // After the API routes, before the framework's SPA fallback: item URLs
         // get the shell with Open Graph tags, everything else falls through.
-        // C3: the site dispatch takes the blog module's handler record (bound over a Services
-        // built from this env), not env — the module no longer sees Server.Env.
-        match Server.Routes.dispatch (Blog.Composition.bind (Server.ModuleServices.blog e request)) request ctx with
+        // C3/C6: the composed site dispatch is site-selected in Server.ModuleServices (default =
+        // blog only; idealist = blog + alerts), so this Worker stays site-agnostic.
+        match Server.ModuleServices.dispatch e request ctx with
         | Some p -> Some p
         | None -> Server.Meta.handleRequest request e
     Admin = Some (fun request env route ->
@@ -68,4 +68,7 @@ let exports = createWorker {
     // through the public /blobs/ route (only via the sandboxed /archive/<id> feature route).
     // CP-D: the prefix is owned by the feature (Blog.Snapshots.privatePrefix), not a literal here.
     BlobServing = { PrivatePrefixes = [ Blog.Snapshots.privatePrefix ] }
+    // C6: site-selected in Server.ModuleServices — idealist runs the alerts cron; every other
+    // microblog tenant resolves to None (inert). Fires only with an [env.<site>.triggers] crons block.
+    Scheduled = Server.ModuleServices.scheduled
 }

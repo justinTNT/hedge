@@ -66,6 +66,16 @@ type TableAttribute(name: string) =
     inherit System.Attribute()
     member _.Name = name
 
+/// Admin list-query override for code generation: the SQL tail appended after
+/// `SELECT <cols> FROM <table>` for the generic admin's list view, replacing the default
+/// `ORDER BY created_at DESC LIMIT 100`. Use for a curation queue — filter completed rows out and
+/// order/limit for the backlog, so actioning visible rows uncovers the rest instead of burying it.
+/// Reference only this type's own columns (and, for a fixed-prefix module, its own tables).
+[<AllowNullLiteral>]
+type AdminListAttribute(query: string) =
+    inherit System.Attribute()
+    member _.Query = query
+
 // -- API endpoint types --
 // The GET family is a 2x2 over (path parameter? x typed query?). A query type is a
 // record whose fields Gen turns into ?k=v params (string/int, each optional or

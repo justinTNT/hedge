@@ -14,7 +14,7 @@
     "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
     "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
     "build:site": "rm -rf _site && npm run prep:lib && vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && { [ -z \"${BASE_PATH}\" ] || { cp _site${BASE_PATH}/index.html _site/index.html && printf '/ %s/ 302\\n' \"${BASE_PATH}\" > _site/_redirects; }; }",
-    "deploy": "SITE_ORIGIN=https://darwin.news SITE_SLUG=darwinnews npm run build && wrangler deploy",
+    "deploy": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://darwin.news SITE_SLUG=darwinnews npm run build && wrangler deploy",
     "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
     "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
     "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
@@ -27,12 +27,13 @@
     "build:extension": "cd extension && node build.js chrome",
     "build:extension:firefox": "cd extension && node build.js firefox",
     "build:extension:all": "npm run build:extension && npm run build:extension:firefox",
-    "deploy:ntaidc": "SITE_ORIGIN=https://blog.nt-ai-dc.info SITE_SLUG=ntaidc SITE_TITLE=\"NT AI Centres\" ADMIN_TITLE=\"NT AI Centres Admin\" SITE_LOGO=\"/public/ntaidc.png\" SITE_INFO_URL=\"https://ares.nt-ai-dc.info\" SITE_INFO_LABEL=\"Project Ares\" npm run build && wrangler deploy --env ntaidc",
-    "deploy:wtfail": "SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" ADMIN_TITLE=\"WT.Fail Admin\" SITE_LOGO=\"/public/wtfail.png\" npm run build && wrangler deploy --env wtfail",
-    "deploy:idealist": "SITE_ORIGIN=https://id-ea.li SITE_SLUG=idealist BASE_PATH=/st SITE_TITLE=\"id-ea.li/st\" ADMIN_TITLE=\"id-eAdmin\" SITE_LOGO=\"/public/idealist.jpg\" npm run build && wrangler deploy --env idealist",
-    "deploy:usbase": "SITE_ORIGIN=https://usba.se SITE_SLUG=usbase SITE_TITLE=\"US Base\" ADMIN_TITLE=\"USBase Admin\" SITE_LOGO=\"/public/usbase.gif\" SITE_FEATURES=bigText npm run build && wrangler deploy --env usbase",
-    "deploy:nonukes": "SITE_ORIGIN=https://archive.ntne.ws SITE_SLUG=nonukes SITE_TITLE=\"No Nukes\" ADMIN_TITLE=\"No Nukes Admin\" SITE_LOGO=\"/public/nonukes.gif\" npm run build && wrangler deploy --env nonukes",
-    "deploy:mtmuse": "SITE_ORIGIN=https://mtmu.se SITE_SLUG=mtmuse SITE_TITLE=\"MT Muse\" ADMIN_TITLE=\"MT Muse Admin\" SITE_LOGO=\"/public/mtmuse.jpg\" SITE_FEATURES=bigText npm run build && wrangler deploy --env mtmuse"
+    "deploy:ntaidc": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://blog.nt-ai-dc.info SITE_SLUG=ntaidc SITE_TITLE=\"NT AI Centres\" ADMIN_TITLE=\"NT AI Centres Admin\" SITE_LOGO=\"/public/ntaidc.png\" SITE_INFO_URL=\"https://ares.nt-ai-dc.info\" SITE_INFO_LABEL=\"Project Ares\" npm run build && wrangler deploy --env ntaidc",
+    "deploy:wtfail": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" ADMIN_TITLE=\"WT.Fail Admin\" SITE_LOGO=\"/public/wtfail.png\" npm run build && wrangler deploy --env wtfail",
+    "clean:site": "rm -rf src/Server/obj src/Server/bin src/Codecs/obj src/Codecs/bin src/Client/obj src/Client/bin dist",
+    "deploy:idealist": "npm run clean:site && HEDGE_SITE=idealist npm run gen && SITE_ORIGIN=https://id-ea.li SITE_SLUG=idealist BASE_PATH=/st SITE_TITLE=\"id-ea.li/st\" ADMIN_TITLE=\"id-eAdmin\" SITE_LOGO=\"/public/idealist.jpg\" HEDGE_SITE=idealist npm run build && wrangler deploy --env idealist",
+    "deploy:usbase": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://usba.se SITE_SLUG=usbase SITE_TITLE=\"US Base\" ADMIN_TITLE=\"USBase Admin\" SITE_LOGO=\"/public/usbase.gif\" SITE_FEATURES=bigText npm run build && wrangler deploy --env usbase",
+    "deploy:nonukes": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://archive.ntne.ws SITE_SLUG=nonukes SITE_TITLE=\"No Nukes\" ADMIN_TITLE=\"No Nukes Admin\" SITE_LOGO=\"/public/nonukes.gif\" npm run build && wrangler deploy --env nonukes",
+    "deploy:mtmuse": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://mtmu.se SITE_SLUG=mtmuse SITE_TITLE=\"MT Muse\" ADMIN_TITLE=\"MT Muse Admin\" SITE_LOGO=\"/public/mtmuse.jpg\" SITE_FEATURES=bigText npm run build && wrangler deploy --env mtmuse"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

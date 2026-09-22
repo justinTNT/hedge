@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    The alerts module's generated codecs (Alerts.Codecs), for a consuming app's shared Codecs
+    project to compose. Depends only on Thoth.Json + Hedge.Codec + AlertsModels; nothing depends on
+    it at compile time within that project, so import order is free. Alerts has no HTTP endpoints and
+    no client, but its RouteContract/AdminGen still `open Alerts.Codecs`, so the codecs compile.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Codecs.fs" />
+  </ItemGroup>
+</Project>

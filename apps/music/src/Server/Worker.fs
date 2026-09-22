@@ -16,4 +16,5 @@ let exports = createWorker {
     GuestSession = None
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
+    Scheduled = None
 }

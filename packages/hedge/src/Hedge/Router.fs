@@ -222,6 +222,10 @@ type WorkerConfig = {
     Mounts: Mount list
     /// R2 key prefixes never served through the public /blobs/ route (C4). See BlobServingPolicy.
     BlobServing: BlobServingPolicy
+    /// Cron handler (C6). `None` ⇒ inert — the `scheduled` export fires nothing without a
+    /// `[triggers]` crons block in wrangler.toml. A generic hook: the framework carries no
+    /// knowledge of what any deployment schedules.
+    Scheduled: (ScheduledController -> obj -> ExecutionContext -> JS.Promise<unit>) option
 }
 
 let createWorker (config: WorkerConfig) =
@@ -460,5 +464,14 @@ let createWorker (config: WorkerConfig) =
                 | None -> return! fetchFromAssets env request
             | _ ->
                 return notFound ()
+        }
+       // Literal 3-arg lambda (like fetch) so Fable emits an uncurried scheduled(c,e,ctx); a
+       // point-free value would bind only the controller. Inert unless config.Scheduled is Some AND
+       // wrangler.toml declares a [triggers] crons block (C6).
+       scheduled = fun (controller: ScheduledController) (env: obj) (ctx: ExecutionContext) ->
+        promise {
+            match config.Scheduled with
+            | Some handler -> return! handler controller env ctx
+            | None -> return ()
         }
     |}

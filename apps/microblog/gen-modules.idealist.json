@@ -1,0 +1,5 @@
+[
+  { "identity": true },
+  { "module": "../../packages/modules/blog" },
+  { "module": "../../packages/modules/alerts" }
+]
