@@ -66,6 +66,23 @@ let private group1 (pattern: string) (input: string) : string option =
     let m = Regex.Match(input, pattern)
     if m.Success && m.Groups.Count > 1 then Some m.Groups.[1].Value else None
 
+/// URL-decode a percent-encoded value (the real link Google Alerts hides in its ?url= param).
+[<Emit("decodeURIComponent($0)")>]
+let private decodeURIComponent (s: string) : string = jsNative
+
+/// The origin (scheme://host) of a URL, for resolving a relative og:image. '' on a bad URL.
+[<Emit("(function(u){ try { return new URL(u).origin; } catch(e) { return ''; } })($0)")>]
+let private originOf (url: string) : string = jsNative
+
+/// Google Alerts wraps every link as https://www.google.com/url?...&url=<real>&... — unwrap to the
+/// real destination so stored/promoted links point at the article, not a Google redirect.
+let unwrapGoogleLink (url: string) : string =
+    if url.Contains("google.com/url") then
+        match group1 "[?&]url=([^&]+)" url with
+        | Some enc -> (try decodeURIComponent enc with _ -> enc)
+        | None -> url
+    else url
+
 let parseFeed (xml: string) : FeedEntry list =
     let blocks =
         [ for m in Regex.Matches(xml, "<entry[^>]*>([\s\S]*?)</entry>") -> m.Groups.[1].Value ]
@@ -81,7 +98,7 @@ let parseFeed (xml: string) : FeedEntry list =
                 |> Option.defaultValue 0
             yield
                 { EntryKey = (decodeEntities idRaw).Trim()
-                  Link = (decodeEntities hrefRaw).Trim()
+                  Link = unwrapGoogleLink ((decodeEntities hrefRaw).Trim())
                   Published = published
                   Title = truncate 500 title
                   Snippet = truncate 2000 snippet }
@@ -140,6 +157,36 @@ let pollSource (services: Services) (source: AlertSourceRow) : JS.Promise<unit> 
             logError (sprintf "alerts: poll failed %s" source.FeedUrl) ex.Message
     }
 
+/// Resolve a possibly-relative og:image against the article's origin. Absolute + protocol-relative
+/// pass through; a root path gets the article origin.
+let private absolutizeImg (articleUrl: string) (src: string) : string =
+    if src.StartsWith("http") then src
+    elif src.StartsWith("//") then "https:" + src
+    elif src.StartsWith("/") then originOf articleUrl + src
+    else src
+
+/// Best-effort: fetch the article and pull its og:image (Google Alerts feeds carry no image), so a
+/// promoted item gets a hero. Returns None on any failure — promotion must never block on a slow or
+/// broken target. Hotlinks the source image (not rehosted to R2); a dead link just hides client-side.
+let fetchOgImage (url: string) : JS.Promise<string option> =
+    promise {
+        try
+            let opts = createObj [ "headers" ==> createObj [ "User-Agent" ==> "Mozilla/5.0 (compatible; hedge-alerts/1.0)" ] ]
+            let! resp = fetchRaw url opts
+            if respStatus resp >= 400 then return None
+            else
+                let! body = responseText resp
+                let head = if body.Length > 300_000 then body.[.. 300_000] else body
+                let pick =
+                    group1 "<meta[^>]+property=[\"']og:image(?::url)?[\"'][^>]*content=[\"']([^\"']+)[\"']" head
+                    |> Option.orElse (group1 "<meta[^>]+content=[\"']([^\"']+)[\"'][^>]*property=[\"']og:image(?::url)?[\"']" head)
+                    |> Option.orElse (group1 "<meta[^>]+name=[\"']twitter:image(?::src)?[\"'][^>]*content=[\"']([^\"']+)[\"']" head)
+                match pick with
+                | Some raw when raw.Trim() <> "" -> return Some (absolutizeImg url (decodeEntities (raw.Trim())))
+                | _ -> return None
+        with _ -> return None
+    }
+
 let promoteApproved (services: Services) : JS.Promise<unit> =
     promise {
         let! result = (services.DB.prepare Sql.selectPromotable).all()
@@ -148,12 +195,18 @@ let promoteApproved (services: Services) : JS.Promise<unit> =
                 try
                     let p = parsePendingPostRow row
                     let topic = rowStr row "topic"
+                    // Unwrap again at promote time so entries ingested before the parse-time unwrap
+                    // (or from a non-Google producer) still promote with a clean article link.
+                    let link = unwrapGoogleLink p.Link
+                    // Google Alerts feeds carry no image → fetch the article's og:image (best-effort).
+                    let! image = fetchOgImage link
                     // The host maps this onto its feed's create surface; alerts never names a content
                     // table. Snippet is plain → wrap; a written owner_comment is already rich-text,
                     // an unwritten one ('') becomes an empty doc so the feed's NOT NULL rich column is valid.
                     let input : PromotionInput =
                         { Title = p.Title
-                          Link = p.Link
+                          Link = link
+                          Image = image
                           Extract = asRichText p.Snippet
                           OwnerComment = (if p.OwnerComment = "" then asRichText "" else p.OwnerComment)
                           ArticleDate = p.PublishedAt

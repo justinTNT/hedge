@@ -14,6 +14,7 @@ open Hedge.Workers
 type PromotionInput =
     { Title: string
       Link: string
+      Image: string option   // article og:image (Google Alerts feeds carry none); None if unavailable
       Extract: string        // TipTap-doc JSON
       OwnerComment: string   // TipTap-doc JSON
       ArticleDate: int       // the feed entry's published time → the item's article date

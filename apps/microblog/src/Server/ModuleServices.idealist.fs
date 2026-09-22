@@ -46,7 +46,7 @@ let private promoteToFeed (db: D1Database) (input: Alerts.Services.PromotionInpu
     let create : Blog.Db.ItemCreate =
         { Title = input.Title
           Link = Some input.Link
-          Image = None
+          Image = input.Image
           Extract = Some input.Extract
           OwnerComment = input.OwnerComment
           ArticleDate = input.ArticleDate
