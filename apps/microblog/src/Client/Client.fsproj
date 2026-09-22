@@ -27,6 +27,8 @@
     <Compile Include="Blog/Main.fs" />
     <!-- darwin.news-specific glue, a separate /rhymes bundle -->
     <Compile Include="Rhyming/App.fs" />
+    <!-- idealist curator page, a separate /curator bundle (reuses the shared rich-text editor) -->
+    <Compile Include="Curator/App.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
