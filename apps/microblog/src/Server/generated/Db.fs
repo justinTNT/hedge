@@ -113,7 +113,7 @@ type GrantRow = {
     Role: string
     Enabled: bool
     GrantedBy: string option
-    GrantedAt: int
+    CreatedAt: int
 }
 
 type GrantCreate = {
@@ -131,13 +131,13 @@ let parseGrantRow (row: obj) : GrantRow =
       Role = rowStr row "role"
       Enabled = rowBool row "enabled"
       GrantedBy = rowStrOpt row "granted_by"
-      GrantedAt = rowInt row "granted_at" }
+      CreatedAt = rowInt row "created_at" }
 
 let selectGrants (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, granted_at FROM grants LIMIT 100")
+    db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100")
 
 let selectGrant (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, granted_at FROM grants WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?")) [| box id |]
 
 let insertGrant (db: D1Database) (id: string) (now: int) (create: GrantCreate) =
     let stmt =

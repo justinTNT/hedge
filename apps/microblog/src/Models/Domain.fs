@@ -38,5 +38,5 @@ type Grant = {
     Role: string
     Enabled: bool
     GrantedBy: string option
-    GrantedAt: CreateTimestamp
+    CreatedAt: CreateTimestamp   // must be named CreatedAt -> created_at (framework CreateTimestamp convention)
 }

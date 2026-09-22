@@ -28,7 +28,7 @@ CREATE TABLE grants (
     role TEXT NOT NULL,
     enabled INTEGER NOT NULL,
     granted_by TEXT,
-    granted_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL
 );
 
 CREATE TABLE blog_items (

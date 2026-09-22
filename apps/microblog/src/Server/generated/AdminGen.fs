@@ -61,10 +61,10 @@ let grant : AdminTable =
             fieldWith "Role" FString []
             fieldWith "Enabled" FBool []
             fieldWith "GrantedBy" (FOption FString) []
-            fieldWith "GrantedAt" FInt [CreateTimestamp]
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
         ]
-      SelectAll = "SELECT id, provider, provider_user_id, role, enabled, granted_by, granted_at FROM grants LIMIT 100"
-      SelectOne = "SELECT id, provider, provider_user_id, role, enabled, granted_by, granted_at FROM grants WHERE id = ?"
+      SelectAll = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?"
       Insert = "INSERT INTO grants (id, provider, provider_user_id, role, enabled, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = false
