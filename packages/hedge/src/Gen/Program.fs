@@ -251,6 +251,7 @@ type ParsedType = {
     Name: string
     Table: string option
     AdminList: string option
+    UniqueTogether: string list option
     Fields: FieldSchema list
 }
 
@@ -263,7 +264,12 @@ let reflectToParsedType (t: Type) : ParsedType =
         match t.GetCustomAttribute<AdminListAttribute>() with
         | null -> None
         | attr -> Some attr.Query
-    { Name = t.Name; Table = tableName; AdminList = adminList; Fields = getFieldSchemas t }
+    let uniqueTogether =
+        match t.GetCustomAttribute<UniqueTogetherAttribute>() with
+        | null -> None
+        | attr -> Some (List.ofArray attr.Fields)
+    { Name = t.Name; Table = tableName; AdminList = adminList
+      UniqueTogether = uniqueTogether; Fields = getFieldSchemas t }
 
 // ============================================================
 // Shared table metadata — used by AdminGen, Db, and Schema.sql
@@ -283,6 +289,8 @@ type TableMeta = {
     MutableFields: FieldSchema list
     MutableCols: string list
     FkFields: FieldSchema list
+    /// Snake-cased columns of a composite-unique constraint ([<UniqueTogether>]); [] when none.
+    UniqueTogether: string list
     SelectAll: string
     SelectOne: string
     Insert: string
@@ -364,10 +372,24 @@ let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
             let placeholders = insertCols |> List.map (fun _ -> "?") |> String.concat ", "
             sprintf "INSERT INTO %s (%s) VALUES (%s)" tableName (String.concat ", " insertCols) placeholders
 
+    // Composite-unique columns ([<UniqueTogether>]): validate each named field belongs to this type
+    // (fail loud on a typo) and snake_case to column names.
+    let uniqueTogetherCols =
+        match parsed.UniqueTogether with
+        | None -> []
+        | Some names ->
+            let known = dbFields |> List.map (fun f -> f.Name) |> Set.ofList
+            names
+            |> List.map (fun n ->
+                if not (Set.contains n known) then
+                    failwithf "UniqueTogether on %s references unknown field '%s'" displayName n
+                toSnakeCase n)
+
     { DisplayName = displayName; TableName = tableName; Schema = schema
       DbFields = dbFields; Cols = cols; ColStr = colStr
       PkCol = pkCol; HasPk = hasPk; HasCreateTs = hasCreateTs; HasUpdateTs = hasUpdateTs
       MutableFields = mutableFields; MutableCols = mutableCols; FkFields = fkFields
+      UniqueTogether = uniqueTogetherCols
       SelectAll = selectAll; SelectOne = selectOne; Insert = insert; Update = update; Delete = delete }
 
 // ============================================================
@@ -752,6 +774,11 @@ let generateIndexes (m: TableMeta) : string list =
         if f.Attrs |> List.contains FieldAttr.Unique then
             let col = toSnakeCase f.Name
             indexes.Add(sprintf "CREATE UNIQUE INDEX idx_%s_%s ON %s(%s);" m.TableName col m.TableName col)
+
+    if not (List.isEmpty m.UniqueTogether) then
+        let name = String.concat "_" m.UniqueTogether
+        let cols = String.concat ", " m.UniqueTogether
+        indexes.Add(sprintf "CREATE UNIQUE INDEX idx_%s_%s ON %s(%s);" m.TableName name m.TableName cols)
 
     if m.HasCreateTs then
         indexes.Add(sprintf "CREATE INDEX idx_%s_created_at ON %s(created_at DESC);" m.TableName m.TableName)
@@ -1591,6 +1618,8 @@ let desiredIndexNames (m: TableMeta) : Set<string> =
       for f in m.DbFields do
           if f.Attrs |> List.contains FieldAttr.Unique then
               yield sprintf "idx_%s_%s" m.TableName (toSnakeCase f.Name)
+      if not (List.isEmpty m.UniqueTogether) then
+          yield sprintf "idx_%s_%s" m.TableName (String.concat "_" m.UniqueTogether)
       if m.HasCreateTs then
           yield sprintf "idx_%s_created_at" m.TableName ]
     |> Set.ofList
