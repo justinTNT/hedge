@@ -31,7 +31,16 @@ let private shellNavigate (segments: string list) =
     Router.navigatePath (List.toArray (baseSegs @ segments))
 
 let private shellNavigateToPath (path: string) =
-    shellNavigate (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList)
+    // Idempotent w.r.t. the deployment prefix: a path may be app-relative OR already carry the base
+    // (e.g. an OAuth `returnTo` from window.location.pathname), so strip a leading base before
+    // shellNavigate re-applies it — otherwise a base-inclusive returnTo would double the prefix.
+    let segs = path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
+    let rec stripBase prefix rest =
+        match prefix, rest with
+        | [], remaining -> remaining
+        | p :: ps, r :: rs when p = r -> stripBase ps rs
+        | _ -> segs
+    shellNavigate (stripBase baseSegs segs)
 
 /// Articles content runs at the root; its context navigates through the shell router.
 let private articlesCtx : Content.HostContext =

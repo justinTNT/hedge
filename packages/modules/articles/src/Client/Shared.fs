@@ -121,8 +121,11 @@ let routeOf (segments: string list) =
 let navigateTo (segments: string list) =
     Router.navigatePath (List.toArray (baseSegments @ segments))
 
+/// Navigate to a path that may be app-relative ("/" or "/some-slug") OR already carry the deployment
+/// prefix (e.g. an OAuth `returnTo` captured from window.location.pathname). `routeOf` strips the base
+/// if present, so `navigateTo` never double-applies it (idempotent w.r.t. the prefix).
 let navigateToPath (path: string) =
-    navigateTo (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList)
+    navigateTo (routeOf (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList))
 
 let loading =
     Html.div [ prop.className "loading"; prop.text "Loading..." ]
