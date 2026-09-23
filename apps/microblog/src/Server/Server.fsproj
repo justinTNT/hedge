@@ -15,6 +15,10 @@
        replacement for the app's old Server.Identity + the identity half of Server.Sql. Imported before
        GuestConfig / AccessConfig / Handlers / ModuleServices, all of which call Identity.Server.*. -->
   <Import Project="../../../../packages/modules/identity/identity.server.props" />
+  <!-- OPT-IN grants sub-surface (Identity.Grants): microblog composes curator role grants. Imported
+       after identity.server.props (reads Identity.Server) and before AccessConfig (which binds it into
+       Hedge.AccessControl). Articles hosts omit this import entirely — adding identity never enables grants. -->
+  <Import Project="../../../../packages/modules/identity/identity.grants.server.props" />
   <ItemGroup>
     <!-- Binds this app's Env + Identity.Server into the shared guest-session policy
          (Hedge.GuestSession). After the identity props (uses it); before Handlers, ModuleServices and

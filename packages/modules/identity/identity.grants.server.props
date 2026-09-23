@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    OPTIONAL access-control (role grant) sub-surface of the identity module. Import this ONLY in a host
+    that composes delegated roles (it must also add the GrantModels gen slice and apply the grants
+    migration). Adding plain identity via identity.server.props never enables grants. Import AFTER
+    identity.server.props (Identity.Grants reads Identity.Server) and BEFORE the app's AccessConfig
+    (which binds Identity.Grants into Hedge.AccessControl).
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Grants.fs" />
+  </ItemGroup>
+</Project>

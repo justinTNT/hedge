@@ -105,6 +105,9 @@ def main():
     # ({"identity": true, "assembly": "IdentityModels"} — its persistence SQL moved out of the app's
     # own Server.Sql into packages/modules/identity). None for a self-contained/legacy identity app.
     identity_server_dir = None
+    # The identity module's OPTIONAL grants sub-surface (Identity.Grants) — composed only when the app
+    # adds the GrantModels identity slice; its grant SQL lives in the module, not copied into the app.
+    grants_server_file = None
     for m in manifest:
         if m.get("module"):
             d = m["module"]
@@ -112,6 +115,8 @@ def main():
             modules.append((ns, d))
         elif m.get("identity") and m.get("assembly") == "IdentityModels":
             identity_server_dir = "../../packages/modules/identity/src/Server"
+        elif m.get("identity") and m.get("assembly") == "GrantModels":
+            grants_server_file = "../../packages/modules/identity/src/Server/Grants.fs"
         elif m.get("tablePrefix"):
             modules.append((m["namespace"], f"../../packages/modules/{m['namespace'].lower()}"))
     module_dirs = [d for _, d in modules]
@@ -135,6 +140,8 @@ def main():
     stmts = extract_plain("src/Server/Sql.fs", "Sql") if os.path.exists("src/Server/Sql.fs") else []
     if identity_server_dir:
         stmts += extract_plain(os.path.join(identity_server_dir, "Sql.fs"), "Identity.Sql")
+    if grants_server_file:
+        stmts += extract_plain(grants_server_file, "Identity.Grants")
     for ns, d in modules:
         stmts += extract_module(os.path.join(d, "src/Server/Sql.fs"), f"{ns}.Sql", tables)
     if not stmts:
