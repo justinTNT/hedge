@@ -18,6 +18,7 @@ open Fable.Core
 open Feliz
 open Feliz.Router
 open Elmish
+open Content.ClaimGlue   // shared OAuth claim-return glue (parseClaimFromRoute / ClaimRoute / returnNavCmd)
 
 let private ctx : Content.HostContext = Content.HostContext.standalone Shared.navigateTo
 
@@ -36,22 +37,6 @@ type Msg =
     | ContentMsg of Articles.Client.Types.Msg
     | IdentityMsg of Identity.Msg
 
-[<Emit("new URLSearchParams(window.location.search).get($0)")>]
-let private getQueryParam (name: string) : string = jsNative
-
-/// OAuth return: /auth/claim?identity=...&returnTo=...
-let private parseClaimFromRoute () : string option * string =
-    let identity = getQueryParam "identity"
-    let returnTo = getQueryParam "returnTo"
-    let identity = if isNull identity || identity = "" then None else Some identity
-    let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
-    identity, returnTo
-
-let private (|ClaimRoute|_|) route =
-    match route with
-    | [ "auth"; "claim" ] | [ "auth"; "claim"; _ ] -> Some ()
-    | _ -> None
-
 let init () : Model * Cmd<Msg> =
     let route = Shared.routeOf (Router.currentUrl ())
     match route with
@@ -59,7 +44,7 @@ let init () : Model * Cmd<Msg> =
         let claimFocus, returnTo = parseClaimFromRoute ()
         let idModel, idCmd = Identity.init claimFocus
         { Route = []; Content = ArtApp.emptyHosted idModel.GuestSession; Identity = idModel },
-        Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.ofEffect (fun _ -> Shared.navigateToPath returnTo) ]
+        Cmd.batch [ Cmd.map IdentityMsg idCmd; returnNavCmd Shared.navigateToPath returnTo ]
     | _ ->
         let idModel, idCmd = Identity.init None
         let content, cmd = ArtApp.enterHosted ctx route (ArtApp.emptyHosted idModel.GuestSession)
@@ -75,7 +60,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             { model with Identity = { model.Identity with PendingClaimFocus = claimFocus } },
             Cmd.batch [
                 Cmd.map IdentityMsg Identity.loadIdentitiesCmd
-                Cmd.ofEffect (fun _ -> Shared.navigateToPath returnTo)
+                returnNavCmd Shared.navigateToPath returnTo
             ]
         | _ ->
             let idModel = Identity.consumeClaimFocus model.Identity

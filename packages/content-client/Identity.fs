@@ -168,7 +168,11 @@ module Identity =
             model, Cmd.none, Failed err
 
         | DisconnectIdentity identityId ->
-            model, disconnectIdentityCmd identityId model.GuestSession.DisplayName, NoSignal
+            // Dropping a provider returns the guest to anonymous. Store the guest's own generated
+            // pseudonym (the new-guest formula) as the fallback name — NOT the current provider
+            // display name — so the anonymous identity presents as a fresh generated name + matching
+            // icon rather than inheriting the dropped account's name.
+            model, disconnectIdentityCmd identityId (GuestSession.anonName()), NoSignal
 
         | GotDisconnect (Ok _) ->
             { model with ShowIdentitySwitcher = false; SelectedIdentity = None },

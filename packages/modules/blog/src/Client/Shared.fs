@@ -137,9 +137,12 @@ let routeOf (segments: string list) =
 let navigateTo (segments: string list) =
     Router.navigatePath (List.toArray (baseSegments @ segments))
 
-/// Navigate to an app-relative path string, e.g. "/" or "/some-slug".
+/// Navigate to a path that may be app-relative ("/" or "/some-slug") OR already carry the deployment
+/// prefix ("/st/some-slug" — e.g. an OAuth `returnTo` captured from window.location.pathname).
+/// `routeOf` strips the base if present, so `navigateTo` never double-applies it: this is idempotent
+/// w.r.t. the prefix (a base-relative path without the prefix is left as-is and gets it added once).
 let navigateToPath (path: string) =
-    navigateTo (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList)
+    navigateTo (routeOf (path.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList))
 
 let private tagColors = [| "#e74c3c"; "#3498db"; "#2ecc71"; "#9b59b6"; "#f39c12"; "#1abc9c"; "#e91e63"; "#00bcd4" |]
 

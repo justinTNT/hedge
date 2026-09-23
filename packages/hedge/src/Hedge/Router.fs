@@ -115,6 +115,7 @@ let jsonResponseWithCookie (body: string) (status: int) (cookie: string) : Worke
 
 let okJsonWithCookie body cookie = jsonResponseWithCookie body 200 cookie
 let unauthorized () = jsonResponse """{"error":"Unauthorized"}""" 401
+let forbidden () = jsonResponse """{"error":"Forbidden"}""" 403
 let notFound () = jsonResponse """{"error":"Not found"}""" 404
 let badRequest msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0

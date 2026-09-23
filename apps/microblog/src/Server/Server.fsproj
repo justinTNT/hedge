@@ -10,14 +10,22 @@
     <Compile Include="Env.fs" />
     <Compile Include="Sql.fs" />
     <Compile Include="generated/Db.fs" />
-    <Compile Include="Identity.fs" />
-    <Compile Include="Attribution.fs" />
-    <!-- Binds this app's Env + Server.Identity into the shared guest-session policy
-         (Hedge.GuestSession). After Identity (uses it); before Handlers, ModuleServices and
+  </ItemGroup>
+  <!-- Shared identity persistence (Identity.Db / Identity.Sql / Identity.Server) — the module-owned
+       replacement for the app's old Server.Identity + the identity half of Server.Sql. Imported before
+       GuestConfig / AccessConfig / Handlers / ModuleServices, all of which call Identity.Server.*. -->
+  <Import Project="../../../../packages/modules/identity/identity.server.props" />
+  <!-- OPT-IN grants sub-surface (Identity.Grants): microblog composes curator role grants. Imported
+       after identity.server.props (reads Identity.Server) and before AccessConfig (which binds it into
+       Hedge.AccessControl). Articles hosts omit this import entirely — adding identity never enables grants. -->
+  <Import Project="../../../../packages/modules/identity/identity.grants.server.props" />
+  <ItemGroup>
+    <!-- Binds this app's Env + Identity.Server into the shared guest-session policy
+         (Hedge.GuestSession). After the identity props (uses it); before Handlers, ModuleServices and
          Worker (all consume it). -->
     <Compile Include="GuestConfig.fs" />
-    <!-- Binds Env + the guest policy + Identity into the shared access-control policy
-         (Hedge.AccessControl). After GuestConfig + Identity; consumed by ModuleServices (idealist). -->
+    <!-- Binds Env + the guest policy + Identity.Server into the shared access-control policy
+         (Hedge.AccessControl). After GuestConfig + the identity props; consumed by ModuleServices (idealist). -->
     <Compile Include="AccessConfig.fs" />
   </ItemGroup>
   <!-- Blog module server layer, composed via the module's .props. Placed before

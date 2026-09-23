@@ -162,6 +162,15 @@
     current.avatarUrl = makeAvatar(c.hex, e.c);
     return current;
   }
+  // The guest's generated anonymous pseudonym (Adjective Colour Emoji) derived from its own id — the
+  // exact new-guest formula. Sent as the fallback name when disconnecting a provider drops back to
+  // anonymous, so the STORED anonymous identity (switcher list + comment attribution) matches the
+  // displayed one. avatarForAuthor(name) reparses the colour + emoji words, so the icon matches too.
+  function anonName() {
+    var h = hash(getSession().guestId);
+    return pickH(adjectives, h >>> 10) + ' ' + pickH(colors, h).name + ' ' + pickH(emojis, h >>> 5).n;
+  }
+
   // Reconcile the local DISPLAY session against the server's /api/auth/me body. Never touches typed
   // drafts (they live in the editor/model, not here). data.guest may be null: the server established
   // or confirmed a guest but exposes no identity (a fresh or anonymous guest), in which case any
@@ -182,13 +191,16 @@
           createdAt: Math.floor(Date.now() / 1000)
         };
       }
-      if (data.guest.identity) {
+      if (data.guest.identity && data.guest.identity.provider !== 'anonymous') {
         var id = data.guest.identity;
         current.identity = id;
         current.displayName = id.name;
         // Don't fall back to the cached avatarUrl — it may belong to a previously active identity.
         current.avatarUrl = id.picture || avatarForAuthor(id.name);
       } else {
+        // No identity, OR the active identity is anonymous: always present the guest's own generated
+        // pseudonym + matching icon (the same new-guest formula, derived from the guest id), never a
+        // stale stored name (e.g. one an old disconnect inherited from a since-dropped provider).
         current = toAnon(current);
       }
       localStorage.setItem(KEY, JSON.stringify(current));
@@ -246,6 +258,7 @@
   window.HedgeGuest = {
     getSession: getSession,
     avatarForAuthor: avatarForAuthor,
+    anonName: anonName,
     syncSession: syncSession,
     ensureSession: ensureSession,
     invalidateSession: invalidateSession

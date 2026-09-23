@@ -7,16 +7,20 @@ open Thoth.Json
 open Hedge.Schema
 open Hedge.SchemaCodec
 
-/// Admin type descriptor returned by the server.
+/// Admin type descriptor returned by the server. `Ops` are the operations the CALLER may perform on
+/// this resource ("list"/"read"/"create"/"update"/"delete") — the server scopes both the resource
+/// list and these per the caller's role, so the client renders only permitted resources + controls.
 type AdminType = {
     Name: string
     Schema: TypeSchema
+    Ops: string list
 }
 
 let private decodeAdminType : Decoder<AdminType> =
     Decode.object (fun get ->
         { Name = get.Required.Field "name" Decode.string
-          Schema = get.Required.Field "schema" decodeTypeSchema })
+          Schema = get.Required.Field "schema" decodeTypeSchema
+          Ops = get.Optional.Field "ops" (Decode.list Decode.string) |> Option.defaultValue [] })
 
 let private decodeTypesResponse : Decoder<AdminType list> =
     Decode.field "types" (Decode.list decodeAdminType)
@@ -43,18 +47,24 @@ let private adminFetch (url: string) (method: HttpMethod) (key: string) (body: s
         return! response.text()
     }
 
-/// Simple GET (no auth needed for types endpoint).
-let private fetchJson (url: string) : JS.Promise<string> =
+/// GET /api/admin/types — the entity types the caller may access, each with its permitted ops. Now
+/// authorization-scoped: sends the admin key (owner) and the same-origin guest cookie (a delegated
+/// curator), so the result is the caller's permitted set. A 401 (no acceptable credential) is reported
+/// as Error "unauthorized" so the SPA shows its sign-in rather than a decode failure.
+let getTypes (key: string) : JS.Promise<Result<AdminType list, string>> =
     promise {
-        let! response = fetch (basePath + url) []
-        return! response.text()
-    }
-
-/// GET /api/admin/types — list available entity types and their schemas.
-let getTypes () : JS.Promise<Result<AdminType list, string>> =
-    promise {
-        let! text = fetchJson "/api/admin/types"
-        return Decode.fromString decodeTypesResponse text
+        let props = [
+            requestHeaders [ Custom ("X-Admin-Key", key) ]
+            Method HttpMethod.GET
+        ]
+        // GlobalFetch (not Fetch.fetch, which FAILWITHS on any non-2xx) so a 401 comes back as a
+        // Response with its status — otherwise the exception pre-empts the status check and an ordinary
+        // signed-out discovery surfaces as a request-error banner instead of the sign-in.
+        let! response = GlobalFetch.fetch(RequestInfo.Url (basePath + "/api/admin/types"), requestProps props)
+        if response.Status = 401 then return Error "unauthorized"
+        else
+            let! text = response.text()
+            return Decode.fromString decodeTypesResponse text
     }
 
 /// GET /api/admin/:type — list records of a type.

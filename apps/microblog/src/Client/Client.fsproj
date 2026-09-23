@@ -10,6 +10,8 @@
     <!-- Shared content-client contract (immutable host context) the blog content
          module references; linked once before the module .props (unified shell, Stage 0). -->
     <Compile Include="../../../../packages/content-client/HostContext.fs" />
+    <!-- Shared OAuth claim-return glue (parse + route pattern + return-nav) the host uses. -->
+    <Compile Include="../../../../packages/content-client/ClaimGlue.fs" />
     <!-- Shared identity subsystem + UI (CP-B: the single identity authority this app's host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />
@@ -19,6 +21,9 @@
   <!-- Content client comes from the composed blog module (its own .props); this app's
        own content pages were removed. Blog is PRIMARY here, run at "/" by Blog/Main.fs. -->
   <Import Project="../../../../packages/modules/blog/blog.client.props" />
+  <!-- idealist only: the alerts typed client (Alerts.ClientGen) the curator page consumes, gated like
+       the alerts codecs/models below. Import before Curator/App.fs. -->
+  <Import Project="../../../../packages/modules/alerts/alerts.client.props" Condition="'$(HEDGE_SITE)' == 'idealist'" />
   <ItemGroup>
     <!-- CP-B: the single-module host (chrome + shared identity + router) that runs the blog
          module via its hosted surface, mirroring the Justat shell. Blog/Main.fs runs it. -->
@@ -27,13 +32,16 @@
     <Compile Include="Blog/Main.fs" />
     <!-- darwin.news-specific glue, a separate /rhymes bundle -->
     <Compile Include="Rhyming/App.fs" />
-    <!-- idealist curator page, a separate /curator bundle (reuses the shared rich-text editor) -->
-    <Compile Include="Curator/App.fs" />
+    <!-- idealist curator page (a separate /curator bundle) — consumes Alerts.ClientGen, so it compiles
+         only on idealist; vite.config.js gates the curator.html input the same way. -->
+    <Compile Include="Curator/App.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
+    <!-- AlertsModels (Alerts.Api) for the curator's typed client — idealist only. -->
+    <ProjectReference Include="../../../../packages/modules/alerts/src/Models/AlertsModels.fsproj" Condition="'$(HEDGE_SITE)' == 'idealist'" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

@@ -15,10 +15,10 @@ let private authorResolver (db: D1Database) : AuthorResolver =
         promise {
             let! _ =
                 db.batch([|
-                    Server.Identity.ensureGuestStmt db req.GuestId req.Now
-                    Server.Identity.ensureAnonymousStmt db req.FallbackIdentityId req.GuestId req.AuthorName req.Now
+                    Identity.Server.ensureGuestStmt db req.GuestId req.Now
+                    Identity.Server.ensureAnonymousStmt db req.FallbackIdentityId req.GuestId req.AuthorName req.Now
                 |])
-            let! active = Server.Identity.activeFor db req.GuestId
+            let! active = Identity.Server.activeFor db req.GuestId
             return
                 { IdentityId = active |> Option.map (fun i -> i.Id) |> Option.defaultValue req.FallbackIdentityId
                   Picture = active |> Option.map (fun i -> i.Picture) |> Option.defaultValue "" }

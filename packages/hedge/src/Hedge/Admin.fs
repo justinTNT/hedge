@@ -25,13 +25,42 @@ type AdminTable = {
     MutableFields: string list
 }
 
-/// What an app hands the dispatcher: its generated tables, how to reach the D1
-/// database from its env, and how to authorise a request (its own admin key).
+/// An admin operation on a resource — what an authorization decision keys on, alongside the table
+/// name. `List` = the collection read (`GET /api/admin/:type`); the rest are the obvious CRUD.
+type AdminOp =
+    | OpList
+    | OpRead
+    | OpCreate
+    | OpUpdate
+    | OpDelete
+
+/// The identity behind an admin request, resolved ONCE per request (subject + grant lookup are async);
+/// the per-(resource, operation) decision is then the sync `permits` predicate. Admin-owned (the app
+/// maps its ADMIN_KEY / Hedge.AccessControl.RoleResult onto it) so the admin need not depend on the
+/// access-control capability. The optional cookie is a guest-session renewal to echo on responses.
+type AdminAccess =
+    /// The owner (a matching ADMIN_KEY): permits every resource and operation.
+    | AdminOwner
+    /// An authenticated subject; `permits resource op` is the app's permission matrix (an unlisted
+    /// resource/op is denied → 403). `setCookie` is an optional guest-cookie renewal.
+    | AdminSubject of permits: (string -> AdminOp -> bool) * setCookie: string option
+    /// No acceptable session — every operation is 401. `setCookie` carries any renewal.
+    | AdminAnonymous of setCookie: string option
+
+/// What an app hands the dispatcher: its generated tables, how to reach the D1 database from its env,
+/// and how to authorize a request. `Authorize` runs once per admin request and yields who is asking;
+/// the dispatcher enforces per (resource, operation) and echoes any renewal cookie. Owner-key-only
+/// apps use `Hedge.Admin.ownerKey` to keep their pre-authorization behaviour.
 type AdminConfig<'env> = {
     Tables: AdminTable list
     GetDb: 'env -> D1Database
-    CheckKey: WorkerRequest -> 'env -> bool
+    Authorize: WorkerRequest -> 'env -> JS.Promise<AdminAccess>
 }
+
+/// Adapter for owner-key-only deployments: full access on a matching key, else 401 — identical to the
+/// pre-authorization admin. Apps that have not adopted delegated roles wire `Authorize = ownerKey f`.
+let ownerKey (checkKey: WorkerRequest -> 'env -> bool) : WorkerRequest -> 'env -> JS.Promise<AdminAccess> =
+    fun request env -> promise { return (if checkKey request env then AdminOwner else AdminAnonymous None) }
 
 // ============================================================
 // PascalCase → camelCase (JSON keys) / snake_case (DB columns)
@@ -186,52 +215,79 @@ let private genericDelete (db: D1Database) (table: AdminTable) (id: string) : JS
 // Response wrappers + route dispatch
 // ============================================================
 
-let private typesResponse (config: AdminConfig<'env>) : WorkerResponse =
-    let body =
-        Encode.object [
-            "types", Encode.list (config.Tables |> List.map (fun t ->
-                Encode.object [
-                    "name", Encode.string t.Name
-                    "schema", encodeTypeSchema t.Schema
-                ]))
-        ] |> Encode.toString 0
-    okJson body
+let private opName = function
+    | OpList -> "list" | OpRead -> "read" | OpCreate -> "create" | OpUpdate -> "update" | OpDelete -> "delete"
+let private allOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
 
-let private listResponse (db: D1Database) (table: AdminTable) : JS.Promise<WorkerResponse> =
+/// Schema/type discovery — itself authorized (the plan: "type/schema discovery follows
+/// authorization"). Returns only the resources the caller may at least LIST, each annotated with the
+/// operations they may perform, so the client renders exactly the resources + controls the server
+/// will honour (client hiding is UX, not enforcement — the CRUD gates are the real check). Anonymous
+/// callers get 401 (the SPA then shows its sign-in); any renewal cookie is echoed.
+let private typesResponse (config: AdminConfig<'env>) (access: AdminAccess) : WorkerResponse =
+    match access with
+    | AdminAnonymous cookie ->
+        match cookie with
+        | Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c
+        | None -> unauthorized ()
+    | _ ->
+        let opsFor (name: string) : AdminOp list =
+            match access with
+            | AdminOwner -> allOps
+            | AdminSubject (permits, _) -> allOps |> List.filter (permits name)
+            | AdminAnonymous _ -> []
+        let cookie = match access with AdminSubject (_, c) -> c | _ -> None
+        let visible = config.Tables |> List.filter (fun t -> opsFor t.Name |> List.contains OpList)
+        let body =
+            Encode.object [
+                "types", Encode.list (visible |> List.map (fun t ->
+                    Encode.object [
+                        "name", Encode.string t.Name
+                        "schema", encodeTypeSchema t.Schema
+                        "ops", Encode.list (opsFor t.Name |> List.map (opName >> Encode.string))
+                    ]))
+            ] |> Encode.toString 0
+        match cookie with Some c -> okJsonWithCookie body c | None -> okJson body
+
+/// Wrap a 200 body, echoing an optional guest-session renewal cookie (delegated admin sessions).
+let private ok (cookie: string option) (body: string) : WorkerResponse =
+    match cookie with Some c -> okJsonWithCookie body c | None -> okJson body
+
+let private listResponse (db: D1Database) (table: AdminTable) (cookie: string option) : JS.Promise<WorkerResponse> =
     promise {
         let! json = genericList db table
-        return okJson (sprintf """{"records":%s}""" json)
+        return ok cookie (sprintf """{"records":%s}""" json)
     }
 
-let private getResponse (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<WorkerResponse> =
+let private getResponse (db: D1Database) (table: AdminTable) (id: string) (cookie: string option) : JS.Promise<WorkerResponse> =
     promise {
         let! result = genericGet db table id
         match result with
         | None -> return notFound ()
-        | Some json -> return okJson (sprintf """{"record":%s}""" json)
+        | Some json -> return ok cookie (sprintf """{"record":%s}""" json)
     }
 
-let private createResponse (db: D1Database) (table: AdminTable) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
+let private createResponse (db: D1Database) (table: AdminTable) (request: WorkerRequest) (cookie: string option) : JS.Promise<WorkerResponse> =
     promise {
         if table.Insert = "" then
             return badRequest (sprintf "%s cannot be created from the admin (no primary key)" table.Name)
         else
             let! bodyText = request.text()
             let! json = genericCreate db table bodyText
-            return okJson (sprintf """{"record":%s}""" json)
+            return ok cookie (sprintf """{"record":%s}""" json)
     }
 
-let private updateResponse (db: D1Database) (table: AdminTable) (id: string) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
+let private updateResponse (db: D1Database) (table: AdminTable) (id: string) (request: WorkerRequest) (cookie: string option) : JS.Promise<WorkerResponse> =
     promise {
         let! bodyText = request.text()
         let! json = genericUpdate db table id bodyText
-        return okJson (sprintf """{"record":%s}""" json)
+        return ok cookie (sprintf """{"record":%s}""" json)
     }
 
-let private deleteResponse (db: D1Database) (table: AdminTable) (id: string) : JS.Promise<WorkerResponse> =
+let private deleteResponse (db: D1Database) (table: AdminTable) (id: string) (cookie: string option) : JS.Promise<WorkerResponse> =
     promise {
         do! genericDelete db table id
-        return okJson """{"ok":true}"""
+        return ok cookie """{"ok":true}"""
     }
 
 /// Try to handle an admin route. Returns Some promise if matched, None otherwise.
@@ -240,11 +296,28 @@ let private deleteResponse (db: D1Database) (table: AdminTable) (id: string) : J
 let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'env) (route: Route) : JS.Promise<WorkerResponse> option =
     let db = config.GetDb env
     let findTable (name: string) = config.Tables |> List.tryFind (fun t -> t.Name = name)
-    let authed () = config.CheckKey request env
+    // Resolve who is asking ONCE, then enforce the requested (resource, operation): owner acts on
+    // everything; a subject acts only where its permits matrix allows (else 403); no session is 401.
+    // Any guest-session renewal cookie rides through to the op's response (or the denial). The subject
+    // + grant lookup are async, so this runs inside the matched route's promise, once per request.
+    let gated (resource: string) (op: AdminOp) (act: string option -> JS.Promise<WorkerResponse>) : JS.Promise<WorkerResponse> =
+        promise {
+            let! access = config.Authorize request env
+            match access with
+            | AdminOwner -> return! act None
+            | AdminSubject (permits, cookie) ->
+                if permits resource op then return! act cookie
+                else return (match cookie with Some c -> jsonResponseWithCookie """{"error":"Forbidden"}""" 403 c | None -> forbidden ())
+            | AdminAnonymous cookie ->
+                return (match cookie with Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c | None -> unauthorized ())
+        }
     match route with
-    // GET /api/admin/types — list available schemas
+    // GET /api/admin/types — the permitted schemas for the caller (authorization-scoped discovery)
     | GET path when matchPath "/api/admin/types" path = Some (Exact "/api/admin/types") ->
-        Some (promise { return typesResponse config })
+        Some (promise {
+            let! access = config.Authorize request env
+            return typesResponse config access
+        })
 
     // GET /api/admin/:type — list records ; /api/admin/:type/:id — get one
     | GET path ->
@@ -253,19 +326,11 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = typeName.Split('/')
             if parts.Length = 1 then
                 match findTable typeName with
-                | Some table ->
-                    Some (promise {
-                        if not (authed ()) then return unauthorized ()
-                        else return! listResponse db table
-                    })
+                | Some table -> Some (gated table.Name OpList (fun c -> listResponse db table c))
                 | None -> None
             elif parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table ->
-                    Some (promise {
-                        if not (authed ()) then return unauthorized ()
-                        else return! getResponse db table parts.[1]
-                    })
+                | Some table -> Some (gated table.Name OpRead (fun c -> getResponse db table parts.[1] c))
                 | None -> None
             else None
         | _ -> None
@@ -275,11 +340,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
         match matchPath "/api/admin/:id" path with
         | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
             match findTable entityName with
-            | Some table ->
-                Some (promise {
-                    if not (authed ()) then return unauthorized ()
-                    else return! createResponse db table request
-                })
+            | Some table -> Some (gated table.Name OpCreate (fun c -> createResponse db table request c))
             | None -> None
         | _ -> None
 
@@ -290,11 +351,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = rest.Split('/')
             if parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table ->
-                    Some (promise {
-                        if not (authed ()) then return unauthorized ()
-                        else return! updateResponse db table parts.[1] request
-                    })
+                | Some table -> Some (gated table.Name OpUpdate (fun c -> updateResponse db table parts.[1] request c))
                 | None -> None
             else None
         | _ -> None
@@ -306,11 +363,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = rest.Split('/')
             if parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table ->
-                    Some (promise {
-                        if not (authed ()) then return unauthorized ()
-                        else return! deleteResponse db table parts.[1]
-                    })
+                | Some table -> Some (gated table.Name OpDelete (fun c -> deleteResponse db table parts.[1] c))
                 | None -> None
             else None
         | _ -> None

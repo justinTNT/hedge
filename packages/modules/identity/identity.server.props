@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    The shared identity server layer, for a consuming identity host to compose. The app IMPORTs this
+    instead of hand-maintaining its own copy of the identity persistence (the byte-identical
+    Server.Identity + identity Server.Sql every host duplicated before Phase 1). Paths are
+    $(MSBuildThisFileDirectory)-rooted so they resolve the same from any consumer.
+
+    Ordering: Identity.Db (row projection) -> Identity.Sql (statements) -> Identity.Server (functions)
+    -> Identity.Attribution (merge mechanism) -> Identity.Handlers (HTTP handlers, which read all the
+    above + take host seams via Deps). Everything depends only on Hedge (Hedge.Workers/Router/
+    GuestSession primitives), so Import this any time after the app references Hedge and BEFORE anything
+    that calls Identity.* (the app's GuestConfig, AccessConfig, Handlers, ModuleServices). It does NOT
+    depend on the app's Server.Env, Server.Db, Server.Sql, or Server.AttributionPolicy (the site's
+    attribution policy is passed to Identity.Handlers as data, not referenced here).
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Db.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Sql.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Identity.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Attribution.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Handlers.fs" />
+  </ItemGroup>
+</Project>

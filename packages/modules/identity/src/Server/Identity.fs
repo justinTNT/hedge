@@ -1,8 +1,16 @@
-module Server.Identity
+module Identity.Server
+
+// The shared identity persistence functions (previously duplicated verbatim as each host's
+// `Server.Identity`). Self-contained: reads its own `Identity.Sql` (sibling module) + `Identity.Db`
+// row projection + the framework `Hedge.Workers` primitives (bind, D1) — never a host's Server.Db /
+// Server.Sql. Hosts compile this via `identity.server.props` and call `Identity.Server.*`.
+//
+// Access-control (grants) resolution and attribution/merge policy are NOT here: those are the host's
+// own concern (grants are an opt-in sub-surface; attribution is injected), so they stay host-side.
 
 open Fable.Core
 open Hedge.Workers
-open Server.Db
+open Identity.Db
 
 /// The guest's active identity — most recently activated, or None if the
 /// guest has never been identified (no row, or nothing activated yet).
@@ -60,12 +68,10 @@ let hasLinkedIdentity (db: D1Database) (guestId: string) : JS.Promise<bool> =
         return not (isNull (box row))
     }
 
-// ---- Access control (curator role) ----
-
-/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id) — the key an
-/// access-control grant is checked against. None when the guest is soft-deleted, has no active
-/// identity, or its active identity is anonymous (which must never hold a role). Injected into
-/// Hedge.AccessControl.Deps.ActiveSubject.
+/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id). None when
+/// the guest is soft-deleted, has no active identity, or its active identity is anonymous. This is
+/// CORE authenticated-subject resolution — available to any identity host for OWNERSHIP checks, with
+/// no grants package composed; role checking (Identity.Grants.hasGrant) is layered on TOP of this.
 let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * string) option> =
     promise {
         let! live = (bind (db.prepare Sql.guestNotDeleted) [| box guestId |]).first()
@@ -75,12 +81,4 @@ let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * stri
             match id with
             | Some i when i.Provider <> "anonymous" -> return Some (i.Provider, i.ProviderUserId)
             | _ -> return None
-    }
-
-/// Is there an enabled grant for this OAuth subject + role? Unknown/absent/disabled → false. Injected
-/// into Hedge.AccessControl.Deps.HasGrant. Fresh lookup per call, so revocation takes effect at once.
-let hasGrant (db: D1Database) (provider: string) (providerUserId: string) (role: string) : JS.Promise<bool> =
-    promise {
-        let! row = (bind (db.prepare Sql.grantEnabled) [| box provider; box providerUserId; box role |]).first()
-        return not (isNull (box row))
     }

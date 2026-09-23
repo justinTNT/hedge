@@ -10,15 +10,21 @@ open Fable.Core
 open Hedge.Workers
 open Server.Env
 
+// Access-control (grants) resolution is the shared identity module's OPT-IN sub-surface
+// (Identity.Grants, via identity.grants.server.props); this app just binds it to its Env. Both
+// resolvers read the shared Identity.Server + the module-owned grant SQL — no grant SQL is copied here.
+
 /// Bind the access-control deps for this request: the shared guest policy + the active-identity
 /// subject resolver (honors guests.deleted_at, excludes anonymous) + the enabled-grant lookup.
 let deps (env: Env) (request: WorkerRequest) : Hedge.AccessControl.Deps =
     { Guest = Server.GuestConfig.deps env request
       ActiveSubject = fun guestId -> promise {
-          let! s = Server.Identity.activeSubject env.DB guestId
+          // Core authenticated-subject resolution (available without the grants package)...
+          let! s = Identity.Server.activeSubject env.DB guestId
           return s |> Option.map (fun (provider, providerUserId) ->
               ({ Provider = provider; ProviderUserId = providerUserId } : Hedge.AccessControl.Subject)) }
-      HasGrant = fun provider providerUserId role -> Server.Identity.hasGrant env.DB provider providerUserId role }
+      // ...with role checking (the optional grants sub-surface) layered on top.
+      HasGrant = fun provider providerUserId role -> Identity.Grants.hasGrant env.DB provider providerUserId role }
 
 /// Authorize `role` for this request (accepted guest cookie → active identity → enabled grant).
 /// One request in, so audience/cookie are consistent. The guest fail-closed check fires here (only on

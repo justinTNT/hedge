@@ -125,7 +125,10 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
         rhyming: resolve(__dirname, 'rhyming.html'),
-        curator: resolve(__dirname, 'curator.html')
+        // The curator page is an idealist-only surface (its client consumes Alerts.ClientGen, compiled
+        // only on idealist). Include it as a build input only there, so other tenants don't reference a
+        // curator bundle that isn't built.
+        ...(process.env.HEDGE_SITE === 'idealist' ? { curator: resolve(__dirname, 'curator.html') } : {})
       }
     }
   },

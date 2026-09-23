@@ -34,6 +34,12 @@ let private orEmpty (x: obj) : string = jsNative
 [<Emit("window.HedgeGuest.avatarForAuthor($0)")>]
 let avatarForAuthor (author: string) : string = jsNative
 
+/// The guest's generated anonymous pseudonym (the new-guest formula) for its own id — used as the
+/// fallback name when disconnecting a provider drops back to anonymous, so the stored anonymous
+/// identity matches the displayed one (and its avatar, which is derived from the name).
+[<Emit("window.HedgeGuest.anonName()")>]
+let anonName () : string = jsNative
+
 [<Emit("$0 == null")>]
 let private isJsNull (o: obj) : bool = jsNative
 

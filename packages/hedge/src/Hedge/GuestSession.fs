@@ -10,6 +10,7 @@ module Hedge.GuestSession
 // implementation while keeping the contract.
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Hedge.Workers
 open Hedge.GuestCookie
 
@@ -67,6 +68,33 @@ let configFor (keyId: string) (secret: string) (audience: string) (previous: (Si
     if isNull (box audience) || audience = "" then failwith "guest signing: audience missing"
     { Active = { KeyId = keyId; Secret = secret }; Audience = audience; Previous = previous }
 
+/// Parse a GUEST_KEYRING value into retiring (previous) signing keys for graceful rotation (Slice G).
+/// The value is a JSON array of { "keyId": string, "secret": >=32 chars, "retireAt": epoch-seconds }:
+/// each entry is a PREVIOUS key that still VERIFIES until retireAt but never signs (issue always uses
+/// the active key), so a rolled key keeps existing cookies valid while the session policy re-signs them
+/// onto the active key on use. Absent/blank -> [] (single-secret deployments are unchanged; packaging
+/// key rotation never forces a rotation or session reset). Present-but-malformed, or a weak/missing
+/// entry secret -> throws, matching configFor's fail-closed stance (a loud misconfiguration, never a
+/// silently-weak keyring). The ACTIVE key is configFor's own secret and is never listed here.
+let keyringFrom (value: string) : (SigningKey * int) list =
+    if isNull (box value) || value.Trim() = "" then []
+    else
+        let arr : obj[] =
+            try unbox (JS.JSON.parse value)
+            with _ -> failwith "guest signing: GUEST_KEYRING is not valid JSON (fail closed)"
+        if isNull (box arr) then failwith "guest signing: GUEST_KEYRING must be a JSON array (fail closed)"
+        [ for entry in arr ->
+            let keyId : string = entry?keyId
+            let secret : string = entry?secret
+            if isNull (box keyId) || keyId = "" then
+                failwith "guest signing: GUEST_KEYRING entry missing keyId (fail closed)"
+            if isNull (box secret) || secret.Length < 32 then
+                failwith "guest signing: GUEST_KEYRING entry secret missing or shorter than 32 bytes (fail closed)"
+            // retireAt is an epoch integer; a missing/garbage value yields a key that never satisfies
+            // `now < retireAt` in keyFor, so it stays inert (fails safe, never authorizes) rather than open.
+            let retireAt : int = entry?retireAt
+            { KeyId = keyId; Secret = secret }, retireAt ]
+
 /// Read the raw `hedge_guest` cookie value from a request (transport only — interpretation is the
 /// policy's job, in `verify`). The single point that names the cookie for reading; issuing names it
 /// in `cookieHeader`. Consumers never touch the cookie themselves.
@@ -93,8 +121,13 @@ let requireGuest (deps: Deps) (cookieValue: string option) : JS.Promise<RequireR
         let now = deps.Now()
         let! v = verify deps.Config now cookieValue
         match v with
-        | Signed claims ->
-            if needsRenewal RenewWithinSeconds now claims then
+        | Signed (claims, keyId) ->
+            // Graceful key rotation: a credential still valid under a RETIRING (non-active) key is
+            // re-signed onto the active key on use, so cookies migrate off a retiring key well before
+            // its retirement epoch — no reset when the old key finally drops out of the keyring. Also
+            // re-sign on the ordinary time-based renewal. issue always signs with Config.Active.
+            let onRetiringKey = keyId <> deps.Config.Active.KeyId
+            if onRetiringKey || needsRenewal RenewWithinSeconds now claims then
                 let! repl = issueHeader deps now claims.GuestId
                 return Accepted { GuestId = claims.GuestId; Replacement = Some repl }
             else

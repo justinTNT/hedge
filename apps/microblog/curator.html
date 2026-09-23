@@ -37,6 +37,10 @@
 </head>
 <body>
     <div id="app"></div>
+    <!-- Defines window.HedgeGuest (the shared guest-session runtime) BEFORE the app module runs — the
+         curator reads identity via Client.GuestSession.syncSession(). Classic script (an IIFE, not
+         bundled by vite), served from _site/<base>/lib; __BASE__ is replaced with the deployment base. -->
+    <script src="__BASE__/lib/guest-session.js"></script>
     <script type="module" src="/lib/rich-text/bootstrap.js"></script>
     <script type="module" src="/dist/client/Curator/App.js"></script>
 </body>

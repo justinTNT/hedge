@@ -1,5 +1,6 @@
 [
-  { "identity": true },
+  { "identity": true, "assembly": "IdentityModels" },
+  { "identity": true, "assembly": "GrantModels", "namespace": "Grants" },
   { "module": "../../packages/modules/blog" },
   { "module": "../../packages/modules/alerts" }
 ]

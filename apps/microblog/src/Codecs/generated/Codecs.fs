@@ -21,7 +21,7 @@ module Encode =
     // -- Domain types --
     let inline guest (v: Models.Domain.Guest) = encode v
     let inline identity (v: Models.Domain.Identity) = encode v
-    let inline grant (v: Models.Domain.Grant) = encode v
+    let inline grant (v: Grants.Domain.Grant) = encode v
 
     // -- API view types --
 
@@ -34,7 +34,7 @@ module Decode =
     // -- Domain types --
     let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
     let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
-    let grant : Decoder<Models.Domain.Grant> = decode<Models.Domain.Grant>()
+    let grant : Decoder<Grants.Domain.Grant> = decode<Grants.Domain.Grant>()
 
     // -- API view types --
 

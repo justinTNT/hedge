@@ -19,8 +19,13 @@ open Server.Env
 [<Emit("new URL($0.url).hostname")>]
 let private hostOf (request: WorkerRequest) : string = jsNative
 
-/// Active signing key id. Key rotation appends retiring previous keys to configFor's last argument.
-let [<Literal>] private KeyId = "k1"
+/// Active signing key id — the key that SIGNS (and verifies). Defaults to "k1" (the estate's
+/// original), overridable per deployment via GUEST_KEY_ID. A key rotation MUST promote a new active id
+/// (e.g. "k2") here while moving the old id ("k1") into GUEST_KEYRING as a retiring key: keyFor
+/// resolves the active id to the active secret first, so if the active id stayed "k1" it would shadow
+/// the retiring "k1" and reject every cookie signed under the old secret.
+let private activeKeyId (env: Env) : string =
+    if isNull (box env.GUEST_KEY_ID) || env.GUEST_KEY_ID = "" then "k1" else env.GUEST_KEY_ID
 
 /// Parse an optional absolute-epoch env value; blank/absent/non-numeric → None.
 let private parseEpoch (s: string) : int option =
@@ -41,7 +46,7 @@ let private migrationMode (env: Env) (now: int) : Hedge.GuestSession.BridgePolic
 /// GUEST_SECRET is absent/short — only reached on a guest operation, never on a content read.
 let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
     let bridge, migrationStart = migrationMode env (epochNow ())
-    { Config = Hedge.GuestSession.configFor KeyId env.GUEST_SECRET (hostOf request) []
+    { Config = Hedge.GuestSession.configFor (activeKeyId env) env.GUEST_SECRET (hostOf request) (Hedge.GuestSession.keyringFrom env.GUEST_KEYRING)
       Bridge = bridge
       // Secure everywhere except an explicit local-HTTP development environment (work order).
       Secure = (env.ENVIRONMENT <> "development")
@@ -49,8 +54,8 @@ let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
       NewGuestId = newId
       // migrationStart bounds eligibility to guests created before it; 0 (no bridge) means the query
       // requires created_at < 0, so nothing is ever eligible under an accidental Bridge.
-      LegacyEligible = (fun value -> Server.Identity.legacyEligible env.DB value migrationStart)
-      LegacyHasLinkedIdentity = (fun guestId -> Server.Identity.hasLinkedIdentity env.DB guestId) }
+      LegacyEligible = (fun value -> Identity.Server.legacyEligible env.DB value migrationStart)
+      LegacyHasLinkedIdentity = (fun guestId -> Identity.Server.hasLinkedIdentity env.DB guestId) }
 
 /// Resolve the guest for a WRITE (comment / identity mutation): verified or bridge-authorized, else
 /// Rejected. Never creates a guest — that is the bootstrap path's job (router /api/auth/me).
