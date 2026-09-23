@@ -1,5 +1,54 @@
 # Archive photograph review — 23–24 September 2026
 
+## 24 September: species-level illustrations approved
+
+The owner approved using the candidate photographs on the nine remaining
+subspecies/variety accounts, with public captions at **species level**. Account
+headings and descriptions keep the full subspecies/variety name. Photo captions
+appear beneath the hero, each gallery image and the enlarged photograph.
+
+Reviewed 44 candidates and selected **30 photographs across all nine accounts**,
+retaining complementary flowers, fruit, seeds, leaf surfaces, habit, aerial roots
+and wildlife views. Fourteen duplicate copies, alternate exports and repeated
+views remain excluded with individual reasons. There is no fixed gallery cap.
+
+| Account | Photographs | Public photo caption |
+| --- | ---: | --- |
+| Alstonia spectabilis subsp. ophioxyloides | 1 | Alstonia spectabilis |
+| Antiaris toxicaria var. macrophylla | 3 | Antiaris toxicaria |
+| Crotalaria cunninghamii subsp. cunninghamii | 5 | Crotalaria cunninghamii |
+| Ficus virens var. virens | 7 | Ficus virens |
+| Ilex arnhemensis subsp. arnhemensis | 3 | Ilex arnhemensis |
+| Leptospermum madidum subsp. sativum | 3 | Leptospermum madidum |
+| Lophostemon grandiflorus subsp. riparius | 3 | Lophostemon grandiflorus |
+| Syzygium forte subsp. potamophilum | 3 | Syzygium forte |
+| Trichodesma zeylanicum var. zeylanicum | 2 | Trichodesma zeylanicum |
+
+The user's observation that these ranks may represent the locally familiar
+expression of a species, particularly Alstonia spectabilis subsp. ophioxyloides,
+is recorded as editorial context. The subspecies/variety shown in each image
+remains unverified. The species-level caption intentionally makes the difference
+from the account title visible to reviewers.
+
+Each selected file has a hash-pinned allocation and explicit `caption` in
+`data/editorial-decisions.json`. The importer preserves that caption rather than
+automatically borrowing the account's more specific name. Existing photo captions,
+hero choices and admin edits are preserved by the insert-only seed.
+
+Coverage is now **507 of 531 accounts**, with **1,105 photographs**. The remaining
+**24 unillustrated accounts** have empty folders referring to the 2022 edition:
+23 say to use its photographs, and Cartonema parviflorum names NPNA 2022 p.145.
+The Desmodium folder uses the spelling `heterocarpum` for the account's
+`heterocarpon`. These findings supersede the rank-review blanks in the earlier
+23 September audit below.
+
+Validation: all 27 app tests passed, including a regression check that follows an
+explicit species caption through candidate selection, generated catalogue and
+SQL seed. Import, audit and site build passed. All 531 existing plant rows and
+1,075 existing photo rows were unchanged after seeding. Live checks verified the
+full account headings, species-only captions for all 30 photos, and all 60 image
+and thumbnail URLs across the nine accounts.
+
 ## 24 September: Abrus seed photograph restored
 
 The Abrus account had two newer flower photographs, but lacked the book's seed

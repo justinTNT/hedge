@@ -416,31 +416,37 @@
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/1. Antiaris toxcaria.290.a.JPG",
       "sha256": "eee25f8f42d3d21de262f484782439c4bc7c43bc7b321b68e3cc4bcca9741040",
       "plant": "Antiaris toxicaria var. macrophylla",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
-      "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "priority": 0,
+      "caption": "Antiaris toxicaria",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Ripe fruit with leaf venation. The filename spelling toxcaria is normalized to toxicaria using the containing account folder; this does not establish the variety.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/1.a Antiaris toxcaria.288.a.JPG",
       "sha256": "517f08013fdb2e79ad117b042204ea109b4b824b0df598029425e0dbcf8f9921",
       "plant": "Antiaris toxicaria var. macrophylla",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Antiaris toxicaria",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Leaves and hanging fruit. The filename spelling toxcaria is normalized to toxicaria using the containing account folder; this does not establish the variety.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/2. Antiaris toxcaria.333.a.JPG",
       "sha256": "658897b94ba7cca7febdceb141b32181d104781f9769505346ccdf025c06e260",
       "plant": "Antiaris toxicaria var. macrophylla",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Antiaris toxicaria",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Opened fruit and exposed seed. The filename spelling toxcaria is normalized to toxicaria using the containing account folder; this does not establish the variety.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antidesma ghaesembilla/PICK/1. Antedesma ghaesaembilla.B.IM.jpg",
@@ -2126,31 +2132,37 @@
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/1. Ilex arnhemensis.318.a.JPG",
       "sha256": "d29318f96534f51089efa295cb5e17601085c90f9b8e4aa077e402801488b0f9",
       "plant": "Ilex arnhemensis subsp. arnhemensis",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
-      "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "priority": 0,
+      "caption": "Ilex arnhemensis",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowers and leaves.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/1.a Ilex arnhemensis.339.a.JPG",
       "sha256": "432777722982f9b1e7387753fe06b75fb95b56060eac2cb4db6f394e3275e76d",
       "plant": "Ilex arnhemensis subsp. arnhemensis",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Ilex arnhemensis",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Close flower view.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/2. Ilex arnhemensis fruit.845.a.JPG",
       "sha256": "517a951cfc21b88c4a4a50709d836b1babf2b35412152bec6cba25ce5bdc44cc",
       "plant": "Ilex arnhemensis subsp. arnhemensis",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Ilex arnhemensis",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Fruit and leaf undersides.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/1. Jasminum didymum subsp. didymum.3821.IC.a.jpeg",
@@ -2226,21 +2238,25 @@
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leptospermum madidum subsp. sativum/PICK/1. Leptospermum madidum.954.a.JPG",
       "sha256": "193886b71ba7e847013a6c5a4be0708e83fe6b02ae8d18ab74933c228c02a860",
       "plant": "Leptospermum madidum subsp. sativum",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
-      "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "priority": 0,
+      "caption": "Leptospermum madidum",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowers and narrow foliage.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leptospermum madidum subsp. sativum/PICK/2. Leptospermum madidum.956.a.JPG",
       "sha256": "c299acdc4176166dca5724159d4861a92f2a1d67a96b83dc6d5e927739ce98fa",
       "plant": "Leptospermum madidum subsp. sativum",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Leptospermum madidum",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Weeping tree habit.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mackinlaya macrosciadea (N)/PICK/1. Mackinlaya macroscaedia.A.IM.jpg",
@@ -2656,21 +2672,25 @@
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichodesma zeylanicum var. zeylanicum/PICK/1. Trichodesma zeylanicum.998.a.JPG",
       "sha256": "2a6286de57d7ec902208147f8c7b21e48415a7cef7fc571941f54fcdab26f9f1",
       "plant": "Trichodesma zeylanicum var. zeylanicum",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
-      "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "priority": 0,
+      "caption": "Trichodesma zeylanicum",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flower and buds.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichodesma zeylanicum var. zeylanicum/PICK/1.a Trichodesma zeylanicum.989.a.JPG",
       "sha256": "3716ce205d87f9b51cae871e79ec1e0f2e42e77f11aa375cb721bcc9813c388f",
       "plant": "Trichodesma zeylanicum var. zeylanicum",
-      "include": false,
+      "include": true,
       "credit": "Photographer not recorded",
       "priority": 3,
-      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
-      "reviewCategory": "rank-review"
+      "caption": "Trichodesma zeylanicum",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowering stem and foliage.",
+      "reviewCategory": "selected-species-level",
+      "previousReason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required."
     },
     {
       "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichosanthes cucumerina var. cucumerina (N)/PICK/1. Trichosanthes cucumerina.A.44015.RD.b.jpg",
@@ -2851,6 +2871,380 @@
       "priority": 4,
       "reason": "24 September 2026 review. Visually reviewed additional framing of the same open-pod cluster. Retain the selected book seed view alongside the two existing flower views.",
       "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Apocynaceae Alstonia Alyxia Cynachum Marsdenia Taberanemonta Wrightia   Brachysteima    a/Alstonia/Alstonia spectabilis 8409.JPG",
+      "sha256": "ae00caf3e67fd97f076cd7b3f599252d36963f87dcc237ba38f6dd3915f7f127",
+      "plant": "Alstonia spectabilis subsp. ophioxyloides",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "caption": "Alstonia spectabilis",
+      "reason": "24 September 2026 visual review: Near-identical flower composition to 8410; retain the sharper view.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Apocynaceae Alstonia Alyxia Cynachum Marsdenia Taberanemonta Wrightia   Brachysteima    a/Alstonia/Alstonia spectabilis 8410.JPG",
+      "sha256": "4973767c50bfddef566aa7eeb23e85b47885b091400be9fc2a205914b9933947",
+      "plant": "Alstonia spectabilis subsp. ophioxyloides",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "caption": "Alstonia spectabilis",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flower clusters and leaves.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/CC/PICK/EXTRAS/Little Friar Bird on Crotalaria cunninghamii.056.a.JPG",
+      "sha256": "3dc630d0351642a152418fb3679ebe554b0e42ef9df8dbf9dea7cdd5d54e46e5",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Bird visiting flowers.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/1. Crotalaria cunninghamii.725.a.JPG",
+      "sha256": "d8836d0e7be80a1f691ecca44108f7e1cc7c19e6ba2ce7e39fe88734e1d66fde",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Detailed flower cluster.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/1.a Crotalaria cunninghamii.750.b.JPG",
+      "sha256": "4a1558ca7c2c6dd6bd29c5613c4ce7fd56dafc156e15996cc3b4bd01c403d9a2",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flower cluster and buds from another angle.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/2. Crotalaria cunninghamii.780.a.JPG",
+      "sha256": "8b37624d948c27314c84afcfc5ff653f05f4a4cf37f5642ab9fde4ca9f27032a",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Individual flowers and calyces.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/EXTRA/Crotalaria cunninghamii.325.a.JPG",
+      "sha256": "fd04854733438d414a78cf2ed03adcfe863efbca6270609aba300b2213d20589",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 visual review: Repeated flower and foliage composition; curated selections and the wider William Burgess view cover these features.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/EXTRA/Crotalaria cunninghamii.714.b.JPG",
+      "sha256": "a92276545a6d5a86a3c58523f2851e4f81972c695138182e7498b1521afc9abb",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 visual review: Repeated close flower composition covered by the curated selections.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Crotalaria cunninghamii/PICK/EXTRA/Crotalaria cunninghamii.784.a.JPG",
+      "sha256": "37e1ac32874e56c1c0da33debf71d8ac47d43905026b3e3212397265035a68a7",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 visual review: Repeated pair of flowers and foliage covered by the curated and wider selected views.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Crotalaria cunninghamii 171.JPG",
+      "sha256": "1d3f5d3b072321ef5ae8a34fb0704ab2f50390d2c82276b01ba1da33670e59cb",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowers and broader foliage view.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Crotalaria cunninghamii 173.JPG",
+      "sha256": "18942370114ea5c3890705f5da57afc3d03203a7179ad0413ef4a680a74f029f",
+      "plant": "Crotalaria cunninghamii subsp. cunninghamii",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "caption": "Crotalaria cunninghamii",
+      "reason": "24 September 2026 visual review: Near-identical William Burgess flower cluster; retain 171 for the broader foliage view.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/A. FEATURE HEADER SHOTS/F. FURTHER SELECTION/Sulphur Crested Cockatoo perched in Banyan, Ficus virens.636.a..JPG",
+      "sha256": "36c002eb5ad9a96cf81df8470e19e6a103e26b0b84f277796bde5d410b2d5647",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Duplicate copy of the selected C. HERO SHOTS photograph.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/B. PLANT COMMUNITIES/E. MONSOON RAINFOREST/PICK/EXTRA/Ficus virens.128.a.jpg",
+      "sha256": "acbbb4e452c0d7eaa9979f7d3310762efe66de840f38997d2b753048d3773191",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Duplicate copy of the selected account-folder aerial-root photograph.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/FF/Fig Bird on Ficus virens.857.a.JPG",
+      "sha256": "7cfe9c5929914cfb445a557bc78ce074febd2c15a9af9b49d9684a46d1d5a32c",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Bird in fruiting branches.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/FF/Sulphur Crested Cockatoo perched in Banyan, Ficus virens.636.a..JPG",
+      "sha256": "36c002eb5ad9a96cf81df8470e19e6a103e26b0b84f277796bde5d410b2d5647",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Bird perched among leaves.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Ficus virens/PICK/1. Ficus virens.124.a.JPG",
+      "sha256": "0966fb3b9c83e5e9fb03cb1a3422ebff6840445c91ee79306f784d81a40a9227",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Whole tree and aerial-root habit.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Ficus virens/PICK/2. Ficus virens.120.a.JPG",
+      "sha256": "4845aadc8e1be4000608b150820e29c8fb248b03c7fc743fb916263474c2911a",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Figs and leaves.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Ficus virens/PICK/EXTRA/Ficus virens.122.a.JPG",
+      "sha256": "451d3cf6e7ec4c47d2d8100789890583455c0305d9725467bd03df8e98f19614",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Repeated fruit-and-leaf composition; retain the curated PICK view.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Ficus virens/PICK/EXTRA/Ficus virens.128.a.jpg",
+      "sha256": "acbbb4e452c0d7eaa9979f7d3310762efe66de840f38997d2b753048d3773191",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Aerial-root detail.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 EAST PT, HUMP DOO, BLACK JUNGLE 20.9.2026/Ficus virens Banyan/SELECT/Ficus virens, Banyan, Black Jungle.845.a.jpg",
+      "sha256": "91a5cdd5e1b6d005939d60f303df19dbac6493c2a7b3cea716bee17865d797a2",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Alternate crop/export of the selected newer PICK trunk/root photograph.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 EAST PT, HUMP DOO, BLACK JUNGLE 20.9.2026/Ficus virens Banyan/SELECT/Ficus virens, Banyan.842.a.jpg",
+      "sha256": "0b44b73da87a7ab5ab01e96b24fd7aa5785aafc59ad0dd623398460acbcd44a2",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Alternate crop/export of the selected newer PICK canopy photograph.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 EAST PT, HUMP DOO, BLACK JUNGLE 20.9.2026/Ficus virens Banyan/SELECT/Ficus virens, Banyan.tif842.a.jpg",
+      "sha256": "b163ee6c561438b35ca03feee6932f547b96e79002429ab671de5ebfacd4fde6",
+      "plant": "Ficus virens var. virens",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 visual review: Alternate crop/export of the selected newer PICK canopy photograph.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 EAST PT, HUMP DOO, BLACK JUNGLE 20.9.2026/Ficus virens Banyan/SELECT/PICK/Ficus virens, Banyan, Black Jungle.845.b.jpg",
+      "sha256": "c3d35412cc18b6355a58e980b16291a40491be739e104189bbfbee91cbf2548a",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Trunk and branching aerial roots.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 EAST PT, HUMP DOO, BLACK JUNGLE 20.9.2026/Ficus virens Banyan/SELECT/PICK/Ficus virens, Banyan, Black Jungle.tif842.b.jpg",
+      "sha256": "f01f46c76bb17596118c441feaecee268cb63446847063abb4b1f2ef025252c0",
+      "plant": "Ficus virens var. virens",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Ficus virens",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Trunk and canopy.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/A. FEATURE HEADER SHOTS/F. FURTHER SELECTION/White-quilled Honeyeater perched on Leptospermum madidum.910..JPG",
+      "sha256": "cee9c5dc1b851e9d3bdd992457a9a01e776e41c22110d575ac74846b40ac50b4",
+      "plant": "Leptospermum madidum subsp. sativum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Leptospermum madidum",
+      "reason": "24 September 2026 visual review: Duplicate copy of the selected C. HERO SHOTS photograph.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/LL/White-quilled Honeyeater perched on Leptospermum madidum.910..JPG",
+      "sha256": "cee9c5dc1b851e9d3bdd992457a9a01e776e41c22110d575ac74846b40ac50b4",
+      "plant": "Leptospermum madidum subsp. sativum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Leptospermum madidum",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Bird visiting branches.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Lophostemon grandiflorus/PICK/1. Lophostemon grandiflorus.616.a.JPG",
+      "sha256": "73e4c0d105bfc0dd988ee8f5f0f99ab43cad46ff51dc4f492adcee38ad713d9a",
+      "plant": "Lophostemon grandiflorus subsp. riparius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "caption": "Lophostemon grandiflorus",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flower clusters and foliage.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Lophostemon grandiflorus/PICK/2. Lophostemon grandiflorus.713.a.JPG",
+      "sha256": "44f805430423ca7df84a9d521c4a0d4a2da9d27428109abac96542a53c7eabd8",
+      "plant": "Lophostemon grandiflorus subsp. riparius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Lophostemon grandiflorus",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Whole-tree habit.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Lophostemon grandiflorus/PICK/EXTRA/Lophostemon grandiflorus.5710.a.jpg",
+      "sha256": "ab496056f7bcf247c8159220eb00fd2e43f2563b4db1138c6ac03a95c0cb2c36",
+      "plant": "Lophostemon grandiflorus subsp. riparius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Lophostemon grandiflorus",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowers and pale leaf undersides.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium forte/PICK/1. Syzygium forte.772.a.JPG",
+      "sha256": "1826c86c91fb8e80b7d30600698fa8fa99f25802747b3c2813c2c7463b164b7c",
+      "plant": "Syzygium forte subsp. potamophilum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "caption": "Syzygium forte",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Fruit with foliage and bark.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium forte/PICK/2. Syzygium forte.091.b.JPG",
+      "sha256": "2002cfe4d8f745e7b3b03f6e5e6bdd998596226845f1050df6adddf92cf31d9d",
+      "plant": "Syzygium forte subsp. potamophilum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Syzygium forte",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Flowering branch.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium forte/PICK/EXTRA/Syzygium forte.777.a.JPG",
+      "sha256": "d7ce531438c1203723baedaa166214037dd0a63cb5755153c1044a724ef3b26d",
+      "plant": "Syzygium forte subsp. potamophilum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Syzygium forte",
+      "reason": "24 September 2026 visual review: Repeated view of the fruit cluster already shown in the curated selection.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium forte/PICK/EXTRA/Syzygium forte.798.b.JPG",
+      "sha256": "d78a30a0485b60c2d2a22f5d744ae70b71db2581e544b045fd45f42113580f4c",
+      "plant": "Syzygium forte subsp. potamophilum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Syzygium forte",
+      "reason": "24 September 2026 owner decision: a species-level photograph may illustrate this subspecies/variety account, provided its public caption retains only the species identification. Subspecies/variety identity remains unverified. Close flower view.",
+      "reviewCategory": "selected-species-level"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichodesma zeylanicum var. zeylanicum/PICK/EXTRA/Trichodesma zeylanicum.008.a.JPG",
+      "sha256": "c5b6f69d50b04534455071bc4f0802ded16155639fbe06a594c13b4eea451f9b",
+      "plant": "Trichodesma zeylanicum var. zeylanicum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "caption": "Trichodesma zeylanicum",
+      "reason": "24 September 2026 visual review: Repeated flower view; the two curated selections show the flower, buds and foliage.",
+      "reviewCategory": "repeated-view"
     }
   ],
   "photoReviewNotes": {
@@ -2897,5 +3291,21 @@
       "reason": "Both the source manuscript and book Y page 229 print cm for the width. This appears to be a unit typo: the account describes narrow sickle-shaped leaves, the photographs agree, and Flora of Australia 17A (2000), p. 375 describes G. mimosoides leaves 6.5-40 cm long and 6-50 mm wide. The narrower local range has not been independently verified. Record for researcher review; do not silently rewrite the manuscript or existing admin entry.",
       "reference": "https://www.dcceew.gov.au/sites/default/files/env/pages/9956603b-17a1-4fe2-b47a-3addcd924fc0/files/flora-australia-17a-proteaceae-2-grevillea.pdf"
     }
-  ]
+  ],
+  "speciesLevelPhotoPolicy": {
+    "agreedOn": "2026-09-24",
+    "decision": "The owner authorizes candidate species-level photographs on the nine listed subspecies/variety accounts. Public photo captions retain the species binomial, while account headings and descriptions retain the full taxon. This is permission to illustrate, not confirmation of the subspecies/variety shown. Each selected file remains an explicit hash-pinned allocation.",
+    "accounts": [
+      "Alstonia spectabilis subsp. ophioxyloides",
+      "Antiaris toxicaria var. macrophylla",
+      "Crotalaria cunninghamii subsp. cunninghamii",
+      "Ficus virens var. virens",
+      "Ilex arnhemensis subsp. arnhemensis",
+      "Leptospermum madidum subsp. sativum",
+      "Lophostemon grandiflorus subsp. riparius",
+      "Syzygium forte subsp. potamophilum",
+      "Trichodesma zeylanicum var. zeylanicum"
+    ],
+    "ownerContext": "The owner suggests these subspecies/varieties often represent the locally familiar expression of the species, specifically citing Alstonia spectabilis subsp. ophioxyloides. Recorded as editorial context; not treated as independent taxonomic verification."
+  }
 }
