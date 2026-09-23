@@ -16,7 +16,7 @@ open Server.Db
 open Blog.Codecs
 open Blog.Db
 
-let private identityJson (i: IdentityRow) : string =
+let private identityJson (i: Identity.Db.IdentityRow) : string =
     let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
     sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s}""" i.Id i.Provider i.Name i.Picture emailJson
 
@@ -32,7 +32,7 @@ let private cacheAvatar (blobs: R2Bucket) (url: string) : JS.Promise<string> =
 
 let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string option> =
     promise {
-        let! active = Identity.activeFor db guestId
+        let! active = Identity.Server.activeFor db guestId
         return active |> Option.map identityJson
     }
 
@@ -46,7 +46,7 @@ let resolveIdentity (db: D1Database) (guestId: string) : JS.Promise<string optio
 /// id can follow it.
 let private mergeDuplicateIdentities (db: D1Database) (guestId: string) : JS.Promise<Map<string, string>> =
     promise {
-        let! all = Identity.listFor db guestId
+        let! all = Identity.Server.listFor db guestId
         let mutable moved = Map.empty
         let groups = all |> Array.groupBy (fun i -> i.Provider, i.ProviderUserId)
         for (_, rows) in groups do
@@ -68,7 +68,7 @@ let private mergeDuplicateIdentities (db: D1Database) (guestId: string) : JS.Pro
                 let survivor = fst ordered.[0]
                 for (dup, _) in ordered.[1..] do
                     do! Attribution.reassign db AttributionPolicy.reassignStatements dup.Id survivor.Id
-                    let! _ = (bind (db.prepare Sql.deleteIdentityById) [| box dup.Id |]).run()
+                    let! _ = (bind (db.prepare Identity.Sql.deleteIdentityById) [| box dup.Id |]).run()
                     moved <- moved |> Map.add dup.Id survivor.Id
         return moved
     }
@@ -83,7 +83,7 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
         let now = epochNow ()
         let identityId = newId ()
 
-        let! _ = (Identity.ensureGuestStmt db guestId now).run()
+        let! _ = (Identity.Server.ensureGuestStmt db guestId now).run()
 
         // Look up the provider account globally, not just under this guest —
         // signing in on a second machine should join the identity you already
@@ -105,14 +105,14 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
             // New identity — insert but do NOT activate yet (user chooses merge/abandon first)
             let insert =
                 bind
-                    (db.prepare Sql.insertProviderIdentity)
+                    (db.prepare Identity.Sql.insertProviderIdentity)
                     [| box identityId; box guestId; box provider; box providerUserId; box name; box storedPicture; optToDb email; box now |]
             let! _ = insert.run()
             ()
         else
             // Existing identity — update name/picture/email (don't activate yet)
             let update =
-                bind (db.prepare Sql.refreshIdentityProfile) [| box name; box storedPicture; optToDb email; box finalId |]
+                bind (db.prepare Identity.Sql.refreshIdentityProfile) [| box name; box storedPicture; optToDb email; box finalId |]
             let! _ = update.run()
             ()
 
@@ -132,7 +132,7 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
             | None -> promise { return finalId }
             | Some owner ->
                 promise {
-                    let! _ = (bind (db.prepare Sql.moveIdentitiesToGuest) [| box owner; box guestId |]).run()
+                    let! _ = (bind (db.prepare Identity.Sql.moveIdentitiesToGuest) [| box owner; box guestId |]).run()
                     let! moved = mergeDuplicateIdentities db owner
                     // The identity we're about to hand to the claim page may
                     // itself have been folded away — follow it.
@@ -144,7 +144,7 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
         // navigation — the blog SPA claim/merge switcher can't render on /curator (a separate document).
         let isCuratorReturn = (returnTo.TrimEnd('/')).EndsWith("/curator") || returnTo = "curator"
         if isCuratorReturn then
-            let! _ = (bind (db.prepare Sql.setIdentityActive) [| box now; box landedId |]).run()
+            let! _ = (bind (db.prepare Identity.Sql.setIdentityActive) [| box now; box landedId |]).run()
             return { RedirectUrl = returnTo; AdoptGuestId = adopt }
         else
             // Redirect to claim page where user chooses merge/abandon
@@ -170,19 +170,19 @@ let private switchIdentity (request: WorkerRequest) (env: Env) : JS.Promise<Work
         let merge : bool = parsed?merge |> unbox
         let now = epochNow ()
 
-        let! owned = Identity.belongsToGuest env.DB identityId guest.GuestId
+        let! owned = Identity.Server.belongsToGuest env.DB identityId guest.GuestId
         if not owned then
             return unauthorized ()
         else
 
         if merge then
-            let! active = Identity.activeFor env.DB guest.GuestId
+            let! active = Identity.Server.activeFor env.DB guest.GuestId
             match active with
             | Some current when current.Id <> identityId ->
                 do! Attribution.reassign env.DB AttributionPolicy.reassignStatements current.Id identityId
             | _ -> ()
 
-        do! Identity.setActive env.DB identityId now
+        do! Identity.Server.setActive env.DB identityId now
         match guest.Replacement with
         | Some c -> return okJsonWithCookie """{"ok":true}""" c
         | None -> return okJson """{"ok":true}"""
@@ -211,7 +211,7 @@ let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
             if isNull n || n = "" then "Anonymous" else n
         let now = epochNow ()
 
-        let! all = Identity.listFor env.DB guest.GuestId
+        let! all = Identity.Server.listFor env.DB guest.GuestId
         match all |> Array.tryFind (fun i -> i.Id = identityId) with
         | None -> return unauthorized ()
         | Some target ->
@@ -220,7 +220,7 @@ let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
             return badRequest "The anonymous identity is the fallback and can't be disconnected"
         else
 
-        let! active = Identity.activeFor env.DB guest.GuestId
+        let! active = Identity.Server.activeFor env.DB guest.GuestId
         let wasActive = active |> Option.map (fun i -> i.Id) |> Option.defaultValue "" = identityId
 
         // Whatever happens, the guest needs an identity to post as afterwards
@@ -232,18 +232,18 @@ let disconnectIdentity (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
                     let created = newId ()
                     let! _ =
                         (bind
-                            (env.DB.prepare Sql.insertAnonymousIdentity)
+                            (env.DB.prepare Identity.Sql.insertAnonymousIdentity)
                             [| box created; box guest.GuestId; box fallbackName; jsNull; box now |]).run()
                     return created
                 }
 
         // Park it on a guest nobody holds a cookie for
         let orphanGuest = newId ()
-        let! _ = (Identity.ensureGuestStmt env.DB orphanGuest now).run()
-        let! _ = (bind (env.DB.prepare Sql.moveIdentityToGuest) [| box orphanGuest; box identityId |]).run()
+        let! _ = (Identity.Server.ensureGuestStmt env.DB orphanGuest now).run()
+        let! _ = (bind (env.DB.prepare Identity.Sql.moveIdentityToGuest) [| box orphanGuest; box identityId |]).run()
 
         if wasActive then
-            do! Identity.setActive env.DB anonId now
+            do! Identity.Server.setActive env.DB anonId now
 
         match guest.Replacement with
         | Some c -> return okJsonWithCookie """{"ok":true}""" c
@@ -265,7 +265,7 @@ let getIdentities (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
         match authz with
         | Rejected -> return okJson """{"identities":[]}"""
         | Accepted guest ->
-        let! rows = Identity.listFor env.DB guest.GuestId
+        let! rows = Identity.Server.listFor env.DB guest.GuestId
         let identities =
             rows |> Array.map (fun i ->
                 let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""

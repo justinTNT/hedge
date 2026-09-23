@@ -1,11 +1,15 @@
-module Server.Sql
+module Identity.Sql
 
-/// Every hand-written SQL statement in the app, named and in one place.
-/// Keep statements as plain literals (no string concatenation).
+// The shared identity persistence SQL (unprefixed `guests` / `identities`), previously duplicated
+// verbatim in every identity host's `Server.Sql`. Table names are plain literals so check-sql.sh can
+// EXPLAIN-prepare each against both a fresh schema.sql database and a migrations-built one. Grants SQL
+// (access-control) and host-specific glue (e.g. darwin.news over the blog module's tables) stay in the
+// host's own `Server.Sql`; only the identity layer lives here.
 
-// ---- Identity policy (ported verbatim from microblog) ----
+// ---- Identity policy ----
 
-/// Active identity = most recently activated.
+/// Active identity = most recently activated. Must agree with the client
+/// switcher's notion of "active" and with the merge source in Attribution.
 let activeIdentityForGuest = """
     SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at
     FROM identities
@@ -31,21 +35,26 @@ let ensureAnonymousIdentity = """
 let findIdentityByProvider =
     "SELECT id FROM identities WHERE guest_id = ? AND provider = ? AND provider_user_id = ?"
 
-// `findIdentityByProviderGlobal` (provider-account lookup ranked by comment history) and
-// `countCommentsForIdentity` (an identity's comment count) are built in Server.Attribution
-// from `AttributionPolicy.commentTables`, so they sum across EVERY content module the site
-// composes (articles + blog on justat), not just articles_comments. They were single-table
-// literals here; a cross-module SUM can't be a static literal (the table set is per-site).
-
+/// Fold one guest's identities into another (their comments follow, since
+/// comments are attributed to the identity, not the guest).
 let moveIdentitiesToGuest =
     "UPDATE identities SET guest_id = ? WHERE guest_id = ?"
 
+/// Park a single identity on another guest. Disconnect uses this to abandon a
+/// credentialed identity onto a fresh empty guest: its comments stay attached,
+/// so signing in with that provider again reclaims the whole history.
 let moveIdentityToGuest =
     "UPDATE identities SET guest_id = ? WHERE id = ?"
 
+/// The guest's anonymous identity, if they have one. Not guaranteed to exist:
+/// it's created by the comment path, so a guest who signed in with a provider
+/// before ever commenting has none.
 let anonymousIdentityForGuest =
     "SELECT id FROM identities WHERE guest_id = ? AND provider = 'anonymous' ORDER BY created_at LIMIT 1"
 
+/// Unconditional anonymous identity, for disconnect's fallback — unlike
+/// ensureAnonymousIdentity this doesn't skip when an active identity exists,
+/// because the identity being disconnected is the active one.
 let insertAnonymousIdentity = """
     INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at)
     VALUES (?, ?, 'anonymous', '', ?, '', NULL, ?, ?)"""
@@ -85,13 +94,3 @@ let legacyGuestEligible =
 /// adoption; only anonymous ownership bridges (work-order rule 5).
 let guestHasLinkedIdentity =
     "SELECT 1 FROM identities WHERE guest_id = ? AND provider <> 'anonymous' LIMIT 1"
-
-// ---- Attribution ----
-//
-// Comment re-attribution on a merge is now module-owned: each content module exposes a
-// Tables-driven `reassignComments` (Articles.Sql / Blog.Sql), composed per-site into the
-// merge policy by `Server.AttributionPolicy` and run by `Server.Attribution.reassign`.
-// This closes the pre-module gap where only `articles_comments` was re-attributed — on
-// justat a merged identity's `blog_comments` now move too. The provider-lookup ranking +
-// comment counts (see the note where those literals used to be) are likewise summed across
-// all composed content tables, so every identity-history path is now module-aware.

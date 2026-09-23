@@ -49,8 +49,8 @@ let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
       NewGuestId = newId
       // migrationStart bounds eligibility to guests created before it; 0 (no bridge) means the query
       // requires created_at < 0, so nothing is ever eligible under an accidental Bridge.
-      LegacyEligible = (fun value -> Server.Identity.legacyEligible env.DB value migrationStart)
-      LegacyHasLinkedIdentity = (fun guestId -> Server.Identity.hasLinkedIdentity env.DB guestId) }
+      LegacyEligible = (fun value -> Identity.Server.legacyEligible env.DB value migrationStart)
+      LegacyHasLinkedIdentity = (fun guestId -> Identity.Server.hasLinkedIdentity env.DB guestId) }
 
 /// Resolve the guest for a WRITE (comment / identity mutation): verified or bridge-authorized, else
 /// Rejected. Never creates a guest — that is the bootstrap path's job (router /api/auth/me).

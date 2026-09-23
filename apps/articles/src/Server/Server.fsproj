@@ -8,12 +8,16 @@
          module server props, mirroring content-client at the Client level. -->
     <Compile Include="../../../../packages/content-server/Author.fs" />
     <Compile Include="Env.fs" />
-    <Compile Include="Sql.fs" />
     <Compile Include="generated/Db.fs" />
-    <Compile Include="Identity.fs" />
+  </ItemGroup>
+  <!-- Shared identity persistence (Identity.Db / Identity.Sql / Identity.Server) — the module-owned
+       replacement for this app's old Server.Identity + Server.Sql (which were entirely the shared
+       identity layer). Imported before GuestConfig / Handlers / ModuleServices, which call it. -->
+  <Import Project="../../../../packages/modules/identity/identity.server.props" />
+  <ItemGroup>
     <Compile Include="Attribution.fs" />
-    <!-- Binds this app's Env + Server.Identity into the shared guest-session policy
-         (Hedge.GuestSession). After Identity (uses it); before the module props, Handlers,
+    <!-- Binds this app's Env + Identity.Server into the shared guest-session policy
+         (Hedge.GuestSession). After the identity props (uses it); before the module props, Handlers,
          ModuleServices and Worker (all consume it). -->
     <Compile Include="GuestConfig.fs" />
   </ItemGroup>

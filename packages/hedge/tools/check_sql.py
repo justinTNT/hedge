@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Validate an app's hand-written SQL against its schema truth(s).
 
-Shared across apps (each has a thin check-sql.sh wrapper). It covers BOTH the
-app's own src/Server/Sql.fs (identity + app glue, plain-literal SQL) AND the SQL
-of every content module the app composes (from gen-modules.json). Module SQL is
+Shared across apps (each has a thin check-sql.sh wrapper). It covers the app's own
+src/Server/Sql.fs (app glue, plain-literal SQL; optional — an app composing the
+shared identity module may keep none), the shared identity module's plain-literal
+SQL (packages/modules/identity, when composed), AND the SQL of every content
+module the app composes (from gen-modules.json). Module SQL is
 Tables-driven — `sprintf "... %s ..." Tables.item` — so it is resolved through
 the generated Server.Db.Tables constants before EXPLAIN, exactly as it runs.
 
@@ -97,12 +99,19 @@ def main():
     #   {"module": "../../packages/modules/blog"}  -> read its module.json for the namespace
     #   {"namespace": "...", "tablePrefix": "..."}  -> legacy inline entry
     # (an {"identity": true} / prefix-less entry is the shared base, not a content module)
+    manifest = json.load(open("gen-modules.json"))
     modules = []  # each: (namespace, module_dir)
-    for m in json.load(open("gen-modules.json")):
+    # The shared identity module's server dir, when this app composes the extracted identity slice
+    # ({"identity": true, "assembly": "IdentityModels"} — its persistence SQL moved out of the app's
+    # own Server.Sql into packages/modules/identity). None for a self-contained/legacy identity app.
+    identity_server_dir = None
+    for m in manifest:
         if m.get("module"):
             d = m["module"]
             ns = json.load(open(os.path.join(d, "module.json"))).get("namespace", "")
             modules.append((ns, d))
+        elif m.get("identity") and m.get("assembly") == "IdentityModels":
+            identity_server_dir = "../../packages/modules/identity/src/Server"
         elif m.get("tablePrefix"):
             modules.append((m["namespace"], f"../../packages/modules/{m['namespace'].lower()}"))
     module_dirs = [d for _, d in modules]
@@ -115,11 +124,17 @@ def main():
 
     # Lint app + composed-module server code for inline SQL.
     lint_inline_sql("src/Server", failures)
+    if identity_server_dir:
+        lint_inline_sql(identity_server_dir, failures)
     for d in module_dirs:
         lint_inline_sql(os.path.join(d, "src/Server"), failures)
 
-    # Extract statements: app plain literals + each module's Tables-resolved SQL.
-    stmts = extract_plain("src/Server/Sql.fs", "Sql")
+    # Extract statements: app plain literals (Sql.fs is optional — an app that composes the shared
+    # identity module may keep no app-level Sql.fs at all) + the shared identity module's plain-literal
+    # SQL + each content module's Tables-resolved SQL.
+    stmts = extract_plain("src/Server/Sql.fs", "Sql") if os.path.exists("src/Server/Sql.fs") else []
+    if identity_server_dir:
+        stmts += extract_plain(os.path.join(identity_server_dir, "Sql.fs"), "Identity.Sql")
     for ns, d in modules:
         stmts += extract_module(os.path.join(d, "src/Server/Sql.fs"), f"{ns}.Sql", tables)
     if not stmts:
