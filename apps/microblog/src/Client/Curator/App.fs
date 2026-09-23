@@ -78,10 +78,16 @@ let private itemsDecoder : Decoder<QueueItem list> = Decode.field "items" (Decod
 
 // -- status-aware fetch --
 
+// Fetch.fetch FAILWITHS on any non-2xx response, which would collapse our 401/403/409 handling into
+// the error path. Use the raw GlobalFetch (returns the Response whatever the status) so we can branch
+// on resp.Status ourselves.
+let private rawFetch (url: string) (props: RequestProperties list) : JS.Promise<Response> =
+    GlobalFetch.fetch(RequestInfo.Url url, requestProps props)
+
 let private post (path: string) (body: string) : JS.Promise<int * string> =
     promise {
         let! resp =
-            fetch (basePath + path)
+            rawFetch (basePath + path)
                 [ Method HttpMethod.POST; requestHeaders [ ContentType "application/json" ]; Body (BodyInit.Case3 body) ]
         let! text = resp.text()
         return resp.Status, text
@@ -89,7 +95,7 @@ let private post (path: string) (body: string) : JS.Promise<int * string> =
 
 let private getText (path: string) : JS.Promise<int * string> =
     promise {
-        let! resp = fetch (basePath + path) []
+        let! resp = rawFetch (basePath + path) []
         let! text = resp.text()
         return resp.Status, text
     }
