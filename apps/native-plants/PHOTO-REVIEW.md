@@ -1,5 +1,33 @@
 # Archive photograph review — 23–24 September 2026
 
+## 24 September: Abrus seed photograph restored
+
+The Abrus account had two newer flower photographs, but lacked the book's seed
+view. Its curated folder and filenames say only `Abrus precatorius`, while the
+manuscript account and newer photographs use `Abrus precatorius subsp. precatorius`.
+The strict rank check therefore left the seed files unmatched.
+
+Book Y, printed page 78 (PDF page 40), directly connects the seed photograph to
+the full subspecies account. After comparing the proof and original files,
+`1. (square) Abrus precatorius.649.b.jpg` is explicitly allocated to that account.
+The other PICK file, `1.a Abrus precatorius.649.a.jpg`, is an alternate crop of the
+same photograph. Two EXTRA photographs show repeated views of the same pod
+cluster; their exclusions are also recorded. No general rank alias was added.
+
+The page now retains **two flower photographs plus the book's seed photograph**,
+showing both pink-to-mauve pea flowers and bright red black-spotted seeds in open
+pods. Existing hero, captions and photo order are preserved. Archive-wide counts
+are now **1,075 photographs across 498 of 531 accounts**.
+
+Import, audit and site build passed. All 531 existing plant records and 1,074
+existing photo records were unchanged after the local seed. The live Abrus API
+returns the two original flower photographs in order followed by the seed view;
+all six image/thumbnail URLs serve successfully.
+
+Review principle: an illustrated account is not necessarily adequately
+illustrated. Select complementary plant parts and life stages; check unresolved
+book selections even when newer photographs have already supplied a hero.
+
 ## 24 September: Grevillea mimosoides hold resolved
 
 The 24 March proof correction concerned an earlier layout. On inspection,
