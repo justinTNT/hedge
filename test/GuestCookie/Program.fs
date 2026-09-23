@@ -24,7 +24,7 @@ let run () = promise {
     let! tok = issue cfg now 3600 "guest-123"
     let! v = verify cfg (now + 10) (Some tok)
     match v with
-    | Signed c -> check "round-trip claims" (c.GuestId = "guest-123" && c.Audience = "usba.se" && c.Expiry = now + 3600)
+    | Signed (c, kid) -> check "round-trip claims" (c.GuestId = "guest-123" && c.Audience = "usba.se" && c.Expiry = now + 3600 && kid = "k1")
     | _ -> check "round-trip signed" false
 
     // 2. expiry: past its expiry → Expired
@@ -47,7 +47,7 @@ let run () = promise {
     // 6. key rotation: active=k2, previous=[k1 unretired] verifies a k1 token
     let rotated = { Active = { KeyId = "k2"; Secret = secretB }; Audience = "usba.se"; Previous = [ (cfg.Active, now + 100000) ] }
     let! vRot = verify rotated (now + 10) (Some tok)
-    check "previous key verifies" (match vRot with Signed _ -> true | _ -> false)
+    check "previous key verifies + surfaces its keyId" (match vRot with Signed (_, kid) -> kid = "k1" | _ -> false)
 
     // 7. retired previous key → Invalid
     let! vRet = verify { rotated with Previous = [ (cfg.Active, now - 1) ] } (now + 10) (Some tok)

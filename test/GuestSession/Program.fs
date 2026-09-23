@@ -58,7 +58,7 @@ let run () = promise {
     match r4 with
     | Accepted a ->
         let! v = verify cfg now (Some (tokenOf a.Replacement.Value))
-        check "upgrade replacement verifies to subject" (match v with Signed c -> c.GuestId = legacy | _ -> false)
+        check "upgrade replacement verifies to subject" (match v with Signed (c, _) -> c.GuestId = legacy | _ -> false)
     | _ -> check "upgrade replacement verifies to subject" false
 
     // 5. eligible LINKED legacy under bridge → reject (must re-login)
@@ -93,11 +93,34 @@ let run () = promise {
     // 12. adopt issues a signed cookie for the adopted subject
     let! adoptedHeader = adopt deps "adopted-1"
     let! av = verify cfg now (Some (tokenOf adoptedHeader))
-    check "adopt -> signed cookie for subject" (match av with Signed c -> c.GuestId = "adopted-1" | _ -> false)
+    check "adopt -> signed cookie for subject" (match av with Signed (c, _) -> c.GuestId = "adopted-1" | _ -> false)
 
     // 13. cookie Secure flag
     check "cookieHeader secure" ((cookieHeader true "tok").Contains "; Secure")
     check "cookieHeader insecure" (not ((cookieHeader false "tok").Contains "; Secure"))
+
+    // 14. graceful key rotation (Slice G): a token still valid under a now-RETIRING key is re-signed
+    //     onto the active key on use (Accepted + replacement), even though it is nowhere near expiry.
+    now <- t0
+    let oldKey = { KeyId = "k0"; Secret = "test-secret-oooooooooooooooooooooooooooooooo" }
+    let! oldTok = issue { cfg with Active = oldKey } t0 LifetimeSeconds "g-rot"
+    // New deployment: k1 active (cfg), k0 retiring but unretired.
+    let rotDeps = { deps with Config = { cfg with Previous = [ (oldKey, t0 + 100000) ] } }
+    let! r14 = requireGuest rotDeps (Some oldTok)
+    check "retiring-key token -> Accepted + re-signed replacement"
+        (match r14 with Accepted a -> a.GuestId = "g-rot" && a.Replacement.IsSome | _ -> false)
+    match r14 with
+    | Accepted a ->
+        let! v = verify rotDeps.Config now (Some (tokenOf a.Replacement.Value))
+        check "re-signed replacement is on the active key" (match v with Signed (c, kid) -> c.GuestId = "g-rot" && kid = "k1" | _ -> false)
+    | _ -> check "re-signed replacement is on the active key" false
+
+    // 15. keyringFrom: blank/null -> []; a JSON array parses to retiring keys (fail-closed on weak secret).
+    check "keyringFrom blank -> []" (keyringFrom "" = [] && keyringFrom null = [])
+    let ring = keyringFrom (sprintf """[{"keyId":"k0","secret":"%s","retireAt":%d}]""" oldKey.Secret (t0 + 100000))
+    check "keyringFrom parses one retiring key" (match ring with [ (k, r) ] -> k.KeyId = "k0" && k.Secret = oldKey.Secret && r = t0 + 100000 | _ -> false)
+    let weakRejected = try keyringFrom """[{"keyId":"k0","secret":"short","retireAt":1}]""" |> ignore; false with _ -> true
+    check "keyringFrom rejects a weak entry secret (fail closed)" weakRejected
 
     if failures = 0 then printfn "guest-session: all %d checks OK" checks
     else eprintfn "guest-session: %d of %d checks FAILED" failures checks

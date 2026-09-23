@@ -37,10 +37,13 @@ type Claims =
       Expiry: int
       Audience: string }
 
-/// Outcome of verifying a cookie value. `Legacy` is a raw non-signed value (bounded, opaque) whose
-/// eligibility for a bridge upgrade is decided by policy + the guests table — never here.
+/// Outcome of verifying a cookie value. `Signed` carries the claims AND the id of the key that
+/// verified it (the active key, or a still-unretired previous key) — so the session policy can
+/// re-sign a cookie presented under a retiring key onto the active key on use (graceful rotation).
+/// `Legacy` is a raw non-signed value (bounded, opaque) whose eligibility for a bridge upgrade is
+/// decided by policy + the guests table — never here.
 type Verification =
-    | Signed of Claims
+    | Signed of Claims * verifyingKeyId: string
     | Expired
     | Invalid
     | Legacy of string
@@ -103,7 +106,7 @@ let verify (config: Config) (now: int) (cookieValue: string option) : JS.Promise
                         | None -> return Invalid
                         | Some claims when claims.Audience <> config.Audience -> return Invalid
                         | Some claims when now >= claims.Expiry -> return Expired
-                        | Some claims -> return Signed claims
+                        | Some claims -> return Signed (claims, key.KeyId)
         | Some raw ->
             // Not signed-looking → a raw legacy value; bound its length before handing it to policy.
             if raw.Length > 200 then return Invalid else return Legacy raw

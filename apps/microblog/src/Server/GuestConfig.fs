@@ -41,7 +41,7 @@ let private migrationMode (env: Env) (now: int) : Hedge.GuestSession.BridgePolic
 /// GUEST_SECRET is absent/short — only reached on a guest operation, never on a content read.
 let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
     let bridge, migrationStart = migrationMode env (epochNow ())
-    { Config = Hedge.GuestSession.configFor KeyId env.GUEST_SECRET (hostOf request) []
+    { Config = Hedge.GuestSession.configFor KeyId env.GUEST_SECRET (hostOf request) (Hedge.GuestSession.keyringFrom env.GUEST_KEYRING)
       Bridge = bridge
       // Secure everywhere except an explicit local-HTTP development environment (work order).
       Secure = (env.ENVIRONMENT <> "development")

@@ -18,6 +18,11 @@ type Env = {
     /// See notes/GUEST-COOKIES-rollout-worksheet.md.
     GUEST_MIGRATION_START: string
     GUEST_BRIDGE_UNTIL: string
+    /// OPTIONAL graceful-key-rotation keyring (Slice G): a JSON array of retiring signing keys
+    /// { keyId, secret, retireAt } that still VERIFY (until retireAt) but never sign. Absent → the
+    /// single GUEST_SECRET is the only key (no rotation). Bound as a Cloudflare secret. See
+    /// Hedge.GuestSession.keyringFrom.
+    GUEST_KEYRING: string
     GOOGLE_CLIENT_ID: string
     GOOGLE_CLIENT_SECRET: string
     GITHUB_CLIENT_ID: string
