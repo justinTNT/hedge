@@ -1,4 +1,4 @@
-import importlib.util, unittest, tempfile
+import hashlib, importlib.util, unittest, tempfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -28,5 +28,60 @@ class ImportTests(unittest.TestCase):
             (folder/'1. Acacia latescens.JPG').write_bytes(b'not opened during matching')
             found,issues=source.photo_candidates(root,[{'id':'one','scientific_name':'Acacia alleniana'},{'id':'two','scientific_name':'Acacia latescens'}])
             self.assertEqual(found,[]);self.assertEqual(issues[0]['kind'],'photo-label-conflict-or-shortened')
+
+    def photo_fixture(self,root,label,filename):
+        path=root/'D. PLANT DESCRIPTIONS GENERA A-Z'/'AA'/label/'PICK'/filename
+        path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'fixture photo')
+        return path
+
+    def test_rank_punctuation_matches_without_discarding_the_rank(self):
+        for rank in ('subsp.','var.','sp.'):
+            with self.subTest(rank=rank), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp);name=f'Acacia example {rank} minor'
+                self.photo_fixture(root,name,f'1. {name}.RD415.JPG')
+                self.photo_fixture(root,name,'2. Acacia example.JPG')
+                self.photo_fixture(root,name,f'3. Acacia example {rank} major.JPG')
+                found,issues=source.photo_candidates(root,[{'id':'one','scientific_name':name}])
+                self.assertEqual(len(found),1);self.assertEqual(found[0]['credit'],'Russell Dempster')
+                self.assertEqual(len(issues),2)
+
+    def test_unmatched_curated_folder_is_reported_until_alias_is_reviewed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);label='Abelmoschus moschatus subsp. tuberosa';name='Abelmoschus moschatus subsp. tuberosus'
+            path=self.photo_fixture(root,label,f'1. {label}.JPG');plants=[{'id':'one','scientific_name':name}]
+            found,issues=source.photo_candidates(root,plants)
+            self.assertEqual(found,[]);self.assertEqual(issues[0]['kind'],'photo-folder-unmatched')
+            self.assertEqual(issues[0]['photos'],[str(path.relative_to(root))])
+            found,issues=source.photo_candidates(root,plants,{'photoNameAliases':{label:{'plant':name,'reason':'Reviewed spelling variant'}}})
+            self.assertEqual(issues,[]);self.assertEqual(found[0]['plantId'],'one')
+            self.assertIn('Reviewed spelling variant',found[0]['evidence'])
+
+    def test_filename_prefixes_and_multiple_taxa_are_not_matches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);name='Acacia example'
+            self.photo_fixture(root,name,'1. Acacia exampleana.JPG')
+            self.photo_fixture(root,name,'2. Acacia example and Acacia other.JPG')
+            found,issues=source.photo_candidates(root,[{'id':'one','scientific_name':name},{'id':'two','scientific_name':'Acacia other'}])
+            self.assertEqual(found,[])
+            self.assertEqual({i['kind'] for i in issues},{'photo-label-conflict-or-shortened','photo-multiple-taxa'})
+
+    def test_supplemental_photos_require_individual_unchanged_allocations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            path=self.photo_fixture(root,'Acacia example','Acacia exampl typo.JPG')
+            other=root/'Acacia example.JPG';other.write_bytes(b'unreviewed')
+            plants=[{'id':'one','scientific_name':'Acacia example'}]
+            decision=dict(path=str(path.relative_to(root)),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),plant='Acacia example',
+                          include=True,credit='Fixture photographer',reason='Reviewed individual filename')
+            self.assertEqual(source.photo_candidates(root,plants)[0],[])
+            found,issues=source.photo_candidates(root,plants,{'photoAllocations':[decision]})
+            self.assertEqual(issues,[]);self.assertEqual([c['path'] for c in found],[str(path.relative_to(root))])
+            self.assertEqual(found[0]['credit'],'Fixture photographer');self.assertIn(decision['reason'],found[0]['evidence'])
+            decision['include']=False
+            found,issues=source.photo_candidates(root,plants,{'photoAllocations':[decision]})
+            self.assertEqual(found,[]);self.assertEqual(issues[0]['kind'],'editorial-photo-exclusion')
+            path.write_bytes(b'replaced photo')
+            with self.assertRaisesRegex(ValueError,'Photo allocation changed'):
+                source.photo_candidates(root,plants,{'photoAllocations':[decision]})
 
 if __name__=='__main__':unittest.main()
