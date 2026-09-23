@@ -76,6 +76,16 @@ type AdminListAttribute(query: string) =
     inherit System.Attribute()
     member _.Query = query
 
+/// Composite-unique constraint for code generation: the named fields (this type's OWN fields, by
+/// their F# names) together must be unique. Emits one `CREATE UNIQUE INDEX` over the snake_cased
+/// columns (and is included in the migrate index diff). Use when uniqueness spans multiple columns
+/// (e.g. a grant keyed by provider + subject + role). Single-column uniqueness stays on the field via
+/// `Unique<'a>`.
+[<AllowNullLiteral>]
+type UniqueTogetherAttribute([<System.ParamArray>] fields: string[]) =
+    inherit System.Attribute()
+    member _.Fields = fields
+
 // -- API endpoint types --
 // The GET family is a 2x2 over (path parameter? x typed query?). A query type is a
 // record whose fields Gen turns into ?k=v params (string/int, each optional or

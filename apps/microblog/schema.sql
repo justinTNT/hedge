@@ -21,6 +21,16 @@ CREATE TABLE identities (
     FOREIGN KEY (guest_id) REFERENCES guests(id)
 );
 
+CREATE TABLE grants (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    enabled INTEGER NOT NULL,
+    granted_by TEXT,
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE blog_items (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -84,6 +94,8 @@ CREATE TABLE blog_snapshots (
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
 CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
+CREATE UNIQUE INDEX idx_grants_provider_provider_user_id_role ON grants(provider, provider_user_id, role);
+CREATE INDEX idx_grants_created_at ON grants(created_at DESC);
 CREATE UNIQUE INDEX idx_blog_items_slug ON blog_items(slug);
 CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
 CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);

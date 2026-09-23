@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curate</title>
+    <!-- Standalone curator page: its own document (not the SPA), so the OAuth return lands here via a
+         full navigation. Reuses the shared rich-text editor for framing edits. -->
+    <style>
+      :root { --line:#e3e3e3; --dim:#6b6b6b; --accent:#2563eb; --ok:#16a34a; --no:#b91c1c; }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",sans-serif; color:#1a1a1a; background:#fafafa; line-height:1.45; }
+      .cx-app { max-width: 760px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+      .cx-center { max-width: 480px; margin: 4rem auto; text-align: center; }
+      .cx-head { display:flex; align-items:center; justify-content:space-between; }
+      h1 { font-size: 1.4rem; }
+      .cx-dim { color: var(--dim); }
+      .cx-providers { display:flex; flex-direction:column; gap:.6rem; align-items:center; margin-top:1rem; }
+      .cx-notice { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:.5rem .75rem; border-radius:6px; margin:.75rem 0; }
+      .cx-item { background:#fff; border:1px solid var(--line); border-radius:8px; padding:1rem; margin:.9rem 0; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+      .cx-meta { display:flex; gap:.6rem; font-size:.8rem; color:var(--dim); margin-bottom:.4rem; }
+      .cx-topic { background:#eef2ff; color:#3730a3; padding:.05rem .5rem; border-radius:999px; }
+      .cx-title { font-weight:600; font-size:1.05rem; color:#111; text-decoration:none; }
+      .cx-title:hover { text-decoration:underline; }
+      .cx-snippet { color:#333; margin:.4rem 0; }
+      .cx-actions { display:flex; gap:.5rem; margin-top:.7rem; flex-wrap:wrap; }
+      .cx-btn { border:1px solid var(--line); background:#fff; color:#111; padding:.4rem .8rem; border-radius:6px; cursor:pointer; font-size:.9rem; }
+      .cx-btn:hover { background:#f3f4f6; }
+      .cx-btn:disabled { opacity:.5; cursor:default; }
+      .cx-approve { border-color:var(--ok); color:var(--ok); }
+      .cx-dismiss { border-color:var(--no); color:var(--no); }
+      .cx-ghost { color:var(--dim); }
+      .cx-input, .cx-textarea { width:100%; padding:.5rem; border:1px solid var(--line); border-radius:6px; font:inherit; margin:.3rem 0; }
+      .cx-label { display:block; font-size:.8rem; color:var(--dim); margin-top:.5rem; }
+      .cx-editor { border:1px solid var(--line); border-radius:6px; min-height:120px; margin:.3rem 0; background:#fff; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module" src="/lib/rich-text/bootstrap.js"></script>
+    <script type="module" src="/dist/client/Curator/App.js"></script>
+</body>
+</html>

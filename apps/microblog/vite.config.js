@@ -124,7 +124,8 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
-        rhyming: resolve(__dirname, 'rhyming.html')
+        rhyming: resolve(__dirname, 'rhyming.html'),
+        curator: resolve(__dirname, 'curator.html')
       }
     }
   },

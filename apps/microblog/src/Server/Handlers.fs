@@ -139,11 +139,19 @@ let onOAuthComplete (db: D1Database) (blobs: R2Bucket) (guestId: string) (userIn
                     return moved |> Map.tryFind finalId |> Option.defaultValue finalId
                 }
 
-        // Redirect to claim page where user chooses merge/abandon
-        let encodedReturnTo = JS.encodeURIComponent returnTo
-        return
-            { RedirectUrl = sprintf "/auth/claim?identity=%s&returnTo=%s" landedId encodedReturnTo
-              AdoptGuestId = adopt }
+        // Curator login: a curator explicitly signs in on the standalone /curator page to work, so
+        // auto-activate the just-authenticated identity and return straight there via a full document
+        // navigation — the blog SPA claim/merge switcher can't render on /curator (a separate document).
+        let isCuratorReturn = (returnTo.TrimEnd('/')).EndsWith("/curator") || returnTo = "curator"
+        if isCuratorReturn then
+            let! _ = (bind (db.prepare Sql.setIdentityActive) [| box now; box landedId |]).run()
+            return { RedirectUrl = returnTo; AdoptGuestId = adopt }
+        else
+            // Redirect to claim page where user chooses merge/abandon
+            let encodedReturnTo = JS.encodeURIComponent returnTo
+            return
+                { RedirectUrl = sprintf "/auth/claim?identity=%s&returnTo=%s" landedId encodedReturnTo
+                  AdoptGuestId = adopt }
     }
 
 /// Switch the guest's active identity, optionally bringing attributed

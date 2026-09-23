@@ -50,8 +50,31 @@ let identity : AdminTable =
       Delete = "DELETE FROM identities WHERE id = ?"
       MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
 
+let grant : AdminTable =
+    { Name = "Grant"
+      Table = "grants"
+      Schema =
+        schema "Grant" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Provider" FString []
+            fieldWith "ProviderUserId" FString []
+            fieldWith "Role" FString []
+            fieldWith "Enabled" FBool []
+            fieldWith "GrantedBy" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?"
+      Insert = "INSERT INTO grants (id, provider, provider_user_id, role, enabled, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE grants SET provider = ?, provider_user_id = ?, role = ?, enabled = ?, granted_by = ? WHERE id = ?"
+      Delete = "DELETE FROM grants WHERE id = ?"
+      MutableFields = ["Provider"; "ProviderUserId"; "Role"; "Enabled"; "GrantedBy"] }
+
 let private ownTables : AdminTable list = [
     guest
     identity
+    grant
 ]
 let tables : AdminTable list = ownTables @ Blog.AdminGen.tables

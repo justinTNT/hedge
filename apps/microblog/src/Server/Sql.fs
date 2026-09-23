@@ -104,6 +104,19 @@ let legacyGuestEligible =
 let guestHasLinkedIdentity =
     "SELECT 1 FROM identities WHERE guest_id = ? AND provider <> 'anonymous' LIMIT 1"
 
+// ---- Access control (curator role) ----
+
+/// A guest row that is not soft-deleted. Access-control resolution honors guests.deleted_at so a
+/// deleted guest's live session can't authorize (the guest-session cookie policy itself does not
+/// check it).
+let guestNotDeleted =
+    "SELECT 1 FROM guests WHERE id = ? AND deleted_at IS NULL LIMIT 1"
+
+/// Is there an ENABLED grant for this OAuth subject (provider, provider_user_id) + role? Absent or
+/// disabled → no row → not authorized. Keyed on the pair (stable across identity merges).
+let grantEnabled =
+    "SELECT 1 FROM grants WHERE provider = ? AND provider_user_id = ? AND role = ? AND enabled = 1 LIMIT 1"
+
 // Comment re-attribution on merge is module-owned (Blog.Sql.reassignComments), composed via
 // Server.AttributionPolicy.reassignStatements and run by Server.Attribution.reassign — the same
 // seam the articles host uses. The app-level blog_comments literal is gone.

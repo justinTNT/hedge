@@ -28,3 +28,24 @@ let selectPromotable =
 /// double-promote roll back at COMMIT (the guarantee the old unique origin_entry_key gave).
 let insertPromotion =
     sprintf "INSERT INTO %s (id, entry_key, item_id, created_at) VALUES (?, ?, ?, ?)" Tables.promotion
+
+// ---- Curator surface (dedicated, guest-cookie-authorized) ----
+
+/// The undecided curation queue: not approved, not rejected, oldest-first, with the source topic.
+/// Same population the admin's [<AdminList>] shows — a drain-the-backlog view.
+let selectPendingQueue =
+    sprintf
+        "SELECT p.id, p.title, p.link, p.snippet, p.owner_comment, p.published_at, s.topic AS topic FROM %s p JOIN %s s ON s.id = p.source_id WHERE p.approved = 0 AND p.rejected = 0 ORDER BY p.published_at ASC LIMIT 500"
+        Tables.pendingPost Tables.alertSource
+
+// State-guarded mutations: each only acts on an UNDECIDED row. A 0-row result means another curator
+// already approved/dismissed it (or it's gone) -> the handler returns 409, so a stale page can't edit
+// or dismiss something already approved (which the cron may have snapshotted for publication).
+let approvePendingPost =
+    sprintf "UPDATE %s SET approved = 1 WHERE id = ? AND approved = 0 AND rejected = 0" Tables.pendingPost
+
+let rejectPendingPost =
+    sprintf "UPDATE %s SET rejected = 1 WHERE id = ? AND approved = 0 AND rejected = 0" Tables.pendingPost
+
+let updateFraming =
+    sprintf "UPDATE %s SET title = ?, snippet = ?, owner_comment = ? WHERE id = ? AND approved = 0 AND rejected = 0" Tables.pendingPost

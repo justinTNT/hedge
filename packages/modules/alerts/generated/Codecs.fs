@@ -13,8 +13,13 @@ module Encode =
     let inline promotion (v: Alerts.Domain.Promotion) = encode v
 
     // -- API view types --
+    let inline alertsItem (v: Alerts.Api.Queue.Item) = encode v
 
     // -- API request encoders --
+    let inline alertsEditFramingReq (v: Alerts.Api.EditFraming.Request) = encode v
+    let inline alertsDismissReq (v: Alerts.Api.Dismiss.Request) = encode v
+    let inline alertsApproveReq (v: Alerts.Api.Approve.Request) = encode v
+    let inline alertsQueueReq (v: Alerts.Api.Queue.Request) = encode v
 
     // -- WebSocket event encoders --
 
@@ -26,10 +31,19 @@ module Decode =
     let promotion : Decoder<Alerts.Domain.Promotion> = decode<Alerts.Domain.Promotion>()
 
     // -- API view types --
+    let alertsItem : Decoder<Alerts.Api.Queue.Item> = decode<Alerts.Api.Queue.Item>()
 
     // -- API response decoders --
+    let alertsEditFramingResponse : Decoder<Alerts.Api.EditFraming.Response> = decode<Alerts.Api.EditFraming.Response>()
+    let alertsDismissResponse : Decoder<Alerts.Api.Dismiss.Response> = decode<Alerts.Api.Dismiss.Response>()
+    let alertsApproveResponse : Decoder<Alerts.Api.Approve.Response> = decode<Alerts.Api.Approve.Response>()
+    let alertsQueueResponse : Decoder<Alerts.Api.Queue.Response> = decode<Alerts.Api.Queue.Response>()
 
     // -- API request decoders --
+    let alertsEditFramingReq : Decoder<Alerts.Api.EditFraming.Request> = decode<Alerts.Api.EditFraming.Request>()
+    let alertsDismissReq : Decoder<Alerts.Api.Dismiss.Request> = decode<Alerts.Api.Dismiss.Request>()
+    let alertsApproveReq : Decoder<Alerts.Api.Approve.Request> = decode<Alerts.Api.Approve.Request>()
+    let alertsQueueReq : Decoder<Alerts.Api.Queue.Request> = decode<Alerts.Api.Queue.Request>()
 
     // -- WebSocket event decoders --
 
@@ -37,3 +51,34 @@ module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
+
+    let alertsEditFramingSchema =
+        schema "Alerts.Api.EditFraming.Request" [
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Title" FString [Required; Trim]
+            fieldWith "Snippet" FString [Required; Trim]
+            fieldWith "OwnerComment" FString [Required; Trim]
+        ]
+
+    let inline alertsEditFramingReq (r: Alerts.Api.EditFraming.Request) = validate alertsEditFramingSchema r
+
+    let alertsDismissSchema =
+        schema "Alerts.Api.Dismiss.Request" [
+            fieldWith "Id" FString [Required; Trim]
+        ]
+
+    let inline alertsDismissReq (r: Alerts.Api.Dismiss.Request) = validate alertsDismissSchema r
+
+    let alertsApproveSchema =
+        schema "Alerts.Api.Approve.Request" [
+            fieldWith "Id" FString [Required; Trim]
+        ]
+
+    let inline alertsApproveReq (r: Alerts.Api.Approve.Request) = validate alertsApproveSchema r
+
+    let alertsQueueSchema =
+        schema "Alerts.Api.Queue.Request" [
+            fieldWith "Cursor" (FOption FString) [Trim]
+        ]
+
+    let inline alertsQueueReq (r: Alerts.Api.Queue.Request) = validate alertsQueueSchema r

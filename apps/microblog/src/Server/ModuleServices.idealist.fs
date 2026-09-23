@@ -61,7 +61,19 @@ let private alertsServices (env: Env) : Alerts.Services.Services =
     { DB = env.DB
       NewId = newId
       Now = epochNow
-      PromoteToFeed = promoteToFeed env.DB }
+      PromoteToFeed = promoteToFeed env.DB
+      // Curator authorization, injected. Takes the request at CALL time, so this constructor stays
+      // request-free — the cron builds alertsServices too and must not need a request. Maps the
+      // framework's RoleResult onto alerts' own CuratorAuth (alerts names no access-control type).
+      AuthorizeCurator = fun request ->
+          promise {
+              let! r = Server.AccessConfig.authorize env "curator" request
+              return
+                  match r with
+                  | Hedge.AccessControl.Authorized (_, repl) -> Alerts.Services.Allowed repl
+                  | Hedge.AccessControl.AuthRequired repl -> Alerts.Services.AuthRequired repl
+                  | Hedge.AccessControl.Forbidden (_, repl) -> Alerts.Services.Forbidden repl
+          } }
 
 /// Site dispatch = blog + alerts (alerts contributes no routes, so this just falls through to blog).
 let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =

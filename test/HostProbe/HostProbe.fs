@@ -58,7 +58,10 @@ let private alertsServices (env: ProbeEnv) : Alerts.Services.Services =
     { DB = env.Db
       NewId = newId
       Now = epochNow
-      PromoteToFeed = fun (_input: Alerts.Services.PromotionInput) -> {| Stmts = [||]; ItemId = newId () |} }
+      PromoteToFeed = fun (_input: Alerts.Services.PromotionInput) -> {| Stmts = [||]; ItemId = newId () |}
+      // Curator authorization is host-injected; a compile-only stub here proves the alerts curator
+      // server layer builds with no access-control / Server.Env dependency.
+      AuthorizeCurator = fun (_request: WorkerRequest) -> promise { return Alerts.Services.AuthRequired None } }
 
 let alertsHandlers (env: ProbeEnv) : Alerts.RouteContract.Handlers =
     Alerts.Composition.bind (alertsServices env)

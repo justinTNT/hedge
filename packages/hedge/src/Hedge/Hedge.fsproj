@@ -18,6 +18,7 @@
     <Compile Include="Workers.fs" />
     <Compile Include="GuestCookie.fs" />
     <Compile Include="GuestSession.fs" />
+    <Compile Include="AccessControl.fs" />
     <Compile Include="OAuth.fs" />
     <Compile Include="Router.fs" />
     <Compile Include="EventHub.fs" />

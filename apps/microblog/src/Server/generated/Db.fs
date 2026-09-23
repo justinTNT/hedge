@@ -102,6 +102,57 @@ let deleteIdentity (id: string) (db: D1Database) : D1PreparedStatement =
 let selectIdentitysByGuestId (guestId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
 
+// ============================================================
+// Grant (grants)
+// ============================================================
+
+type GrantRow = {
+    Id: string
+    Provider: string
+    ProviderUserId: string
+    Role: string
+    Enabled: bool
+    GrantedBy: string option
+    CreatedAt: int
+}
+
+type GrantCreate = {
+    Provider: string
+    ProviderUserId: string
+    Role: string
+    Enabled: bool
+    GrantedBy: string option
+}
+
+let parseGrantRow (row: obj) : GrantRow =
+    { Id = rowStr row "id"
+      Provider = rowStr row "provider"
+      ProviderUserId = rowStr row "provider_user_id"
+      Role = rowStr row "role"
+      Enabled = rowBool row "enabled"
+      GrantedBy = rowStrOpt row "granted_by"
+      CreatedAt = rowInt row "created_at" }
+
+let selectGrants (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100")
+
+let selectGrant (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?")) [| box id |]
+
+let insertGrant (db: D1Database) (id: string) (now: int) (create: GrantCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO grants (id, provider, provider_user_id, role, enabled, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Provider; box create.ProviderUserId; box create.Role; box create.Enabled; optToDb create.GrantedBy; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateGrant (id: string) (create: GrantCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE grants SET provider = ?, provider_user_id = ?, role = ?, enabled = ?, granted_by = ? WHERE id = ?"))
+         [| box create.Provider; box create.ProviderUserId; box create.Role; box create.Enabled; optToDb create.GrantedBy; box id |]
+
+let deleteGrant (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM grants WHERE id = ?")) [| box id |]
+
 module Tables =
     let guest = "guests"
     let identity = "identities"
+    let grant = "grants"

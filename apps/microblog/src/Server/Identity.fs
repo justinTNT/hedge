@@ -59,3 +59,28 @@ let hasLinkedIdentity (db: D1Database) (guestId: string) : JS.Promise<bool> =
         let! row = (bind (db.prepare Sql.guestHasLinkedIdentity) [| box guestId |]).first()
         return not (isNull (box row))
     }
+
+// ---- Access control (curator role) ----
+
+/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id) — the key an
+/// access-control grant is checked against. None when the guest is soft-deleted, has no active
+/// identity, or its active identity is anonymous (which must never hold a role). Injected into
+/// Hedge.AccessControl.Deps.ActiveSubject.
+let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * string) option> =
+    promise {
+        let! live = (bind (db.prepare Sql.guestNotDeleted) [| box guestId |]).first()
+        if isNull (box live) then return None
+        else
+            let! id = activeFor db guestId
+            match id with
+            | Some i when i.Provider <> "anonymous" -> return Some (i.Provider, i.ProviderUserId)
+            | _ -> return None
+    }
+
+/// Is there an enabled grant for this OAuth subject + role? Unknown/absent/disabled → false. Injected
+/// into Hedge.AccessControl.Deps.HasGrant. Fresh lookup per call, so revocation takes effect at once.
+let hasGrant (db: D1Database) (provider: string) (providerUserId: string) (role: string) : JS.Promise<bool> =
+    promise {
+        let! row = (bind (db.prepare Sql.grantEnabled) [| box provider; box providerUserId; box role |]).first()
+        return not (isNull (box row))
+    }

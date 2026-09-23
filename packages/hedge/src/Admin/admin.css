@@ -238,6 +238,11 @@ html.dark .admin-app {
     border-radius: 6px;
 }
 
+/* Checkboxes (boolean fields) shouldn't stretch to the full-width input rule above. */
+.admin-field input[type="checkbox"] {
+    width: 3em;
+}
+
 .admin-field input:focus,
 .admin-key-input input:focus {
     outline: none;

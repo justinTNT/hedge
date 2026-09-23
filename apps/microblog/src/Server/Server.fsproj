@@ -16,6 +16,9 @@
          (Hedge.GuestSession). After Identity (uses it); before Handlers, ModuleServices and
          Worker (all consume it). -->
     <Compile Include="GuestConfig.fs" />
+    <!-- Binds Env + the guest policy + Identity into the shared access-control policy
+         (Hedge.AccessControl). After GuestConfig + Identity; consumed by ModuleServices (idealist). -->
+    <Compile Include="AccessConfig.fs" />
   </ItemGroup>
   <!-- Blog module server layer, composed via the module's .props. Placed before
        Handlers.fs because the app's bespoke getRhymes reads Blog.Sql; it needs
