@@ -2811,6 +2811,46 @@
       "priority": 3,
       "reviewCategory": "selected",
       "reason": "Reviewed after resolving the obsolete whole-account proof hold. The full species label in William Burgess's collection agrees with the narrow entire leaves and cream cylindrical flower racemes in the two curated images and corrected book Y page 229. Adds a close flower view with a butterfly. Documentary and visual corroboration, not an independently verified botanical identification."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abrus precatorius/PICK/1. (square) Abrus precatorius.649.b.jpg",
+      "sha256": "910d45af414c791f8b9343592ab1ea34c5d4e5b553e3136e9e23161cd5c262a0",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 4,
+      "reason": "24 September 2026 review. Book Y printed page 78 (PDF page 40) places this seed photograph directly above Abrus precatorius subsp. precatorius. The source folder and filename omit the subspecies, but the proof establishes the account allocation. Adds the bright red black-spotted seeds and open pods absent from the two selected flower views. Retain the curated square crop; no general species-to-subspecies alias is introduced.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abrus precatorius/PICK/1.a Abrus precatorius.649.a.jpg",
+      "sha256": "8036f29cc21a0441ad8246aceb9ff3da6e4beaf7baf0aee2a6c5fa7ff7d3da87",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 4,
+      "reason": "24 September 2026 review. Alternate wider crop of the same seed photograph as the selected 649.b file. Retain the curated square crop used for this account's seed view.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abrus precatorius/PICK/EXTRA/1a. Abrus precatorius.823.a.jpg",
+      "sha256": "a28439daff76fcc8df4a61bfca387372601563c510dc3f831bda0a68a180499f",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 4,
+      "reason": "24 September 2026 review. Visually reviewed additional photograph of the same open-pod cluster. The selected book seed view already shows the red black-spotted seeds, open pods and pinnate foliage clearly.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abrus precatorius/PICK/EXTRA/Abrus precatorius.759.a.jpg",
+      "sha256": "93c802a9a17bfb137202444a2e6ccf328e5544dc68490eff5452d3a612c42373",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 4,
+      "reason": "24 September 2026 review. Visually reviewed additional framing of the same open-pod cluster. Retain the selected book seed view alongside the two existing flower views.",
+      "reviewCategory": "repeated-view"
     }
   ],
   "photoReviewNotes": {
