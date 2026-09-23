@@ -290,9 +290,11 @@ open Server.Env
 let adminConfig : AdminConfig<Env> =
     { Tables = Server.AdminGen.tables
       GetDb = fun env -> env.DB
-      CheckKey = fun request env ->
+      // Owner-key-only authorization (the default). Apps that add delegated roles supply a richer
+      // Authorize returning Hedge.Admin.AdminSubject with a per-(resource, operation) permits matrix.
+      Authorize = Hedge.Admin.ownerKey (fun request env ->
         let key = getHeader request "X-Admin-Key"
-        key <> "" && key = env.ADMIN_KEY }
+        key <> "" && key = env.ADMIN_KEY) }
 
 === src/Server/Env.fs ===
 module Server.Env
