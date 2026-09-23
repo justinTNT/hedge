@@ -19,9 +19,11 @@ open Server.Env
 let deps (env: Env) (request: WorkerRequest) : Hedge.AccessControl.Deps =
     { Guest = Server.GuestConfig.deps env request
       ActiveSubject = fun guestId -> promise {
-          let! s = Identity.Grants.activeSubject env.DB guestId
+          // Core authenticated-subject resolution (available without the grants package)...
+          let! s = Identity.Server.activeSubject env.DB guestId
           return s |> Option.map (fun (provider, providerUserId) ->
               ({ Provider = provider; ProviderUserId = providerUserId } : Hedge.AccessControl.Subject)) }
+      // ...with role checking (the optional grants sub-surface) layered on top.
       HasGrant = fun provider providerUserId role -> Identity.Grants.hasGrant env.DB provider providerUserId role }
 
 /// Authorize `role` for this request (accepted guest cookie → active identity → enabled grant).

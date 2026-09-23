@@ -57,7 +57,10 @@ let getTypes (key: string) : JS.Promise<Result<AdminType list, string>> =
             requestHeaders [ Custom ("X-Admin-Key", key) ]
             Method HttpMethod.GET
         ]
-        let! response = fetch (basePath + "/api/admin/types") props
+        // GlobalFetch (not Fetch.fetch, which FAILWITHS on any non-2xx) so a 401 comes back as a
+        // Response with its status — otherwise the exception pre-empts the status check and an ordinary
+        // signed-out discovery surfaces as a request-error banner instead of the sign-in.
+        let! response = GlobalFetch.fetch(RequestInfo.Url (basePath + "/api/admin/types"), requestProps props)
         if response.Status = 401 then return Error "unauthorized"
         else
             let! text = response.text()

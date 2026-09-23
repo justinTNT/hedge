@@ -23,6 +23,10 @@ type Env = {
     /// single GUEST_SECRET is the only key (no rotation). Bound as a Cloudflare secret. See
     /// Hedge.GuestSession.keyringFrom.
     GUEST_KEYRING: string
+    /// OPTIONAL active signing key id (default "k1"). A key rotation sets a NEW id here (e.g. "k2")
+    /// alongside a new GUEST_SECRET, and lists the OLD id+secret in GUEST_KEYRING so existing cookies
+    /// keep verifying. Leaving the active id equal to a retiring key's id would shadow it.
+    GUEST_KEY_ID: string
     GOOGLE_CLIENT_ID: string
     GOOGLE_CLIENT_SECRET: string
     GITHUB_CLIENT_ID: string

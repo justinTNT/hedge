@@ -67,3 +67,18 @@ let hasLinkedIdentity (db: D1Database) (guestId: string) : JS.Promise<bool> =
         let! row = (bind (db.prepare Sql.guestHasLinkedIdentity) [| box guestId |]).first()
         return not (isNull (box row))
     }
+
+/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id). None when
+/// the guest is soft-deleted, has no active identity, or its active identity is anonymous. This is
+/// CORE authenticated-subject resolution — available to any identity host for OWNERSHIP checks, with
+/// no grants package composed; role checking (Identity.Grants.hasGrant) is layered on TOP of this.
+let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * string) option> =
+    promise {
+        let! live = (bind (db.prepare Sql.guestNotDeleted) [| box guestId |]).first()
+        if isNull (box live) then return None
+        else
+            let! id = activeFor db guestId
+            match id with
+            | Some i when i.Provider <> "anonymous" -> return Some (i.Provider, i.ProviderUserId)
+            | _ -> return None
+    }

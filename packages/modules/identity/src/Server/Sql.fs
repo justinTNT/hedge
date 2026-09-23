@@ -94,3 +94,9 @@ let legacyGuestEligible =
 /// adoption; only anonymous ownership bridges (work-order rule 5).
 let guestHasLinkedIdentity =
     "SELECT 1 FROM identities WHERE guest_id = ? AND provider <> 'anonymous' LIMIT 1"
+
+/// A guest row that is not soft-deleted. Authenticated-subject resolution honors guests.deleted_at so
+/// a deleted guest's live session can't authorize (the guest-session cookie policy itself doesn't
+/// check it). Core (not grants): subject identity is needed for ownership too, not only role checks.
+let guestNotDeleted =
+    "SELECT 1 FROM guests WHERE id = ? AND deleted_at IS NULL LIMIT 1"
