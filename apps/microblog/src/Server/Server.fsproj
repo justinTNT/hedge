@@ -16,7 +16,6 @@
        GuestConfig / AccessConfig / Handlers / ModuleServices, all of which call Identity.Server.*. -->
   <Import Project="../../../../packages/modules/identity/identity.server.props" />
   <ItemGroup>
-    <Compile Include="Attribution.fs" />
     <!-- Binds this app's Env + Identity.Server into the shared guest-session policy
          (Hedge.GuestSession). After the identity props (uses it); before Handlers, ModuleServices and
          Worker (all consume it). -->
