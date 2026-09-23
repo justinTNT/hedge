@@ -1,5 +1,134 @@
 {
   "heldPhotoSpecies": {
     "Grevillea mimosoides": "The 24 March 2026 proof notes identify a misallocated image of G. longicuspis. Hold the account's photo allocation until compared with book Y."
-  }
+  },
+  "photoNameAliases": {
+    "Abelmoschus moschatus subsp. tuberosa": {
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "reason": "Reviewed archive spelling variant: the manuscript uses tuberosus; the matching genus, species and subspecies label in the curated folder uses tuberosa. The three PICK images show the documented red, white and yellow flower variants. This is a photo allocation decision, not a new taxonomic synonym. Canonical spelling corroborated by ANPSA and Royal Botanic Gardens Victoria.",
+      "references": [
+        "https://anpsa.org.au/plant_profiles/abelmoschus-moschatus-subsp-tuberosus/",
+        "https://data.rbg.vic.gov.au/rbgcensus/census/taxon/c0725a77-8a52-446f-89f3-ce0591fbf628"
+      ]
+    }
+  },
+  "photoAllocations": [
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abelmoschus moschatus subsp. tuberosa/PICK/EXTRA/Abelmoschus moschatus subsp. tuberosa frt & seeds.727.b.JPG",
+      "sha256": "313d2900e5638812caf35128a61c8e2f8f2dc6710ae47b4da18aa6ca49ae6478",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "reason": "Reviewed EXTRA selection: labelled with the same tuberosa spelling as the curated PICK folder; fruit and exposed seeds add a diagnostic view absent from the selected flowers."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abelmoschus moschatus subsp. tuberosa/PICK/EXTRA/Abelmoschus moschatus subsp. tuberosa.060.a.jpg",
+      "sha256": "5515d749c7e5faea2d4dcb6bd9457b20c061c3a88e01498ab65bc494c9f32cea",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "reason": "Alternate crop of the same red-flower photograph as PICK 1; retain the curated crop rather than displaying both."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatus spp tuberosus 147.JPG",
+      "sha256": "fef4794d6c425d651c0e4800c691fbd3201973c3899a1d945f4f7b40f066096c",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": false,
+      "credit": "William Burgess",
+      "reason": "Near-duplicate pale-pink flower view of Abelmoschus moschatus spp tuberosus.JPG from the same collection; retain the latter framing."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatus spp tuberosus 645.JPG",
+      "sha256": "8e1a4704fce37d0e4111d1f8dac90e0c57a5ca20ef5bc6f16be44dd23a520a49",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatus spp tuberosus.JPG",
+      "sha256": "7c9cec4e02cf711c2d8d395f40d38d1e74c9f7e06a9fc209409c2a78622b0ac6",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatus spptuberosus 883.JPG",
+      "sha256": "4506f706fc776e1a31c2312989bcaf744b394c99967fc443a886b8b2f8ba8b5d",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatus ssp tuberosus 648.JPG",
+      "sha256": "286f718a25c29bee1f54d4296c861743ecb59a61e8ba0ebee617060c08b4d890",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschatuss tuberosus  001.JPG",
+      "sha256": "ced2bffa16b7fccec3c754f8c5573899ed1cdfd5a79c69b139026489ba7965e0",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abelmoschus moschuatus spptuberosus 647.JPG",
+      "sha256": "753ac64ff1c2f009ab650d9f4258342d76da85073bee5e1b874a5ad4687a989e",
+      "plant": "Abelmoschus moschatus subsp. tuberosus",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Reviewed filename allocation from the user-identified Willie Burgess collection: genus, species (with minor spelling errors) and tuberosus epithet link to the manuscript account. Archive spp/ssp/spptuberosus labels are resolved only for these individual files. Visual comparison supports the allocation; final botanical review remains pending. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea pyramidalis/PICK/1. Grevillea pyramidalisA.IM.jpg",
+      "sha256": "5854817a6435b0fcba5f9aecb9fdfce8342b5f10ed60fc34b8b77c2a67c85b55",
+      "plant": "Grevillea pyramidalis",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "Retain the existing allocation supported by the matching curated folder and full botanical name in the filename; an undelimited shot suffix follows the name. Explicitly pinned so general matching can require whole-name boundaries."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Haemodorum coccineum/PICK/1. Haemodorum coccineum562.a.JPG",
+      "sha256": "2c9660a38e4aadbf8a20cbb7024dede93d3dd15d541b82f6ab24dc105ed9f4cd",
+      "plant": "Haemodorum coccineum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "Retain the existing allocation supported by the matching curated folder and full botanical name in the filename; an undelimited shot suffix follows the name. Explicitly pinned so general matching can require whole-name boundaries."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mimusops elengi (use 2022 small tree shot)/PICK/1. Mimusops elengii.9319.NS.a.jpg",
+      "sha256": "80c023922e4380cd84200b01d374978a83857e848a2be49d3890e6fb29716c6d",
+      "plant": "Mimusops elengi",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "Retain the existing allocation supported by the curated Mimusops elengi folder; the filenames use elengii. This is an explicit archive spelling decision, not a taxonomic synonym; final botanical review remains pending."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mimusops elengi (use 2022 small tree shot)/PICK/2. Mimusops elengii bark.987.a.JPG",
+      "sha256": "e72bba9d0701af702148a326cba3b91fc7a3abd5c3009370ebb4bde4a210cd02",
+      "plant": "Mimusops elengi",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 2,
+      "reason": "Retain the existing allocation supported by the curated Mimusops elengi folder; the filenames use elengii. This is an explicit archive spelling decision, not a taxonomic synonym; final botanical review remains pending."
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/VV/Vitex glabrata (use 2022 tree shot as smaller 2. image)/PICK/1. Vitex glabrata1.WB.a.JPG",
+      "sha256": "c4aa9e65ccff7cb2f754058687577350a35320b0bfe4e091b9dd675535f4f148",
+      "plant": "Vitex glabrata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "Retain the existing allocation supported by the matching curated folder and full botanical name in the filename; an undelimited shot suffix follows the name. Explicitly pinned so general matching can require whole-name boundaries."
+    }
+  ]
 }

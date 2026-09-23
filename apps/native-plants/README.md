@@ -6,7 +6,8 @@ An independent Hedge app for John Brock's plant collection. It lives in
 This is a local working prototype. The accepted-view manuscript supplies 531 plant
 accounts in 102 source family labels and 286 genera. There are 504 exact joins to
 the attributes table. All matched, unheld photographs from the curated `PICK`
-folders are imported, with one hero and a supporting gallery per account.
+folders, plus explicitly reviewed supplemental selections, are imported with
+one hero and a supporting gallery per account.
 The source collection still needs comparison with the final proof
 and editorial review of photo identity, credits and unresolved names before release.
 
@@ -96,12 +97,26 @@ real table cells via `textutil`. Only exact name joins are applied; unmatched ro
 and unknown codes appear in `data/import-report.json`.
 
 Photos are selected from the curated plant-description `PICK` folders, outside
-`EXTRA/EXTRAS`, with exact account/folder/filename agreement. Subspecies are not
-automatically matched to species-only labels. Every eligible photograph is imported;
+`EXTRA/EXTRAS`, with account/folder/filename agreement after normalizing spaces,
+periods and underscores consistently. Rank words and epithets remain significant:
+subspecies are not automatically matched to species-only labels. Unmatched folders
+and conflicting filenames are reported, including the affected paths.
+Every eligible photograph is imported;
 the source ordering determines the initial hero and supporting order. Re-importing
 preserves saved ordering, captions and publication choices. Known editorial holds live in
 `data/editorial-decisions.json`, including the Grevillea mimosoides proof correction.
 Those checks establish documentary evidence, not botanical verification.
+
+`photoNameAliases` in that same decisions file records reviewed archive spellings
+and their evidence without changing the manuscript name, account ID or public
+taxonomic aliases. For example, the Abelmoschus photo folder's `tuberosa` spelling
+is explicitly allocated to the manuscript's `tuberosus` account.
+`photoAllocations` records individual supplemental files (including selected
+`EXTRA` or photographer-collection images), their account, credit, SHA256 and
+selection/exclusion reason. A changed file stops import for review. These entries
+do not enable wholesale import of another archive folder. The Abelmoschus
+selection includes fruit/seeds and Willie Burgess photographs; an alternate crop
+and a near-duplicate flower view remain excluded with reasons recorded.
 
 The importer makes 640px and 1600px WebP derivatives, retaining binary hashes and
 allocation evidence locally. Photographer initials are expanded only where the
@@ -130,8 +145,9 @@ The focused checks exercise the compiled Worker over real in-memory SQLite:
 owner authorization, edit/unpublish/delete behavior, private metadata exclusion,
 photo/parent visibility, facet semantics, aliases, bulk-loading and cache isolation,
 expiry failures, racing invalidation and preservation of edits on re-import.
-Importer fixtures cover tracked revisions, inline labels, unknown codes and
-conflicting photograph labels. Client checks cover keyboard selection, shareable
+Importer fixtures cover tracked revisions, inline labels, unknown codes, rank
+punctuation, reviewed aliases, unmatched folders, conflicting photograph labels
+and hash-pinned supplemental selections. Client checks cover keyboard selection, shareable
 filter URLs and rejection of late responses after navigation or refresh failure.
 
 No production worker, D1 database, R2 bucket or domain has been created. Before a

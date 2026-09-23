@@ -132,29 +132,67 @@ def extract(root,account_ids=None):
     issues.extend(dict(kind='endemic-join-unresolved',name=name) for name in sorted(unmatched_endemics))
     return plants,issues,dict(accounts=len(plants),attributeRows=len(attrs),exactAttributeJoins=len(used),endemicSourceNames=len(endemics))
 
-def photo_candidates(root,plants):
+def photo_key(s): return norm(re.sub(r'[._]', ' ', s))
+def has_photo_label(filename,label):
+    return bool(re.search(r'(?<![\w-])'+re.escape(photo_key(label))+r'(?![\w-])',photo_key(filename)))
+
+def photo_credit(filename):
+    initials=re.findall(r'(?:[.\s])('+'|'.join(CREDITS)+r')(?=\d|[.\s]|$)',filename)
+    return CREDITS[initials[-1]] if initials else 'Photographer not recorded'
+
+def photo_candidates(root,plants,decisions=None):
+    decisions=decisions or {}
     photo_root=next(p for p in root.rglob('D. PLANT DESCRIPTIONS GENERA A-Z') if p.is_dir())
-    names={norm(p['scientific_name']):p for p in plants}; found=[]; issues=[]
+    names={photo_key(p['scientific_name']):p for p in plants}; found=[]; issues=[]
+    if len(names)!=len(plants): raise ValueError('Ambiguous normalized photo account names')
+    aliases={photo_key(label):decision for label,decision in decisions.get('photoNameAliases',{}).items()}
+    labels=dict(names)
+    for label,decision in aliases.items():
+        plant=names[photo_key(decision['plant'])]
+        if label in labels and labels[label]['id']!=plant['id']: raise ValueError(f'Conflicting photo alias: {label}')
+        if not decision['reason']: raise ValueError(f'Missing photo alias evidence: {label}')
+        labels[label]=plant
     for folder in sorted(photo_root.glob('*/*')):
         if not folder.is_dir():continue
-        label=clean(re.sub(r'\s*\([^)]*\)','',folder.name));plant=names.get(norm(label))
-        if not plant:continue
-        for path in sorted(folder.rglob('*')):
-            if path.suffix.lower() not in ('.jpg','.jpeg','.tif','.tiff'):continue
-            if not any(p.upper()=='PICK' for p in path.relative_to(folder).parts):continue
-            if any(p.upper() in ('EXTRA','EXTRAS') for p in path.relative_to(folder).parts):continue
-            filename=norm(re.sub(r'[._]',' ',path.stem))
-            exact=norm(label) in filename
+        paths=[path for path in sorted(folder.rglob('*')) if path.is_file()
+               and path.suffix.lower() in ('.jpg','.jpeg','.tif','.tiff')
+               and any(p.upper()=='PICK' for p in path.relative_to(folder).parts)
+               and not any(p.upper() in ('EXTRA','EXTRAS') for p in path.relative_to(folder).parts)]
+        label=clean(re.sub(r'\s*\([^)]*\)','',folder.name));plant=labels.get(photo_key(label))
+        if not plant:
+            if paths: issues.append(dict(kind='photo-folder-unmatched',label=label,path=str(folder.relative_to(root)),
+                                         photos=[str(p.relative_to(root)) for p in paths]))
+            continue
+        for path in paths:
             # Never resolve a shortened rank or conflicting folder label by fuzzy matching.
-            if not exact:
+            if not has_photo_label(path.stem,label):
                 issues.append(dict(kind='photo-label-conflict-or-shortened',plant=plant['scientific_name'],path=str(path.relative_to(root))));continue
-            names_in_file=[p['scientific_name'] for p in plants if norm(p['scientific_name']) in filename]
+            names_in_file=sorted({p['scientific_name'] for name,p in labels.items() if has_photo_label(path.stem,name)})
             if len(names_in_file)>1:
                 issues.append(dict(kind='photo-multiple-taxa',plant=plant['scientific_name'],path=str(path.relative_to(root)),names=names_in_file));continue
-            initials=re.findall(r'(?:[.\s])('+'|'.join(CREDITS)+r')(?:[.\s]|$)',path.name)
-            credit=CREDITS[initials[-1]] if initials else 'Photographer not recorded'
             priority=0 if re.match(r'^1[. ](?!a)',path.name,re.I) else 1 if path.name.startswith('1') else 2
-            found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=str(path.relative_to(root)),credit=credit,priority=priority))
+            alias=aliases.get(photo_key(label))
+            evidence=('reviewed photo-label alias: '+alias['reason']) if alias else 'account/folder/filename agreement after punctuation normalization'
+            found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=str(path.relative_to(root)),
+                              credit=photo_credit(path.name),priority=priority,evidence='PICK selection; '+evidence))
+    # Other archive areas require individual, hash-pinned decisions, never a fuzzy/global scan.
+    allocations=decisions.get('photoAllocations',[])
+    allocation_paths={a['path'] for a in allocations}
+    if len(allocation_paths)!=len(allocations): raise ValueError('Duplicate photo allocation paths')
+    issues=[i for i in issues if i.get('path') not in allocation_paths]
+    for allocation in allocations:
+        path=(root/allocation['path']).resolve()
+        if not path.is_relative_to(root.resolve()) or not path.is_file(): raise ValueError(f'Invalid photo allocation path: {allocation["path"]}')
+        if hashlib.sha256(path.read_bytes()).hexdigest()!=allocation['sha256']: raise ValueError(f'Photo allocation changed; review required: {allocation["path"]}')
+        plant=names[photo_key(allocation['plant'])]
+        if not allocation['reason']: raise ValueError(f'Missing photo allocation evidence: {path}')
+        if not allocation['include']:
+            issues.append(dict(kind='editorial-photo-exclusion',plant=plant['scientific_name'],path=allocation['path'],reason=allocation['reason']))
+            found=[c for c in found if c['path']!=allocation['path']]
+            continue
+        if any(c['path']==allocation['path'] for c in found): raise ValueError(f'Duplicate photo allocation: {path}')
+        found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=allocation['path'],credit=allocation['credit'],
+                          priority=allocation.get('priority',3),evidence='Explicit photo allocation: '+allocation['reason']))
     return found,issues
 
 def q(v):
@@ -172,7 +210,7 @@ def main():
     source_files=[next(root.rglob(pattern)) for pattern in ['3. NPNA 2026 PLANT DESCRIPTIONS.docx','2.B NPNA 2026 TABLE OF PLANT ATTRIBUTES A.A.rtf','4. NPNA 2026 REF, BIB, GLOSS, FAM LIST, ENDEM LIST, INDEX.docx']]
     fingerprint={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files}
     decisions=json.loads((data/'editorial-decisions.json').read_text()) if (data/'editorial-decisions.json').exists() else {}
-    plants,issues,report=extract(root,decisions.get('accountIds',{}));candidates,photo_issues=photo_candidates(root,plants);issues+=photo_issues
+    plants,issues,report=extract(root,decisions.get('accountIds',{}));candidates,photo_issues=photo_candidates(root,plants,decisions);issues+=photo_issues
     lock=data/'source-lock.json'
     if lock.exists() and json.loads(lock.read_text())!=fingerprint and not args.accept_source_change:
         prior=json.loads((data/'catalogue-source.json').read_text()) if (data/'catalogue-source.json').exists() else {'plants':[]}
@@ -191,18 +229,18 @@ def main():
         for n,c in enumerate(chosen):
             src=root/c['path'];digest=hashlib.sha256(src.read_bytes()).hexdigest();key=digest[:20]
             try:
-                with Image.open(src) as original:
-                    im=ImageOps.exif_transpose(original).convert('RGB')
-                    for width,label in [(640,'thumb'),(1600,'large')]:
-                        out=media/f'{key}-{label}.webp'
-                        if not out.exists():
+                outputs=[(width,media/f'{key}-{label}.webp') for width,label in [(640,'thumb'),(1600,'large')]]
+                if any(not out.exists() for _,out in outputs):
+                    with Image.open(src) as original:
+                        im=ImageOps.exif_transpose(original).convert('RGB')
+                        for width,out in outputs:
+                            if out.exists(): continue
                             copy=im.copy();copy.thumbnail((width,width));copy.save(out,'WEBP',quality=83)
-                    width,height=im.size
             except Exception as e:
                 issues.append(dict(kind='image-decode',path=c['path'],error=str(e)));continue
             photos.append(dict(id='photo-'+key,plant_id=p['id'],image=f'/media/{key}-large.webp',thumbnail=f'/media/{key}-thumb.webp',
                 caption=p['scientific_name'],photographer=c['credit'],sort_order=n,published=True,
-                source_evidence=f"{c['path']}; SHA256 {digest}; exact folder/filename agreement; PICK selection; editorial image review pending",
+                source_evidence=f"{c['path']}; SHA256 {digest}; {c['evidence']}; editorial image review pending",
                 created_at=1790118000,updated_at=None,deleted_at=None))
     owners=collections.defaultdict(set)
     for photo in photos:owners[photo['id']].add(photo['plant_id'])
