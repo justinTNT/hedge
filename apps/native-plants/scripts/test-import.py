@@ -65,6 +65,19 @@ class ImportTests(unittest.TestCase):
             self.assertEqual(found,[])
             self.assertEqual({i['kind'] for i in issues},{'photo-label-conflict-or-shortened','photo-multiple-taxa'})
 
+    def test_reviewed_allocation_removes_only_its_path_from_unmatched_folder_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);name='Acacia example'
+            reviewed=self.photo_fixture(root,'Acacia typo','1. Acacia typo.JPG')
+            pending=self.photo_fixture(root,'Acacia typo','2. Acacia typo.JPG')
+            decision=dict(path=str(reviewed.relative_to(root)),sha256=hashlib.sha256(reviewed.read_bytes()).hexdigest(),
+                          plant=name,include=True,credit='Fixture photographer',reason='Reviewed archive spelling')
+            found,issues=source.photo_candidates(root,[{'id':'one','scientific_name':name}],{'photoAllocations':[decision]})
+            self.assertEqual([c['path'] for c in found],[str(reviewed.relative_to(root))])
+            self.assertEqual(issues[0]['photos'],[str(pending.relative_to(root))])
+            pending.unlink()
+            self.assertEqual(source.photo_candidates(root,[{'id':'one','scientific_name':name}],{'photoAllocations':[decision]})[1],[])
+
     def test_supplemental_photos_require_individual_unchanged_allocations(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

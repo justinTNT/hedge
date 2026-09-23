@@ -179,7 +179,13 @@ def photo_candidates(root,plants,decisions=None):
     allocations=decisions.get('photoAllocations',[])
     allocation_paths={a['path'] for a in allocations}
     if len(allocation_paths)!=len(allocations): raise ValueError('Duplicate photo allocation paths')
-    issues=[i for i in issues if i.get('path') not in allocation_paths]
+    unresolved=[]
+    for issue in issues:
+        if issue['kind']=='photo-folder-unmatched':
+            issue={**issue,'photos':[p for p in issue['photos'] if p not in allocation_paths]}
+            if not issue['photos']: continue
+        if issue.get('path') not in allocation_paths: unresolved.append(issue)
+    issues=unresolved
     for allocation in allocations:
         path=(root/allocation['path']).resolve()
         if not path.is_relative_to(root.resolve()) or not path.is_file(): raise ValueError(f'Invalid photo allocation path: {allocation["path"]}')
