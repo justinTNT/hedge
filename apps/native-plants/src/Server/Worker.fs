@@ -20,15 +20,8 @@ let exports = createWorker {
         | None -> None
     Admin = Some (fun request env route ->
         let env = env :?> Env
-        let isAdmin =
-            match route with
-            | GET p | POST p | PUT p | DELETE p -> p.StartsWith("/api/admin/") || p="/api/admin"
-            | _ -> false
-        let action =
-            if isAdmin && not (Server.AdminConfig.adminConfig.CheckKey request env) then
-                Some (promise {return unauthorized ()})
-            else Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request env route
-        action
+        // The shared admin enforces authorization for discovery and every CRUD operation.
+        Hedge.Admin.handleRequest Server.AdminConfig.adminConfig request env route
         |> Option.map (fun action -> promise {
             let! response = action
             if response.status >= 200 && response.status < 300 && request.method <> "GET" then

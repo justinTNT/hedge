@@ -1,16 +1,22 @@
 # Integration with shared identity and access-controlled admin
 
-The first app slice deliberately stands on the existing Hedge owner admin. Identity
-and delegated admin authorization are being extracted in a separate workstream.
-Native Plants should adopt the resulting consuming contract when it lands.
+Native Plants is rebased onto main's identity/admin merge (`5d2ae5d`, including the
+review fixes in `1954eec`). It now uses the shared admin's `Authorize` contract through
+`Hedge.Admin.ownerKey`; the framework gates discovery and CRUD. The app still uses
+owner-key access while personal contributions and delegated review are implemented.
+
+The shared identity module and optional grant support are available. The next
+integration slice can use core `Identity.Server.activeSubject` for ownership without
+enabling grants. Scoped contribution reads, bounded review/promotion operations and
+private media still need implementation and the planned second-consumer checks.
 
 ## Existing seams
 
 - Public botanical content is app-owned `Plant` and `PlantPhoto` data.
-- `AdminConfig` binds the owner key; replace/adapt that binding when shared admin
-  authorization becomes available. Do not add a second grants implementation here.
+- `AdminConfig.Authorize` binds the owner-key adapter; extend that binding with the
+  app's delegated policy when bounded review operations are ready. Reuse shared grants.
 - The Worker currently opts out of OAuth and guest sessions. Enable the shared
-  identity module through its documented composition surface, once available.
+  identity module through its shared composition surface in the next integration slice.
 - The public catalogue explicitly projects allowed fields. New personal records
   must not be added to that projection by default.
 - A photo promotion should create/update a curated PlantPhoto through an app-owned
@@ -62,7 +68,7 @@ On logout or identity switching, clear the personal images and any open personal
 image viewer immediately; reject in-flight responses for the previous identity.
 Personal responses and media must never enter the shared catalogue cache.
 
-## Acceptance when shared infrastructure arrives
+## Acceptance for contribution integration
 
 1. An authenticated user can manage their own species notes and images.
 2. A second user cannot read private material or alter the first user's records.

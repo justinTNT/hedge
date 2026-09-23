@@ -113,11 +113,11 @@ Imported guide photographs are public static assets. Removing an allocation from
 the catalogue does not revoke a known static URL. This storage is unsuitable for
 private personal uploads; see the integration note below.
 
-## Upcoming identity and contributions
+## Identity and contributions
 
 See [IDENTITY-INTEGRATION.md](IDENTITY-INTEGRATION.md). The public catalogue and
 owner editing are usable independently. Personal notes/images and delegated
-review will consume the forthcoming shared identity/access-controlled admin;
+review will build on the shared identity and admin authorization now on main;
 this app does not carry a copied login or grants implementation.
 
 ## Checks
