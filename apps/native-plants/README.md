@@ -103,8 +103,9 @@ subspecies are not automatically matched to species-only labels. Unmatched folde
 and conflicting filenames are reported, including the affected paths.
 Every eligible photograph is imported;
 the source ordering determines the initial hero and supporting order. Re-importing
-preserves saved ordering, captions and publication choices. Known editorial holds live in
-`data/editorial-decisions.json`, including the Grevillea mimosoides proof correction.
+preserves saved ordering, captions and publication choices. Editorial holds and their resolutions live in
+`data/editorial-decisions.json`. The Grevillea mimosoides hold was resolved against
+the corrected book Y layout; see [PHOTO-REVIEW.md](PHOTO-REVIEW.md).
 Those checks establish documentary evidence, not botanical verification.
 
 `photoNameAliases` in that same decisions file records reviewed archive spellings

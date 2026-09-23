@@ -1,7 +1,5 @@
 {
-  "heldPhotoSpecies": {
-    "Grevillea mimosoides": "The 24 March 2026 proof notes identify a misallocated image of G. longicuspis. Hold the account's photo allocation until compared with book Y."
-  },
+  "heldPhotoSpecies": {},
   "photoNameAliases": {
     "Abelmoschus moschatus subsp. tuberosa": {
       "plant": "Abelmoschus moschatus subsp. tuberosus",
@@ -2803,6 +2801,16 @@
       "priority": 3,
       "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
       "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Proteaceae Grevillea Persoonia Stenocarpus/Grevillea/Grevillea mimosoides 3279.JPG",
+      "sha256": "f33b852fb1c6c7690f19fadf5d4077cf99caee346cb66739f8bd9db362abf08f",
+      "plant": "Grevillea mimosoides",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reviewCategory": "selected",
+      "reason": "Reviewed after resolving the obsolete whole-account proof hold. The full species label in William Burgess's collection agrees with the narrow entire leaves and cream cylindrical flower racemes in the two curated images and corrected book Y page 229. Adds a close flower view with a butterfly. Documentary and visual corroboration, not an independently verified botanical identification."
     }
   ],
   "photoReviewNotes": {
@@ -2819,5 +2827,35 @@
       "Jasminum didymum subsp. didymium": "Photo folder and Kew use subsp. didymum.",
       "Leichardtia viridiflora subsp. tropica": "Photo folder and original taxonomic paper use Leichhardtia."
     }
-  }
+  },
+  "resolvedPhotoHolds": {
+    "Grevillea mimosoides": {
+      "resolvedOn": "2026-09-24",
+      "previousReason": "The 24 March 2026 proof notes identify a misallocated image of G. longicuspis. Hold the account's photo allocation until compared with book Y.",
+      "evidence": "Visually compared book Y, printed page 229 (PDF page 115), with the curated source files. The PDF creation date is 25 March 2026, after the 24 March correction. It already puts the red-flowered Ian Morris photograph under G. longicuspis and the two cream-flowered photographs under G. mimosoides. Their composition matches the two named PICK files. The earlier whole-account hold was obsolete; the correction concerned a previous proof layout, not these source filenames.",
+      "proofPath": "# A A A A COMPLETE NPNA NEW ED 2026/A A MANUSCRIPT/5. FULL DRAFT & EDITS JAN-MAR 2026/69c3d6be8a3f9_Native Plants of Northern Australia - book Y.pdf",
+      "verifiedCuratedFiles": [
+        {
+          "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea mimosoides/PICK/1. Grevillea mimosoides.014.a.JPG",
+          "sha256": "037dc236e64e94ae1b9d16c38ea835f432809b328370150c0130cb3a1ae4d76c"
+        },
+        {
+          "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea mimosoides/PICK/2. Grevillea mimosoides.029.a.JPG",
+          "sha256": "cb45d539b87b99e0222c81c4665c818ba2078245ec91158c5d885f7bc702d839"
+        }
+      ]
+    }
+  },
+  "descriptionReviewNotes": [
+    {
+      "plant": "Grevillea mimosoides",
+      "field": "leaves",
+      "reviewedOn": "2026-09-24",
+      "status": "editorial-review-needed",
+      "sourceText": "blade 12-29cm x 6-20(30)cm",
+      "proposedCorrection": "blade 12-29cm x 6-20(30)mm",
+      "reason": "Both the source manuscript and book Y page 229 print cm for the width. This appears to be a unit typo: the account describes narrow sickle-shaped leaves, the photographs agree, and Flora of Australia 17A (2000), p. 375 describes G. mimosoides leaves 6.5-40 cm long and 6-50 mm wide. The narrower local range has not been independently verified. Record for researcher review; do not silently rewrite the manuscript or existing admin entry.",
+      "reference": "https://www.dcceew.gov.au/sites/default/files/env/pages/9956603b-17a1-4fe2-b47a-3addcd924fc0/files/flora-australia-17a-proteaceae-2-grevillea.pdf"
+    }
+  ]
 }

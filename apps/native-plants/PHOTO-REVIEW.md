@@ -1,4 +1,41 @@
-# Archive photograph review — 23 September 2026
+# Archive photograph review — 23–24 September 2026
+
+## 24 September: Grevillea mimosoides hold resolved
+
+The 24 March proof correction concerned an earlier layout. On inspection,
+**book Y already incorporates it**: printed page 229 (PDF page 115) puts the
+red-flowered Ian Morris photograph under G. longicuspis, and the two
+cream-flowered photographs under G. mimosoides. The PDF metadata gives a creation
+date of 25 March 2026, consistent with that sequence.
+
+The two mimosoides photographs match `1. Grevillea mimosoides.014.a.JPG` and
+`2. Grevillea mimosoides.029.a.JPG` in its curated PICK directory. William Burgess's
+`Grevillea mimosoides 3279.JPG` provides a consistent additional view of the narrow
+entire leaves and cream cylindrical flower racemes, with a butterfly. The
+whole-account hold was our precaution and was no longer justified by the later
+proof. It has been removed, retaining its history, proof path and the two source
+hashes in `resolvedPhotoHolds`.
+
+These **three photographs** bring coverage to **498 of 531 accounts** and
+**1,074 photographs**, leaving **33 unillustrated accounts** (nine needing rank
+review and 24 without a direct full-name filename match).
+
+There is also a likely **description unit error**: both the manuscript and book Y
+say leaf blades are `12–29cm x 6–20(30)cm`. The width probably means **mm**.
+[Flora of Australia 17A, p. 375](https://www.dcceew.gov.au/sites/default/files/env/pages/9956603b-17a1-4fe2-b47a-3addcd924fc0/files/flora-australia-17a-proteaceae-2-grevillea.pdf)
+describes a broader species range of 6.5–40 cm long and 6–50 mm wide. This supports
+a unit correction but does not independently verify the manuscript's narrower
+local range. The proposed correction is recorded in `descriptionReviewNotes`;
+the manuscript and app description are unchanged pending editorial review.
+
+The refreshed import, coverage audit and site build passed. Local database checks
+confirmed all 531 existing plant rows and 1,071 existing photo rows unchanged.
+The live gallery returns all three new photographs, and all six derivative URLs
+serve WebP images successfully.
+
+The rest of this note records the **23 September review**, before this resolution.
+
+## 23 September results
 
 The broader review recovered **161 photographs for 65 plant accounts**, including
 the first photographs for **53 accounts**. The local preview has been updated.
@@ -72,8 +109,9 @@ and a breviflora-labelled photograph in a Grewia oxyphylla folder. The two files
 explicitly marked `TBC` remain excluded. No species-only label was assumed to
 identify a particular subspecies or variety.
 
-The existing **Grevillea mimosoides** hold remains: proof corrections identified
-a G. longicuspis misallocation. These files have not been reinstated.
+At the end of this review, **Grevillea mimosoides** remained held because proof
+corrections identified a G. longicuspis misallocation. That hold was subsequently
+resolved on 24 September, as documented above.
 
 Two apparent manuscript spelling errors deserve editorial review. Only explicit
 photo allocations were made; account names, IDs and manuscript text are unchanged:
@@ -101,7 +139,8 @@ required subspecies or variety:
 - Syzygium forte subsp. potamophilum
 - Trichodesma zeylanicum var. zeylanicum
 
-One account, **Grevillea mimosoides**, has the existing editorial hold above.
+One account, **Grevillea mimosoides**, was held at this point; it is now illustrated
+following the 24 September resolution above.
 
 For the following 24 accounts, the archive scan found no direct full-name
 filename match. This does **not** establish that photographs are absent:
