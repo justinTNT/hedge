@@ -1,4 +1,5 @@
-import hashlib, importlib.util, unittest, tempfile
+import hashlib, importlib.util, json, unittest, tempfile
+from unittest.mock import patch
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -96,5 +97,30 @@ class ImportTests(unittest.TestCase):
             path.write_bytes(b'replaced photo')
             with self.assertRaisesRegex(ValueError,'Photo allocation changed'):
                 source.photo_candidates(root,plants,{'photoAllocations':[decision]})
+
+    def test_species_caption_survives_import_without_changing_ranked_account(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'archive';app=Path(tmp)/'app';data=app/'data';data.mkdir(parents=True)
+            name='Acacia example subsp. minor';plant={'id':'one','scientific_name':name,'family':'Fabaceae','genus':'Acacia'}
+            exact=self.photo_fixture(root,name,'1. Acacia example subsp. minor.JPG')
+            candidate=self.photo_fixture(root,name,'2. Acacia example.JPG')
+            source.Image.new('RGB',(8,8),'green').save(exact)
+            source.Image.new('RGB',(8,8),'yellow').save(candidate)
+            for filename in ['3. NPNA 2026 PLANT DESCRIPTIONS.docx','2.B NPNA 2026 TABLE OF PLANT ATTRIBUTES A.A.rtf','4. NPNA 2026 REF, BIB, GLOSS, FAM LIST, ENDEM LIST, INDEX.docx']:
+                (root/filename).write_bytes(b'fixture source fingerprint')
+            decision=dict(path=str(candidate.relative_to(root)),sha256=hashlib.sha256(candidate.read_bytes()).hexdigest(),
+                          plant=name,include=True,caption='Acacia example',credit='Fixture photographer',
+                          reason='Species-level illustration approved; subspecies remains unverified')
+            (data/'editorial-decisions.json').write_text(json.dumps({'photoAllocations':[decision]}))
+            with patch.object(source,'__file__',str(app/'scripts/import-source.py')), \
+                 patch.object(source,'extract',return_value=([plant],[],{})), \
+                 patch('sys.argv',['import-source.py','--source',str(root)]), patch('builtins.print'):
+                source.main()
+            catalogue=json.loads((data/'catalogue-source.json').read_text())
+            self.assertEqual(catalogue['plants'],[plant])
+            self.assertEqual([p['caption'] for p in catalogue['photos']],[name,'Acacia example'])
+            self.assertEqual([p['plant_id'] for p in catalogue['photos']],['one','one'])
+            self.assertIn("'Acacia example','Fixture photographer'",(data/'import.sql').read_text())
+            self.assertIn('subspecies remains unverified',catalogue['photos'][1]['source_evidence'])
 
 if __name__=='__main__':unittest.main()

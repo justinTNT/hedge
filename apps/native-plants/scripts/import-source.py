@@ -197,7 +197,9 @@ def photo_candidates(root,plants,decisions=None):
             found=[c for c in found if c['path']!=allocation['path']]
             continue
         if any(c['path']==allocation['path'] for c in found): raise ValueError(f'Duplicate photo allocation: {path}')
-        found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=allocation['path'],credit=allocation['credit'],
+        caption=allocation.get('caption',plant['scientific_name'])
+        if not isinstance(caption,str) or not caption.strip(): raise ValueError(f'Invalid photo allocation caption: {path}')
+        found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=allocation['path'],credit=allocation['credit'],caption=caption,
                           priority=allocation.get('priority',3),evidence='Explicit photo allocation: '+allocation['reason']))
     return found,issues
 
@@ -245,7 +247,7 @@ def main():
             except Exception as e:
                 issues.append(dict(kind='image-decode',path=c['path'],error=str(e)));continue
             photos.append(dict(id='photo-'+key,plant_id=p['id'],image=f'/media/{key}-large.webp',thumbnail=f'/media/{key}-thumb.webp',
-                caption=p['scientific_name'],photographer=c['credit'],sort_order=n,published=True,
+                caption=c.get('caption',p['scientific_name']),photographer=c['credit'],sort_order=n,published=True,
                 source_evidence=f"{c['path']}; SHA256 {digest}; {c['evidence']}; editorial image review pending",
                 created_at=1790118000,updated_at=None,deleted_at=None))
     owners=collections.defaultdict(set)

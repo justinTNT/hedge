@@ -114,10 +114,19 @@ taxonomic aliases. For example, the Abelmoschus photo folder's `tuberosa` spelli
 is explicitly allocated to the manuscript's `tuberosus` account.
 `photoAllocations` records individual supplemental files (including selected
 `EXTRA` or photographer-collection images), their account, credit, SHA256 and
-selection/exclusion reason. A changed file stops import for review. These entries
+selection/exclusion reason, and an optional public `caption`. A changed file stops import for review. These entries
 do not enable wholesale import of another archive folder. The Abelmoschus
 selection includes fruit/seeds and Willie Burgess photographs; an alternate crop
 and a near-duplicate flower view remain excluded with reasons recorded.
+
+Species-level photographs may illustrate a subspecies/variety account when
+explicitly approved in `photoAllocations`. Their `caption` keeps the species
+binomial; the account name and description keep the full taxon. The nine accounts
+approved on 24 September are listed in `speciesLevelPhotoPolicy`. This records
+permission to illustrate, without asserting the finer identification. Captions
+appear beneath the hero, gallery photographs and enlarged photograph, and remain
+editable through the photo admin. An allocation without `caption` retains the
+existing default of the account's full name.
 
 The September media review also covers selected `SELECT`, `PICKX`, annotated
 `PICK (...)` folders and newer field-trip collections. Those folders are not
