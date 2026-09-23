@@ -1,5 +1,5 @@
 [
-  { "identity": true },
+  { "identity": true, "assembly": "IdentityModels" },
   { "module": "../../packages/modules/articles", "primary": true },
   { "module": "../../packages/modules/blog" }
 ]

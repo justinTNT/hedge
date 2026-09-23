@@ -1,30 +1,14 @@
-module Models.Domain
+module Grants.Domain
 
-// The app's shared, app-level identity schema (unprefixed) — NOT a content module.
-// Content (items/comments/tags) now lives in the composed `blog` module
-// (packages/modules/blog); this app provides only the shared identity that the
-// blog's comments reference via Hedge.Interface.IdentityRef.
+// The access-control grant table, in a SEPARATE assembly (`GrantModels`, namespace
+// `Grants`) so it stays OPT-IN per app: a host gains the `grants` table only by adding
+// a second identity slice `{ "identity": true, "assembly": "GrantModels",
+// "namespace": "Grants" }` to its gen manifest (microblog/idealist do; articles omits
+// it, so no `grants` table there). Kept out of `Models.Domain` so the two shared
+// identity assemblies never define the same module. The generated `grants` table is
+// unchanged (table name derives from the type's short name `Grant`, not its namespace).
 
 open Hedge.Interface
-
-type Guest = {
-    Id: PrimaryKey<string>
-    SessionId: string
-    CreatedAt: CreateTimestamp
-    DeletedAt: SoftDelete option
-}
-
-type Identity = {
-    Id: PrimaryKey<string>
-    GuestId: ForeignKey<Guest>
-    Provider: string
-    ProviderUserId: string
-    Name: string
-    Picture: string
-    Email: string option
-    ActivatedAt: int option
-    CreatedAt: CreateTimestamp
-}
 
 /// A role grant: the person identified by the OAuth pair (provider, provider_user_id) holds `role`
 /// (e.g. "curator"). Keyed on the pair — stable across identity merges (never guest_id/identities.id).
