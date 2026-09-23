@@ -1,0 +1,11 @@
+data/import.sql
+data/catalogue-source.json
+data/import-report.json
+data/photo-candidates.json
+data/source-change-report.json
+public/admin.css
+public/media/
+public/hero.webp
+.local/
+.dev.vars
+__pycache__/

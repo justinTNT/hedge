@@ -1,0 +1,29 @@
+{
+  "name": "hedge-native-plants",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "gen": "dotnet run --project src/Gen/Gen.fsproj",
+    "import": "python3 scripts/import-source.py",
+    "build": "npm run gen && npm run build:client && npm run build:admin && npm run build:server && npm run build:site",
+    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client --noCache",
+    "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin --noCache",
+    "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server --noCache",
+    "build:site": "node scripts/prepare.mjs && vite build",
+    "db:init": "node scripts/db-local.mjs init",
+    "db:seed": "node scripts/db-local.mjs seed",
+    "preview": "wrangler dev --port 8794",
+    "dev": "concurrently -k \"wrangler dev --port 8794\" \"vite\"",
+    "test": "python3 scripts/test-import.py && node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^8.3.0",
+    "wrangler": "^4.67.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
