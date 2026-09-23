@@ -92,7 +92,12 @@ let browserTransport : Hedge.Http.Transport =
                 | Some body -> baseProps @ [ Body (BodyInit.Case3 body) ]
                 | None -> baseProps
             try
-                let! response = fetch url props
+                // GlobalFetch (not Fetch.fetch, which FAILWITHS on any non-2xx) so a 4xx/5xx comes
+                // back as a normal Response with its status — Http.sendDecode then interprets it as a
+                // typed ApiError. Only a request that never completes (network/CORS) is a
+                // TransportFailure. Fetch.fetch's throw-on-!ok would otherwise turn every 4xx into a
+                // TransportFailure, hiding real statuses from the generated client.
+                let! response = GlobalFetch.fetch(RequestInfo.Url url, requestProps props)
                 let! text = response.text()
                 return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
             with ex ->
