@@ -37,11 +37,14 @@ type Draft = { Id: string; Title: string; Snippet: string }
 type Access =
     | Loading
     | NeedLogin
-    | NotCurator of who: string
+    | NotCurator
     | Ready
 
 type Model =
     { Access: Access
+      /// The signed-in identity's display name, stored INDEPENDENTLY of Access so it survives whatever
+      /// order /api/auth/me and the queue response arrive in.
+      Me: string option
       Items: QueueItem list
       Providers: string list
       Editing: Draft option
@@ -59,7 +62,9 @@ type Msg =
     | SaveFraming
     | Act of itemId: string * action: string
     | ActResult of itemId: string * status: int
-    | FramingResult of itemId: string * status: int
+    /// Carries the SUBMITTED snapshot so completion applies to that exact item, not whichever draft
+    /// is open when the response lands (fixes the save-race that could clobber another item's draft).
+    | FramingSaved of itemId: string * title: string * snippet: string * owner: string * status: int
     | Reload
 
 // -- wire decoders (codec is camelCase; OwnerComment RichContent rides as a string) --
@@ -114,16 +119,22 @@ let private fetchProvidersCmd : Cmd<Msg> =
 let private fetchMeCmd : Cmd<Msg> =
     Cmd.OfPromise.perform (fun () -> getText "/api/auth/me") ()
         (fun (_, b) ->
-            match Decode.fromString (Decode.field "identity" (Decode.field "name" Decode.string)) b with
+            // /api/auth/me shape: {"guest":{"guestId":..,"identity":{"name":..}}} or {"guest":null}.
+            match Decode.fromString (Decode.field "guest" (Decode.field "identity" (Decode.field "name" Decode.string))) b with
             | Ok n -> GotMe(Some n)
             | Error _ -> GotMe None)
 
 let init () =
-    { Access = Loading; Items = []; Providers = []; Editing = None; Busy = None; Notice = None },
+    { Access = Loading; Me = None; Items = []; Providers = []; Editing = None; Busy = None; Notice = None },
     Cmd.batch [ fetchQueueCmd; fetchProvidersCmd; fetchMeCmd ]
 
+/// Mount the shared rich-text editor, wired to the GUEST upload endpoint (the curator's signed cookie
+/// authorizes /api/blobs/guest; the default /api/blobs is ADMIN_KEY-only and would 401 for a curator).
 let private mountEditor (initial: string) =
-    Cmd.ofEffect (fun _ -> Client.RichText.createEditorWhenReady Client.RichText.ownerCommentEditorId initial)
+    Cmd.ofEffect (fun _ ->
+        Client.RichText.createEditorScoped
+            Client.RichText.ownerCommentEditorId initial (fun _ -> ()) (fun () -> ())
+            (basePath + "/api/blobs/guest"))
 
 let private destroyEditor =
     Cmd.ofEffect (fun _ -> Client.RichText.destroyEditor Client.RichText.ownerCommentEditorId)
@@ -135,13 +146,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | Ok items -> { model with Access = Ready; Items = items; Notice = None }, Cmd.none
         | Error e -> { model with Access = Ready; Items = []; Notice = Some("Couldn't read the queue: " + e) }, Cmd.none
     | GotQueue(401, _) -> { model with Access = NeedLogin }, Cmd.none
-    | GotQueue(403, _) -> { model with Access = NotCurator "" }, Cmd.none
+    | GotQueue(403, _) -> { model with Access = NotCurator }, Cmd.none
     | GotQueue(_, _) -> { model with Access = NeedLogin; Notice = Some "Couldn't reach the server." }, Cmd.none
     | GotProviders ps -> { model with Providers = ps }, Cmd.none
-    | GotMe name ->
-        match model.Access, name with
-        | NotCurator _, Some n -> { model with Access = NotCurator n }, Cmd.none
-        | _ -> model, Cmd.none
+    | GotMe name -> { model with Me = name }, Cmd.none
     | StartEdit id ->
         match model.Items |> List.tryFind (fun i -> i.Id = id) with
         | None -> model, Cmd.none
@@ -155,6 +163,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         match model.Editing with
         | None -> model, Cmd.none
         | Some d ->
+            // Snapshot the submitted content NOW (id + title + snippet + the editor's owner comment)
+            // and carry it through completion, so a slow response applies to THIS item — never to
+            // whichever draft happens to be open when it lands.
             let owner = Client.RichText.getEditorContent Client.RichText.ownerCommentEditorId
             let body =
                 Encode.object
@@ -165,7 +176,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 |> Encode.toString 0
             { model with Busy = Some d.Id },
             Cmd.OfPromise.either (fun () -> post "/api/alerts/curation/framing" body) ()
-                (fun (s, _) -> FramingResult(d.Id, s)) (fun _ -> FramingResult(d.Id, 0))
+                (fun (s, _) -> FramingSaved(d.Id, d.Title, d.Snippet, owner, s))
+                (fun _ -> FramingSaved(d.Id, d.Title, d.Snippet, owner, 0))
     | Act(id, action) ->
         { model with Busy = Some id },
         Cmd.OfPromise.either (fun () -> post (sprintf "/api/alerts/curation/%s" action) (sprintf "{\"id\":\"%s\"}" id)) ()
@@ -175,19 +187,25 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | ActResult(_, 409) -> { model with Busy = None; Notice = Some "Another curator already actioned that — reloading." }, fetchQueueCmd
     | ActResult(_, (401 | 403)) -> { model with Busy = None }, fetchQueueCmd
     | ActResult(_, _) -> { model with Busy = None; Notice = Some "That didn't go through — try again." }, Cmd.none
-    | FramingResult(id, 200) ->
-        let editing = model.Editing
-        let items =
-            model.Items
-            |> List.map (fun i ->
-                match editing with
-                | Some d when d.Id = i.Id ->
-                    { i with Title = d.Title; Snippet = d.Snippet
-                             OwnerComment = Client.RichText.getEditorContent Client.RichText.ownerCommentEditorId }
-                | _ -> i)
-        { model with Items = items; Editing = None; Busy = None; Notice = Some "Saved." }, destroyEditor
-    | FramingResult(_, 409) -> { model with Editing = None; Busy = None; Notice = Some "Already actioned — reloading." }, Cmd.batch [ destroyEditor; fetchQueueCmd ]
-    | FramingResult(_, _) -> { model with Busy = None; Notice = Some "Couldn't save — try again." }, Cmd.none
+    | FramingSaved(id, title, snippet, owner, status) ->
+        // Apply to the item the request was FOR, using the submitted snapshot. Only close the editor /
+        // clear Busy if they still belong to that item (the curator may have moved on to another).
+        let editingThis = model.Editing |> Option.exists (fun d -> d.Id = id)
+        let busy = if model.Busy = Some id then None else model.Busy
+        match status with
+        | 200 ->
+            let items = model.Items |> List.map (fun i -> if i.Id = id then { i with Title = title; Snippet = snippet; OwnerComment = owner } else i)
+            { model with Items = items; Busy = busy
+                         Editing = (if editingThis then None else model.Editing)
+                         Notice = Some "Saved." },
+            (if editingThis then destroyEditor else Cmd.none)
+        | 409 ->
+            { model with Busy = busy
+                         Editing = (if editingThis then None else model.Editing)
+                         Notice = Some "Already actioned by another curator — reloading." },
+            Cmd.batch [ (if editingThis then destroyEditor else Cmd.none); fetchQueueCmd ]
+        | _ ->
+            { model with Busy = busy; Notice = Some "Couldn't save — try again." }, Cmd.none
     | Reload -> { model with Notice = None }, fetchQueueCmd
 
 // -- views --
@@ -297,12 +315,14 @@ let view (model: Model) dispatch =
             match model.Access with
             | Loading -> Html.div [ prop.className "cx-center"; prop.text "Loading…" ]
             | NeedLogin -> loginView model.Providers dispatch
-            | NotCurator who ->
+            | NotCurator ->
                 Html.div [
                     prop.className "cx-center"
                     prop.children [
                         Html.h1 [ prop.text "Curate" ]
-                        Html.p [ prop.text (if who = "" then "You're signed in, but you don't have curator access." else sprintf "You're signed in as %s, but you don't have curator access." who) ]
+                        Html.p [ prop.text (match model.Me with
+                                            | Some n -> sprintf "You're signed in as %s, but you don't have curator access." n
+                                            | None -> "You're signed in, but you don't have curator access.") ]
                     ]
                 ]
             | Ready -> queueView model dispatch
