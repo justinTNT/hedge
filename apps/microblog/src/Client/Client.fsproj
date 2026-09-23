@@ -10,6 +10,8 @@
     <!-- Shared content-client contract (immutable host context) the blog content
          module references; linked once before the module .props (unified shell, Stage 0). -->
     <Compile Include="../../../../packages/content-client/HostContext.fs" />
+    <!-- Shared OAuth claim-return glue (parse + route pattern + return-nav) the host uses. -->
+    <Compile Include="../../../../packages/content-client/ClaimGlue.fs" />
     <!-- Shared identity subsystem + UI (CP-B: the single identity authority this app's host uses). -->
     <Compile Include="../../../../packages/content-client/Identity.fs" />
     <Compile Include="../../../../packages/content-client/IdentityView.fs" />

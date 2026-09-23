@@ -17,6 +17,7 @@ open Feliz
 open Feliz.Router
 open Elmish
 open Articles.Client.Shell.Types
+open Content.ClaimGlue   // shared OAuth claim-return glue (parseClaimFromRoute / ClaimRoute / returnNavCmd)
 
 // -- Deployment base + the shell's single navigator. Articles is PRIMARY (mount []),
 //    blog is mounted at /blog; both navigate through this one router. --
@@ -69,22 +70,6 @@ let private locationPathname : string = jsNative
 let private currentSegments () =
     locationPathname.Split('/') |> Array.filter (fun s -> s <> "") |> Array.toList
 
-[<Emit("new URLSearchParams(window.location.search).get($0)")>]
-let private getQueryParam (name: string) : string = jsNative
-
-/// OAuth return: /auth/claim?identity=...&returnTo=...
-let private parseClaimFromRoute () : (string option * string) =
-    let identity = getQueryParam "identity"
-    let returnTo = getQueryParam "returnTo"
-    let identity = if isNull identity || identity = "" then None else Some identity
-    let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
-    identity, returnTo
-
-let private (|ClaimRoute|_|) route =
-    match route with
-    | [ "auth"; "claim" ] | [ "auth"; "claim"; _ ] -> Some ()
-    | _ -> None
-
 /// Which module a content route targets, and the module-local route within it. Whole-
 /// segment mount: "blog" peels to the blog module; "blogger" is NOT a blog mount.
 let private targetOf (route: string list) : ModuleId * string list =
@@ -118,7 +103,7 @@ let init () : Model * Cmd<Msg> =
         let idModel, idCmd = Identity.init claimFocus
         { Active = Articles; Route = []; Activation = 0; Pending = None
           Articles = ArtApp.emptyHosted idModel.GuestSession; Blog = None; Identity = idModel },
-        Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo) ]
+        Cmd.batch [ Cmd.map IdentityMsg idCmd; returnNavCmd shellNavigateToPath returnTo ]
     | _ ->
         let idModel, idCmd = Identity.init None
         match targetOf route with
@@ -142,7 +127,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             { model with Identity = { model.Identity with PendingClaimFocus = claimFocus } },
             Cmd.batch [
                 Cmd.map IdentityMsg Identity.loadIdentitiesCmd
-                Cmd.ofEffect (fun _ -> shellNavigateToPath returnTo)
+                returnNavCmd shellNavigateToPath returnTo
             ]
         | route ->
             // Navigation: bump the activation (invalidating the outgoing one), dispose
