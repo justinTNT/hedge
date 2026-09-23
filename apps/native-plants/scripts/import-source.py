@@ -165,7 +165,7 @@ def q(v):
 def insert(table,row):return f'INSERT OR IGNORE INTO {table} ('+','.join(row)+') VALUES ('+','.join(q(v) for v in row.values())+');'
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--source',type=Path,default=Path.home()/'Desktop/brocky');ap.add_argument('--photos',type=int,default=1)
+    ap=argparse.ArgumentParser();ap.add_argument('--source',type=Path,default=Path.home()/'Desktop/brocky')
     ap.add_argument('--accept-source-change',action='store_true',help='Only use after reviewing data/source-change-report.json')
     args=ap.parse_args();root=args.source.resolve();app=Path(__file__).resolve().parents[1]
     data=app/'data';data.mkdir(exist_ok=True)
@@ -187,7 +187,7 @@ def main():
         if p['scientific_name'] in decisions.get('heldPhotoSpecies',{}):
             issues.append(dict(kind='editorial-photo-hold',plant=p['scientific_name'],reason=decisions['heldPhotoSpecies'][p['scientific_name']]))
             continue
-        chosen=sorted((c for c in candidates if c['plantId']==p['id']),key=lambda c:(c['priority'],c['path']))[:args.photos]
+        chosen=sorted((c for c in candidates if c['plantId']==p['id']),key=lambda c:(c['priority'],c['path']))
         for n,c in enumerate(chosen):
             src=root/c['path'];digest=hashlib.sha256(src.read_bytes()).hexdigest();key=digest[:20]
             try:

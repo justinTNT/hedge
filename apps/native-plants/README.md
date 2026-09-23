@@ -5,8 +5,9 @@ An independent Hedge app for John Brock's plant collection. It lives in
 
 This is a local working prototype. The accepted-view manuscript supplies 531 plant
 accounts in 102 source family labels and 286 genera. There are 504 exact joins to
-the attributes table and 424 selected photo allocations with matching folder and
-filename labels. The source collection still needs comparison with the final proof
+the attributes table. All matched, unheld photographs from the curated `PICK`
+folders are imported, with one hero and a supporting gallery per account.
+The source collection still needs comparison with the final proof
 and editorial review of photo identity, credits and unresolved names before release.
 
 ## Run locally
@@ -51,7 +52,8 @@ account ID. Do not create a second account merely because its name changed.
 
 - Keyboard-operated typeahead over scientific, common and explicitly recorded
   former names. Search runs locally over the published name/card catalogue.
-- Family and genus drilldown, shareable URLs, botanical account pages and image viewing.
+- Family and genus drilldown, shareable URLs and botanical account pages with a
+  hero photograph and smaller supporting images. Every photograph opens the viewer.
 - Filters for growth form, sun, water, garden features, wildlife associations,
   recorded NT endemism and available photographs. Unknown attributes remain unknown.
 - SQLite/D1-backed Plant and PlantPhoto editing through Hedge admin. `Published`
@@ -63,6 +65,8 @@ Fields containing several facet values use `|` separators in storage. These beco
 ordinary typed lists in the catalogue. Photos have explicit credit, caption, order
 and publication fields. `SourceEvidence` is private editorial metadata and is never
 included in public API responses.
+The first published photograph by sort order becomes the hero; change `SortOrder`
+in PlantPhoto admin to choose it. Galleries have no fixed five-image limit.
 
 ## Persistence and in-memory queries
 
@@ -93,7 +97,9 @@ and unknown codes appear in `data/import-report.json`.
 
 Photos are selected from the curated plant-description `PICK` folders, outside
 `EXTRA/EXTRAS`, with exact account/folder/filename agreement. Subspecies are not
-automatically matched to species-only labels. Known editorial holds live in
+automatically matched to species-only labels. Every eligible photograph is imported;
+the source ordering determines the initial hero and supporting order. Re-importing
+preserves saved ordering, captions and publication choices. Known editorial holds live in
 `data/editorial-decisions.json`, including the Grevillea mimosoides proof correction.
 Those checks establish documentary evidence, not botanical verification.
 

@@ -298,7 +298,7 @@ let detail (plant:PlantDetail) dispatch =
         if plant.Photos.Length>1 then Html.section [prop.className "photo-gallery";prop.ariaLabel "More photographs";prop.children [
             for photo in plant.Photos |> List.skip 1 do
                 Html.figure [prop.children [
-                    Html.button [prop.className "image-button";prop.ariaLabel("Enlarge: "+photo.Caption);prop.onClick(fun _->dispatch(Zoom(Some photo)));prop.children [Html.img [prop.src photo.Thumbnail;prop.alt photo.Caption;prop.custom("loading","lazy")]]]
+                    Html.button [prop.className "image-button";prop.ariaLabel("Enlarge: "+photo.Caption);prop.onClick(fun _->dispatch(Zoom(Some photo)));prop.children [Html.img [prop.src photo.Thumbnail;prop.alt photo.Caption;prop.custom("loading","lazy")];Html.span "View photograph ↗"]]
                     Html.figcaption [prop.children [Html.span photo.Caption;Html.span("Photo: "+photo.Photographer)]]
                 ]]
         ]]
