@@ -13,3 +13,5 @@ body.tenant-idealist .feed-day::after { background: linear-gradient(to right, #e
 body.tenant-idealist .owner-comment { background: #222; }
 body.tenant-idealist .comment-author { color: #ccc; }
 body.tenant-idealist .comment-body { color: #999; }
+/* Login/connect links: white, not the light-red `a` colour, so they read on the sign-in pane. */
+body.tenant-idealist .connect-options a { color: #fff; }
