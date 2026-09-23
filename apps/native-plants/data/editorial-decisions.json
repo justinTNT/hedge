@@ -129,6 +129,30 @@
       "credit": "William Burgess",
       "priority": 0,
       "reason": "Retain the existing allocation supported by the matching curated folder and full botanical name in the filename; an undelimited shot suffix follows the name. Explicitly pinned so general matching can require whole-name boundaries."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Acacia/Acacia  alleniana 2455.JPG",
+      "sha256": "de8a9cbe385b1fd811fde72253fd7cf56c4c988b8be99de31ab33c54ab6ae490",
+      "plant": "Acacia alleniana",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Exact full species name in the filename within the user-identified Willie Burgess Acacia collection. All three labelled files were visually inspected; retain the two close flower views and the wider flowering branch for later editorial selection. The conflicting Acacia latescens files in the curated alleniana folder remain excluded. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Acacia/Acacia alleniana 2454.JPG",
+      "sha256": "60a6d82395892f0eba12f7eb5e8fbe6ee5f0b63db8cce2cdb44c4a3929989dde",
+      "plant": "Acacia alleniana",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Exact full species name in the filename within the user-identified Willie Burgess Acacia collection. All three labelled files were visually inspected; retain the two close flower views and the wider flowering branch for later editorial selection. The conflicting Acacia latescens files in the curated alleniana folder remain excluded. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Acacia/Acacia alleniana 2457.JPG",
+      "sha256": "810b8a2893d84cd158791a2813e2ce1319a1a75103e9542fa7995c78ed8faa3d",
+      "plant": "Acacia alleniana",
+      "include": true,
+      "credit": "William Burgess",
+      "reason": "Exact full species name in the filename within the user-identified Willie Burgess Acacia collection. All three labelled files were visually inspected; retain the two close flower views and the wider flowering branch for later editorial selection. The conflicting Acacia latescens files in the curated alleniana folder remain excluded. Credit follows the named photographer collection."
     }
   ]
 }
