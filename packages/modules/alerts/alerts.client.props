@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    The alerts module's generated typed client (Alerts.ClientGen) — the curation endpoints
+    (Queue/Approve/Dismiss/EditFraming) as `createClient transport -> Client`. For a consuming app's
+    Client project to compose (idealist only — the curator page). Import AFTER the shared Client.Api
+    (browserTransport) and with Alerts.Codecs (via the Codecs project) + Alerts.Api (AlertsModels)
+    available; nothing app-side depends on it except the curator page, so import it before that.
+    Paths are $(MSBuildThisFileDirectory)-rooted.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/ClientGen.fs" />
+  </ItemGroup>
+</Project>
