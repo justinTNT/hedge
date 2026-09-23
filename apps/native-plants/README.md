@@ -118,6 +118,19 @@ do not enable wholesale import of another archive folder. The Abelmoschus
 selection includes fruit/seeds and Willie Burgess photographs; an alternate crop
 and a near-duplicate flower view remain excluded with reasons recorded.
 
+The September media review also covers selected `SELECT`, `PICKX`, annotated
+`PICK (...)` folders and newer field-trip collections. Those folders are not
+automatically equivalent to `PICK`: each addition is an explicit reviewed file.
+See [PHOTO-REVIEW.md](PHOTO-REVIEW.md) for scope, results and outstanding decisions.
+
+Run `npm run audit:photos` after importing to scan the whole supplied archive for
+full-name and rank-only filename candidates. It writes private
+`data/photo-audit.json` and `data/photo-audit.md`, including every unillustrated
+account. This is an inventory of the source import, not live admin state; it never
+imports candidates. Maps, repeated exports, uncertain labels and unverified
+subspecies remain editorial decisions. Absence of a filename match does not prove
+that a photograph is absent from the archive.
+
 The importer makes 640px and 1600px WebP derivatives, retaining binary hashes and
 allocation evidence locally. Photographer initials are expanded only where the
 source notes identify them; other credits are marked unrecorded. The archive is

@@ -153,6 +153,2671 @@
       "include": true,
       "credit": "William Burgess",
       "reason": "Exact full species name in the filename within the user-identified Willie Burgess Acacia collection. All three labelled files were visually inspected; retain the two close flower views and the wider flowering branch for later editorial selection. The conflicting Acacia latescens files in the curated alleniana folder remain excluded. Credit follows the named photographer collection."
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/DARWIN EXCURSION 29.3.2026/Abrus precatorius subsp. precatorius.829.a.JPG",
+      "sha256": "16e4d8a23fdb9b878eb5727e36944fc6059f2b06fa6574b7c7c0375808d05574",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/DARWIN EXCURSION 29.3.2026/Abrus precatorius subsp. precatorius.tif804.b.jpeg",
+      "sha256": "60e40fbd9b2b742a02f6a4177d41651a4f78af86d37e10e2e8ab1a640d002ccd",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/DARWIN EXCURSION 29.3.2026/SELECT/Abrus precatorius subsp. precatorius.804.b.JPG",
+      "sha256": "16b35790230a41cd4a556096e264956e769adaccd6873fa0fa5a5a9ce76e59a0",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/DARWIN EXCURSION 29.3.2026/SELECT/Abrus precatorius subsp. precatorius.828.a.JPG",
+      "sha256": "786c9dae5386552150127aa11c9f168147dc598ac893d903cfff9df59a668383",
+      "plant": "Abrus precatorius subsp. precatorius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abutilon indicum var. australiense/PICK/1. Abutilon indicum.400.a.JPG",
+      "sha256": "e091f262094ed170a22037ece077089bb33f5be04f3d74c408fbc00929ec730d",
+      "plant": "Abutilon indicum var. australiense",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Abutilon indicum var. australiense/PICK/1.a Abutilon indicum.400.b.JPG",
+      "sha256": "3c7802e23385161fc0b5bbb7ac37b2de5918dde6574ae98d7c5a4a0a5a09b4c0",
+      "plant": "Abutilon indicum var. australiense",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abutilon indicum var australiense 1037.JPG",
+      "sha256": "f30c96955ed1d699900efce3e809cad7f8f624130710b7a25a8738e4c4455292",
+      "plant": "Abutilon indicum var. australiense",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abutilon indicum var australiense 2347.JPG",
+      "sha256": "724406f2200c2303416236f12f3efb9745d1cbd0d5a001060bf5fa6819e77978",
+      "plant": "Abutilon indicum var. australiense",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abutilon indicum var australiense 2757.JPG",
+      "sha256": "f399529840e756c6664ea2880899e6f70e1d8415a4e8bb26e06b542360cd4892",
+      "plant": "Abutilon indicum var. australiense",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Abutilon indicum var australiense.JPG",
+      "sha256": "68a112057922182fc90512dd586ebbb4a5eb6b4e729b9aae549fddb93e677aba",
+      "plant": "Abutilon indicum var. australiense",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia alleniana/PICK/1. Acacia latescens.455 .WB.JPG",
+      "sha256": "de8a9cbe385b1fd811fde72253fd7cf56c4c988b8be99de31ab33c54ab6ae490",
+      "plant": "Acacia alleniana",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "This file is byte-identical to the already imported Willie Burgess Acacia alleniana 2454.JPG, but is labelled latescens in the curated alleniana folder. Retain the original-file allocation once; record the conflicting copy for researcher review. Both the manuscript and WATTLE describe needle-like phyllodes in alleniana, consistent with the visible foliage. No new identification is asserted.",
+      "reviewCategory": "conflicting-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia alleniana/PICK/1.a Acacia latescens.814.a.JPG",
+      "sha256": "129d8f3969c77acfed7a1cbbadf6bf631b9517dfb6de8ba3d3d519baf89e4de8",
+      "plant": "Acacia alleniana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia lycopodifolia/PICK/1. Acacia lycopodifolia.648.d.JPG",
+      "sha256": "e067fa7b94d350bc4e55879a2cf26a60181c7e244ea70199d36ab1befea6eb7b",
+      "plant": "Acacia lycopodiifolia",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia retivenea subsp. retivenea (NEW)/PICK/1.a Acacia retivenea.2419.WB.c.JPG",
+      "sha256": "2ae58108ed68a60f484c4a525df2370849b873d5705eed3e9aa67e8700f9f8f9",
+      "plant": "Acacia retivenea subsp. retivenea",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia sericoflora/SELECT/1. Acacia sericoflora with paper wasp.9930.GF.jpg",
+      "sha256": "dd4585b18ee8698d63e3436f3f9633667c2f3ea8e60c0652e7097ec18ebc1448",
+      "plant": "Acacia sericoflora",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia sericoflora/SELECT/2. Acacia sericoflora seedpods.3585.GF.jpg",
+      "sha256": "afa2ef7c907fcfee5af42749c834b28dcc0d873179bc045912d3ec85c83518de",
+      "plant": "Acacia sericoflora",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Acacia sericoflora/SELECT/2. Acacia sericoflora.8945.GF.jpg",
+      "sha256": "86ac34b87e2c2239d0cf4f8fc95f10b7bc5517c5e705e632e53dd7bd978a5ff8",
+      "plant": "Acacia sericoflora",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Adansonia gregorii/PICK/Boab Study.5020.a.jpg",
+      "sha256": "69b5b0fd399d06f79d4d8f534b7b725f149190bc17dc1a3386084e1a4bd96e52",
+      "plant": "Adansonia gregorii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Allosyncarpia ternata (use 2022 tree shot)/PICKX/1 Allosyncarpia ternata.963.c.JPG",
+      "sha256": "69cf01f6149b3e620519e3e03c4ffa09db2d884fc40c90c42935b95a9f40067f",
+      "plant": "Allosyncarpia ternata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Allosyncarpia ternata (use 2022 tree shot)/PICKX/1.a Allosyncarpia ternata.963.b.JPG",
+      "sha256": "ab8e2470e038369aab1b4ba4d6e7be303233e7d50cadb7c3f36e1c06eecc554b",
+      "plant": "Allosyncarpia ternata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Allosyncarpia ternata (use 2022 tree shot)/PICKX/EXTRA/Allosyncarpia ternata.533.a.JPG",
+      "sha256": "4bf9ce8f29b432c7d082a352470a10f7f9d80e209415dd2dfde2ba2648fff3b5",
+      "plant": "Allosyncarpia ternata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ALLOSYNC TERNATA 6.6 & 8.6.2026/SELECT/PICK/Allosyncarpia ternata.tif054.1.jpeg",
+      "sha256": "47f84f3fd72258139f1ca04f47f104fb0ccafd80a6e1c924de73a943ba20edbf",
+      "plant": "Allosyncarpia ternata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ALLOSYNC TERNATA 6.6 & 8.6.2026/SELECT/PICK/Allosyncarpia ternata.tif054.3.jpeg",
+      "sha256": "d6770f09a7c1c57305ca08c83c7a4c80eb8dc66f727a814f2f13e5f8cfc22de1",
+      "plant": "Allosyncarpia ternata",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Ampelocissus acetosa/PICK/1. Ampellosissus acetosa.A.IM.a.jpg",
+      "sha256": "90b2247cb3d09196cb7f474d92f343c5cb4f7afe2505d1308516b29ed3f1b785",
+      "plant": "Ampelocissus acetosa",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Ampelocissus acetosa/PICK/EXTRA/Ampelocissus acetosa.B.IM.a.jpg",
+      "sha256": "c186b1c7571bdc24808de398e1412412dfc253e7e203c3ec0c12260c3a01bfb0",
+      "plant": "Ampelocissus acetosa",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Amyema sanguinea var. pulchra/PICK/1. Amyema sanguinea var. pulcha.IM.a.jpg",
+      "sha256": "8275f0dca417656546b20b047f2907dfce4a4a2ac2a3791d4776d99739b3d97e",
+      "plant": "Amyema sanguinea var. pulchra",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/1. Antiaris toxcaria.290.a.JPG",
+      "sha256": "eee25f8f42d3d21de262f484782439c4bc7c43bc7b321b68e3cc4bcca9741040",
+      "plant": "Antiaris toxicaria var. macrophylla",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/1.a Antiaris toxcaria.288.a.JPG",
+      "sha256": "517f08013fdb2e79ad117b042204ea109b4b824b0df598029425e0dbcf8f9921",
+      "plant": "Antiaris toxicaria var. macrophylla",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antiaris toxicaria var. macrophylla/PICK/2. Antiaris toxcaria.333.a.JPG",
+      "sha256": "658897b94ba7cca7febdceb141b32181d104781f9769505346ccdf025c06e260",
+      "plant": "Antiaris toxicaria var. macrophylla",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antidesma ghaesembilla/PICK/1. Antedesma ghaesaembilla.B.IM.jpg",
+      "sha256": "5b7a12bc4a02d81581d8cd86b78baff633fd0999471d99bd8eca863edc87e11d",
+      "plant": "Antidesma ghaesembilla",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antidesma ghaesembilla/PICK/1.a Antedesma ghaesembilla.A.IM.jpg",
+      "sha256": "eb3e902c39240290a4c90e9c1f02a120f3e2ddac8a05d7a29e2e2e9001b870ee",
+      "plant": "Antidesma ghaesembilla",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Antidesma parvifolium/PICK/1. Antidesma parvifolia.A.IM.jpg",
+      "sha256": "7233614ddeaa01e70ce6fcabfc4b613b8eabf505b6c5192932c075f5f5408b58",
+      "plant": "Antidesma parvifolium",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Argusia argentea (use 2022 tree shot)/PICK/1. Argusia argentia.A.IM.jpg",
+      "sha256": "68d47b90d770d95acfde8d6e27c0e94da2b1c68cc49a00bf0a8b915e15518236",
+      "plant": "Argusia argentea",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Asteromyrtus magnifica/PICKX/1. Asteromyrtus magnifica.918.a.JPG",
+      "sha256": "3be638ecc7b4c8142beb9c0226407a98041006c6a08fc94c960c867532714697",
+      "plant": "Asteromyrtus magnifica",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Asteromyrtus magnifica/PICKX/1.a Asteromyrtus magnifica.933.a.JPG",
+      "sha256": "62f7209e052288275aaa6f2f6233d0d7165dfdde8bd09c124a6133f714de32bc",
+      "plant": "Asteromyrtus magnifica",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Asteromyrtus magnifica/PICKX/EXTRA/Asteromyrtus magnifica.918.b.JPG",
+      "sha256": "4d91dc727bc6a9342b3c37036a615d709d7b3b0b8ccec9b90a225808e09df030",
+      "plant": "Asteromyrtus magnifica",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Asteromyrtus magnifica/PICKX/EXTRA/Asteromyrtus magnifica.9791.KM.jpeg",
+      "sha256": "b6598abbe85c6aef10d9fedc1eb3aa4da57c158fc23a7b285db2f10c3c63df9f",
+      "plant": "Asteromyrtus magnifica",
+      "include": true,
+      "credit": "Keira Meadows",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Atalaya hemiglauca/PICK/1. Atalya hemiglauca.3375.AW.a.jpg",
+      "sha256": "340029a64aa10bc576612fab49b282ccde30e1bc257ec1634f2cccfbe40c475e",
+      "plant": "Atalaya hemiglauca",
+      "include": true,
+      "credit": "Aiden Webb",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Atalaya hemiglauca/PICK/Varied Lorikeet on Atalaya.jpg",
+      "sha256": "fc748412dde23f74856ea2a6169a8063e8e22b039e843a6c3a63015d24302076",
+      "plant": "Atalaya hemiglauca",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Atalaya variifolia/PICK/2. Atalaya varifolia fruit.9947.WB.a.JPG",
+      "sha256": "eb3a2740365ecd10e9672196c162fa07a40d6e97d8f3ff3f2fbde3750856887b",
+      "plant": "Atalaya variifolia",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Auranticarpa melansoperma/PICK/1. Auranticarpa melansoperma.958.a.JPG",
+      "sha256": "d98a797b46b547fd8d3c52789e537ea7b06e9d033a68767a9ce8cba178d4a00a",
+      "plant": "Auranticarpa melanosperma",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/AA/Auranticarpa melansoperma/PICK/2. Auranticarpa melansoperma.965.bb.JPG",
+      "sha256": "a1b3e93d1f5e23d5a8243369944be2b33fb6cba740374c5849c4afada4df0c9e",
+      "plant": "Auranticarpa melanosperma",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/A Invertebrates of the nt photos/Auranticarpa melanosperma 8976.JPG",
+      "sha256": "b85650e2c377f52c9c08a19f6c88eba091a21b6da7a82225f928cec26c8eac55",
+      "plant": "Auranticarpa melanosperma",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Pittosporaceae Auranticarpa Pittosporum/Auranticarpa/Auranticarpa melanosperma 8976.JPG",
+      "sha256": "b85650e2c377f52c9c08a19f6c88eba091a21b6da7a82225f928cec26c8eac55",
+      "plant": "Auranticarpa melanosperma",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Barringtonia asiatica (NEW)/PICK/2. Barringtonia acutangula.tif940.a.jpeg",
+      "sha256": "826fa97af25ef75ff9611b71737f1ee4088c13f5a56915fa4cee57b81c69c319",
+      "plant": "Barringtonia asiatica",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/BB/Red-collared Lorikeet on Ghost Gum, Blakella bella.666.a.JPG",
+      "sha256": "ef3bc64e99e72048db4f99ca571d834e6f2304425ce31bca31562ee8f23b8b22",
+      "plant": "Blakella bella",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/1. Blakella bella.677.aa.JPG",
+      "sha256": "c0a9059d3fc79c5c1cb047305278777360118b19247363083e479d506a97533c",
+      "plant": "Blakella bella",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/1. Blakella bella.tif979.a.jpeg",
+      "sha256": "372524a65b7bccd854e7c41d1452aa76cd88c9bbc7601ecb0dd9b2cd31d44232",
+      "plant": "Blakella bella",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/2. Blakella bella.879.b.JPG",
+      "sha256": "08d29fc62fee1c17b6bacb3fb71ba3e34333003624a85bfc258d32ff4a02ef83",
+      "plant": "Blakella bella",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/Blakella bella MAP.jpg",
+      "sha256": "5710017dbe076ee8fdeb2ed2945901cdb7d5fe94f795345ed03bea0433660bd6",
+      "plant": "Blakella bella",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/EXTRA/1. Red-collared Lorikeet on Blakella bella.681.a.JPG",
+      "sha256": "64cec60250eef9a36fed7a4d5caaa467fa6356990cff8a6874087304732223b2",
+      "plant": "Blakella bella",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/EXTRA/Blakella bella.677.a.JPG",
+      "sha256": "ee17b47d39d945f0e76eb26055a890fb81c8627bf3c244f04ee453831c3770ac",
+      "plant": "Blakella bella",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/EXTRA/Blakella bella.879.a.JPG",
+      "sha256": "a126b1d3e5baade70d03957d964d417ac3d4d2ab9cedcca56277cbebe538935c",
+      "plant": "Blakella bella",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/EXTRA/Red-collared Lorikeet on Blakella bella.666.a.JPG",
+      "sha256": "ef3bc64e99e72048db4f99ca571d834e6f2304425ce31bca31562ee8f23b8b22",
+      "plant": "Blakella bella",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Blakella/Blakella bella 4427.JPG",
+      "sha256": "05277821d1991cf697ee3f3b91006452c98ca34b071fa2b7461fc1f3bc91b267",
+      "plant": "Blakella bella",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blephocareya depauperata/PICK/1. Blephrocarya depauperata.A.IM.jpg",
+      "sha256": "934bd60e26fa9e17ef486cce34cdf192c1a09059bd2a5236f600d4ccd91c7c35",
+      "plant": "Blepharocarya depauperata",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blephocareya depauperata/PICK/2. Blephrocarya depauperata frt capsules.683.a.JPG",
+      "sha256": "404d9331386c780b4eb0c12817fe5532785a79b5f5674b8bc5e70f1eee463aec",
+      "plant": "Blepharocarya depauperata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Anacardiaceae Blepharocarya Buchanania/blepharocarya depauperata (1).JPG",
+      "sha256": "336e736b09645c14da812017019c52e34291d3360c29389bbe9a13f9488cde95",
+      "plant": "Blepharocarya depauperata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Bossaiea bossiaeoides/PICK/1. Bossiaea bossiaeoides w Native Bees.tif1.DL.jpg",
+      "sha256": "82b6d6d7f9ccf73c676a0511670638d4f6bf033308753821621f34305d041848",
+      "plant": "Bossiaea bossiaeoides",
+      "include": true,
+      "credit": "Diane Lucas",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Bossaiea bossiaeoides/PICK/2. Bossiaea bossiaeoides (16x9.tif2.DL.a.jpg",
+      "sha256": "040cbdc2dc68712cc9454f7fc42c36d520980c3caafb12a31401e79d6f03f9d5",
+      "plant": "Bossiaea bossiaeoides",
+      "include": true,
+      "credit": "Diane Lucas",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Bossaiea bossiaeoides/PICK/EXTRA/Bossiaea bossiaeoides.380.a..JPG",
+      "sha256": "d672b9125f0c0c04ae77031dfdd1b892676a02a5212284ea301edf25252d9f2f",
+      "plant": "Bossiaea bossiaeoides",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Bossiaea bossiaeoides 9358 (2).JPG",
+      "sha256": "139ded0b347c5c544c34a886643ae9c23b0eb89e0d033b93aff2f34dd5e92ec8",
+      "plant": "Bossiaea bossiaeoides",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Bossiaea bossiaeoides 9358.JPG",
+      "sha256": "3d1c4da3fdbaf5689bde5bc970b58986b295fd0b054d9a190bacdb327536ceb3",
+      "plant": "Bossiaea bossiaeoides",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Bruguiera exaristata (also use 2022 flwr shot cropped as a 2. )/PICK/1. Bruguiera exarisata.841.a.JPG",
+      "sha256": "6c534f92dbb5e8f52713e7cbb20225fc84dd8df8bad5c5372e698aa7f5f78e38",
+      "plant": "Bruguiera exaristata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Callophyllum inophyllum/PICK/1. Calophyllum inophyllum.964.a.JPG",
+      "sha256": "a9fc3c21dd6617812dcea2d3e13e7c3116c55780a501b1b1398166c57053893a",
+      "plant": "Calophyllum inophyllum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Callophyllum inophyllum/PICK/2. Calophyllum inophyllum.4024.a.jpg",
+      "sha256": "2c3d360ff1c3a06e6d73406fee721a38809294e9fb968654e31c3135ba082153",
+      "plant": "Calophyllum inophyllum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Callophyllum inophyllum/PICK/EXTRA/2.a Calophyllum inophyllum trunk.927.a.JPG",
+      "sha256": "23e89596cf17f00ab4567caa91bcdedb33bec362a4eb7543865f882b70e57c84",
+      "plant": "Calophyllum inophyllum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Clusiaceae calophyllum/Calophyllum inophyllum 678.JPG",
+      "sha256": "d77fda4056165c311044755156669721160b571c8e33ea626689853e5a28b54b",
+      "plant": "Calophyllum inophyllum",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Clusiaceae calophyllum/Calophyllum inophyllum 679.JPG",
+      "sha256": "0d544cd2a86e39b3cdcbcd4ad56c318a132b2ba2e2b1cdd4b08f96e945713dde",
+      "plant": "Calophyllum inophyllum",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Fabaceae Acacia Erythrina Jacksonia Albizia Bossiaea Caseapinia Cathormion Erythrophleum Jacksonia Millettia Mucuna Senna Sesbania  Sophora Tamarindus/Clusiaceae calophyllum/Calophyllum inophyllum 684.JPG",
+      "sha256": "a1baae439381e55eb72d2a7d9f4e1310d918f1e7999cabc5361042aa5f27896e",
+      "plant": "Calophyllum inophyllum",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Calytrix achaeta/SELECT/1. Calytrix achaeta.003.GF.a.jpg",
+      "sha256": "da8c16462cfcf7f0a0384d9e07294173237dee7cbe635c5bf28ab56390a2ce85",
+      "plant": "Calytrix achaeta",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Carallia brachiata/PICK.1 (C. brachiata)/1. Carallia brachiata.261.a.JPG",
+      "sha256": "8ef13dedd05be38f0699b9cefa23d7377dffb582595223b5595669198c9d3011",
+      "plant": "Carallia brachiata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Carallia brachiata/PICK.1 (C. brachiata)/1.a Carallia brachiata.261.b.JPG",
+      "sha256": "42964f7c178a75513fa964bf66ed6ee3c08ede17bd2a39390fa5c192ec6f7a4a",
+      "plant": "Carallia brachiata",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Carallia brachiata/PICK.1 (C. brachiata)/2. Carallia brachiata flowers with Hover Fly.891.a.JPG",
+      "sha256": "061f0ee4e4df7a26d08fd54f76f6a1fbd6719e4bb767ab59d0d29190c776f670",
+      "plant": "Carallia brachiata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Carallia brachiata/PICK.1 (C. brachiata)/PICK.2 (C. brachiata)/1. Four O'clock Moth on Carallia brachiata.797.a.JPG",
+      "sha256": "bb623069746c093ede9271938932cd138334fbfcb7d1c0692f2c50ff7e3b1aeb",
+      "plant": "Carallia brachiata",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Casuarina equisetifolia/PICK/1.a Red-tailed Black Cockatoo eating seeds of  Cas equi.269.b.JPG",
+      "sha256": "14867342368043bcc8f2e1e44a8b1e7e0f6cbb35071b89525a56b2dd2650b541",
+      "plant": "Casuarina equisetifolia",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Casuarina equisetifolia/PICK/2. Casuarina equisitifolia.523.a.JPG",
+      "sha256": "25db06705e36aaa65b1bb9c4a0b93cbeeaf2d24ff0a15995430bd79f915bfaa5",
+      "plant": "Casuarina equisetifolia",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cathormion umbellatum/PICK/1. Cathormium umbellatum.1.WB.b.JPG",
+      "sha256": "eb0c92f2c0108041e6b2e15a8a81d463a93a80780b96835d50e02842b4d4f47d",
+      "plant": "Cathormion umbellatum",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cleome microaustralica/PICK/C_microaustralasica.jpg",
+      "sha256": "b8d374adc7e10ee1b4611fc054aad21baa7f1afc1a480d00d06f21849cd4400d",
+      "plant": "Cleome microaustralica",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Clerodendrum floribundum (incl. C. costatum)/PICK (incl C. costatum)/1. Clerodendrum floribundum.996.a.JPG",
+      "sha256": "674f6b6cb69531bdda0400476b9d5f03c2c35a8c786a1f718d077ad313b6517e",
+      "plant": "Clerodendrum floribundum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Clerodendrum floribundum (incl. C. costatum)/PICK (incl C. costatum)/2. Clerodendrum floribundum fruit.710.a.JPG",
+      "sha256": "ac0d50bf202b02e3cc8ec964a942609049d45282e050b8543b7d273e41c0e95b",
+      "plant": "Clerodendrum floribundum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Clerodendrum floribundum (incl. C. costatum)/PICK (incl C. costatum)/Clerodendrum floribundum bark.039.a.JPG",
+      "sha256": "a676dfd334e89cc51d07af45b979f4d8ede7ec5939a4f49421093d72c8b72d68",
+      "plant": "Clerodendrum floribundum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Clerodendrum floribundum (incl. C. costatum)/PICK (incl C. costatum)/EXTRA/Clerodendrum floribundum TBC.2.IM.b.jpg",
+      "sha256": "8e5240a313df650f04312b25af89ec80f45efb500a26805269141ca26ba51b98",
+      "plant": "Clerodendrum floribundum",
+      "include": false,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "The source filename explicitly marks identification TBC; retain that uncertainty until confirmed.",
+      "reviewCategory": "source-tbc"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/E. NEW IMAGES TO ANDREW/(add to) Clerodendrum floribundum.039.a.JPG",
+      "sha256": "a676dfd334e89cc51d07af45b979f4d8ede7ec5939a4f49421093d72c8b72d68",
+      "plant": "Clerodendrum floribundum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/1. Corymbia dunlopiana.215.a.JPG",
+      "sha256": "10828dad047c064cc81195681882d346299d13f623463ab7b5c42cde84d75a4a",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/1. White-gaped Honeater on Corymbia dunlopiana.595.b.JPG",
+      "sha256": "7acc6699180cf970a45ac39ce98f8d9fa4e8a5f7066ad1ac32ce66a975ca6124",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/2. Corymbia dunlopiana bark.601.a.JPG",
+      "sha256": "e1cb0257995a097691f9acdf41a10afde9627c66e2c678492abd6a5e046e165f",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/2. Corymbia dunlopiana nuts.389.a.JPG",
+      "sha256": "62cebe816d4f7f2c856cc761fa3ff83d4fdb8d11f6988db232a123c96b3406c3",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/Corymbia dunlopiana.jpg",
+      "sha256": "7cc92e078b86e4a817dcdeb08a1b0ef7c4ced41b940a1709bd85f28b96015b76",
+      "plant": "Corymbia dunlopiana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/EXTRA/Corymbia dunlopiana.214.b.JPG",
+      "sha256": "26fb6ba026ae7496a0903b9460419c558789b3c7f54ff03693e1fdfc8d0ad2f6",
+      "plant": "Corymbia dunlopiana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/EXTRA/Corymbia dunlopiana.218.a.JPG",
+      "sha256": "7a9105ac7e9fb18ec56aeefc4a6157a0a75d225b1ad7544ea0d75ec8702c7e88",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/EXTRA/White-gaped Honeyeater on Corymbia dunlopiana & .595.JPG",
+      "sha256": "9f01bd890c9aaab4a131419a2de52ce1d63438d6b02113812663bf75e769dde5",
+      "plant": "Corymbia dunlopiana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 TIM MOORE TNP/FOLDER 2/Corymbia dunlopiana.906.a.JPG",
+      "sha256": "200adff33e56e85b34ea1d94728d7aee515169848afabe55a77a2dfd816e1d2e",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A A A BOT GDNS 2.8.2026/SELECT/PICK/Corymbia dunlopiana.906.a.JPG",
+      "sha256": "200adff33e56e85b34ea1d94728d7aee515169848afabe55a77a2dfd816e1d2e",
+      "plant": "Corymbia dunlopiana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/BATCH ADEL R TRIP 27.5.26/Corymbia dunlopiana.696.1.JPG",
+      "sha256": "68e1eea9536a5fe4fc6cccba19bdb1b0298525ac5920b627165abf1c31668173",
+      "plant": "Corymbia dunlopiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/1. Corymbia setosa.370.a.JPG",
+      "sha256": "1895fbf317962faeebf95cb3fe62b277fa0dd83616e063813179c19dff41ab56",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/1.a Corymbia setosa.951.a.JPG",
+      "sha256": "e169df6a63ea0efb706176c19416d5e55593f14658c6063bc9ce4ab8fc053a74",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/2. Corymbia setosa bark.373.a.JPG",
+      "sha256": "67e090fb14cdfa4f087ebd2396e76c776004289cddfad19f9fad5566c193d826",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/2. Corymbia setosa nuts.346.a.JPG",
+      "sha256": "2ebc192edc63070081d02070a5cab1d607032df76d3c7419a55d7b2ae5cb00fb",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/EXTRA/Corymbia setosa.121.a.JPG",
+      "sha256": "217eb9b0081550133c7a4f3510633bc0d1a71e9b56445e57862c9e12de21c14c",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia setosa/PICK (C. setosa)/EXTRA/Corymbia setosa.713.b.JPG",
+      "sha256": "f199c787b0e9a1a6dd0880a33820af8e17b8a1f1a2e15484618acbd38e70699e",
+      "plant": "Corymbia setosa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cryptocarya cunninghamii/PICKX/1. Cryptocarya cunninghamii.751.a.JPG",
+      "sha256": "095c569c6f63f1d4163c48a5021378ed5541c1316d3d88abe2d66ce40917e439",
+      "plant": "Cryptocarya cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cryptocarya cunninghamii/PICKX/1.a Cryptocarya cunninghamii.747.a.JPG",
+      "sha256": "9e936fb028bb3494f5f684ba1f0a49d214fea4226e4d13fc972d0c78e6ec0692",
+      "plant": "Cryptocarya cunninghamii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cryptocarya cunninghamii/PICKX/EXTRA/Cryptocarya cunninghamii.750.a.JPG",
+      "sha256": "169121ec583cd936cce6df73964510b80f77a713e2f45da02aa7f2dfffb09060",
+      "plant": "Cryptocarya cunninghamii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/DD/Dysoxylum acutangulum subsp. fovealatum/PICK/1. Dysoxylum acutangulum subsp. fovealatum.A.IM.jpg",
+      "sha256": "06a2388268ee76e01f225d9bb0f31b1734da6f7befdc753180709b2ed15e374a",
+      "plant": "Dysoxylum acutangulum subsp. foveolatum",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Epipremnum aplissimum/PICK/1. Epipremnum aplissimum.122.a.JPG",
+      "sha256": "794cb0a946859cc0c08784ed64d8d8c7b4bbe0b8f9ba47dc2a81726bc0f087fc",
+      "plant": "Epipremnum amplissimum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Erythrina vespertilio subsp. vespertilio/PICK/1. Erythrina vespertilio.556.b.JPG",
+      "sha256": "60b7f3c1e13c7ec9f976a212a529232d3adf413746f8f3d23ae0a63a6c6b1aab",
+      "plant": "Erythrina vespertilio subsp. vespertilio",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Erythrina vespertilio subsp. vespertilio/PICK/1. White-gaped Honeyeater on Erythrina vespertilio w leaves.482.aa.JPG",
+      "sha256": "135d037ee97eae394e8bfecfde8a78975a2c85d55437184b3c361bfe892e1cd7",
+      "plant": "Erythrina vespertilio subsp. vespertilio",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 TIM MOORE TNP/FOLDER 2/Erythrina vespertilio subsp. vespertilio.832.a.JPG",
+      "sha256": "4d47baf03646dcadf6858989b6958259124fcf3d589ca1da95f2ced4a0b1c2b0",
+      "plant": "Erythrina vespertilio subsp. vespertilio",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A A A BOT GDNS 2.8.2026/SELECT/PICK/Erythrina vespertilio subsp. vespertilio.832.a.JPG",
+      "sha256": "4d47baf03646dcadf6858989b6958259124fcf3d589ca1da95f2ced4a0b1c2b0",
+      "plant": "Erythrina vespertilio subsp. vespertilio",
+      "include": true,
+      "credit": "Tim Moore",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus brachyandra (use all 2022 photos)/Eucalyptus brachyandra tree.jpg",
+      "sha256": "4bb5ff09fb0010c5b48b49843af772a9aff97b9c288cc589f5a8ced014fc227f",
+      "plant": "Eucalyptus brachyandra",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/1.a Eucalyptus camaldulensis var. obutsa.1107.b.jpg",
+      "sha256": "004c42b2df12e0a3f158e54fa2f8e527669a8bdc9f510d13c4d0c7e24621dd83",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/2. Eucalyptus camaldulensis var. obutsa.583.a.JPG",
+      "sha256": "730b1a69af07a9d4998cb269479b8fd8513ff9938e12bbf794613b2d0ef2fcc6",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/EXTRA/Eucalyptus camaldulensis subsp. obtusa.jb.jpg",
+      "sha256": "32b2c779c8e8557db051fec5fe5933fc8d1820698202635bc4c427ea3e75c27d",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/Eucalyptus camaldulensis subsp.obtusa frt.108.a.JPG",
+      "sha256": "4318aee9075ad4f8fe1bda58154a54ce032b252afc3bb11cb8ddbbc88a25abcc",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/Eucalyptus camaldulensis subsp.obtusa frt.108.c.JPG",
+      "sha256": "3db01ea10feef21b9de2d84ea2ac310c4aa78e67aa6c3108acb3fb60ec81e4f5",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/Lerps on leaves of Eucalyptus camaldulensis.065.a.JPG",
+      "sha256": "1e31f8ccb5c5af3fbda05dced8099427d82f2527da43ad19d2188bd03db0c443",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus camaldulensis subsp. obutsa (use 2022 fruit & bark)/PICK/White-gaped Honeyeater eating lerps on Euc cam.177.b.JPG",
+      "sha256": "55827f429a63d883ec2ad57cb95a6d0596a4024fc80b146f4752f22827d50791",
+      "plant": "Eucalyptus camaldulensis subsp. obtusa",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus patellaris (use 2022 tree bark & nuts) USE NEW MAP/PICK/Eucalyptus patellaris.4825.GF.JPG",
+      "sha256": "053884d2e2034157e3db3369fc955c02ba3e5efddb415891d5afd15573b08af9",
+      "plant": "Eucalyptus patellaris",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus patellaris (use 2022 tree bark & nuts) USE NEW MAP/PICK/Eucalyptus patellaris.jpg",
+      "sha256": "e2106489297e72d11fa7bd62ea0723f0150c294a8b92dc2d9c2ee8befd4e252d",
+      "plant": "Eucalyptus patellaris",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tetrodonta (use 2022 bark & fruit shots)/PICK/1. Eucalytptus tetrodonta.849.a.JPG",
+      "sha256": "6e543d9316365b806f3d3b3f9dc63acc938bdad417e4c2efd3df52e991857b18",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tetrodonta (use 2022 bark & fruit shots)/PICK/1.a Eucalytptus tetrodonta.849.b.JPG",
+      "sha256": "da78aeb9dc8821ab3e4287b9b1dc859127aadb0c59e12cc0152c190299b3396f",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tetrodonta (use 2022 bark & fruit shots)/PICK/2. Eucalytptus tetrodonta.787.a.JPG",
+      "sha256": "8cb81bc1ef3543c5b6fca946ecfebf0942fcb92967ca8bb92eb632d6700f6923",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tetrodonta (use 2022 bark & fruit shots)/PICK/EXTRA/Eucalyptus tetrodonta open woodland.409.a.jpg",
+      "sha256": "34dcd7b0f8267eb015ae3847137de606b62b90537f599ddee892f9fab3712e3d",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tetrodonta (use 2022 bark & fruit shots)/PICK/EXTRA/Eucalyptus tetrodonta open woodland.431.a.jpg",
+      "sha256": "655f05311745cbdc7c42694eeec0baca9da8123e8605845fc7688c19b9c0fe9b",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/AA G. FOX, RIYALA & DARWIN NP VISIT Tarennoidea, Murraya, Diosp rugo, Intsea bij, Meiogyne,  19.6.2026/YELLOW STRINGYBARK/Eucalyptus tetrodonta yellow flwrs.241.a.JPG",
+      "sha256": "a5eb83d55440d66f6591a3ddfa2832aa0fc291e64360f527bae7d7af65e6ca29",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 4672.JPG",
+      "sha256": "64f26cf143e3e17215a291f32ad299ce69cd66f0ff712f7d624a3298d9452fa6",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 4673.JPG",
+      "sha256": "4407b99db419f1a1dcfa18a8466cacba6a4777cb9a26d69494361202b6e6f322",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5336.JPG",
+      "sha256": "2b13b1fd690bd45d6e90ecad599991f006bdcc7abcc9474c38061b0904f98714",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5337.JPG",
+      "sha256": "41f19cc347e324a165a7f0247c1a0aa70998d8b52defc438340a436d2c448266",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5338.JPG",
+      "sha256": "0f30dc092ab28211872676eea2b84d63195715a40294e7c861f51e0bd43b41ac",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5343.JPG",
+      "sha256": "90e4ed037142f548ca4bc83dc65c5222c883a21bee3fc2e40f94891eed231cb9",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5347.JPG",
+      "sha256": "e7dc5b84bc37b9da6a078b4cae7202bca1449bc83acd35d6684b031766aadd6b",
+      "plant": "Eucalyptus tetrodonta",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 5349.JPG",
+      "sha256": "b00db2a55b3119eb2a49169058a746fc2cfe07528730efd371bea64f0c95f3d8",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myrtacea/Eucalyptus/Eucalyptus tetrodonta 6674.JPG",
+      "sha256": "e3a85f7ca3b6ab8b2fa2308b8e486103f376e7df3935272075b570afd9b78df1",
+      "plant": "Eucalyptus tetrodonta",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tintinnans (use all 4 shots from 2022). (USE NEW MAP)/PICK/Eucalytpus tintinnans.jpg",
+      "sha256": "3320a30d99b55a4a09c2c768944b80ba73243b01225fe12fa496a747db886195",
+      "plant": "Eucalyptus tintinnans",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/BATCH ADEL R TRIP 27.5.26/Eucalyptus tintinnans bark.687.1.JPG",
+      "sha256": "1bdd561a048863dcb4b0ddf1d90624da4dc43b5bfb4149bab36db21ecc377183",
+      "plant": "Eucalyptus tintinnans",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/BATCH ADEL R TRIP 27.5.26/Eucalyptus tintinnans.3201.1.jpg",
+      "sha256": "39ee697eae8f5e9fa83a67b6aafbac552fb18b068267394ad8f9dc858da809f7",
+      "plant": "Eucalyptus tintinnans",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Exocarpus latifolius/PICK/1. Exocarpus latifolius.166.a.JPG",
+      "sha256": "cb9d2dc0757d2f5c927ab9841b944c646991460189cf970dd982ec7fb342c3c4",
+      "plant": "Exocarpos latifolius",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Exocarpus latifolius/PICK/1.a Exocarpus latifolius.163.a.JPG",
+      "sha256": "37fd56cab3eac77672c88ba285ab6108dfe2cab938e4fcbb114ae58e53378a68",
+      "plant": "Exocarpos latifolius",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Flacourtia territorialis (NEW)/PICK/F_territorialis.jpg",
+      "sha256": "7e49b0b702e2e726a789205c2e98b6108cfc83ec3b28c3be28db462343656647",
+      "plant": "Flacourtia territorialis",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Flueggea virosa subsp. melanthesoides/PICK/1. Flueggia virosa subsp. melanthesoides.738.a.JPG",
+      "sha256": "00096271dc8da9a64d84f59960af4228190b028b8a721b60493e7b4edd887b20",
+      "plant": "Flueggea virosa subsp. melanthesoides",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Flueggea virosa subsp. melanthesoides/PICK/1.a Flueggia virosa subsp. melanthesoides.737.a.JPG",
+      "sha256": "9cac1ea8b1b9cf9d3e475cd260e69ea325636e2a559da71898bb98845c2376ab",
+      "plant": "Flueggea virosa subsp. melanthesoides",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/B. PLANT COMMUNITIES/E. MONSOON RAINFOREST/PICK/3. (4th p. w Dispersal) Pied Imperial Pigeon eating fruit of Ganophyllum falcatum.065.a.JPG",
+      "sha256": "0df85214ce85b2af1efed011b6f424b50ac607efd731d08dc751bbd445bdb0ae",
+      "plant": "Ganophyllum falcatum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Ganopyhyllum falcatum/PICK/1. Ganopyhyllum falcatum.090.a.JPG",
+      "sha256": "acf12218e952e3fcb00fd086f1ad6008a251e244a84b0478fad7b3499c644597",
+      "plant": "Ganophyllum falcatum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Ganopyhyllum falcatum/PICK/1.a Ganopyhyllum falcatum.171.a.JPG",
+      "sha256": "49827ab196c1a8ad1e7c3866a495d39af6a370bfb49db0a30288bcf74ccfb36b",
+      "plant": "Ganophyllum falcatum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Ganopyhyllum falcatum/PICK/2. Ganophyllum falcatum.141.WB.a.JPG",
+      "sha256": "30e70f30b221227a83027f50aa12f4e7a7c58845742b32a79dbd2e5758bf0775",
+      "plant": "Ganophyllum falcatum",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Goodeniaceae/Goodenia/Goodenia pilosa 2399.JPG",
+      "sha256": "89ddf5051b46142b9175a3520bb9fbbe2c52928bda97b8c75b31b9dd9e1e8325",
+      "plant": "Goodenia pilosa",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea sp. Magela Creek (N)/PICK/Grevillea_sp._Magella.jpg",
+      "sha256": "bc83f89a10b3ec1919596319ab96d0f6164d279c20d27b63d2919be64b44563e",
+      "plant": "Grevillea sp. Magela Creek",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grewia breviflora/PICK/Grewia brevifora Aust Trop RF Plants, (R.L. Barrett).2230338.jpg",
+      "sha256": "5787afc1fefd81e975ea5095040a2ed26bbbc1184d28f0c0fe199472bb1fdcf5",
+      "plant": "Grewia breviflora",
+      "include": true,
+      "credit": "R. L. Barrett",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grewia oxyphylla/Grewia breviflora.426.a.JPG",
+      "sha256": "42d16634d3b0c9a1d927f6472f3f0f3924c406e94f5baccf058352667869a5d7",
+      "plant": "Grewia breviflora",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Haemodorum coccineum/PICK/2. Wattle Blue Butterfly on Haemadorum coccineum.964.JPG",
+      "sha256": "0d37e00151800d38dbc6d63089e8fe4c5d4419d4275290dc96bbdda8bc23bfab",
+      "plant": "Haemodorum coccineum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Harpullia leichhardtii (N)/PICK/1. Harpullia leichhardti.606.a.JPG",
+      "sha256": "f0326ad9912107705ddf66b9bae763f461cd06a516199cc50c61e23b7158542b",
+      "plant": "Harpullia leichhardtii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Harpullia leichhardtii (N)/PICK/1.a Harpullia leichhardti.610.a.JPG",
+      "sha256": "9b638d054a16bec38425211bde706db12bdb70bab54573ae4cb5e7db2246805e",
+      "plant": "Harpullia leichhardtii",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Harpullia leichhardtii (N)/PICK/H_leichardtii.jpg",
+      "sha256": "d9ff3796c5279d84f188843ead6faa958850247ba014178e5f8676fc7369de38",
+      "plant": "Harpullia leichhardtii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Heliotropium ventricosum/PICK/1. Heliotropum ventricosum.721.a.JPG",
+      "sha256": "12bb328d43f914535d4d65e95fa8705418877c256ab50c8cd49017ef2c01ba55",
+      "plant": "Heliotropium ventricosum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Heliotropium ventricosum/PICK/1.a Heliotropum ventricosum.720.a.JPG",
+      "sha256": "9911a4b85e82d1362a6cfab8b18df0b6322ecdd42563092d3758176bb0780fb9",
+      "plant": "Heliotropium ventricosum",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 23 (1).JPG",
+      "sha256": "84bae8f8d3543725f7c79497624673ba6bbff6ef4f06310ebee1c60bbeca121e",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 23 (2).JPG",
+      "sha256": "796d3afd45b1e0337f79253952c78af02399a9e59bdb649eec7a1d0b354f29fc",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (1).JPG",
+      "sha256": "f4287cb1aa533c21b89c7f651681b4af8d35700f07266cceb6b12e94520155be",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (2).JPG",
+      "sha256": "09fa3e3bb4df3b99081ca52006ac9a508430375c2a58ca535357051c06e00b44",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (3).JPG",
+      "sha256": "c9a78dd7878aa27759b274408b2f70fed157fd02a41378e9f8286093b141ea03",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (4).JPG",
+      "sha256": "b7e21367892f6a5a4ebd44e1a58e2be64cbc27a8d326a73a61849e649bbd2fce",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (5).JPG",
+      "sha256": "5878866d5396c8f3f83c7ae2bfceca6540ed1ba98200ebe5f630cc89d49d52d3",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (6).JPG",
+      "sha256": "df6284a91343ffd1a476e09d5484a1597ca03fda4552a5370ac2194f09ae74aa",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (7).JPG",
+      "sha256": "4e555d31c1a0ba05d29fb2f89219f60870ed3bfd898307d667b7eba2029b8a55",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/16 2 26 Grevillea Hibbertia complanta fabaceae Lee rubra/Hibbertia complanata 34 (8).JPG",
+      "sha256": "e2ccddbab9f7379ab785df1608c8365a5653f831c2ecf85d1c96ffe8ab437f3c",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 0 9 (1).JPG",
+      "sha256": "f9a72dc35ef990d3c53d5b693e82919a885cb94cb0b586040b290b263583c784",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 0 9 (2).JPG",
+      "sha256": "e031a2cda6c6eaeabff5ee7a88ca8f6535bc8e4797a9266919d8634105e90f83",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 21.JPG",
+      "sha256": "759049b54d7fc966ad02a328a56913e0910ee051e6b20a8f1c76238fcb52a6ac",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 23.JPG",
+      "sha256": "06afaf5cd90cc4c911b11ce4718f74e501f426e35cc97bb5ec0871e8455a9b7a",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 6 7 (1).JPG",
+      "sha256": "e305b2f2d98d618c3c8d2ceb580fa67c9ef3cd6b8cd59e9b25d0ef68caf8ad40",
+      "plant": "Hibbertia complanata",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Dilleniaceae Dillenia Hibbertia/Hibbertia/Hibbertia complanata 6 7 (2).JPG",
+      "sha256": "68d6f1556236879f141479b0235f6491e446aa0abeae158593ca89c7e59d5ea6",
+      "plant": "Hibbertia complanata",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/1. Hibiscus tiliaceus.313.b.jpg",
+      "sha256": "329f8fa6fa576126d608c6045801f4ad79c68295632cb39e77b05f80fcaa781e",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/1.a Hibiscus tiliaceus.3721.jpg",
+      "sha256": "375a4043a3229a46032bb56c45c5ab18ef9b42b197c64619d47b02636854af84",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/2. Hibiscus tiliaceus.249.a.JPG",
+      "sha256": "5dec0a48e7de503dad655bd38fa458f5cf28c386220bb1165c7b73570ad0f010",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/EXTRA/2. Hibiscus tiliaceus.249.a.JPG",
+      "sha256": "5dec0a48e7de503dad655bd38fa458f5cf28c386220bb1165c7b73570ad0f010",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/EXTRA/Hibiscus tiliaceus.335.b.JPG",
+      "sha256": "28f25f7b76ac6338f0aecef960e33b18c4e7dafc34e8d408329b4919b49b13bf",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/EXTRA/Hibiscus tiliaceus.337.a.JPG",
+      "sha256": "606eb4ab3e6c0a487dbef195b8d05c0def835f48a0a9278ece4932f03f7af34c",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus tiliaceus/PICKX/EXTRA/Hibiscus tiliaceus.872.d.JPG",
+      "sha256": "20bf4582da979baec6d040678e11260fbd57892586ad165a27fff4eb233f17ce",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ESPL 3.6.2026 Tino smil, Arenga, Bamboo, Term plat, Aden pavo, Blak pol, Boss boss, Mimu elen, Millet pinn, Hibi tili/SELECT/Hibiscus tiliaceus.928.1.JPG",
+      "sha256": "bfb17047d8c0fc09891a1abb96190d69cc6c8146bd1b7c916115894c31c1cb34",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ESPL 3.6.2026 Tino smil, Arenga, Bamboo, Term plat, Aden pavo, Blak pol, Boss boss, Mimu elen, Millet pinn, Hibi tili/SELECT/Hibiscus tiliaceus.tif928.1.tif",
+      "sha256": "c4952230195b31ca59be96f3f8b4329a90750764348ade19a93a6f5c52c371db",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ESPL 3.6.2026 Tino smil, Arenga, Bamboo, Term plat, Aden pavo, Blak pol, Boss boss, Mimu elen, Millet pinn, Hibi tili/SELECT/PICK/Hibiscus tiliaceus.928.2.JPG",
+      "sha256": "528f1ac34f74db74d4e44cf49da62b6a530f637bcbb302abd9c41aef650991f9",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ESPL 3.6.2026 Tino smil, Arenga, Bamboo, Term plat, Aden pavo, Blak pol, Boss boss, Mimu elen, Millet pinn, Hibi tili/SELECT/PICK/Hibiscus tiliaceus.928.3.JPG",
+      "sha256": "39441a9daf05b2ad7d2c11b6746472a4bfac3625944f299ca99dbfca67b49fe1",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A ESPL 3.6.2026 Tino smil, Arenga, Bamboo, Term plat, Aden pavo, Blak pol, Boss boss, Mimu elen, Millet pinn, Hibi tili/SELECT/PICK/Hibiscus tiliaceus.tif928.1.jpeg",
+      "sha256": "c6962e3dc1facd7db55b329ba480b05ae116d86a8d403109fe246dad5457be12",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Hibiscus tiliaceus 234.JPG",
+      "sha256": "6f06e7460011d678b3ef285aaf65274f49e6f9d2f9180450d66d712d20bb93d2",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Hibiscus/Hibiscus Tiliaceus 239.JPG",
+      "sha256": "639d98f4c589d7e5bdd926de469bba0fc7e5f34b17970257d4e3b18d5f0fcd2a",
+      "plant": "Hibiscus tiliaceus",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Hibiscus/Hibiscus tiliaceus 234.JPG",
+      "sha256": "6f06e7460011d678b3ef285aaf65274f49e6f9d2f9180450d66d712d20bb93d2",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Malvaceae Brachychiton Helicteres Hibiscus sterculia Thespesia Abelmoschus Abutilon Adansonia Gossypium Urena/Hibiscus/Hibiscus tiliaceus 237.JPG",
+      "sha256": "ae39c405c09eae5e304882d9d85664ea65fed072cced6c409ac8a955bcfd275e",
+      "plant": "Hibiscus tiliaceus",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/1. Hildegardia australienis.322.a.JPG",
+      "sha256": "6eb8e90375fc55cad6de49a4ea3162d89f92497a532bc9a2a22ca03e4e682b46",
+      "plant": "Hildegardia australiensis",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/2. Hildegardia australienis flowers.232.a.JPG",
+      "sha256": "478a95858d7a5c7da5e0426d7125f0ed6bac052fee07ddefd7bad1637bde35b0",
+      "plant": "Hildegardia australiensis",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/2. Hildegardia australienis.504.b.JPG",
+      "sha256": "c1ac02fe52da59613d211c24cebee2feb55d97cba3da858204be9ebd0f626d53",
+      "plant": "Hildegardia australiensis",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/Hildegardia australiensis.jpg",
+      "sha256": "e8a91eb731a100829db47f029aafbc4d083d5ac97ac9c595d791472790bfb6f1",
+      "plant": "Hildegardia australiensis",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Horsefieldia australiana/PICK/1. Horsefieldia australiana.280.a.JPG",
+      "sha256": "45996082fe493d3ebc4f315db11e1931d50d1c72343965cf5629827bd4364208",
+      "plant": "Horsfieldia australiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Horsefieldia australiana/PICK/1.a Horsefieldia australiana.280.b.JPG",
+      "sha256": "ec4d2a090480fceb39d70693ca91398ee7d3a15d7e348e5f6cbade105218d786",
+      "plant": "Horsfieldia australiana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Horsefieldia australiana/PICK/2. Horsefieldia australiana fruit & seed.683.a.JPG",
+      "sha256": "dba4067b2ff8e61719fc0d78a18f631b00fb84f60f7fef4df28d26ae7b75fb00",
+      "plant": "Horsfieldia australiana",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Myristicaceae Myristica Horsfieldia/horsfieldia australiana mail flowers.JPG",
+      "sha256": "0559438ea06bca519985d6f20ccfd81b3164420824836160f40f07e7172364f4",
+      "plant": "Horsfieldia australiana",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/1. Ilex arnhemensis.318.a.JPG",
+      "sha256": "d29318f96534f51089efa295cb5e17601085c90f9b8e4aa077e402801488b0f9",
+      "plant": "Ilex arnhemensis subsp. arnhemensis",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/1.a Ilex arnhemensis.339.a.JPG",
+      "sha256": "432777722982f9b1e7387753fe06b75fb95b56060eac2cb4db6f394e3275e76d",
+      "plant": "Ilex arnhemensis subsp. arnhemensis",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/II/Ilex arnhemensis subsp. arnhemensis/PICK/2. Ilex arnhemensis fruit.845.a.JPG",
+      "sha256": "517a951cfc21b88c4a4a50709d836b1babf2b35412152bec6cba25ce5bdc44cc",
+      "plant": "Ilex arnhemensis subsp. arnhemensis",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/1. Jasminum didymum subsp. didymum.3821.IC.a.jpeg",
+      "sha256": "d86f80b3cb2442033ab713aa91f9bd322f4d5a4c2586b4a8074053369f13b228",
+      "plant": "Jasminum didymum subsp. didymium",
+      "include": true,
+      "credit": "Ian Cowie",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending. The photograph label didymum is corroborated by Kew POWO; manuscript didymium remains unchanged pending text/name review.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/Jasminum didymum.266.a.JPG",
+      "sha256": "623222a69db99a30e84ecc49f17c886641873bc947fc3dd2ebd5fb406fc28d19",
+      "plant": "Jasminum didymum subsp. didymium",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/Jasminum didymum.266.b.JPG",
+      "sha256": "d29d609624a0c4071fca235abb391feecdd804bec99829e5657e64a8470ecefe",
+      "plant": "Jasminum didymum subsp. didymium",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/Jasminum didymum.267.a.JPG",
+      "sha256": "2536fbaee079123c67d22f59ada59544cb1279e6a68bd34337023d7918bef7be",
+      "plant": "Jasminum didymum subsp. didymium",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/JJ/Jasminum didymum subsp. didymum/PICK/Jasminum didymum.268.a.JPG",
+      "sha256": "d6a2cd4f38244f227df7f2ed92d31bad6ec3874bfc53e70acfc88c8c5b54afc8",
+      "plant": "Jasminum didymum subsp. didymium",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leichhardtia viridiflora subsp. tropica (N)/PICK/1. Leichhardtia viridiflora subsp. tropica.151.a.JPG",
+      "sha256": "c8f0e165fd0e79c8aa9d39b2a07dd6702f0739f6b03bf1974d02d55133090b44",
+      "plant": "Leichardtia viridiflora subsp. tropica",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending. The photograph genus spelling Leichhardtia is corroborated by Forster (2020), Austrobaileya 11:1–18; manuscript Leichardtia remains unchanged pending text/name review.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leichhardtia viridiflora subsp. tropica (N)/PICK/1.a Leichhardtia viridiflora subsp. tropica.148.a.JPG",
+      "sha256": "55d203570b631b7865d539b7a829206e95ab6daa73d2bc83bf99fad3baa486d0",
+      "plant": "Leichardtia viridiflora subsp. tropica",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending. The photograph genus spelling Leichhardtia is corroborated by Forster (2020), Austrobaileya 11:1–18; manuscript Leichardtia remains unchanged pending text/name review.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leptospermum madidum subsp. sativum/PICK/1. Leptospermum madidum.954.a.JPG",
+      "sha256": "193886b71ba7e847013a6c5a4be0708e83fe6b02ae8d18ab74933c228c02a860",
+      "plant": "Leptospermum madidum subsp. sativum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/LL/Leptospermum madidum subsp. sativum/PICK/2. Leptospermum madidum.956.a.JPG",
+      "sha256": "c299acdc4176166dca5724159d4861a92f2a1d67a96b83dc6d5e927739ce98fa",
+      "plant": "Leptospermum madidum subsp. sativum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mackinlaya macrosciadea (N)/PICK/1. Mackinlaya macroscaedia.A.IM.jpg",
+      "sha256": "615df115d24ac6121414a8fa9259d7e1022f74fc1567f49be8ce50d68d460c38",
+      "plant": "Mackinlaya macrosciadea",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Macropteranthes kekwickii (N)/PICK/M_keckwickii.jpg",
+      "sha256": "7c8997e2b318490c1a8c37aef080db62ff57710c794fc90b9f63eb58c3701c7a",
+      "plant": "Macropteranthes kekwickii",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: a distribution map, not a plant photograph. Keep out of the photograph gallery.",
+      "reviewCategory": "map"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mallotus nesophila/PICK/1. Mallotus nesophila.318.a.JPG",
+      "sha256": "4d9a4aa0f1e204a92281b3b6211c840802ae0cf74367e994716ad61303819c8e",
+      "plant": "Mallotus nesophilus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Mallotus nesophila/PICK/1.a Mallotus nesophila.322.a.JPG",
+      "sha256": "0b058d878d61d41237321975ea5ae2654ff77f46ae61efff7b441d0624998e8a",
+      "plant": "Mallotus nesophilus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Phyllanthaceae Antideama Endospermum Glocidon Macaranga Mallotus Margaritaria Surgada/mallotus nesophilus 8675.JPG",
+      "sha256": "461c80833a82038e22138e4315e9d3784ec20ed534e1d454b8f91c7854714c0f",
+      "plant": "Mallotus nesophilus",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Melaleuca viridiflora/PICK/1.a Melalaleuca viridiflora.970.a.JPG",
+      "sha256": "29fe8b904b81b857efa953336c5cf4ea8ede4f010402baf0057ecc094b26ba86",
+      "plant": "Melaleuca viridiflora",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/NN/Nervilia dallachyana (N)/PICK/1. Nervillea plicata.3.IM.jpg",
+      "sha256": "cef6ac3fbb16ceed0fb1b1428439d4403a9f57a023a7d0727f270400bdfdba7c",
+      "plant": "Nervilia dallachyana",
+      "include": false,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/NN/Nervilia dallachyana (N)/PICK/2. Nervilia plicata leaf.jpg",
+      "sha256": "0a78debc04af84e9d2475e83ef386a68aac6c7066af20f5ed4aca7a80f5d5a5c",
+      "plant": "Nervilia dallachyana",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Phaleria macrocarpa (N)/PICK/2. Phalaria macrocarpa.TBC.IM.bb.jpg",
+      "sha256": "a9206b04caa4bfd96eacb0512558a55504a1608170e9ef60ee49ce9ddbded105",
+      "plant": "Phaleria macrocarpa",
+      "include": false,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "The source filename explicitly marks identification TBC; retain that uncertainty until confirmed.",
+      "reviewCategory": "source-tbc"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Phaleria octandra (N)/PICK/2. Phalaria octandra fruit.A.IM.a.jpg",
+      "sha256": "5d4dab114a35a6a5fc743cc2ed4f6983cb2d9e1c59ba8b6390d15e270e1017f7",
+      "plant": "Phaleria octandra",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Pimelea punicea (N)/PICK/2. Clearwing Swallowtail on Pimelia punicea.556.a.JPG",
+      "sha256": "ae14b3ffc0e04901fca3de09d59c132770e06fa8bf9929957489653168a19340",
+      "plant": "Pimelea punicea",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Pittosporum moluccanum/PICK/1. Pitosporum moluccanum.A.IM.jpg",
+      "sha256": "bc4e75592f142020759b192906486f08484c260555e092342510c946a482fc0c",
+      "plant": "Pittosporum moluccanum",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/A. FEATURE HEADER SHOTS/F. FURTHER SELECTION/White-quilled Honeyeater on Planchonia careya.456.a.JPG",
+      "sha256": "80d2d8ba5c9b8d4ae7be651c76ec615c64d966aeba503908b3384e523026df82",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/C. HERO SHOTS A-Z/PP/White-quilled Honeyeater on Planchonia careya.456.a.JPG",
+      "sha256": "80d2d8ba5c9b8d4ae7be651c76ec615c64d966aeba503908b3384e523026df82",
+      "plant": "Planchonia careya",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Planchonia careya/PICKX/1. Planchonia careya & Praying Mantis.013.a.JPG",
+      "sha256": "8fed7c55d55ad563a9144c6da8a075be03527afbe9647b81b65e59b398ccb6c1",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Planchonia careya/PICKX/2. Planchonia careya fruit.446.a.JPG",
+      "sha256": "c9deb1ac39c397af9cb277bdd368f16b8b211354d3d9cd455e4d18f90938301d",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Planchonia careya/PICKX/EXTRA/Planchonia careya & Praying Mantis.007.a.JPG",
+      "sha256": "70775f6c9a7381796e8ffefbbb18e13fabfd3ab23142717e15055c01f8a6e012",
+      "plant": "Planchonia careya",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Planchonia careya/PICKX/EXTRA/_1100943 Planchonia careya.b.JPG",
+      "sha256": "a2da9735667cd37057bbe8e3d09c7d41ffdbe17443cf04450ff8d914ae6290f8",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lecythidaceae Planchonia/Planchonia careya 7969.JPG",
+      "sha256": "42b162215ffee9430a9c87b8cb27e4d1a43d03a93748bbf6376e84fa9c81d31f",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lecythidaceae Planchonia/Planchonia careya 7970.JPG",
+      "sha256": "3b168fb4a0164bd38c36c30b0d2f4b1a9fcab948d0750c8313910ecf9e2a98c7",
+      "plant": "Planchonia careya",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Pontederia australasica/PICK/1. Pontedaria australasica.A.IM.jpg",
+      "sha256": "ff5f28db8879cf7808d4152f34f128526bc914bca873bbc908fc46f1f30e8d9a",
+      "plant": "Pontederia australasica",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/PP/Ptychosperma macarthurii/PICK/1. Fig Bird eating fruit.2526.WB.JPG",
+      "sha256": "449915d0077789c8b54a65d27874dcf9944e1c7a8b0d7ba74eaf34a2eabd8c5f",
+      "plant": "Ptychosperma macarthurii",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Semecarpus australiensis/PICK/1. Semecarpus australienis.823.aa.JPG",
+      "sha256": "ea0164ed467cc66786aa96105b45c97bd2f46e1ecd269b1a11805fe2732d3f71",
+      "plant": "Semecarpus australiensis",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Semecarpus australiensis/PICK/2. Semecarpus australienis fruit.508.a.JPG",
+      "sha256": "559c0de7f2287a9e52f386eed4b02552b3d2e802315624813bbc63b5700b3610",
+      "plant": "Semecarpus australiensis",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Sesbania cannabina/PICK/1. Sesbania cannibina.3083.GF.JPG",
+      "sha256": "8c4b48787cca4c6b635c6e9c4aae25bacc2ca1c7267dc6c86606f65edaff8d2c",
+      "plant": "Sesbania cannabina",
+      "include": true,
+      "credit": "Gary Fox",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/1. Syzygium eucalyptoides subsp. bleeseri.2.RD.a.JPG",
+      "sha256": "57097f5348c7d86791fb780a609ccef23e1f7d688f304931ac0be1b45cbe2de9",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "Russell Dempster",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/2. Syzygium eucalyptoides subsp. bleeseri.450.JPG",
+      "sha256": "a4cfb165f6bf442d9eda90e2e60229fe90d36eda4b76e9f6e0a800692ecc4a06",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/EXTRA/2. Syzygium eucalyptoides subsp. bleeseri.456.JPG",
+      "sha256": "012f2658e52976fdd6e172b39276a7447d9c8c6a9b130f4eea351d2bd5ec1893",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/EXTRA/Syzygium eucalyptoides subsp. bleeseri.210.a..JPG",
+      "sha256": "e719fa99d1ef9c7228a54440a29eacf02139c5a40b29fb032d7844b3d09ae6cb",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/EXTRA/Syzygium eucalyptoides subsp. bleeseri.9.RD.JPG.JPG",
+      "sha256": "47717f3b389202f063b107a592ee0721038ed1ed7038295b184996888a753169",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": false,
+      "credit": "Russell Dempster",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. bleeseri/PICKX/EXTRA/Syzygium eucalyptoides subsp. bleeseri.9804.WB.b.JPG",
+      "sha256": "8d2fe79821c4a53b5e580852ea978e123055c1639c3804cd3d6be630f45617e3",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 TIM MOORE TNP/FOLDER 2/Syzygium eucalyptoides subsp. bleeseri.450.aa.JPG",
+      "sha256": "d940e8835ffa89035ba98e8d83d825817b6b6e4dc7a0bc084b5438228a87e8f0",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 TIM MOORE TNP/FOLDER 2/Syzygium eucalyptoides subsp. bleeseri.456.a.JPG",
+      "sha256": "012f2658e52976fdd6e172b39276a7447d9c8c6a9b130f4eea351d2bd5ec1893",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/1 1 1 1 1 1 TIM MOORE TNP/FOLDER 2/Syzygium eucalyptoides subsp. bleeseri.756.a.JPG",
+      "sha256": "3c02b908418f02556e119ae0674e7dcf328595c0d21a4d182e9743937386620a",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A A A BOT GDNS 2.8.2026/SELECT/PICK/Syzygium eucalyptoides subsp. bleeseri.756.a.JPG",
+      "sha256": "3c02b908418f02556e119ae0674e7dcf328595c0d21a4d182e9743937386620a",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/A A A BOT GDNS 2.8.2026/SELECT/Syzygium eucalyptoides subsp. bleeseri.738.a.JPG",
+      "sha256": "d7ad8475ace1bd2bda158c35a4436d88cc9e2cbb18539d35d8d536f9b16688d6",
+      "plant": "Syzygium eucalyptoides subsp. bleeseri",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. eucalyptoides/PICK/1. Syzgium eucalyptoides subsp. eucalyptoides.9557.WB.b.JPG",
+      "sha256": "585854ffabf2b9bc1c2f7b81d869d2e21f6964f813c5c9d78091dff33affbb35",
+      "plant": "Syzygium eucalyptoides subsp. eucalyptoides",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. eucalyptoides/PICK/2. Syzygium eucalyptoides susp. eucalyptoides.275.a.JPG",
+      "sha256": "9624174ee537e4dffb7619232d266cc3ba6e6b94c7b52145bd49d4ab0dac625d",
+      "plant": "Syzygium eucalyptoides subsp. eucalyptoides",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Syzygium eucalyptoides subsp. eucalyptoides/PICK/EXTRA/(2.a Syzygium eucalyptoides subsp. eucalyptoides.BS).jpg",
+      "sha256": "ca8798ee8179155e5510451ecc8a2222add3cf96648f67dff651ef01533d84bf",
+      "plant": "Syzygium eucalyptoides subsp. eucalyptoides",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Thysanotus elatior (prev. Thysanotus banksii)/PICK/1. Thysanotus eliator.tif.022.a.jpg",
+      "sha256": "0cde939d91ef482c47c812a05156d21c2f8d677dddd69e9b580594ed8edc2a64",
+      "plant": "Thysanotus elatior",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Thysanotus elatior (prev. Thysanotus banksii)/PICK/2. Thysanotus eliator.tif.033.jpg",
+      "sha256": "40cfc96234c3d71041b4ad3edf095099e3407d6354b74badb261de144640cd16",
+      "plant": "Thysanotus elatior",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Reviewed archive spelling/abbreviation against the manuscript account and the curated folder; this is a file-specific allocation, not a general taxonomic synonym rule. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichodesma zeylanicum var. zeylanicum/PICK/1. Trichodesma zeylanicum.998.a.JPG",
+      "sha256": "2a6286de57d7ec902208147f8c7b21e48415a7cef7fc571941f54fcdab26f9f1",
+      "plant": "Trichodesma zeylanicum var. zeylanicum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichodesma zeylanicum var. zeylanicum/PICK/1.a Trichodesma zeylanicum.989.a.JPG",
+      "sha256": "3716ce205d87f9b51cae871e79ec1e0f2e42e77f11aa375cb721bcc9813c388f",
+      "plant": "Trichodesma zeylanicum var. zeylanicum",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichosanthes cucumerina var. cucumerina (N)/PICK/1. Trichosanthes cucumerina.A.44015.RD.b.jpg",
+      "sha256": "ac28f332688fb66b28890f4589525b267e3c61b20861c8d2c1cd850dc767673f",
+      "plant": "Trichosanthes cucumerina var. cucumerina",
+      "include": false,
+      "credit": "Russell Dempster",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/TT/Trichosanthes cucumerina var. cucumerina (N)/PICK/2. Trichosanthes cucumerina.A.4120.RD.a.jpg",
+      "sha256": "e5d3e4d9a06715e282cb93da5480e55adc8d3306f8be2ab6b6144d0c16a3057e",
+      "plant": "Trichosanthes cucumerina var. cucumerina",
+      "include": false,
+      "credit": "Russell Dempster",
+      "priority": 3,
+      "reason": "The filename omits or disagrees with the account subspecies/variety rank. Folder placement alone is not enough to establish this allocation; researcher review required.",
+      "reviewCategory": "rank-review"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/VV/Vitex trifoliata/PICK/1. Vitex trifoliata.544.d.JPG",
+      "sha256": "903f0092ccf7fe26519551277ea7d0b5451bdee9438d4c40edf1eb70ee3fff74",
+      "plant": "Vitex trifolia",
+      "include": false,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "Filename and target account do not establish the same full taxon, or another account folder supplies conflicting evidence. Retain for researcher review instead of inferring an identification from appearance.",
+      "reviewCategory": "name-review"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lamiaceae Clerodendrum Pityodia Vitex Wrightia Callicarpa Gmelina Plectranthus/Vitex/Vitex trifolia 0001.JPG",
+      "sha256": "e20ede17caa56614aa805d03e2128874b42e68e1d9534fc65ee376bfe38a3401",
+      "plant": "Vitex trifolia",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lamiaceae Clerodendrum Pityodia Vitex Wrightia Callicarpa Gmelina Plectranthus/Vitex/Vitex trifolia 004.JPG",
+      "sha256": "984ba76c77b735a927aaf0ae0e4f64987049ef368f5f91e637ccb7f31303ecaa",
+      "plant": "Vitex trifolia",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lamiaceae Clerodendrum Pityodia Vitex Wrightia Callicarpa Gmelina Plectranthus/Vitex/Vitex trifolia 005.JPG",
+      "sha256": "da9de5b894c187bd82b585f5c6eb34dbbcbc44f51937f0cc0d40333c2db2574b",
+      "plant": "Vitex trifolia",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lamiaceae Clerodendrum Pityodia Vitex Wrightia Callicarpa Gmelina Plectranthus/Vitex/Vitex trifolia 009.JPG",
+      "sha256": "207d698519ce4c303b6d01e7334c5bf0571c6a4fd073b22836c853f6e67ae8a7",
+      "plant": "Vitex trifolia",
+      "include": false,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A NPNA 2026 NEW PHOTOS/WILLIE BURGESS Plants of the nt photos/Lamiaceae Clerodendrum Pityodia Vitex Wrightia Callicarpa Gmelina Plectranthus/Vitex/Vitex trifolia 010.JPG",
+      "sha256": "72072a4b9debdbdd7f08eaf84f023d48c63dc67be7ea6da5adf236c2313960ee",
+      "plant": "Vitex trifolia",
+      "include": true,
+      "credit": "William Burgess",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/XX/Xanthostemon umbrosus/PICK (X. umbrosus)/1. Four O'clock Moth on Xanthostemon umbrosus.IM.jpg",
+      "sha256": "394cb271f8582c4b7389e4782b6251a82341ed22e54579652d2de422025144e0",
+      "plant": "Xanthostemon umbrosus",
+      "include": true,
+      "credit": "Ian Morris",
+      "priority": 0,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/XX/Xanthostemon umbrosus/PICK (X. umbrosus)/EXTRA/2. Xanthostemon umbrosus fruit.256.a.JPG",
+      "sha256": "8c66a364375237c252e1238eb75b0061aafe388f89bd775e617f47bbaccb1153",
+      "plant": "Xanthostemon umbrosus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/XX/Xanthostemon umbrosus/PICK (X. umbrosus)/EXTRA/Xanthostemon umbrosus 261.b.JPG",
+      "sha256": "7a0a70b425a72317f9270f64b54a4cdadace9e4667b5be61c0c5c57a6df8bbd5",
+      "plant": "Xanthostemon umbrosus",
+      "include": true,
+      "credit": "Photographer not recorded",
+      "priority": 3,
+      "reason": "23 September 2026 visual and documentary review. Full species/rank name is present in the filename. Selected to retain a useful flower, fruit, foliage, bark, habit or wildlife view. Final botanical verification remains pending.",
+      "reviewCategory": "selected"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/XX/Xanthostemon umbrosus/PICK (X. umbrosus)/EXTRA/Xanthostemon umbrosus with 4 O'clock Moth (square).A.IM.a.jpg",
+      "sha256": "a69862914166f60ebbf77853467df2fa562d23f8bd820f218a4e4e8138a02fa9",
+      "plant": "Xanthostemon umbrosus",
+      "include": false,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "Visually reviewed: alternate crop, export or closely repeated composition of a selected view for this account. Retain the clearer or more useful representative.",
+      "reviewCategory": "repeated-view"
+    },
+    {
+      "path": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/XX/Xanthostemon umbrosus/PICK (X. umbrosus)/Xanthostemon umbrosus with 4 O'clock Moth (square).A.IM.a.jpg",
+      "sha256": "a69862914166f60ebbf77853467df2fa562d23f8bd820f218a4e4e8138a02fa9",
+      "plant": "Xanthostemon umbrosus",
+      "include": false,
+      "credit": "Ian Morris",
+      "priority": 3,
+      "reason": "Byte-identical copy of another reviewed source file; retain only the selected representative.",
+      "reviewCategory": "duplicate-copy"
     }
-  ]
+  ],
+  "photoReviewNotes": {
+    "reviewedOn": "2026-09-23",
+    "scope": "Visually reviewed 265 full-name candidates for unillustrated accounts and unresolved curated selections, after indexing 10634 JPG/JPEG/TIF/TIFF/PNG files across the supplied archive. This is documentary allocation, not a complete botanical verification of every archive image.",
+    "creditsSource": "2026 manuscript front matter: Copyright in photographs John Brock and contributing photographers; named initials list used for explicit allocations. Unmarked files are not automatically attributed to John Brock.",
+    "references": [
+      "https://apps.lucidcentral.org/wattle/text/entities/acacia_alleniana.htm",
+      "https://worldwidewattle.com/speciesgallery/latescens.php",
+      "https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:149607-3",
+      "https://www.qld.gov.au/__data/assets/pdf_file/0023/158135/forster-gymnema-and-leichhardtia-austrobaileya-v11-1-18.pdf"
+    ],
+    "manuscriptSpellingsForReview": {
+      "Jasminum didymum subsp. didymium": "Photo folder and Kew use subsp. didymum.",
+      "Leichardtia viridiflora subsp. tropica": "Photo folder and original taxonomic paper use Leichhardtia."
+    }
+  }
 }
