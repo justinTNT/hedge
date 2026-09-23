@@ -133,6 +133,14 @@ let private findSchema (types: Api.AdminType list option) (typeName: string) : T
     types |> Option.bind (fun ts ->
         ts |> List.tryFind (fun t -> t.Name = typeName) |> Option.map (fun t -> t.Schema))
 
+/// The operations the caller may perform on a type (server-scoped, from the types response). Drives
+/// which controls the client offers; the server enforces the same set on every CRUD/discovery call.
+let private opsOf (types: Api.AdminType list option) (typeName: string) : string list =
+    types
+    |> Option.bind (fun ts -> ts |> List.tryFind (fun t -> t.Name = typeName))
+    |> Option.map (fun t -> t.Ops)
+    |> Option.defaultValue []
+
 let private recordToFields (schema: TypeSchema) (record: obj) : Map<string, string> =
     schema.Fields
     |> List.map (fun field ->
@@ -199,7 +207,7 @@ let init () : Model * Cmd<Msg> =
           EditingId = None
           EditRecord = None
           EditFields = Map.empty
-          IsLoading = false
+          IsLoading = true   // discovery runs immediately (LoadTypes below); avoid a sign-in flash
           Error = None
           FormSeq = 0 }
     model, Cmd.ofMsg LoadTypes
@@ -230,8 +238,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with Key = model.KeyDraft; Error = None }, Cmd.ofMsg LoadTypes
 
     | LoadTypes ->
+        // Discovery is authorization-scoped: send the admin key (owner) + the same-origin guest
+        // cookie (a delegated curator). The permitted set comes back; 401 -> show the sign-in.
         { model with IsLoading = true },
-        Cmd.OfPromise.either Api.getTypes () GotTypes (fun ex -> GotTypes (Error ex.Message))
+        Cmd.OfPromise.either (fun () -> Api.getTypes model.Key) () GotTypes (fun ex -> GotTypes (Error ex.Message))
 
     | GotTypes (Ok types) ->
         let cmd =
@@ -243,7 +253,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with Types = Some types; IsLoading = false; Error = None }, cmd
 
     | GotTypes (Error err) ->
-        { model with IsLoading = false; Error = Some err }, Cmd.none
+        // No acceptable credential -> fall back to the sign-in (Types stays None) with no scary
+        // banner; any other failure surfaces its message.
+        let error = if err = "unauthorized" then None else Some err
+        { model with Types = None; IsLoading = false; Error = error }, Cmd.none
 
     | SelectType typeName ->
         { model with CurrentType = Some typeName; IsLoading = true; Records = None; EditingId = None; EditRecord = None; EditFields = Map.empty },
@@ -399,7 +412,12 @@ module View =
         Html.div [
             prop.className "admin-home"
             prop.children (types |> List.map (fun t ->
-                let canCreate = t.Schema.Fields |> List.exists (fun f -> f.Attrs |> List.contains PrimaryKey)
+                // Offer "New" only when the type has a primary key AND the caller may create it (a
+                // delegated role without create permission never sees the button — the server also
+                // enforces it: hiding is UX, the CRUD gate is the check).
+                let canCreate =
+                    (t.Schema.Fields |> List.exists (fun f -> f.Attrs |> List.contains PrimaryKey))
+                    && (t.Ops |> List.contains "create")
                 Html.div [
                     prop.className "admin-home-row"
                     prop.children [
@@ -497,7 +515,7 @@ module View =
                     prop.text display
                 ]
 
-    let private recordRow (schema: TypeSchema) dispatch (record: obj) =
+    let private recordRow (schema: TypeSchema) (ops: string list) dispatch (record: obj) =
         let pkField = idField schema
         let id =
             match pkField with
@@ -520,17 +538,19 @@ module View =
                     prop.children [
                         // Edit lives on the row itself, so only the destructive
                         // action needs a control — and it must not open the editor.
-                        Html.button [
-                            prop.className "admin-btn admin-btn-danger"
-                            prop.text "Delete"
-                            prop.onClick (fun e -> e.stopPropagation(); dispatch (DeleteRecord id))
-                        ]
+                        // Shown only when the caller may delete this resource (server also enforces).
+                        if ops |> List.contains "delete" then
+                            Html.button [
+                                prop.className "admin-btn admin-btn-danger"
+                                prop.text "Delete"
+                                prop.onClick (fun e -> e.stopPropagation(); dispatch (DeleteRecord id))
+                            ]
                     ]
                 ]
             ]
         ]
 
-    let private recordList (schema: TypeSchema) (records: obj list) dispatch =
+    let private recordList (schema: TypeSchema) (ops: string list) (records: obj list) dispatch =
         let visibleFields =
             schema.Fields |> List.filter (fun field ->
                 match field.Type with
@@ -544,8 +564,10 @@ module View =
                     prop.className "admin-list-header"
                     prop.children [
                         Html.h2 [ prop.text (sprintf "%ss" schema.Name) ]
-                        // Same primary-key rule as the home page: no key, no create
-                        if schema.Fields |> List.exists (fun f -> f.Attrs |> List.contains PrimaryKey) then
+                        // Same primary-key rule as the home page, plus the caller must be permitted
+                        // to create (a read-only delegate never sees it; the server also enforces).
+                        if (schema.Fields |> List.exists (fun f -> f.Attrs |> List.contains PrimaryKey))
+                           && (ops |> List.contains "create") then
                             Html.button [
                                 prop.className "admin-btn admin-btn-primary admin-btn-add"
                                 prop.title (sprintf "New %s" schema.Name)
@@ -567,7 +589,7 @@ module View =
                                         Html.th [ prop.className "admin-cell-actions"; prop.text "Actions" ]
                                     ]
                                 ]
-                                Html.tbody (records |> List.map (recordRow schema dispatch))
+                                Html.tbody (records |> List.map (recordRow schema ops dispatch))
                             ]
                         ]
                     ]
@@ -724,8 +746,11 @@ module View =
                 ]
             ]
 
-    let private editForm (model: Model) (schema: TypeSchema) dispatch =
+    let private editForm (model: Model) (schema: TypeSchema) (ops: string list) dispatch =
         let isCreate = model.EditingId.IsNone
+        // Save is offered only when the caller may perform the write this form does (create vs update).
+        // A read-only delegate can open a record but not save it (the server also rejects the write).
+        let canSave = ops |> List.contains (if isCreate then "create" else "update")
         // On create the server generates the id and timestamps, so showing them
         // as blank disabled boxes would just be noise.
         let fields =
@@ -746,12 +771,13 @@ module View =
                 Html.div [
                     prop.className "admin-form-actions"
                     prop.children [
-                        Html.button [
-                            prop.className "admin-btn admin-btn-primary"
-                            prop.text "Save"
-                            prop.disabled model.IsLoading
-                            prop.onClick (fun _ -> dispatch Save)
-                        ]
+                        if canSave then
+                            Html.button [
+                                prop.className "admin-btn admin-btn-primary"
+                                prop.text "Save"
+                                prop.disabled model.IsLoading
+                                prop.onClick (fun _ -> dispatch Save)
+                            ]
                         Html.button [
                             prop.className "admin-btn"
                             prop.text "Back"
@@ -809,21 +835,24 @@ module View =
                         ]
                     | None -> Html.none
 
-                    if model.Key = "" then
-                        keyInput model dispatch
-                    elif model.IsLoading then
+                    if model.IsLoading then
                         Html.div [ prop.className "loading"; prop.text "Loading..." ]
+                    elif model.Types.IsNone then
+                        // Authorization-scoped discovery returned nothing usable (401) — show the
+                        // sign-in. An owner enters the admin key; a delegated curator is authenticated
+                        // by the guest cookie they already hold (so they never reach here).
+                        keyInput model dispatch
                     else
                         match model.Route with
                         | [typeName; _] ->
                             match findSchema model.Types typeName with
-                            | Some schema -> editForm model schema dispatch
+                            | Some schema -> editForm model schema (opsOf model.Types typeName) dispatch
                             | None -> Html.p [ prop.text "Unknown type." ]
                         | [typeName] ->
                             match findSchema model.Types typeName with
                             | Some schema ->
                                 match model.Records with
-                                | Some records -> recordList schema records dispatch
+                                | Some records -> recordList schema (opsOf model.Types typeName) records dispatch
                                 | None -> Html.p [ prop.text "No records loaded." ]
                             | None -> Html.p [ prop.text "Unknown type." ]
                         | _ ->

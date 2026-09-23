@@ -215,16 +215,39 @@ let private genericDelete (db: D1Database) (table: AdminTable) (id: string) : JS
 // Response wrappers + route dispatch
 // ============================================================
 
-let private typesResponse (config: AdminConfig<'env>) : WorkerResponse =
-    let body =
-        Encode.object [
-            "types", Encode.list (config.Tables |> List.map (fun t ->
-                Encode.object [
-                    "name", Encode.string t.Name
-                    "schema", encodeTypeSchema t.Schema
-                ]))
-        ] |> Encode.toString 0
-    okJson body
+let private opName = function
+    | OpList -> "list" | OpRead -> "read" | OpCreate -> "create" | OpUpdate -> "update" | OpDelete -> "delete"
+let private allOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+
+/// Schema/type discovery — itself authorized (the plan: "type/schema discovery follows
+/// authorization"). Returns only the resources the caller may at least LIST, each annotated with the
+/// operations they may perform, so the client renders exactly the resources + controls the server
+/// will honour (client hiding is UX, not enforcement — the CRUD gates are the real check). Anonymous
+/// callers get 401 (the SPA then shows its sign-in); any renewal cookie is echoed.
+let private typesResponse (config: AdminConfig<'env>) (access: AdminAccess) : WorkerResponse =
+    match access with
+    | AdminAnonymous cookie ->
+        match cookie with
+        | Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c
+        | None -> unauthorized ()
+    | _ ->
+        let opsFor (name: string) : AdminOp list =
+            match access with
+            | AdminOwner -> allOps
+            | AdminSubject (permits, _) -> allOps |> List.filter (permits name)
+            | AdminAnonymous _ -> []
+        let cookie = match access with AdminSubject (_, c) -> c | _ -> None
+        let visible = config.Tables |> List.filter (fun t -> opsFor t.Name |> List.contains OpList)
+        let body =
+            Encode.object [
+                "types", Encode.list (visible |> List.map (fun t ->
+                    Encode.object [
+                        "name", Encode.string t.Name
+                        "schema", encodeTypeSchema t.Schema
+                        "ops", Encode.list (opsFor t.Name |> List.map (opName >> Encode.string))
+                    ]))
+            ] |> Encode.toString 0
+        match cookie with Some c -> okJsonWithCookie body c | None -> okJson body
 
 /// Wrap a 200 body, echoing an optional guest-session renewal cookie (delegated admin sessions).
 let private ok (cookie: string option) (body: string) : WorkerResponse =
@@ -289,9 +312,12 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
                 return (match cookie with Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c | None -> unauthorized ())
         }
     match route with
-    // GET /api/admin/types — list available schemas
+    // GET /api/admin/types — the permitted schemas for the caller (authorization-scoped discovery)
     | GET path when matchPath "/api/admin/types" path = Some (Exact "/api/admin/types") ->
-        Some (promise { return typesResponse config })
+        Some (promise {
+            let! access = config.Authorize request env
+            return typesResponse config access
+        })
 
     // GET /api/admin/:type — list records ; /api/admin/:type/:id — get one
     | GET path ->
