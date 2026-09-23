@@ -1551,13 +1551,14 @@ em {
 
 .photo-gallery {
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),260px));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));
   gap:24px;
   margin:0 0 38px;
 }
 
 .photo-gallery figure {
   margin:0;
+  max-width:260px;
 }
 
 .photo-gallery figcaption {
@@ -1567,6 +1568,19 @@ em {
   font-size:10px;
   color:var(--muted);
   margin-top:10px;
+}
+
+@media(max-width:700px) {
+  .photo-gallery {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:20px 14px;
+  }
+  .photo-gallery .image-button>span {
+    font-size:8px;
+    bottom:8px;
+    right:8px;
+    padding:6px;
+  }
 }
 
 @media(prefers-reduced-motion:reduce) {

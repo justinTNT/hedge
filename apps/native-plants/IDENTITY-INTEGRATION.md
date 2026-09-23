@@ -40,6 +40,28 @@ policy prematurely. Public-image visibility timing, withdrawal and per-reviewer
 read-state semantics belong to the integration work. The current catalogue has no
 personal contribution endpoints or nonfunctional sign-in controls.
 
+## Species-page photograph experience
+
+The shared selection has one hero photograph and smaller supporting photographs;
+every image opens the same full-size viewer. There is no fixed five-image limit.
+The selection can show flowers, nuts, leaves, juvenile/adult differences and other
+useful identification views, as well as different aspects of a plant's beauty.
+An owner can choose the hero by changing the curated photos' sort order.
+
+When a user signs in, the species page must also show that user's own photographs,
+including ones that have not been offered for public use or promoted. Load them
+through an authenticated owner-scoped request, alongside the shared catalogue,
+with a clear "Your photographs" treatment and the same image viewer. They should
+appear automatically on the species page, without visiting a separate profile.
+Seeing one's own image here does not publish it or make it visible to other users.
+
+Promotion into the shared selection is an editorial outcome users can aspire to;
+it preserves attribution and the contribution link. A promoted image should appear
+only once on its owner's page, with its ownership/public-selection status visible.
+On logout or identity switching, clear the personal images and any open personal
+image viewer immediately; reject in-flight responses for the previous identity.
+Personal responses and media must never enter the shared catalogue cache.
+
 ## Acceptance when shared infrastructure arrives
 
 1. An authenticated user can manage their own species notes and images.
@@ -51,3 +73,7 @@ personal contribution endpoints or nonfunctional sign-in controls.
    personal material stays out of public catalogue responses.
 6. The app imports the shared identity/admin capability without Microblog or Alerts
    implementation namespaces, and without changing the source-import pipeline.
+7. A species page shows the curated hero/gallery and the signed-in user's own
+   images. All open in the viewer; another user sees only their own personal images.
+8. Promotion does not duplicate the photograph for its owner. Logout, account
+   switching and late responses cannot leave another identity's images on screen.
