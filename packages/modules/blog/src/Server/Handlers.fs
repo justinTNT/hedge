@@ -20,6 +20,17 @@ open Blog.Db
 // Server.Env / Server.Identity. Author resolution comes via the content-server contract.
 open Blog.Services
 open Content.Server.Author
+
+/// News-page titles routinely carry a " | Site Name" suffix lifted from the page <title>. Drop it on
+/// ingest: trim from the LAST " | " to the end (so "Story | The Paper" -> "Story"). No separator ->
+/// unchanged; a title that is only the suffix (nothing before the separator, or an empty remainder) is
+/// kept as-is rather than blanked.
+let private trimTitleSuffix (title: string) : string =
+    match title.LastIndexOf(" | ") with
+    | i when i > 0 ->
+        let head = title.Substring(0, i).Trim()
+        if head = "" then title else head
+    | _ -> title
 open Hedge.GuestSession
 
 let private toFeedItem (r: ItemRow) : GetFeed.FeedItem =
@@ -283,6 +294,8 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
         | Ok validatedSlug ->
         // New submissions default their article date to now; backdate later via admin.
         let submittedAt = services.Now ()
+        // Strip a " | Site Name" suffix off news titles at ingest (see trimTitleSuffix).
+        let title = trimTitleSuffix req.Title
         // Rehost the item image into R2 so it survives the source rotting/hotlink-blocking.
         // Best-effort (falls back to the original URL); a `/blobs/...` value (e.g. already
         // uploaded) isn't https:// so it passes through untouched. Existing rows are untouched
@@ -293,7 +306,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
             | Some url -> promise { let! u = rehostRemoteImage services.Blobs "items" allowedImageTypes url in return Some u }
             | None -> promise { return None }
         let ins = insertItem services.DB (services.NewId ()) (services.Now ())
-                    { Title = req.Title; Link = req.Link; Image = rehostedImage
+                    { Title = title; Link = req.Link; Image = rehostedImage
                       Extract = req.Extract; OwnerComment = req.OwnerComment
                       ArticleDate = submittedAt
                       Slug = validatedSlug; ViewCount = 0 }
@@ -328,7 +341,7 @@ let submitItem (req: SubmitItem.Request) (request: WorkerRequest)
 
         let newItem : SubmitItem.Item =
             { Id = ins.Id
-              Title = req.Title
+              Title = title
               Slug = validatedSlug
               Link = req.Link |> Option.map Link
               Image = rehostedImage |> Option.map Image
