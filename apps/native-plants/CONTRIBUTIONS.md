@@ -65,7 +65,7 @@ To assign a curator:
 The site footer and admin navigation use `/api/plants/v2/access`, which applies the
 same owner-key and curator-grant checks as the protected endpoints. Catalogue
 links appear only after the saved admin key is validated. Review links and the
-review interface appear only for an owner or curator. Direct `/review` navigation
+review interface appear only for an owner, curator or identifier. Direct `/review` navigation
 shows an access-required screen otherwise. Capabilities are refreshed on identity
 changes, focus and periodic checks; every review request still authorizes afresh.
 Logout clears the OAuth identity, not a separately saved owner key: that key
@@ -110,7 +110,8 @@ Current lifecycle policy:
   produces more than five items, all remain accessible and editable; additions
   stay blocked until the count drops below five. Nothing is trimmed on deployment.
 
-There is no schema migration. Existing account-wide safeguards (2,000 notes,
+The five-item limits needed no schema migration; the later field-note purposes
+require migration 0003 as documented below. Existing account-wide safeguards (2,000 notes,
 100 photo records including retained failed/deleted uploads, and 250 MiB) continue to apply.
 
 Focused checks cover the fifth/sixth boundary, owner/species isolation, concurrent
@@ -127,8 +128,8 @@ stream (6 MB total), each file (5 MB / 512 KB), dimensions and JPEG container;
 it removes EXIF/GPS/XMP/IPTC/comment segments before storing.
 
 Private R2 keys use `private/native-plants/`. The generic blob route cannot serve
-them. `/api/plants/personal-media/:id/{image,thumbnail}` checks ownership or an
-offered-photo review grant and returns `private, no-store`, `nosniff` responses.
+them. `/api/plants/personal-media/:id/{image,thumbnail}` checks ownership, an explicitly offered photo for a curator, or an active
+entry attachment shared with the caller’s curator/identifier role and returns `private, no-store`, `nosniff` responses.
 Media reads deliberately do not renew cookies. Protected JSON requests join the
 same cookie-operation lock as login-session refresh/logout. A logout or page/owner
 change discards late results and clears private UI. Mutation requests require a
@@ -152,7 +153,8 @@ maintenance under `native-plants/contributed/`. Never remove keys referenced by
 
 Fresh installations use `npm run db:init`. Existing identity-enabled databases use
 `npm run db:migrate:contributions` once (migration `0002_contributions.sql`). This
-only adds notes, photos, hero preferences, claim markers and shared grants. The
+only adds notes, photos, hero preferences, claim markers and shared grants.
+Apply 0003_field_notes.sql after it for the current field-note workflow. The
 local database is migrated; existing plants, curated photos, maps, glossary and
 reference records were compared to the pre-identity backup and are unchanged.
 The post-migration snapshot is `/tmp/native-plants-contributions-migrated.sqlite`.
