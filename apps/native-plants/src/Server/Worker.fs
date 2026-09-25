@@ -30,6 +30,7 @@ let exports = createWorker {
         }))
     OAuth = None
     GuestSession = None
+    AllowGuestUploads = false
     Mounts = []
     BlobServing = { PrivatePrefixes = ["private/"] }
     Scheduled = None
