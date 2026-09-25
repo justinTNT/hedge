@@ -2,11 +2,11 @@
 
 Date: 25 September 2026
 
-Status: framework branch prepared with the shared session prerequisite; the refactor below is planned, not yet implemented.
+Status: implemented and verified on `hedge-framework-boundaries` and the isolated `native-plants-boundaries` integration branch. Ready for review; not merged to main or deployed.
 
 Framework baseline: `main` at `516f2d9`; working branch `hedge-framework-boundaries` in `~/Play/hedge-framework-boundaries`.
 
-App baseline: `native-plants` at `868a9b1`, pushed to `origin/native-plants`; checkout `~/Play/hedge-native-plants`.
+App integration baseline: `native-plants` at `40f0697`; original checkout `~/Play/hedge-native-plants`. Integration branch/check-out: `native-plants-boundaries` in `~/Play/hedge-native-plants-boundaries`. Historical design links below remain pinned to `868a9b1`.
 
 ## Outcome
 
@@ -55,7 +55,50 @@ Merging the port back into Native Plants will encounter shared changes already p
 - Framework prerequisite commit: `0e448ae`, based on main `516f2d9`.
 - All 17 ported files were checked byte-for-byte against source commit `53aa270`.
 - The full repository `./test.sh` passed in the fresh framework checkout, including generated outputs, host builds, session fixtures and the scaffold production build.
-- Framework/app refactor slices 1–5 remain unimplemented. Main and deployed applications are unchanged by this preparation.
+- Framework/app slices 1–5 are now implemented and verified as recorded below. Main, the original Native Plants checkout and deployed applications remain unchanged.
+
+## Implementation and verification — 25 September 2026
+
+- Shared implementation: `9c72c26`; API documentation: `7e48e7e` in
+  `packages/hedge/README.md`. Request-context opt-in works for all four GET
+  shapes in standalone and module routing. The browser transport's missing
+  JSON content-type header was also corrected and covered by a runtime fixture.
+- Native Plants implementation: `87438ad`, after deliberately merging the
+  shared branch into `native-plants-boundaries`. Shared prerequisites were
+  preserved under both histories; the only merge conflict was the test runner's
+  insertion point. App code is absent from the framework branch.
+- Private v2 JSON uses generated contracts, codecs and clients. V1 adapters
+  remain for one compatibility release and call the same typed commands/SQL.
+  The streaming cap stays app-owned: authorization precedes reading the body,
+  and generated routing receives only the bounded reconstructed request.
+- Multipart/media remain app-owned. The upload adapter consumes its response
+  inside the session lock, then loads a typed snapshot in a separate lock.
+- Owner-key notifications are shared; the main app/admin shell use the same
+  capability loader. Storage polling is removed, server revalidation retained,
+  and stale credential/session results discarded. Common admin state is cleared
+  when the applied key changes. Identity/grant persistence is unchanged.
+- Native Plants explicitly registers generated descriptor values. Identity's
+  list/read ceiling is enforced for the owner; private tables and future
+  generated descriptors remain absent. Other hosts retain existing CRUD.
+- Full `./test.sh` passed on both the framework and combined integration trees,
+  including nine new compiled boundary/admin fixtures and all existing host,
+  session, generator and scaffold checks. Native Plants production build,
+  18 importer tests, 95 Node tests and preview checks passed (4,041 referenced
+  media paths; 4,610 deploy assets). Schemas and migrations have no changes.
+- Browser checks on an isolated local Worker covered anonymous denial, owner
+  key application, immediate navigation updates, read-only Identity and typed
+  review loading. Verified contributor/curator behavior, revocation, uploads,
+  renewal and races have compiled Worker/SQLite coverage; this work did not
+  repeat live provider sign-in or browser file selection.
+- Remote refs were refreshed and the concurrent `hedge-capacitor-microblog`
+  worktree inspected; its committed addition is a plan on the shared baseline.
+  No shared implementation from that branch was imported or modified.
+
+Remaining release actions: review the two implementation tracks, merge the
+shared branch into main, then bring main into Native Plants and retain the app
+commit through the existing integration history. No deployment or old-client
+retirement is part of this implementation. See Native Plants `CONTRIBUTIONS.md`
+and `PREVIEW.md` for the compatibility window and local verification record.
 
 ## Findings the implementation must accommodate
 
