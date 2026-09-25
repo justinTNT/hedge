@@ -24,7 +24,7 @@ open Blog.Db
 let private oauthDeps : Identity.Handlers.OAuthDeps =
     { ReassignStatements = Server.AttributionPolicy.reassignStatements
       CommentTables = Server.AttributionPolicy.commentTables
-      ActivateOnReturn = fun returnTo -> (returnTo.TrimEnd('/')).EndsWith("/curator") || returnTo = "curator" }
+      ActivateOnReturn = fun returnTo -> (returnTo.TrimEnd('/')).EndsWith("/curator") }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
 let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =

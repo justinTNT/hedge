@@ -70,7 +70,7 @@ let configFor (keyId: string) (secret: string) (audience: string) (previous: (Si
 
 /// Sign out this browser without moving/deleting provider identities or changing other devices.
 let expiredCookie (secure: bool) : string =
-    "hedge_guest=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0" + (if secure then "; Secure" else "")
+    sprintf "%s=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0%s" CookieName (if secure then "; Secure" else "")
 
 /// Parse a GUEST_KEYRING value into retiring (previous) signing keys for graceful rotation (Slice G).
 /// The value is a JSON array of { "keyId": string, "secret": >=32 chars, "retireAt": epoch-seconds }:
