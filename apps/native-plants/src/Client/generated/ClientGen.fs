@@ -9,6 +9,16 @@ open Codecs
 // --- Transport-neutral client (C2) ---
 
 type Client = {
+    promotePhoto: Models.Api.PromotePhoto.Request -> JS.Promise<Result<Models.Api.PromotePhoto.Response, Hedge.Http.ApiError>>
+    reviewCorrection: Models.Api.ReviewCorrection.Request -> JS.Promise<Result<Models.Api.ReviewCorrection.Response, Hedge.Http.ApiError>>
+    selectHero: Models.Api.SelectHero.Request -> JS.Promise<Result<Models.Api.SelectHero.Response, Hedge.Http.ApiError>>
+    deletePhoto: Models.Api.DeletePhoto.Request -> JS.Promise<Result<Models.Api.DeletePhoto.Response, Hedge.Http.ApiError>>
+    updatePhoto: Models.Api.UpdatePhoto.Request -> JS.Promise<Result<Models.Api.UpdatePhoto.Response, Hedge.Http.ApiError>>
+    deleteNote: Models.Api.DeleteNote.Request -> JS.Promise<Result<Models.Api.DeleteNote.Response, Hedge.Http.ApiError>>
+    saveNote: Models.Api.SaveNote.Request -> JS.Promise<Result<Models.Api.SaveNote.Response, Hedge.Http.ApiError>>
+    getReview: Models.Api.GetReview.Query -> JS.Promise<Result<Models.Api.GetReview.Response, Hedge.Http.ApiError>>
+    getPersonal: string -> JS.Promise<Result<Models.Api.GetPersonal.Response, Hedge.Http.ApiError>>
+    getAccess: unit -> JS.Promise<Result<Models.Api.GetAccess.Response, Hedge.Http.ApiError>>
     searchPlants: Models.Api.SearchPlants.Query -> JS.Promise<Result<Models.Api.SearchPlants.Response, Hedge.Http.ApiError>>
     getRevision: unit -> JS.Promise<Result<Models.Api.GetRevision.Response, Hedge.Http.ApiError>>
     getPlant: string -> JS.Promise<Result<Models.Api.GetPlant.Response, Hedge.Http.ApiError>>
@@ -16,6 +26,16 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
+    promotePhoto = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/review/promote"; Query = []; Headers = []; Body = Some (Encode.promotePhotoReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.promotePhotoResponse
+    reviewCorrection = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/review/correction"; Query = []; Headers = []; Body = Some (Encode.reviewCorrectionReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.reviewCorrectionResponse
+    selectHero = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/hero"; Query = []; Headers = []; Body = Some (Encode.selectHeroReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.selectHeroResponse
+    deletePhoto = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/photos/delete"; Query = []; Headers = []; Body = Some (Encode.deletePhotoReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.deletePhotoResponse
+    updatePhoto = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/photos/update"; Query = []; Headers = []; Body = Some (Encode.updatePhotoReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.updatePhotoResponse
+    deleteNote = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/notes/delete"; Query = []; Headers = []; Body = Some (Encode.deleteNoteReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.deleteNoteResponse
+    saveNote = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/notes/save"; Query = []; Headers = []; Body = Some (Encode.saveNoteReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.saveNoteResponse
+    getReview = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/v2/review"; Query = (List.choose (fun p -> p) [ (match query.Page with Some v -> Some ("page", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.getReviewResponse
+    getPersonal = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/plants/v2/personal/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPersonalResponse
+    getAccess = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/v2/access"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getAccessResponse
     searchPlants = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/search"; Query = (List.choose (fun p -> p) [ (match query.Q with Some v -> Some ("q", v) | None -> None); (match query.Family with Some v -> Some ("family", v) | None -> None); (match query.Genus with Some v -> Some ("genus", v) | None -> None); (match query.Form with Some v -> Some ("form", v) | None -> None); (match query.Sun with Some v -> Some ("sun", v) | None -> None); (match query.Water with Some v -> Some ("water", v) | None -> None); (match query.Feature with Some v -> Some ("feature", v) | None -> None); (match query.Wildlife with Some v -> Some ("wildlife", v) | None -> None); (match query.Endemic with Some v -> Some ("endemic", v) | None -> None); (match query.Photos with Some v -> Some ("photos", v) | None -> None); (match query.Photographer with Some v -> Some ("photographer", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.searchPlantsResponse
     getRevision = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/revision"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getRevisionResponse
     getPlant = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/plants/plant/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPlantResponse

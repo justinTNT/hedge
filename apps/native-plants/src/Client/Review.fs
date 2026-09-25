@@ -12,7 +12,7 @@ let image (url:string) (key:string) : JS.Promise<string> = jsNative
 let release (url:string) : unit = jsNative
 
 type Model = {Epoch:int;Data:Review option;Key:string;Busy:bool;Error:string option;Images:Map<string,string>;Zoom:string option;Page:int}
-type Msg = Load | Key of string | UseKey | Loaded of int * Result<Review,string> | Act of string * string * int
+type Msg = Load | Key of string | UseKey | Loaded of int * Result<Review,string> | Act of ReviewChange
          | ImageLoaded of int * string * Result<string,string> | Show of string | Close | TurnPage of int
 let empty epoch = {Epoch=epoch;Data=None;Key="";Busy=false;Error=None;Images=Map.empty;Zoom=None;Page=0}
 let clear model =
@@ -20,7 +20,7 @@ let clear model =
     model.Zoom |> Option.iter release
     empty (model.Epoch+1)
 let load model = Cmd.OfPromise.either
-                    (fun ()->Client.Personal.request ("/api/plants/review?page="+string model.Page) "GET" null "" model.Key) ()
+                    (fun ()->Client.ContributionsApi.review model.Key model.Page |> Client.ContributionsApi.forView) ()
                     (fun data->Loaded(model.Epoch,Ok data)) (fun ex->Loaded(model.Epoch,Error ex.Message))
 let enter key epoch = let m={empty epoch with Key=key;Busy=true} in m,load m
 let update msg model =
@@ -39,10 +39,10 @@ let update msg model =
     | Loaded(epoch,Error error) when epoch=model.Epoch -> {model with Data=None;Busy=false;Error=Some error},Cmd.none
     | Loaded _ -> model,Cmd.none
     | Act _ when model.Busy -> model,Cmd.none
-    | Act(action,id,revision) ->
+    | Act command ->
         let next={clear model with Key=model.Key;Busy=true;Page=model.Page}
         next,Cmd.OfPromise.either
-            (fun ()->Client.Personal.request ("/api/plants/review?page="+string model.Page) "POST" (Client.Personal.payload action id revision []) "" model.Key) ()
+            (fun ()->Client.ContributionsApi.reviewChange model.Key model.Page command |> Client.ContributionsApi.forView) ()
             (fun data->Loaded(next.Epoch,Ok data)) (fun ex->Loaded(next.Epoch,Error ex.Message))
     | ImageLoaded(epoch,id,Ok url) when epoch=model.Epoch ->
         if id="zoom" then
@@ -78,7 +78,7 @@ let view canManageCatalogue model dispatch =
                         Html.a [prop.href("/plants/"+item.PlantId);prop.text item.PlantName]
                         Html.p [prop.className "note-text";prop.text note.Text]
                         Html.small(if note.Read then "Read" else "Unread")
-                        button (if note.Read then "Mark unread" else "Mark read") (Act((if note.Read then "unread" else "read"),note.Id,note.Revision))
+                        button (if note.Read then "Mark unread" else "Mark read") (Act(CorrectionRead(note.Id,note.Revision,not note.Read)))
                     ]]
             ]]
             Html.section [prop.children [
@@ -95,7 +95,7 @@ let view canManageCatalogue model dispatch =
                             Html.p photo.Caption
                             if photo.Photographer<>"" then Html.small("Photo: "+photo.Photographer)
                             if photo.Width>=200 && photo.Height>=200 then button "View photograph" (Show photo.Image)
-                            button "Include on species page" (Act("promote",photo.Id,photo.Revision))
+                            button "Include on species page" (Act(PromotePhoto(photo.Id,photo.Revision)))
                         ]]
                 ]]
             ]]

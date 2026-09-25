@@ -1,4 +1,4 @@
-import { storedAdminKey, readCapabilities } from './access-client.mjs';
+import { storedAdminKey, readCapabilities, subscribeCredentials } from './access-client.mjs';
 
 export function showCapabilities(root, access) {
   for (const element of root.querySelectorAll('[data-plants-access]')) {
@@ -22,19 +22,18 @@ export function mountAdminAccess(root = document, host = window) {
     } catch { if (attempt===epoch) hide(); }
   }
   const invalidate=()=>{ ++epoch; hide(); void refresh(); };
-  const storage=e=>{ if (e.key===null || e.key==='adminKey') invalidate(); };
+  const unsubscribe=subscribeCredentials(invalidate);
   const visible=()=>{ if (!root.hidden) invalidate(); };
   hide(); void refresh();
-  host.addEventListener('storage',storage);
   host.addEventListener('focus',invalidate);
   host.addEventListener('hedge:session-cleared',invalidate);
   root.addEventListener('visibilitychange',visible);
   const timer=host.setInterval(()=>{
-    if (storedAdminKey()!==key || (!root.hidden && Date.now()-lastCheck>=15000)) void refresh();
-  },1000);
+    if (!root.hidden && Date.now()-lastCheck>=15000) void refresh();
+  },15000);
   return ()=>{
     ++epoch; hide(); host.clearInterval(timer);
-    host.removeEventListener('storage',storage); host.removeEventListener('focus',invalidate);
+    unsubscribe(); host.removeEventListener('focus',invalidate);
     host.removeEventListener('hedge:session-cleared',invalidate); root.removeEventListener('visibilitychange',visible);
   };
 }

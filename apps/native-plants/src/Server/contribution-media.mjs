@@ -73,7 +73,7 @@ export async function readPhotoUpload(request) {
     size: full.bytes.length + thumb.bytes.length };
 }
 
-export async function readJson(request) {
+async function boundedJsonText(request) {
   if (!request.headers.get('Content-Type')?.startsWith('application/json')) throw new Error('Send a JSON request.');
   const reader = request.body?.getReader(); if (!reader) throw new Error('Missing request.');
   const chunks = []; let size = 0;
@@ -85,8 +85,18 @@ export async function readJson(request) {
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
+  return new Blob(chunks).text();
+}
+
+export async function boundedJsonRequest(request) {
+  const text = await boundedJsonText(request);
+  return new Request(request.url, {method: request.method, headers: request.headers, body: text});
+}
+
+export async function readJson(request) {
+  const text = await boundedJsonText(request);
   try {
-    const value = JSON.parse(await new Blob(chunks).text());
+    const value = JSON.parse(text);
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected an object');
     return value;
   }

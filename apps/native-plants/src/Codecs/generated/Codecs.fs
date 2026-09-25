@@ -35,6 +35,13 @@ module Encode =
     // -- API view types --
 
     // -- API request encoders --
+    let inline promotePhotoReq (v: Models.Api.PromotePhoto.Request) = encode v
+    let inline reviewCorrectionReq (v: Models.Api.ReviewCorrection.Request) = encode v
+    let inline selectHeroReq (v: Models.Api.SelectHero.Request) = encode v
+    let inline deletePhotoReq (v: Models.Api.DeletePhoto.Request) = encode v
+    let inline updatePhotoReq (v: Models.Api.UpdatePhoto.Request) = encode v
+    let inline deleteNoteReq (v: Models.Api.DeleteNote.Request) = encode v
+    let inline saveNoteReq (v: Models.Api.SaveNote.Request) = encode v
 
     // -- WebSocket event encoders --
 
@@ -57,12 +64,29 @@ module Decode =
     // -- API view types --
 
     // -- API response decoders --
+    let promotePhotoResponse : Decoder<Models.Api.PromotePhoto.Response> = decode<Models.Api.PromotePhoto.Response>()
+    let reviewCorrectionResponse : Decoder<Models.Api.ReviewCorrection.Response> = decode<Models.Api.ReviewCorrection.Response>()
+    let selectHeroResponse : Decoder<Models.Api.SelectHero.Response> = decode<Models.Api.SelectHero.Response>()
+    let deletePhotoResponse : Decoder<Models.Api.DeletePhoto.Response> = decode<Models.Api.DeletePhoto.Response>()
+    let updatePhotoResponse : Decoder<Models.Api.UpdatePhoto.Response> = decode<Models.Api.UpdatePhoto.Response>()
+    let deleteNoteResponse : Decoder<Models.Api.DeleteNote.Response> = decode<Models.Api.DeleteNote.Response>()
+    let saveNoteResponse : Decoder<Models.Api.SaveNote.Response> = decode<Models.Api.SaveNote.Response>()
+    let getReviewResponse : Decoder<Models.Api.GetReview.Response> = decode<Models.Api.GetReview.Response>()
+    let getPersonalResponse : Decoder<Models.Api.GetPersonal.Response> = decode<Models.Api.GetPersonal.Response>()
+    let getAccessResponse : Decoder<Models.Api.GetAccess.Response> = decode<Models.Api.GetAccess.Response>()
     let searchPlantsResponse : Decoder<Models.Api.SearchPlants.Response> = decode<Models.Api.SearchPlants.Response>()
     let getRevisionResponse : Decoder<Models.Api.GetRevision.Response> = decode<Models.Api.GetRevision.Response>()
     let getPlantResponse : Decoder<Models.Api.GetPlant.Response> = decode<Models.Api.GetPlant.Response>()
     let getCatalogueResponse : Decoder<Models.Api.GetCatalogue.Response> = decode<Models.Api.GetCatalogue.Response>()
 
     // -- API request decoders --
+    let promotePhotoReq : Decoder<Models.Api.PromotePhoto.Request> = decode<Models.Api.PromotePhoto.Request>()
+    let reviewCorrectionReq : Decoder<Models.Api.ReviewCorrection.Request> = decode<Models.Api.ReviewCorrection.Request>()
+    let selectHeroReq : Decoder<Models.Api.SelectHero.Request> = decode<Models.Api.SelectHero.Request>()
+    let deletePhotoReq : Decoder<Models.Api.DeletePhoto.Request> = decode<Models.Api.DeletePhoto.Request>()
+    let updatePhotoReq : Decoder<Models.Api.UpdatePhoto.Request> = decode<Models.Api.UpdatePhoto.Request>()
+    let deleteNoteReq : Decoder<Models.Api.DeleteNote.Request> = decode<Models.Api.DeleteNote.Request>()
+    let saveNoteReq : Decoder<Models.Api.SaveNote.Request> = decode<Models.Api.SaveNote.Request>()
 
     // -- WebSocket event decoders --
 
@@ -70,3 +94,71 @@ module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
+
+    let promotePhotoSchema =
+        schema "Models.Api.PromotePhoto.Request" [
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Page" FInt []
+        ]
+
+    let inline promotePhotoReq (r: Models.Api.PromotePhoto.Request) = validate promotePhotoSchema r
+
+    let reviewCorrectionSchema =
+        schema "Models.Api.ReviewCorrection.Request" [
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Read" FBool []
+            fieldWith "Page" FInt []
+        ]
+
+    let inline reviewCorrectionReq (r: Models.Api.ReviewCorrection.Request) = validate reviewCorrectionSchema r
+
+    let selectHeroSchema =
+        schema "Models.Api.SelectHero.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+        ]
+
+    let inline selectHeroReq (r: Models.Api.SelectHero.Request) = validate selectHeroSchema r
+
+    let deletePhotoSchema =
+        schema "Models.Api.DeletePhoto.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+        ]
+
+    let inline deletePhotoReq (r: Models.Api.DeletePhoto.Request) = validate deletePhotoSchema r
+
+    let updatePhotoSchema =
+        schema "Models.Api.UpdatePhoto.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Caption" FString [Required; Trim]
+            fieldWith "Photographer" FString [Required; Trim]
+            fieldWith "Offered" FBool []
+        ]
+
+    let inline updatePhotoReq (r: Models.Api.UpdatePhoto.Request) = validate updatePhotoSchema r
+
+    let deleteNoteSchema =
+        schema "Models.Api.DeleteNote.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+        ]
+
+    let inline deleteNoteReq (r: Models.Api.DeleteNote.Request) = validate deleteNoteSchema r
+
+    let saveNoteSchema =
+        schema "Models.Api.SaveNote.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Text" FString [Required; Trim]
+            fieldWith "Correction" FBool []
+        ]
+
+    let inline saveNoteReq (r: Models.Api.SaveNote.Request) = validate saveNoteSchema r

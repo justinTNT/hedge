@@ -7,8 +7,10 @@ data/photo-audit.md
 data/source-change-report.json
 public/admin.css
 public/lib/
-public/media/
+public/media
 public/hero.webp
 .local/
 .dev.vars
 __pycache__/
+
+node_modules

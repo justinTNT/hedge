@@ -4,22 +4,22 @@ open Hedge.Workers
 open Hedge.Admin
 open Server.Env
 
-let private tables =
-    Server.AdminGen.tables
-    |> List.filter (fun table -> not (List.contains table.Name ["Guest"; "PlantNote"; "PersonalPlantPhoto"; "PlantViewPreference"; "ContributionClaim"]))
-
-// The owner needs provider-account identifiers to assign grants, but identity lifecycle
-// changes must still go through the shared identity handlers, never generated CRUD.
-let private ownerPermits resource operation =
-    match resource with
-    | "Identity" -> operation = OpList || operation = OpRead
-    | _ -> tables |> List.exists (fun table -> table.Name = resource)
+// Registration is an app decision; new generated tables are never exposed implicitly.
+let private tables = [
+    Server.AdminGen.plant
+    Server.AdminGen.plantPhoto
+    Server.AdminGen.plantMap
+    Server.AdminGen.glossaryTerm
+    Server.AdminGen.sourceReference
+    Server.AdminGen.grant
+    { Server.AdminGen.identity with SupportedOps = [OpList; OpRead] }
+]
 
 let adminConfig : AdminConfig<Env> =
     { Tables = tables
       GetDb = fun env -> env.DB
       Authorize = fun request env -> promise {
           return
-              if Server.AuthConfig.isOwner env request then AdminSubject (ownerPermits, None)
+              if Server.AuthConfig.isOwner env request then AdminOwner
               else AdminAnonymous None
       } }

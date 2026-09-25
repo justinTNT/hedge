@@ -1,6 +1,6 @@
 module Models.Contributions
 
-/// Private wire data: arrays keep this hand-written, multipart-capable surface ordinary JSON.
+/// App view data and the legacy v1 JSON contract. V2 uses generated codecs and lists.
 type Note = { Id:string; Text:string; Correction:bool; Revision:int; Read:bool; CreatedAt:int }
 type Photo = {
     Id:string; Image:string; Thumbnail:string; Caption:string; Photographer:string
@@ -17,3 +17,13 @@ type Capabilities = { CanEditCatalogue:bool; CanReview:bool }
 type ReviewNote = { PlantId:string; PlantName:string; Note:Note }
 type ReviewPhoto = { PlantId:string; PlantName:string; Photo:Photo }
 type Review = { Notes:ReviewNote array; Photos:ReviewPhoto array; Page:int; HasMore:bool }
+
+/// App commands shared by the typed API and the one-release legacy adapter.
+type PersonalChange =
+    | SaveNote of id:string * revision:int * text:string * correction:bool
+    | DeleteNote of id:string * revision:int
+    | UpdatePhoto of id:string * revision:int * caption:string * photographer:string * offered:bool
+    | DeletePhoto of id:string * revision:int
+    | SelectHero of id:string
+
+type ReviewChange = CorrectionRead of id:string * revision:int * read:bool | PromotePhoto of id:string * revision:int

@@ -6,10 +6,6 @@ open Feliz
 open Elmish
 open Models.Contributions
 
-[<Import("request", "./contribution-client.mjs")>]
-let request (path:string) (method:string) (data:obj) (viewer:string) (adminKey:string) : JS.Promise<'T> = jsNative
-[<Import("upload", "./contribution-client.mjs")>]
-let upload (plantId:string) (id:string) (file:obj) (viewer:string) : JS.Promise<Personal> = jsNative
 [<Import("uuid", "./contribution-client.mjs")>]
 let uuid () : string = jsNative
 [<Emit("$0.target.files[0]")>]
@@ -38,19 +34,24 @@ type Msg =
 let scrollEditor (id:string) : unit = jsNative
 let focus id = Cmd.ofEffect(fun _ -> scrollEditor id)
 let empty epoch = {PlantId="";Epoch=epoch;Data=None;Loading=false;Busy=false;Error=None;Draft=None;PhotoDraft=None;Notice=None;PendingAction="";PendingId="";FeedbackInGallery=false}
-let url model = "/api/plants/personal/"+model.PlantId
-let load model = Cmd.OfPromise.either (fun ()->request (url model) "GET" null "" "") () (fun data->Loaded(model.Epoch,Ok data)) (fun ex->Loaded(model.Epoch,Error ex.Message))
+let load model = Cmd.OfPromise.either (fun ()->Client.ContributionsApi.personal model.PlantId |> Client.ContributionsApi.forView) () (fun data->Loaded(model.Epoch,Ok data)) (fun ex->Loaded(model.Epoch,Error ex.Message))
 let enter plantId epoch =
     let model={empty epoch with PlantId=plantId;Loading=true}
     model,load model
-let payload action id revision extra = createObj (["Action" ==> action;"Id" ==> id;"Revision" ==> revision] @ extra)
-let save label data model =
+let save label command model =
     match model.Data with
     | None -> model,Cmd.none
     | Some current ->
-        let next={model with Busy=true;Error=None;Notice=None;Epoch=model.Epoch+1;Loading=false;PendingAction=data?Action;PendingId=data?Id;FeedbackInGallery=List.contains (unbox<string> data?Action) ["savePhoto";"deletePhoto";"hero"]}
+        let action,id,gallery =
+            match command with
+            | Models.Contributions.SaveNote(id,_,_,_) -> "saveNote",id,false
+            | Models.Contributions.DeleteNote(id,_) -> "deleteNote",id,false
+            | UpdatePhoto(id,_,_,_,_) -> "savePhoto",id,true
+            | Models.Contributions.DeletePhoto(id,_) -> "deletePhoto",id,true
+            | SelectHero id -> "hero",id,true
+        let next={model with Busy=true;Error=None;Notice=None;Epoch=model.Epoch+1;Loading=false;PendingAction=action;PendingId=id;FeedbackInGallery=gallery}
         next,Cmd.OfPromise.either
-            (fun ()->request (url model) "POST" data current.ViewerToken "") ()
+            (fun ()->Client.ContributionsApi.change model.PlantId current.ViewerToken command |> Client.ContributionsApi.forView) ()
             (fun data->Saved(next.Epoch,label,Ok data)) (fun ex->Saved(next.Epoch,label,Error ex.Message))
 
 let private notesFull model = model.Data |> Option.forall(fun d->d.NoteCapacity.Used>=d.NoteCapacity.Limit)
@@ -93,9 +94,9 @@ let update msg model =
     | SaveNote ->
         match model.Draft with
         | Some d when d.Revision=0 && notesFull model -> noteLimit model
-        | Some d -> save "Note saved." (payload "saveNote" d.Id d.Revision ["Text" ==> d.Text;"Correction" ==> d.Correction]) model
+        | Some d -> save "Note saved." (Models.Contributions.SaveNote(d.Id,d.Revision,d.Text,d.Correction)) model
         | None -> model,Cmd.none
-    | DeleteNote note -> save "Note deleted." (payload "deleteNote" note.Id note.Revision []) model
+    | DeleteNote note -> save "Note deleted." (Models.Contributions.DeleteNote(note.Id,note.Revision)) model
     | EditPhoto photo ->
         {model with Draft=None;PhotoDraft=Some{Id=photo.Id;Revision=photo.Revision;Caption=photo.Caption;Photographer=photo.Photographer;Offered=photo.Offered};Notice=None;Error=None;FeedbackInGallery=true},focus "photo-editor"
     | Caption value -> {model with PhotoDraft=model.PhotoDraft |> Option.map(fun d->{d with Caption=value})},Cmd.none
@@ -104,10 +105,10 @@ let update msg model =
     | CancelPhoto -> {model with PhotoDraft=None},Cmd.none
     | SavePhoto ->
         match model.PhotoDraft with
-        | Some d -> save "Photograph details saved." (payload "savePhoto" d.Id d.Revision ["Caption" ==> d.Caption;"Photographer" ==> d.Photographer;"Offered" ==> d.Offered]) model
+        | Some d -> save "Photograph details saved." (UpdatePhoto(d.Id,d.Revision,d.Caption,d.Photographer,d.Offered)) model
         | None -> model,Cmd.none
-    | DeletePhoto photo -> save "Your photograph was removed." (payload "deletePhoto" photo.Id photo.Revision []) model
-    | Hero id -> save (if id="" then "Using the site’s hero photograph." else "Your hero photograph is selected.") (payload "hero" id 0 []) model
+    | DeletePhoto photo -> save "Your photograph was removed." (Models.Contributions.DeletePhoto(photo.Id,photo.Revision)) model
+    | Hero id -> save (if id="" then "Using the site’s hero photograph." else "Your hero photograph is selected.") (SelectHero id) model
     | PhotoLimit -> photoLimit model
     | Upload _ when photosFull model -> photoLimit model
     | Upload file ->
@@ -115,7 +116,7 @@ let update msg model =
         | None -> model,Cmd.none
         | Some current ->
             let next={model with Busy=true;Error=None;Notice=Some "Preparing and uploading your photograph…";Epoch=model.Epoch+1;Loading=false;PendingAction="upload";PendingId="";FeedbackInGallery=true}
-            next,Cmd.OfPromise.either (fun ()->upload model.PlantId (uuid()) file current.ViewerToken) ()
+            next,Cmd.OfPromise.either (fun ()->Client.ContributionsApi.upload model.PlantId (uuid()) file current.ViewerToken |> Client.ContributionsApi.forView) ()
                 (fun data->Saved(next.Epoch,"Photograph added.",Ok data))
                 (fun ex->Saved(next.Epoch,"",Error ex.Message))
 
