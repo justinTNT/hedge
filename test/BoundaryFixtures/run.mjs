@@ -64,3 +64,22 @@ test('private browser adapter applies base, headers and no-store once and preser
     assert.equal(request.url,'/st/private');assert.equal(request.options.cache,'no-store');assert.equal(new Headers(request.options.headers).get('Content-Type'),'application/json');assert.equal(new Headers(request.options.headers).get('X-Admin-Key'),'captured');
   } finally {globalThis.fetch=fetch}
 });
+test('mobile bearer resolution is fail-closed and shares the role policy with cookies',async()=>{
+  const bearer=token=>new Request('https://test/x',{headers:{Authorization:'Bearer '+token}});
+  const noHeader=new Request('https://test/x');
+  // resolve: valid hash -> guest, present-but-wrong -> invalid, absent -> no-bearer
+  assert.equal(await runtime.mobileResolve(bearer('good-token'),'good-token','g1'),'valid:g1');
+  assert.equal(await runtime.mobileResolve(bearer('wrong-token'),'good-token','g1'),'invalid');
+  assert.equal(await runtime.mobileResolve(noHeader,'good-token','g1'),'no-bearer');
+  // requireGuestOrBearer: bearer wins; an INVALID bearer rejects WITHOUT the cookie fallback; a
+  // missing bearer falls through to the cookie (which here always accepts COOKIE-GID)
+  assert.equal(await runtime.mobileRequire(bearer('good-token'),'good-token','g1'),'accepted:g1');
+  assert.equal(await runtime.mobileRequire(bearer('wrong-token'),'good-token','g1'),'rejected');
+  assert.equal(await runtime.mobileRequire(noHeader,'good-token','g1'),'accepted:COOKIE-GID');
+  // shared role tail via a bearer-resolved session: same outcomes the cookie path would give
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','google','curator'),'authorized');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','google','editor'),'forbidden');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','anonymous','curator'),'auth-required');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','','curator'),'auth-required');
+  assert.equal(await runtime.mobileRole(bearer('wrong-token'),'good-token','g1','google','curator'),'auth-required');
+});
