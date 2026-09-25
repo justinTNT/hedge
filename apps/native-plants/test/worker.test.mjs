@@ -121,3 +121,66 @@ test('real seed is idempotent and preserves admin edits and soft deletion',async
   const start=performance.now();const resp=await f.call('/api/plants/catalogue');const data=await resp.json();
   assert.equal(data.plants.length,530);console.log(`Full catalogue: ${(performance.now()-start).toFixed(1)} ms, ${JSON.stringify(data).length} serialized characters`);
 });
+
+test('maps stay out of photo heroes, keep source labels, and obey admin publication and deletion',async()=>{
+  const f=fixture();const p=await f.create();
+  const map={plantId:p.id,image:'/media/maps/range.png',caption:'Published species name',sourceLabel:'2022 edition, p. 83',published:true,sortOrder:0,sourceEvidence:'PRIVATE MAP SOURCE'};
+  const record=(await (await f.admin('PlantMap',{method:'POST',body:map})).json()).record;
+  assert.ok(record.id);
+  await f.admin('PlantMap',{method:'POST',body:{...map,published:false,caption:'Unreviewed draft'}});
+  const detail=()=>f.call('/api/plants/plant/'+p.id).then(r=>r.json());
+  const data=await detail();assert.equal(data.plant.distributionMaps.length,1);
+  assert.equal(data.plant.distributionMaps[0].sourceLabel,map.sourceLabel);
+  assert.equal(data.plant.card.photo,null);assert.equal(data.plant.photos.length,0);
+  assert.ok(!JSON.stringify(data).includes('PRIVATE'));
+  assert.equal((await (await f.call('/api/plants/search?photos=true')).json()).plants.length,0);
+  const before=(await (await f.call('/api/plants/revision')).json()).revision;
+  await f.admin('PlantMap/'+record.id,{method:'PUT',body:{...record,caption:'Corrected caption'}});
+  assert.equal((await detail()).plant.distributionMaps[0].caption,'Corrected caption');
+  assert.notEqual((await (await f.call('/api/plants/revision')).json()).revision,before);
+  await f.admin('PlantMap/'+record.id,{method:'PUT',body:{...record,published:false}});
+  assert.equal((await detail()).plant.distributionMaps.length,0);
+  await f.admin('PlantMap/'+record.id,{method:'PUT',body:{...record,published:true}});
+  await f.admin('PlantMap/'+record.id,{method:'DELETE'});
+  assert.equal((await detail()).plant.distributionMaps.length,0);
+  await f.admin('PlantMap',{method:'POST',body:map});
+  await f.admin('Plant/'+p.id,{method:'PUT',body:{...p,published:false}});
+  assert.equal((await f.call('/api/plants/plant/'+p.id)).status,404);
+});
+
+test('photographer filters include supporting images, count plants once and exclude hidden credits',async()=>{
+  const f=fixture();const p=await f.create();
+  const photo={plantId:p.id,image:'/media/public.webp',thumbnail:'/media/thumb.webp',caption:'Plant',photographer:'John Brock',sortOrder:0,published:true,sourceEvidence:''};
+  await f.admin('PlantPhoto',{method:'POST',body:photo});
+  const supporting=(await (await f.admin('PlantPhoto',{method:'POST',body:{...photo,sortOrder:1,photographer:'Kym Brennan'}})).json()).record;
+  const duplicate=(await (await f.admin('PlantPhoto',{method:'POST',body:{...photo,sortOrder:2,photographer:'Kym Brennan'}})).json()).record;
+  await f.admin('PlantPhoto',{method:'POST',body:{...photo,published:false,photographer:'Private photographer'}});
+  await f.admin('PlantPhoto',{method:'POST',body:{...photo,sortOrder:3,photographer:'Photographer not recorded'}});
+  const data=await (await f.call('/api/plants/catalogue')).json();
+  assert.deepEqual(data.plants[0].photographers,['John Brock','Kym Brennan']);
+  assert.equal(data.plants[0].photo.photographer,'John Brock');
+  assert.deepEqual(data.photographers,[{name:'John Brock',count:1},{name:'Kym Brennan',count:1}]);
+  assert.equal((await (await f.call('/api/plants/search?photographer=Kym%20Brennan&family=Fabaceae')).json()).total,1);
+  assert.equal((await (await f.call('/api/plants/search?photographer=Kym%20Brennan&family=Otheraceae')).json()).total,0);
+  await f.admin('PlantPhoto/'+supporting.id,{method:'PUT',body:{...supporting,published:false}});
+  await f.admin('PlantPhoto/'+duplicate.id,{method:'DELETE'});
+  assert.equal((await (await f.call('/api/plants/search?photographer=Kym%20Brennan')).json()).total,0);
+});
+
+test('glossary and reference edits share catalogue publication rules and revision invalidation',async()=>{
+  const f=fixture();await f.create();
+  const term={term:'Glaucous',aliases:'',definition:'Bluish bloom',illustration:'',sourceLabel:'Book glossary',sourceEvidence:'PRIVATE GLOSSARY PATH',sortOrder:0,published:true};
+  const saved=(await (await f.admin('GlossaryTerm',{method:'POST',body:term})).json()).record;
+  assert.ok(saved.id);
+  await f.admin('GlossaryTerm',{method:'POST',body:{...term,term:'Private term',published:false}});
+  const reference={sourceKey:'usage-1',kind:'usage',number:1,citation:'Full citation',aliases:'',sourceLabel:'Book references',sourceEvidence:'PRIVATE REFERENCE PATH',sortOrder:1,published:true};
+  const ref=(await (await f.admin('SourceReference',{method:'POST',body:reference})).json()).record;
+  const first=await (await f.call('/api/plants/catalogue')).json();
+  assert.equal(first.glossary.length,1);assert.equal(first.references.length,1);assert.ok(!JSON.stringify(first).includes('PRIVATE'));
+  await f.admin('GlossaryTerm/'+saved.id,{method:'PUT',body:{...saved,definition:'Owner correction'}});
+  const next=await (await f.call('/api/plants/catalogue')).json();assert.notEqual(first.revision,next.revision);assert.equal(next.glossary[0].definition,'Owner correction');
+  await f.admin('SourceReference/'+ref.id,{method:'PUT',body:{...ref,published:false}});
+  assert.equal((await (await f.call('/api/plants/catalogue')).json()).references.length,0);
+  await f.admin('GlossaryTerm/'+saved.id,{method:'DELETE'});
+  assert.equal((await (await f.call('/api/plants/catalogue')).json()).glossary.length,0);
+});

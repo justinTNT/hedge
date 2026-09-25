@@ -84,7 +84,260 @@ let plantPhoto : AdminTable =
       Delete = "UPDATE plant_photos SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       MutableFields = ["PlantId"; "Image"; "Thumbnail"; "Caption"; "Photographer"; "SortOrder"; "Published"; "SourceEvidence"] }
 
+let plantMap : AdminTable =
+    { Name = "PlantMap"
+      Table = "plant_maps"
+      Schema =
+        schema "PlantMap" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "PlantId" FString [ForeignKey "Plant"]
+            fieldWith "Image" FString [Image]
+            fieldWith "Caption" FString []
+            fieldWith "SourceLabel" FString []
+            fieldWith "Published" FBool []
+            fieldWith "SortOrder" FInt []
+            fieldWith "SourceEvidence" FString []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at, updated_at, deleted_at FROM plant_maps WHERE deleted_at IS NULL ORDER BY plant_id, sort_order LIMIT 1000"
+      SelectOne = "SELECT id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at, updated_at, deleted_at FROM plant_maps WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO plant_maps (id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE plant_maps SET plant_id = ?, image = ?, caption = ?, source_label = ?, published = ?, sort_order = ?, source_evidence = ?, updated_at = ? WHERE id = ?"
+      Delete = "UPDATE plant_maps SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["PlantId"; "Image"; "Caption"; "SourceLabel"; "Published"; "SortOrder"; "SourceEvidence"] }
+
+let glossaryTerm : AdminTable =
+    { Name = "GlossaryTerm"
+      Table = "glossary_terms"
+      Schema =
+        schema "GlossaryTerm" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Term" FString [Unique]
+            fieldWith "Aliases" FString []
+            fieldWith "Definition" FString []
+            fieldWith "Illustration" FString [Image]
+            fieldWith "SourceLabel" FString []
+            fieldWith "SourceEvidence" FString []
+            fieldWith "SortOrder" FInt []
+            fieldWith "Published" FBool []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM glossary_terms WHERE deleted_at IS NULL ORDER BY term LIMIT 1000"
+      SelectOne = "SELECT id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM glossary_terms WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO glossary_terms (id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE glossary_terms SET term = ?, aliases = ?, definition = ?, illustration = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"
+      Delete = "UPDATE glossary_terms SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["Term"; "Aliases"; "Definition"; "Illustration"; "SourceLabel"; "SourceEvidence"; "SortOrder"; "Published"] }
+
+let sourceReference : AdminTable =
+    { Name = "SourceReference"
+      Table = "source_references"
+      Schema =
+        schema "SourceReference" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "SourceKey" FString [Unique]
+            fieldWith "Kind" FString []
+            fieldWith "Number" FInt []
+            fieldWith "Citation" FString []
+            fieldWith "Aliases" FString []
+            fieldWith "SourceLabel" FString []
+            fieldWith "SourceEvidence" FString []
+            fieldWith "SortOrder" FInt []
+            fieldWith "Published" FBool []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM source_references WHERE deleted_at IS NULL ORDER BY kind, sort_order LIMIT 1000"
+      SelectOne = "SELECT id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM source_references WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO source_references (id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE source_references SET source_key = ?, kind = ?, number = ?, citation = ?, aliases = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"
+      Delete = "UPDATE source_references SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["SourceKey"; "Kind"; "Number"; "Citation"; "Aliases"; "SourceLabel"; "SourceEvidence"; "SortOrder"; "Published"] }
+
+let plantNote : AdminTable =
+    { Name = "PlantNote"
+      Table = "plant_notes"
+      Schema =
+        schema "PlantNote" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "PlantId" FString [ForeignKey "Plant"]
+            fieldWith "OwnerProvider" FString []
+            fieldWith "OwnerId" FString []
+            fieldWith "Text" FString []
+            fieldWith "IsCorrection" FBool []
+            fieldWith "Revision" FInt []
+            fieldWith "ReviewedRevision" (FOption FInt) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, updated_at = ? WHERE id = ?"
+      Delete = "UPDATE plant_notes SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "Text"; "IsCorrection"; "Revision"; "ReviewedRevision"] }
+
+let personalPlantPhoto : AdminTable =
+    { Name = "PersonalPlantPhoto"
+      Table = "personal_plant_photos"
+      Schema =
+        schema "PersonalPlantPhoto" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "PlantId" FString [ForeignKey "Plant"]
+            fieldWith "OwnerProvider" FString []
+            fieldWith "OwnerId" FString []
+            fieldWith "ImageKey" FString []
+            fieldWith "ThumbnailKey" FString []
+            fieldWith "Width" FInt []
+            fieldWith "Height" FInt []
+            fieldWith "StoredBytes" FInt []
+            fieldWith "Caption" FString []
+            fieldWith "Photographer" FString []
+            fieldWith "Offered" FBool []
+            fieldWith "Ready" FBool []
+            fieldWith "Revision" FInt []
+            fieldWith "PublishedPhotoId" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at, updated_at, deleted_at FROM personal_plant_photos WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at, updated_at, deleted_at FROM personal_plant_photos WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO personal_plant_photos (id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = true
+      Update = "UPDATE personal_plant_photos SET plant_id = ?, owner_provider = ?, owner_id = ?, image_key = ?, thumbnail_key = ?, width = ?, height = ?, stored_bytes = ?, caption = ?, photographer = ?, offered = ?, ready = ?, revision = ?, published_photo_id = ?, updated_at = ? WHERE id = ?"
+      Delete = "UPDATE personal_plant_photos SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "ImageKey"; "ThumbnailKey"; "Width"; "Height"; "StoredBytes"; "Caption"; "Photographer"; "Offered"; "Ready"; "Revision"; "PublishedPhotoId"] }
+
+let plantViewPreference : AdminTable =
+    { Name = "PlantViewPreference"
+      Table = "plant_view_preferences"
+      Schema =
+        schema "PlantViewPreference" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "OwnerProvider" FString []
+            fieldWith "OwnerId" FString []
+            fieldWith "PlantId" FString [ForeignKey "Plant"]
+            fieldWith "HeroPhotoId" (FOption FString) []
+        ]
+      SelectAll = "SELECT id, owner_provider, owner_id, plant_id, hero_photo_id FROM plant_view_preferences LIMIT 100"
+      SelectOne = "SELECT id, owner_provider, owner_id, plant_id, hero_photo_id FROM plant_view_preferences WHERE id = ?"
+      Insert = "INSERT INTO plant_view_preferences (id, owner_provider, owner_id, plant_id, hero_photo_id) VALUES (?, ?, ?, ?, ?)"
+      HasCreateTs = false
+      HasUpdateTs = false
+      Update = "UPDATE plant_view_preferences SET owner_provider = ?, owner_id = ?, plant_id = ?, hero_photo_id = ? WHERE id = ?"
+      Delete = "DELETE FROM plant_view_preferences WHERE id = ?"
+      MutableFields = ["OwnerProvider"; "OwnerId"; "PlantId"; "HeroPhotoId"] }
+
+let contributionClaim : AdminTable =
+    { Name = "ContributionClaim"
+      Table = "contribution_claims"
+      Schema =
+        schema "ContributionClaim" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString [Unique]
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, created_at FROM contribution_claims ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, created_at FROM contribution_claims WHERE id = ?"
+      Insert = "INSERT INTO contribution_claims (id, guest_id, created_at) VALUES (?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE contribution_claims SET guest_id = ? WHERE id = ?"
+      Delete = "DELETE FROM contribution_claims WHERE id = ?"
+      MutableFields = ["GuestId"] }
+
+let guest : AdminTable =
+    { Name = "Guest"
+      Table = "guests"
+      Schema =
+        schema "Guest" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "SessionId" FString []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+        ]
+      SelectAll = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE guests SET session_id = ? WHERE id = ?"
+      Delete = "UPDATE guests SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      MutableFields = ["SessionId"] }
+
+let identity : AdminTable =
+    { Name = "Identity"
+      Table = "identities"
+      Schema =
+        schema "Identity" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString [ForeignKey "Guest"]
+            fieldWith "Provider" FString []
+            fieldWith "ProviderUserId" FString []
+            fieldWith "Name" FString []
+            fieldWith "Picture" FString []
+            fieldWith "Email" (FOption FString) []
+            fieldWith "ActivatedAt" (FOption FInt) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?"
+      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
+      Delete = "DELETE FROM identities WHERE id = ?"
+      MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
+
+let grant : AdminTable =
+    { Name = "Grant"
+      Table = "grants"
+      Schema =
+        schema "Grant" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "Provider" FString []
+            fieldWith "ProviderUserId" FString []
+            fieldWith "Role" FString []
+            fieldWith "Enabled" FBool []
+            fieldWith "GrantedBy" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?"
+      Insert = "INSERT INTO grants (id, provider, provider_user_id, role, enabled, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE grants SET provider = ?, provider_user_id = ?, role = ?, enabled = ?, granted_by = ? WHERE id = ?"
+      Delete = "DELETE FROM grants WHERE id = ?"
+      MutableFields = ["Provider"; "ProviderUserId"; "Role"; "Enabled"; "GrantedBy"] }
+
 let tables : AdminTable list = [
     plant
     plantPhoto
+    plantMap
+    glossaryTerm
+    sourceReference
+    plantNote
+    personalPlantPhoto
+    plantViewPreference
+    contributionClaim
+    guest
+    identity
+    grant
 ]

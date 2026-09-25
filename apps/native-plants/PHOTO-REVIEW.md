@@ -1,5 +1,86 @@
 # Archive photograph review — 23–24 September 2026
 
+## 24 September: high-confidence archive additions
+
+Added **520 photographs across 293 accounts** from the Crucial X10 report's
+**A — strong documentary association** loose-photo shortlist. There are now
+**1,864 published photographs across all 531 accounts**. The 289 published
+distribution maps remain separate from the galleries. These totals supersede
+the earlier counts below.
+
+All 521 A-grade loose candidates from the missing-photo and gallery-expansion
+reports were checked against their local Brock archive copies and source SHA256s.
+The previously reviewed shortlist was compared with the current galleries,
+including the recently imported proof images. One further fruit-cluster view of
+*Aidia racemosa* (E050-10) was excluded as a repeat of an existing view; the other
+520 were added. B-grade supported associations and C-grade unresolved leads remain
+for later decisions. Earlier book-image additions were not imported again.
+
+The permanent audit is `data/volume-photo-import.json`: each candidate's report
+reference, source path/hash, dimensions, association evidence, selection notes,
+caption, credit and inclusion/exclusion decision. Corresponding individual
+allocations are in `data/editorial-decisions.json`. The original volume hierarchy
+is preserved under `~/Desktop/brocky`; no external volume is required.
+
+Six photographs retain species-level captions where their filenames omit the
+account's subspecies/variety, even though the full-rank source folder supports the
+association. No botanical identification or taxonomic equivalence is inferred.
+206 added photographs have explicit photographer credits; the other 314 remain
+silent. Credits use known filename initials, named photographer collections and
+explicit metadata. The Aidia fruit-dove photograph is credited to Leigh Patterson:
+its LP filename and EXIF Artist/Copyright take precedence over the Ian Morris
+collection containing it. R. A. Kerrigan is retained as named in the source file.
+
+New photos follow the existing gallery rather than displacing its hero. All 531
+existing plant records, 1,352 existing photo records (including unpublished maps),
+295 map records, glossary entries and references were byte-for-byte unchanged at
+the record level after the insert-only seed. All 293 affected public responses
+were checked for unchanged hero/order followed by their added photos, correct
+captions and credits, and absence of private source evidence. All 1,040 new served
+WebPs were byte-compared with generated assets; source dimensions were respected.
+
+Validation: 43 app/importer tests and the site build passed. The additions are in
+the local preview; no remote deployment occurred.
+
+## 24 September: photographs recovered from the 2022 proof
+
+Added **247 photographs across 175 accounts**, including **34 photographs for
+all 24 previously unillustrated accounts**. All **531 accounts are now
+illustrated**, with **1,352 gallery entries** (this total includes existing map
+images). These figures supersede the historical coverage counts below.
+
+The source is `HD/AA NATIVE PLANTS OF NA 2021/FINAL FULL DRAFT/PROOF Native Plants
+of N Australia-PDF.pdf`, the 2021 proof of the 2022 edition, copied from the
+external volume to the Brock archive. Of the 185 reviewed image objects, 54 were
+composites requiring individual panel crops. The 249 proposed panels were
+visually reviewed; a blank panel and a small duplicate crop of the existing
+Eucalyptus camaldulensis fruit photograph were excluded. No distribution maps
+were added in this photograph batch.
+
+Each retained panel has explicit page, object index, crop bounds, output hash
+and account evidence in `data/book-photo-extractions.json`, plus a hash-pinned
+allocation in `data/editorial-decisions.json`. The reproducible extractor is
+`scripts/extract-book-photos.py`. Native pixels are saved as lossless PNG under
+the archive's adjacent `PROOF Native Plants of N Australia-PDF.extracted`
+directory. Some proof images and insets are small: they are neither enhanced nor
+upscaled, and should be inspected at that quality.
+
+Credit is John Brock, following the proof's copyright and photography statement;
+the specifically credited exceptions are outside this selection. Species-only
+proof evidence for Avicennia marina, Eucalyptus camaldulensis and Trichodesma
+zeylanicum retains a species-level public caption on the more specific account.
+Other allocations record full-rank account evidence from the proof. Documentary
+matching is not independent botanical identification.
+
+Existing photographs keep their order, hero choices, captions and publication
+state. New photographs follow the existing gallery; previously empty galleries
+start with their largest recovered panel. All 531 pre-existing plant rows and
+1,105 pre-existing photo rows were verified unchanged after the insert-only seed.
+
+Validation: all 27 app tests and the site build passed. Every extracted PNG hash
+was verified; all 175 affected live account responses and all 494 image/thumbnail
+URLs were checked successfully. Derivatives do not enlarge the extracted images.
+
 ## 24 September: species-level illustrations approved
 
 The owner approved using the candidate photographs on the nine remaining
@@ -263,3 +344,53 @@ Validation completed for this review:
 
 These changes are in the local Native Plants checkout and preview; no remote
 deployment was performed.
+
+## 24 September: crop refinements, minimum dimensions and contributors
+
+Reviewed and tightened 132 proof-photo crops to remove residual paper gutters and
+compression fringes, including all four Koolpinensis photographs. The old extraction
+PNGs remain untouched; new ` - trimmed.png` files have pinned hashes and prior-crop
+evidence in `book-photo-extractions.json`. Each replacement retains its original
+PlantPhoto ID. Seed updates require the previous image/thumbnail URLs and preserve
+owner captions, ordering, publication and deletion fields.
+
+Photographs with either full-image dimension below 200px remain visible inline but
+have no enlargement button or “View photograph” prompt. This applies to 62 current
+photos, including Koolpinensis's small bark and fruit insets. Unknown photographer
+credits are silent in both inline captions and the photograph viewer.
+
+The supplied contributor index adds these verified initials to the importer. Counts
+below are selected published photographs, not all files in the archive:
+
+| Initials | Photographer | Selected photos |
+| --- | --- | ---: |
+| KB | Kym Brennan | 4 |
+| IC | Ian Cowie | 3 |
+| DH | David Hancock | 1 |
+| DL | Diane Lucas | 6 |
+| AM | Anita Meadows | 2 |
+| KM | Keira Meadows | 5 |
+| LP | Leigh Patterson | 0 |
+| JP | Julia Perdevich | 1 |
+| TR | Tissa Ratnayeke | 0 |
+| JRS | Jeremy Russell-Smith | 4 |
+| NS | Nic Smith | 4 |
+| BS | Ben Stuckey | 1 |
+| AW | Aiden Webb | 7 |
+
+35 previously unrecorded credits were filled from filename initials; three selections
+from this contributor list already had explicit credits. Existing named credits were
+preserved. Across the collection, 553 photos name 18 photographers; 791 still have
+no established credit. Leigh Patterson and Tissa Ratnayeke are recognized mappings,
+but no currently selected image carries their initials. The four existing mappings
+(IM, WB, RD, GF) and explicitly recorded names remain available.
+
+The browse page's Photographer filter matches any published, undeleted photo on an
+account, including supporting images. Facet counts count distinct plant accounts;
+filter URLs are shareable and combine with botanical filters. Photo credits remain
+editable through PlantPhoto admin and are independent of application user identity.
+
+Eight images previously counted as photographs are distribution maps. Their photo
+records are unpublished and preserved; dedicated map records display them with the
+other maps. Current totals: 1,344 published photographs, 531 illustrated accounts,
+289 accounts with a distribution map. See [MAP-REVIEW.md](MAP-REVIEW.md).

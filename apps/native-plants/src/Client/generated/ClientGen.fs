@@ -3,22 +3,20 @@ module Client.ClientGen
 
 open Fable.Core
 open Thoth.Json
-open Models.Api
-open Models.Ws
 open Codecs
 
 
 // --- Transport-neutral client (C2) ---
 
 type Client = {
-    searchPlants: SearchPlants.Query -> JS.Promise<Result<SearchPlants.Response, Hedge.Http.ApiError>>
-    getRevision: unit -> JS.Promise<Result<GetRevision.Response, Hedge.Http.ApiError>>
-    getPlant: string -> JS.Promise<Result<GetPlant.Response, Hedge.Http.ApiError>>
-    getCatalogue: unit -> JS.Promise<Result<GetCatalogue.Response, Hedge.Http.ApiError>>
+    searchPlants: Models.Api.SearchPlants.Query -> JS.Promise<Result<Models.Api.SearchPlants.Response, Hedge.Http.ApiError>>
+    getRevision: unit -> JS.Promise<Result<Models.Api.GetRevision.Response, Hedge.Http.ApiError>>
+    getPlant: string -> JS.Promise<Result<Models.Api.GetPlant.Response, Hedge.Http.ApiError>>
+    getCatalogue: unit -> JS.Promise<Result<Models.Api.GetCatalogue.Response, Hedge.Http.ApiError>>
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    searchPlants = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/search"; Query = (List.choose (fun p -> p) [ (match query.Q with Some v -> Some ("q", v) | None -> None); (match query.Family with Some v -> Some ("family", v) | None -> None); (match query.Genus with Some v -> Some ("genus", v) | None -> None); (match query.Form with Some v -> Some ("form", v) | None -> None); (match query.Sun with Some v -> Some ("sun", v) | None -> None); (match query.Water with Some v -> Some ("water", v) | None -> None); (match query.Feature with Some v -> Some ("feature", v) | None -> None); (match query.Wildlife with Some v -> Some ("wildlife", v) | None -> None); (match query.Endemic with Some v -> Some ("endemic", v) | None -> None); (match query.Photos with Some v -> Some ("photos", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.searchPlantsResponse
+    searchPlants = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/search"; Query = (List.choose (fun p -> p) [ (match query.Q with Some v -> Some ("q", v) | None -> None); (match query.Family with Some v -> Some ("family", v) | None -> None); (match query.Genus with Some v -> Some ("genus", v) | None -> None); (match query.Form with Some v -> Some ("form", v) | None -> None); (match query.Sun with Some v -> Some ("sun", v) | None -> None); (match query.Water with Some v -> Some ("water", v) | None -> None); (match query.Feature with Some v -> Some ("feature", v) | None -> None); (match query.Wildlife with Some v -> Some ("wildlife", v) | None -> None); (match query.Endemic with Some v -> Some ("endemic", v) | None -> None); (match query.Photos with Some v -> Some ("photos", v) | None -> None); (match query.Photographer with Some v -> Some ("photographer", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.searchPlantsResponse
     getRevision = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/revision"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getRevisionResponse
     getPlant = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/plants/plant/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPlantResponse
     getCatalogue = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/plants/catalogue"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getCatalogueResponse

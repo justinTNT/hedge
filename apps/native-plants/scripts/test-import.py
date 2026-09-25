@@ -1,4 +1,4 @@
-import hashlib, importlib.util, json, unittest, tempfile
+import hashlib, importlib.util, json, unittest, tempfile, sqlite3
 from unittest.mock import patch
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -7,6 +7,57 @@ spec=importlib.util.spec_from_file_location('source',Path(__file__).with_name('i
 source=importlib.util.module_from_spec(spec);spec.loader.exec_module(source)
 
 class ImportTests(unittest.TestCase):
+    def test_reviewed_media_updates_preserve_owner_edits_and_are_repeatable(self):
+        db=sqlite3.connect(':memory:');self.addCleanup(db.close)
+        db.executescript("CREATE TABLE plant_photos(id TEXT,image TEXT,thumbnail TEXT,source_evidence TEXT,published INT,photographer TEXT,caption TEXT,sort_order INT,deleted_at INT); CREATE TABLE plant_maps(id TEXT,image TEXT,source_evidence TEXT,published INT);")
+        old='a'*64
+        photos=[dict(id='photo-1',image='/new.webp',thumbnail='/new-thumb.webp',photographer='Kym Brennan'),
+                dict(id='photo-2',image='/new.webp',thumbnail='/new-thumb.webp',photographer='Kym Brennan')]
+        decisions=dict(photoAllocations=[dict(photoId=p['id'],replacesSha256=old,path='trimmed.png',sha256='b'*64) for p in photos],
+                       reclassifiedMapPhotos=[dict(photoId='map-photo',reason='Reviewed map')])
+        db.execute('INSERT INTO plant_photos VALUES(?,?,?,?,?,?,?,?,?)',('photo-1','/media/'+old[:20]+'-large.webp','/media/'+old[:20]+'-thumb.webp','source',0,'Photographer not recorded','Owner caption',99,123))
+        db.execute('INSERT INTO plant_photos VALUES(?,?,?,?,?,?,?,?,?)',('photo-2','/owner.webp','/owner-thumb.webp','owner',1,'Owner credit','Custom image',1,None))
+        db.execute('INSERT INTO plant_photos VALUES(?,?,?,?,?,?,?,?,?)',('map-photo','/map.webp','/map.webp','source',1,'','Map',1,None))
+        ref=dict(plantId='one',reference='old-map')
+        key='map-'+hashlib.sha256(b'one|old-map').hexdigest()[:20]
+        db.execute('INSERT INTO plant_maps VALUES(?,?,?,?)',(key,'/old.png','map source',1))
+        sql=source.reviewed_media_updates(photos,decisions,[dict(id=key,image='/old.png')],dict(supersedesBookMaps=[ref]))
+        db.executescript(sql)
+        row=db.execute('SELECT image,thumbnail,published,photographer,caption,sort_order,deleted_at FROM plant_photos WHERE id="photo-1"').fetchone()
+        self.assertEqual(row,('/new.webp','/new-thumb.webp',0,'Kym Brennan','Owner caption',99,123))
+        self.assertEqual(db.execute('SELECT image,photographer FROM plant_photos WHERE id="photo-2"').fetchone(),('/owner.webp','Owner credit'))
+        self.assertEqual(db.execute('SELECT published FROM plant_maps').fetchone(),(0,))
+        self.assertEqual(db.execute('SELECT published FROM plant_photos WHERE id="map-photo"').fetchone(),(0,))
+        db.execute('UPDATE plant_maps SET published=1')
+        db.execute('UPDATE plant_photos SET published=1 WHERE id="map-photo"')
+        before=list(db.iterdump());db.executescript(sql)
+        self.assertEqual(list(db.iterdump()),before)
+
+    def test_contributor_initials_require_filename_boundaries(self):
+        for code,name in source.CREDITS.items():
+            for filename in [f'Acacia example.{code}415.JPG',f'Acacia example_{code}.jpg',f'{code}-Acacia example.jpg']:
+                with self.subTest(filename=filename):self.assertEqual(source.photo_credit(filename),name)
+        for filename in ['Acacia example.JPG','Acacia JRSunknown.JPG','ExampleKB.JPG']:
+            self.assertEqual(source.photo_credit(filename),'Photographer not recorded')
+
+    def test_reference_source_preserves_all_entries_and_reports_number_gaps(self):
+        from zipfile import ZipFile
+        from xml.sax.saxutils import escape
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);path=root/'4. NPNA 2026 REF, BIB, GLOSS, FAM LIST, ENDEM LIST, INDEX.docx'
+            paragraphs=['REFERENCES for ABORIGINAL PLANT USAGE','1. First citation','3. Third citation','BIBLIOGRAPHY','Author. Complete entry.','GLOSSARY','Compound leaf: A leaf made of leaflets.','Glaucous: A bluish bloom.','FAMILY LIST']
+            xml='<w:document xmlns:w="'+source.W[1:-1]+'"><w:body>'+''.join('<w:p><w:r><w:t>'+escape(p)+'</w:t></w:r></w:p>' for p in paragraphs)+'</w:body></w:document>'
+            with ZipFile(path,'w') as archive:
+                archive.writestr('word/document.xml',xml)
+                archive.writestr('word/_rels/document.xml.rels','<Relationships/>')
+            with patch.object(source,'__file__',str(root/'app/scripts/import-source.py')):
+                glossary,refs,issues=source.reference_material(root,root/'media')
+            self.assertEqual([g['term'] for g in glossary],['Compound leaf','Glaucous'])
+            self.assertEqual(glossary[0]['aliases'],'Compound leaves')
+            self.assertEqual([r['number'] for r in refs],[1,3,0])
+            self.assertEqual(refs[2]['citation'],'Author. Complete entry.')
+            self.assertIn(dict(kind='missing-numbered-reference',number=2),issues)
+
     def test_accepted_revision_omits_deleted_and_moved_from(self):
         xml='<w:p xmlns:w="'+source.W[1:-1]+'"><w:r><w:t>Current </w:t></w:r><w:del><w:r><w:t>old</w:t></w:r></w:del><w:ins><w:r><w:t>new</w:t></w:r></w:ins><w:moveFrom><w:r><w:t>wrong</w:t></w:r></w:moveFrom></w:p>'
         self.assertEqual(source.accepted(ET.fromstring(xml)),'Current new')
@@ -113,7 +164,7 @@ class ImportTests(unittest.TestCase):
                           reason='Species-level illustration approved; subspecies remains unverified')
             (data/'editorial-decisions.json').write_text(json.dumps({'photoAllocations':[decision]}))
             with patch.object(source,'__file__',str(app/'scripts/import-source.py')), \
-                 patch.object(source,'extract',return_value=([plant],[],{})), \
+                 patch.object(source,'extract',return_value=([plant],[],{})), patch.object(source,'reference_material',return_value=([],[],[])), \
                  patch('sys.argv',['import-source.py','--source',str(root)]), patch('builtins.print'):
                 source.main()
             catalogue=json.loads((data/'catalogue-source.json').read_text())
@@ -122,5 +173,46 @@ class ImportTests(unittest.TestCase):
             self.assertEqual([p['plant_id'] for p in catalogue['photos']],['one','one'])
             self.assertIn("'Acacia example','Fixture photographer'",(data/'import.sql').read_text())
             self.assertIn('subspecies remains unverified',catalogue['photos'][1]['source_evidence'])
+
+    def test_maps_keep_published_taxon_and_skip_unallocated_candidates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'archive';root.mkdir();media=Path(tmp)/'media'
+            path=root/'map.png';source.Image.new('L',(20,30),255).save(path)
+            item=dict(plantId='one',reference='p042-o226',outputPath='map.png',sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                      caption='Acacia example',sourceLabel='2022 edition, p. 83',pdfPage=42,objectIndex=226,reason='Reviewed species-level map')
+            manifest=dict(version=1,sourcePath='proof.pdf',sourceSha256='proof-hash',images=[item,{**item,'plantId':None,'outputPath':'unallocated.png'}])
+            maps=source.distribution_maps(root,[{'id':'one'}],manifest,media)
+            self.assertEqual(len(maps),1);self.assertEqual(maps[0]['caption'],'Acacia example')
+            self.assertTrue(maps[0]['image'].endswith('.gif'))
+            with source.Image.open(media/'maps'/Path(maps[0]['image']).name) as display:
+                self.assertEqual(display.size,(20,30))
+                self.assertEqual(display.convert('RGBA').getextrema()[3],(0,0))
+            self.assertEqual(source.distribution_maps(root,[{'id':'one'}],manifest,media),maps)
+            with self.assertRaisesRegex(ValueError,'Unknown map account'):
+                source.distribution_maps(root,[{'id':'different'}],manifest,media)
+            path.write_bytes(b'changed map')
+            with self.assertRaisesRegex(ValueError,'Map changed'):
+                source.distribution_maps(root,[{'id':'one'}],manifest,media)
+
+    def test_map_gif_keeps_ink_and_transparency_without_resizing_or_dithering(self):
+        image=source.Image.new('L',(4,2));image.putdata([0,64,128,191,192,220,254,255])
+        payload=source.io.BytesIO();image.save(payload,'PNG')
+        with source.Image.open(source.io.BytesIO(source.transparent_map_gif(payload.getvalue()))) as result:
+            self.assertEqual(result.format,'GIF');self.assertEqual(result.size,(4,2))
+            rgba=result.convert('RGBA');pixels=[rgba.getpixel((x,y)) for y in range(2) for x in range(4)]
+            self.assertEqual(pixels[:4],[(0,0,0,255)]*4)
+            self.assertEqual([p[3] for p in pixels[4:]],[0]*4)
+
+    def test_map_format_update_preserves_owner_images_and_metadata(self):
+        db=sqlite3.connect(':memory:');self.addCleanup(db.close)
+        db.execute('CREATE TABLE plant_maps(id TEXT,image TEXT,caption TEXT,source_evidence TEXT,published INT,sort_order INT,deleted_at INT)')
+        db.executemany('INSERT INTO plant_maps VALUES(?,?,?,?,?,?,?)',[
+            ('source','/media/maps/abc.png','Edited caption','evidence',0,17,123),
+            ('owner','/owner-map.png','Owner image','owner evidence',1,2,None)])
+        sql=source.reviewed_media_updates([],{},[dict(id='source',image='/media/maps/abc.gif'),dict(id='owner',image='/media/maps/def.gif')],{})
+        db.executescript(sql)
+        self.assertEqual(db.execute('SELECT * FROM plant_maps WHERE id="source"').fetchone(),('source','/media/maps/abc.gif','Edited caption','evidence',0,17,123))
+        self.assertEqual(db.execute('SELECT * FROM plant_maps WHERE id="owner"').fetchone(),('owner','/owner-map.png','Owner image','owner evidence',1,2,None))
+        before=list(db.iterdump());db.executescript(sql);self.assertEqual(list(db.iterdump()),before)
 
 if __name__=='__main__':unittest.main()

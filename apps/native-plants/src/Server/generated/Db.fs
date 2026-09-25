@@ -203,6 +203,595 @@ let deletePlantPhoto (id: string) (db: D1Database) : D1PreparedStatement =
 let selectPlantPhotosByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("SELECT id, plant_id, image, thumbnail, caption, photographer, sort_order, published, source_evidence, created_at, updated_at, deleted_at FROM plant_photos WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
 
+// ============================================================
+// PlantMap (plant_maps)
+// ============================================================
+
+type PlantMapRow = {
+    Id: string
+    PlantId: string
+    Image: string
+    Caption: string
+    SourceLabel: string
+    Published: bool
+    SortOrder: int
+    SourceEvidence: string
+    CreatedAt: int
+    UpdatedAt: int option
+    DeletedAt: int option
+}
+
+type PlantMapCreate = {
+    PlantId: string
+    Image: string
+    Caption: string
+    SourceLabel: string
+    Published: bool
+    SortOrder: int
+    SourceEvidence: string
+}
+
+let parsePlantMapRow (row: obj) : PlantMapRow =
+    { Id = rowStr row "id"
+      PlantId = rowStr row "plant_id"
+      Image = rowStr row "image"
+      Caption = rowStr row "caption"
+      SourceLabel = rowStr row "source_label"
+      Published = rowBool row "published"
+      SortOrder = rowInt row "sort_order"
+      SourceEvidence = rowStr row "source_evidence"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectPlantMaps (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at, updated_at, deleted_at FROM plant_maps WHERE deleted_at IS NULL ORDER BY plant_id, sort_order LIMIT 1000")
+
+let selectPlantMap (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at, updated_at, deleted_at FROM plant_maps WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertPlantMap (db: D1Database) (id: string) (now: int) (create: PlantMapCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO plant_maps (id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.PlantId; box create.Image; box create.Caption; box create.SourceLabel; box create.Published; box create.SortOrder; box create.SourceEvidence; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updatePlantMap (id: string) (create: PlantMapCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE plant_maps SET plant_id = ?, image = ?, caption = ?, source_label = ?, published = ?, sort_order = ?, source_evidence = ?, updated_at = ? WHERE id = ?"))
+         [| box create.PlantId; box create.Image; box create.Caption; box create.SourceLabel; box create.Published; box create.SortOrder; box create.SourceEvidence; box now; box id |]
+
+let deletePlantMap (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE plant_maps SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+let selectPlantMapsByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, image, caption, source_label, published, sort_order, source_evidence, created_at, updated_at, deleted_at FROM plant_maps WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
+
+// ============================================================
+// GlossaryTerm (glossary_terms)
+// ============================================================
+
+type GlossaryTermRow = {
+    Id: string
+    Term: string
+    Aliases: string
+    Definition: string
+    Illustration: string
+    SourceLabel: string
+    SourceEvidence: string
+    SortOrder: int
+    Published: bool
+    CreatedAt: int
+    UpdatedAt: int option
+    DeletedAt: int option
+}
+
+type GlossaryTermCreate = {
+    Term: string
+    Aliases: string
+    Definition: string
+    Illustration: string
+    SourceLabel: string
+    SourceEvidence: string
+    SortOrder: int
+    Published: bool
+}
+
+let parseGlossaryTermRow (row: obj) : GlossaryTermRow =
+    { Id = rowStr row "id"
+      Term = rowStr row "term"
+      Aliases = rowStr row "aliases"
+      Definition = rowStr row "definition"
+      Illustration = rowStr row "illustration"
+      SourceLabel = rowStr row "source_label"
+      SourceEvidence = rowStr row "source_evidence"
+      SortOrder = rowInt row "sort_order"
+      Published = rowBool row "published"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectGlossaryTerms (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM glossary_terms WHERE deleted_at IS NULL ORDER BY term LIMIT 1000")
+
+let selectGlossaryTerm (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM glossary_terms WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertGlossaryTerm (db: D1Database) (id: string) (now: int) (create: GlossaryTermCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO glossary_terms (id, term, aliases, definition, illustration, source_label, source_evidence, sort_order, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Term; box create.Aliases; box create.Definition; box create.Illustration; box create.SourceLabel; box create.SourceEvidence; box create.SortOrder; box create.Published; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateGlossaryTerm (id: string) (create: GlossaryTermCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE glossary_terms SET term = ?, aliases = ?, definition = ?, illustration = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"))
+         [| box create.Term; box create.Aliases; box create.Definition; box create.Illustration; box create.SourceLabel; box create.SourceEvidence; box create.SortOrder; box create.Published; box now; box id |]
+
+let deleteGlossaryTerm (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE glossary_terms SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+// ============================================================
+// SourceReference (source_references)
+// ============================================================
+
+type SourceReferenceRow = {
+    Id: string
+    SourceKey: string
+    Kind: string
+    Number: int
+    Citation: string
+    Aliases: string
+    SourceLabel: string
+    SourceEvidence: string
+    SortOrder: int
+    Published: bool
+    CreatedAt: int
+    UpdatedAt: int option
+    DeletedAt: int option
+}
+
+type SourceReferenceCreate = {
+    SourceKey: string
+    Kind: string
+    Number: int
+    Citation: string
+    Aliases: string
+    SourceLabel: string
+    SourceEvidence: string
+    SortOrder: int
+    Published: bool
+}
+
+let parseSourceReferenceRow (row: obj) : SourceReferenceRow =
+    { Id = rowStr row "id"
+      SourceKey = rowStr row "source_key"
+      Kind = rowStr row "kind"
+      Number = rowInt row "number"
+      Citation = rowStr row "citation"
+      Aliases = rowStr row "aliases"
+      SourceLabel = rowStr row "source_label"
+      SourceEvidence = rowStr row "source_evidence"
+      SortOrder = rowInt row "sort_order"
+      Published = rowBool row "published"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectSourceReferences (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM source_references WHERE deleted_at IS NULL ORDER BY kind, sort_order LIMIT 1000")
+
+let selectSourceReference (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at, updated_at, deleted_at FROM source_references WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertSourceReference (db: D1Database) (id: string) (now: int) (create: SourceReferenceCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO source_references (id, source_key, kind, number, citation, aliases, source_label, source_evidence, sort_order, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.SourceKey; box create.Kind; box create.Number; box create.Citation; box create.Aliases; box create.SourceLabel; box create.SourceEvidence; box create.SortOrder; box create.Published; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateSourceReference (id: string) (create: SourceReferenceCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE source_references SET source_key = ?, kind = ?, number = ?, citation = ?, aliases = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"))
+         [| box create.SourceKey; box create.Kind; box create.Number; box create.Citation; box create.Aliases; box create.SourceLabel; box create.SourceEvidence; box create.SortOrder; box create.Published; box now; box id |]
+
+let deleteSourceReference (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE source_references SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+// ============================================================
+// PlantNote (plant_notes)
+// ============================================================
+
+type PlantNoteRow = {
+    Id: string
+    PlantId: string
+    OwnerProvider: string
+    OwnerId: string
+    Text: string
+    IsCorrection: bool
+    Revision: int
+    ReviewedRevision: int option
+    CreatedAt: int
+    UpdatedAt: int option
+    DeletedAt: int option
+}
+
+type PlantNoteCreate = {
+    PlantId: string
+    OwnerProvider: string
+    OwnerId: string
+    Text: string
+    IsCorrection: bool
+    Revision: int
+    ReviewedRevision: int option
+}
+
+let parsePlantNoteRow (row: obj) : PlantNoteRow =
+    { Id = rowStr row "id"
+      PlantId = rowStr row "plant_id"
+      OwnerProvider = rowStr row "owner_provider"
+      OwnerId = rowStr row "owner_id"
+      Text = rowStr row "text"
+      IsCorrection = rowBool row "is_correction"
+      Revision = rowInt row "revision"
+      ReviewedRevision = rowIntOpt row "reviewed_revision"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectPlantNotes (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
+
+let selectPlantNote (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertPlantNote (db: D1Database) (id: string) (now: int) (create: PlantNoteCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updatePlantNote (id: string) (create: PlantNoteCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, updated_at = ? WHERE id = ?"))
+         [| box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; box now; box id |]
+
+let deletePlantNote (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE plant_notes SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+let selectPlantNotesByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
+
+// ============================================================
+// PersonalPlantPhoto (personal_plant_photos)
+// ============================================================
+
+type PersonalPlantPhotoRow = {
+    Id: string
+    PlantId: string
+    OwnerProvider: string
+    OwnerId: string
+    ImageKey: string
+    ThumbnailKey: string
+    Width: int
+    Height: int
+    StoredBytes: int
+    Caption: string
+    Photographer: string
+    Offered: bool
+    Ready: bool
+    Revision: int
+    PublishedPhotoId: string option
+    CreatedAt: int
+    UpdatedAt: int option
+    DeletedAt: int option
+}
+
+type PersonalPlantPhotoCreate = {
+    PlantId: string
+    OwnerProvider: string
+    OwnerId: string
+    ImageKey: string
+    ThumbnailKey: string
+    Width: int
+    Height: int
+    StoredBytes: int
+    Caption: string
+    Photographer: string
+    Offered: bool
+    Ready: bool
+    Revision: int
+    PublishedPhotoId: string option
+}
+
+let parsePersonalPlantPhotoRow (row: obj) : PersonalPlantPhotoRow =
+    { Id = rowStr row "id"
+      PlantId = rowStr row "plant_id"
+      OwnerProvider = rowStr row "owner_provider"
+      OwnerId = rowStr row "owner_id"
+      ImageKey = rowStr row "image_key"
+      ThumbnailKey = rowStr row "thumbnail_key"
+      Width = rowInt row "width"
+      Height = rowInt row "height"
+      StoredBytes = rowInt row "stored_bytes"
+      Caption = rowStr row "caption"
+      Photographer = rowStr row "photographer"
+      Offered = rowBool row "offered"
+      Ready = rowBool row "ready"
+      Revision = rowInt row "revision"
+      PublishedPhotoId = rowStrOpt row "published_photo_id"
+      CreatedAt = rowInt row "created_at"
+      UpdatedAt = rowIntOpt row "updated_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectPersonalPlantPhotos (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at, updated_at, deleted_at FROM personal_plant_photos WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
+
+let selectPersonalPlantPhoto (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at, updated_at, deleted_at FROM personal_plant_photos WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertPersonalPlantPhoto (db: D1Database) (id: string) (now: int) (create: PersonalPlantPhotoCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO personal_plant_photos (id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.ImageKey; box create.ThumbnailKey; box create.Width; box create.Height; box create.StoredBytes; box create.Caption; box create.Photographer; box create.Offered; box create.Ready; box create.Revision; optToDb create.PublishedPhotoId; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updatePersonalPlantPhoto (id: string) (create: PersonalPlantPhotoCreate) (db: D1Database) : D1PreparedStatement =
+    let now = epochNow()
+    bind (db.prepare("UPDATE personal_plant_photos SET plant_id = ?, owner_provider = ?, owner_id = ?, image_key = ?, thumbnail_key = ?, width = ?, height = ?, stored_bytes = ?, caption = ?, photographer = ?, offered = ?, ready = ?, revision = ?, published_photo_id = ?, updated_at = ? WHERE id = ?"))
+         [| box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.ImageKey; box create.ThumbnailKey; box create.Width; box create.Height; box create.StoredBytes; box create.Caption; box create.Photographer; box create.Offered; box create.Ready; box create.Revision; optToDb create.PublishedPhotoId; box now; box id |]
+
+let deletePersonalPlantPhoto (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE personal_plant_photos SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+let selectPersonalPlantPhotosByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, image_key, thumbnail_key, width, height, stored_bytes, caption, photographer, offered, ready, revision, published_photo_id, created_at, updated_at, deleted_at FROM personal_plant_photos WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
+
+// ============================================================
+// PlantViewPreference (plant_view_preferences)
+// ============================================================
+
+type PlantViewPreferenceRow = {
+    Id: string
+    OwnerProvider: string
+    OwnerId: string
+    PlantId: string
+    HeroPhotoId: string option
+}
+
+type PlantViewPreferenceCreate = {
+    OwnerProvider: string
+    OwnerId: string
+    PlantId: string
+    HeroPhotoId: string option
+}
+
+let parsePlantViewPreferenceRow (row: obj) : PlantViewPreferenceRow =
+    { Id = rowStr row "id"
+      OwnerProvider = rowStr row "owner_provider"
+      OwnerId = rowStr row "owner_id"
+      PlantId = rowStr row "plant_id"
+      HeroPhotoId = rowStrOpt row "hero_photo_id" }
+
+let selectPlantViewPreferences (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, owner_provider, owner_id, plant_id, hero_photo_id FROM plant_view_preferences LIMIT 100")
+
+let selectPlantViewPreference (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, owner_provider, owner_id, plant_id, hero_photo_id FROM plant_view_preferences WHERE id = ?")) [| box id |]
+
+let insertPlantViewPreference (db: D1Database) (id: string) (create: PlantViewPreferenceCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO plant_view_preferences (id, owner_provider, owner_id, plant_id, hero_photo_id) VALUES (?, ?, ?, ?, ?)"))
+             [| box id; box create.OwnerProvider; box create.OwnerId; box create.PlantId; optToDb create.HeroPhotoId |]
+    {| Stmt = stmt; Id = id |}
+
+let updatePlantViewPreference (id: string) (create: PlantViewPreferenceCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE plant_view_preferences SET owner_provider = ?, owner_id = ?, plant_id = ?, hero_photo_id = ? WHERE id = ?"))
+         [| box create.OwnerProvider; box create.OwnerId; box create.PlantId; optToDb create.HeroPhotoId; box id |]
+
+let deletePlantViewPreference (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM plant_view_preferences WHERE id = ?")) [| box id |]
+
+let selectPlantViewPreferencesByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, owner_provider, owner_id, plant_id, hero_photo_id FROM plant_view_preferences WHERE plant_id = ? LIMIT 100")) [| box plantId |]
+
+// ============================================================
+// ContributionClaim (contribution_claims)
+// ============================================================
+
+type ContributionClaimRow = {
+    Id: string
+    GuestId: string
+    CreatedAt: int
+}
+
+type ContributionClaimCreate = {
+    GuestId: string
+}
+
+let parseContributionClaimRow (row: obj) : ContributionClaimRow =
+    { Id = rowStr row "id"
+      GuestId = rowStr row "guest_id"
+      CreatedAt = rowInt row "created_at" }
+
+let selectContributionClaims (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, guest_id, created_at FROM contribution_claims ORDER BY created_at DESC LIMIT 100")
+
+let selectContributionClaim (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, created_at FROM contribution_claims WHERE id = ?")) [| box id |]
+
+let insertContributionClaim (db: D1Database) (id: string) (now: int) (create: ContributionClaimCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO contribution_claims (id, guest_id, created_at) VALUES (?, ?, ?)"))
+             [| box id; box create.GuestId; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateContributionClaim (id: string) (create: ContributionClaimCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE contribution_claims SET guest_id = ? WHERE id = ?"))
+         [| box create.GuestId; box id |]
+
+let deleteContributionClaim (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM contribution_claims WHERE id = ?")) [| box id |]
+
+// ============================================================
+// Guest (guests)
+// ============================================================
+
+type GuestRow = {
+    Id: string
+    SessionId: string
+    CreatedAt: int
+    DeletedAt: int option
+}
+
+type GuestCreate = {
+    SessionId: string
+}
+
+let parseGuestRow (row: obj) : GuestRow =
+    { Id = rowStr row "id"
+      SessionId = rowStr row "session_id"
+      CreatedAt = rowInt row "created_at"
+      DeletedAt = rowIntOpt row "deleted_at" }
+
+let selectGuests (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, session_id, created_at, deleted_at FROM guests WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
+
+let selectGuest (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+
+let insertGuest (db: D1Database) (id: string) (now: int) (create: GuestCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"))
+             [| box id; box create.SessionId; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateGuest (id: string) (create: GuestCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE guests SET session_id = ? WHERE id = ?"))
+         [| box create.SessionId; box id |]
+
+let deleteGuest (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE guests SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
+
+// ============================================================
+// Identity (identities)
+// ============================================================
+
+type IdentityRow = {
+    Id: string
+    GuestId: string
+    Provider: string
+    ProviderUserId: string
+    Name: string
+    Picture: string
+    Email: string option
+    ActivatedAt: int option
+    CreatedAt: int
+}
+
+type IdentityCreate = {
+    GuestId: string
+    Provider: string
+    ProviderUserId: string
+    Name: string
+    Picture: string
+    Email: string option
+    ActivatedAt: int option
+}
+
+let parseIdentityRow (row: obj) : IdentityRow =
+    { Id = rowStr row "id"
+      GuestId = rowStr row "guest_id"
+      Provider = rowStr row "provider"
+      ProviderUserId = rowStr row "provider_user_id"
+      Name = rowStr row "name"
+      Picture = rowStr row "picture"
+      Email = rowStrOpt row "email"
+      ActivatedAt = rowIntOpt row "activated_at"
+      CreatedAt = rowInt row "created_at" }
+
+let selectIdentitys (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100")
+
+let selectIdentity (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?")) [| box id |]
+
+let insertIdentity (db: D1Database) (id: string) (now: int) (create: IdentityCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateIdentity (id: string) (create: IdentityCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"))
+         [| box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box id |]
+
+let deleteIdentity (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM identities WHERE id = ?")) [| box id |]
+
+let selectIdentitysByGuestId (guestId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
+
+// ============================================================
+// Grant (grants)
+// ============================================================
+
+type GrantRow = {
+    Id: string
+    Provider: string
+    ProviderUserId: string
+    Role: string
+    Enabled: bool
+    GrantedBy: string option
+    CreatedAt: int
+}
+
+type GrantCreate = {
+    Provider: string
+    ProviderUserId: string
+    Role: string
+    Enabled: bool
+    GrantedBy: string option
+}
+
+let parseGrantRow (row: obj) : GrantRow =
+    { Id = rowStr row "id"
+      Provider = rowStr row "provider"
+      ProviderUserId = rowStr row "provider_user_id"
+      Role = rowStr row "role"
+      Enabled = rowBool row "enabled"
+      GrantedBy = rowStrOpt row "granted_by"
+      CreatedAt = rowInt row "created_at" }
+
+let selectGrants (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants ORDER BY created_at DESC LIMIT 100")
+
+let selectGrant (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, provider, provider_user_id, role, enabled, granted_by, created_at FROM grants WHERE id = ?")) [| box id |]
+
+let insertGrant (db: D1Database) (id: string) (now: int) (create: GrantCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO grants (id, provider, provider_user_id, role, enabled, granted_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.Provider; box create.ProviderUserId; box create.Role; box create.Enabled; optToDb create.GrantedBy; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateGrant (id: string) (create: GrantCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE grants SET provider = ?, provider_user_id = ?, role = ?, enabled = ?, granted_by = ? WHERE id = ?"))
+         [| box create.Provider; box create.ProviderUserId; box create.Role; box create.Enabled; optToDb create.GrantedBy; box id |]
+
+let deleteGrant (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM grants WHERE id = ?")) [| box id |]
+
 module Tables =
     let plant = "plants"
     let plantPhoto = "plant_photos"
+    let plantMap = "plant_maps"
+    let glossaryTerm = "glossary_terms"
+    let sourceReference = "source_references"
+    let plantNote = "plant_notes"
+    let personalPlantPhoto = "personal_plant_photos"
+    let plantViewPreference = "plant_view_preferences"
+    let contributionClaim = "contribution_claims"
+    let guest = "guests"
+    let identity = "identities"
+    let grant = "grants"

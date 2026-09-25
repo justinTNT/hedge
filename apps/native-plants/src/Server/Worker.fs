@@ -8,11 +8,16 @@ open Server.Env
 [<ExportDefault>]
 let exports = createWorker {
     Routes = fun request env ctx ->
-        match Server.Routes.dispatch request (env :?> Env) ctx with
+        let result =
+            match Server.Contributions.dispatch request (env :?> Env) with
+            | Some action -> Some action
+            | None -> Server.Routes.dispatch request (env :?> Env) ctx
+        match result with
         | Some result -> Some (promise {
             try
                 let! response = result
-                response?headers?set("Cache-Control", "no-store") |> ignore
+                if not (response?headers?has("Cache-Control")) then
+                    response?headers?set("Cache-Control", "no-store") |> ignore
                 return response
             with _ -> return jsonResponse "{\"error\":\"The catalogue is temporarily unavailable. Please try again.\"}" 503
           })
@@ -28,8 +33,8 @@ let exports = createWorker {
                 Server.CatalogueStore.invalidate env
             return response
         }))
-    OAuth = None
-    GuestSession = None
+    OAuth = Some (fun env -> Server.AuthConfig.oauth (env :?> Env))
+    GuestSession = Some (fun env request -> Server.AuthConfig.deps (env :?> Env) request)
     AllowGuestUploads = false
     Mounts = []
     BlobServing = { PrivatePrefixes = ["private/"] }

@@ -22,3 +22,33 @@ directory = "./_site"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*", "/blobs/*"]
+
+[vars]
+CONTRIBUTIONS_REQUIRE_LOGIN = "true"
+
+# Private remote preview; local development above remains independent.
+[env.preview]
+name = "native-plants-preview"
+main = "worker-preview.js"
+workers_dev = true
+preview_urls = false
+
+[env.preview.assets]
+directory = "./_site"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# Essential: the default asset-first routing would bypass preview authentication.
+run_worker_first = true
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "native-plants-preview-db"
+database_id = "231a3148-92aa-4709-90cd-463fb04c6f2b"
+
+[[env.preview.r2_buckets]]
+binding = "BLOBS"
+bucket_name = "native-plants-preview-media"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+CONTRIBUTIONS_REQUIRE_LOGIN = "true"

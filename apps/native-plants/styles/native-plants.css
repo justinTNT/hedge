@@ -1054,13 +1054,6 @@ em {
   flex-wrap:wrap;
 }
 
-.source-line {
-  border-top:1px solid var(--line);
-  padding-top:22px;
-  font-size:10px;
-  color:var(--muted);
-  margin-top:35px;
-}
 
 .about-page {
   max-width:900px;
@@ -1519,10 +1512,6 @@ em {
   .plant-associations {
     margin-left:0;
   }
-  .source-line {
-    font-size:9px;
-    line-height:1.8;
-  }
   .about-page h1 {
     font-size:49px;
   }
@@ -1570,6 +1559,42 @@ em {
   margin-top:10px;
 }
 
+/* Small photo sets share the title column; larger galleries span the page. */
+.detail-intro--compact {
+  grid-template-areas:"title hero" "photos hero";
+  grid-template-rows:auto 1fr;
+  row-gap:24px;
+}
+
+.detail-intro--compact>.detail-title {
+  grid-area:title;
+  min-width:0;
+}
+
+.detail-intro--compact .plant-facts {
+  margin-bottom:0;
+}
+
+.detail-intro--compact>.detail-figure {
+  grid-area:hero;
+  min-width:0;
+}
+
+.photo-gallery--compact {
+  grid-area:photos;
+  grid-template-columns:repeat(2,minmax(0,192px));
+  gap:16px;
+  margin:0;
+  width:100%;
+}
+
+.photo-gallery--compact .image-button>span {
+  font-size:8px;
+  bottom:8px;
+  right:8px;
+  padding:6px;
+}
+
 @media(max-width:700px) {
   .photo-gallery {
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -1588,4 +1613,134 @@ em {
     scroll-behavior:auto!important;
     transition:none!important;
   }
+}
+
+.distribution-map {
+  margin:1.5rem 0 0;
+  max-width:28rem;
+}
+
+.map-image {
+  display:flex;
+  width:50%;
+  padding:0;
+  background:transparent;
+  border:none;
+}
+
+.map-image img {
+  display:block;
+  max-width:100%;
+  max-height:22rem;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+}
+
+.distribution-map figcaption {
+  display:flex;
+  flex-direction:column;
+  gap:.35rem;
+  margin-top:.75rem;
+  font-size:.8rem;
+  color:var(--muted);
+}
+
+.photograph-static { cursor:default; }
+
+/* Source definitions remain inline; the popup fits the viewport on mouse and touch. */
+.annotated-term { display:inline; }
+.term-button { display:inline; border:0; border-radius:0; padding:0; margin:0; background:none; color:inherit; font:inherit; line-height:inherit; text-align:inherit; text-decoration:underline dotted; text-underline-offset:.2em; cursor:help; }
+.term-button:hover,.term-button:focus-visible { color:#47652f; text-decoration-style:solid; }
+.term-button:focus-visible { outline:2px solid #71835e; outline-offset:3px; }
+.definition-popover { position:fixed; z-index:100; display:block; overflow:auto; padding:18px 20px; border:1px solid #b9c5aa; border-radius:7px; background:#fffef9; color:#223427; box-shadow:0 8px 30px #17261930; font:14px/1.6 Arial,sans-serif; font-style:normal; font-weight:400; letter-spacing:normal; text-transform:none; text-align:left; cursor:auto; }
+.definition-popover>strong { display:block; margin-bottom:6px; font-size:17px; }
+.definition-body { display:block; }
+.definition-popover>small { display:block; margin-top:10px; color:#697562; font-size:11px; }
+.definition-popover>img { display:block; max-width:100%; height:auto; margin-top:12px; background:white; }
+.reference-page { max-width:1000px; }
+.reference-search { display:block; width:100%; max-width:560px; padding:14px 18px; background:#fffef9; border:1px solid #b9c5aa; border-radius:4px; font:inherit; }
+.glossary-list>div { padding:22px 0; border-bottom:1px solid #dce0d4; }
+.glossary-list dt { font-size:23px; font-weight:600; margin-bottom:9px; }
+.glossary-list dd { margin:0; max-width:760px; line-height:1.8; }
+.glossary-list dd>img { display:block; max-width:min(100%,560px); height:auto; margin:18px 0; }
+.glossary-list dd>small { display:block; margin-top:10px; color:#697562; }
+.reference-list { padding-left:28px; }
+.reference-list li { padding:8px 0 8px 8px; line-height:1.7; overflow-wrap:anywhere; }
+.reference-page h2 { margin:38px 0 16px; }
+
+.bibliography-list { list-style:none; padding-left:0; }
+
+/* Account presentation belongs to this app; anonymous guest details have no UI. */
+.header-account { display:flex; align-items:center; gap:20px; }
+.account-control { position:relative; }
+.account-toggle { border:0; background:transparent; color:var(--ink); padding:10px 0; font-size:12px; font-weight:600; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-panel { position:absolute; z-index:30; right:0; top:calc(100% + 12px); width:min(300px,calc(100vw - 32px)); padding:26px; background:var(--paper); border:1px solid var(--line); box-shadow:0 12px 35px #243f3220; }
+.account-panel strong { display:block; padding-right:20px; overflow-wrap:anywhere; }
+.account-panel p { font-size:13px; color:var(--muted); margin:12px 0; }
+.account-close { position:absolute; right:10px; top:8px; border:0; background:transparent; font-size:22px; color:var(--muted); }
+.account-action { display:block; width:100%; text-align:center; border:1px solid var(--line); background:var(--soft); color:var(--green); padding:12px; font-size:13px; margin-top:14px; }
+.account-action:hover { background:var(--green); color:var(--paper); }
+@media(max-width:700px) {
+  .site-header { height:auto; min-height:104px; padding:16px 20px; flex-wrap:wrap; gap:14px; }
+  .site-header nav { order:3; width:100%; justify-content:center; }
+  .header-account { margin-left:auto; }
+  .account-toggle { max-width:110px; }
+}
+
+
+/* Species notebook: private contributions belong to this app, not the catalogue CSS. */
+.personal-content { margin: 2.5rem 0 3rem; padding: 1.7rem 2rem; background: #f1f2e9; border: 1px solid #d8decf; border-radius: 6px; }
+.personal-content h2 { margin:0; }
+.notebook-heading { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
+.personal-actions,.personal-photo-controls { display:flex; gap:.65rem; flex-wrap:wrap; align-items:center; margin:.8rem 0; }
+.personal-content button,.personal-photo-controls button,.review-page button,.photo-editor button { border:1px solid #b1bfaa; background:#fff; color:#304932; padding:.55rem .85rem; border-radius:4px; cursor:pointer; font:inherit; font-size:.85rem; }
+.personal-content button:disabled,.personal-photo-controls button:disabled,.review-page button:disabled,.photo-editor button:disabled { opacity:.5; cursor:not-allowed; }
+.personal-badge { font-size:.75rem; color:#56734b; width:100%; }
+.personal-photo-controls { margin:.6rem 0 0; }
+.personal-photo-controls button { padding:.35rem .65rem; font-size:.75rem; }
+.personal-content > small,.personal-empty { color:#687160; }
+.note-editor,.photo-editor { padding:1.4rem; margin:1.2rem 0; background:#fff; border:1px solid #d6ddce; border-radius:4px; scroll-margin-top:6rem; }
+.note-editor label,.photo-editor label,.review-key label { display:block; margin:.6rem 0 1rem; }
+.note-editor label > span,.photo-editor label > span,.review-key label > span { display:block; font-size:.85rem; margin-bottom:.4rem; }
+.note-editor textarea,.photo-editor input:not([type=checkbox]),.review-key input { width:100%; padding:.7rem; border:1px solid #b1bfaa; border-radius:3px; font:inherit; background:#fff; color:inherit; box-sizing:border-box; }
+.note-editor textarea { resize:vertical; }
+.note-editor .check-field,.photo-editor .check-field { display:flex; gap:.65rem; align-items:flex-start; }
+.check-field input { margin-top:.25rem; }
+.personal-note { position:relative; margin:.85rem 0; }
+.personal-note .note-text { padding:1rem 6.5rem 1rem 1.1rem; min-height:4rem; background:#f8f8f0; border:1px solid #d1d7c7; border-right-color:#fff; border-bottom-color:#fff; border-radius:4px; box-shadow:inset 0 1px 3px #243f3210,0 1px 0 #fff; font-size:.92rem; line-height:1.8; }
+.personal-note > small { display:block; padding:.4rem .7rem 0; color:var(--muted); font-size:.73rem; }
+.note-actions { position:absolute; top:.45rem; right:.45rem; display:flex; gap:.15rem; }
+.action-icon { display:flex; align-items:center; justify-content:center; pointer-events:none; }
+.icon-button,.personal-content .icon-button { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; padding:8px; border:1px solid transparent; border-radius:5px; background:transparent; color:#56704f; cursor:pointer; }
+.icon-button:hover:not(:disabled) { background:#fff9; border-color:#c9d3bd; color:var(--green); }
+.icon-button:disabled { opacity:.45; cursor:wait; }
+.note-actions .action-icon svg { width:18px; height:18px; }
+.photo-gallery .photo-upload-slot { aspect-ratio:1; width:100%; align-self:start; padding:10px; border:1px dashed #c5cfb9; border-radius:3px; background:linear-gradient(135deg,#edf0e5,transparent); }
+.photo-upload-slot .icon-button { width:46px; height:46px; border-color:#c6d0bc; background:#f7f8f1; box-shadow:0 1px 2px #243f320a; }
+.photo-upload-slot .action-icon svg { width:27px; height:27px; }
+.gallery-feedback:empty,.gallery-photo-editor:empty { display:none; }
+.gallery-feedback { font-size:.88rem; margin:-.6rem 0 1.5rem; max-width:65ch; color:var(--muted); }
+.gallery-feedback [role=alert] { color:#973b2e; }
+.gallery-photo-editor { max-width:44rem; }
+.note-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+.personal-content [role=alert],.review-page [role=alert] { color:#973b2e; }
+.review-page { max-width:1150px; margin:auto; min-height:60vh; }
+.review-page h1 { font-size:2.6rem; }
+.review-key { padding:1rem; margin:1rem 0; background:#f1f2e9; }
+.review-key form { max-width:36rem; }
+.review-key a { display:block; margin-top:1rem; }
+.review-page > section { margin-top:2rem; }
+.review-note { padding:1rem; margin:1rem 0; border:1px solid #d6ddce; }
+.review-note > small { margin-right:1rem; }
+.review-photos { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1.5rem; }
+.review-photo { padding:1rem; border:1px solid #d6ddce; display:flex; flex-direction:column; gap:.7rem; }
+.review-photo img { width:100%; max-height:300px; object-fit:contain; }
+.review-page .lightbox > img { max-width:90vw; max-height:90vh; object-fit:contain; }
+@media(max-width:650px) {
+  .personal-content {padding:1.1rem;}
+  .note-editor,.photo-editor {padding:1rem;}
+  .personal-note .note-text {padding:3.25rem 1rem 1rem;}
+  .note-actions .icon-button {width:44px; height:44px;}
+  .photo-gallery .photo-upload-slot {padding:8px;}
 }

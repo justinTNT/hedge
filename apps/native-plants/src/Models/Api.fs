@@ -6,14 +6,18 @@ type Section = { Label: string; Text: string }
 type PlantCard = {
     Id: string; Slug: string; ScientificName: string; CommonNames: string; Family: string; Genus: string
     Aliases: string list; Forms: string list; Height: string; Sun: string list; Water: string list
-    GardenFeatures: string list; Wildlife: string list; EndemicNt: bool; Summary: string; Photo: Photo option
+    GardenFeatures: string list; Wildlife: string list; EndemicNt: bool; Summary: string; Photo: Photo option; Photographers: string list
 }
-type PlantDetail = { Card: PlantCard; Sections: Section list; Photos: Photo list }
+type DistributionMap = { Id: string; Image: string; Caption: string; SourceLabel: string }
+type PlantDetail = { Card: PlantCard; Sections: Section list; Photos: Photo list; DistributionMaps: DistributionMap list }
 type Taxon = { Name: string; Count: int; Genera: string list }
 type Facet = { Name: string; Count: int }
 
+type GlossaryEntry = { Id: string; Term: string; Aliases: string list; Definition: string; Illustration: string; SourceLabel: string }
+type ReferenceEntry = { Id: string; Kind: string; Number: int; Citation: string; Aliases: string list; SourceLabel: string }
+
 module GetCatalogue =
-    type Response = { Plants: PlantCard list; Families: Taxon list; Forms: Facet list; Sun: Facet list; Water: Facet list; GardenFeatures: Facet list; Wildlife: Facet list; Revision: string; RefreshSeconds: int }
+    type Response = { Plants: PlantCard list; Families: Taxon list; Forms: Facet list; Sun: Facet list; Water: Facet list; GardenFeatures: Facet list; Wildlife: Facet list; Revision: string; RefreshSeconds: int; Photographers: Facet list; Glossary: GlossaryEntry list; References: ReferenceEntry list }
     let endpoint : Get<Response> = Get "/api/plants/catalogue"
 
 module GetPlant =
@@ -25,6 +29,6 @@ module GetRevision =
     let endpoint : Get<Response> = Get "/api/plants/revision"
 
 module SearchPlants =
-    type Query = { Q: string option; Family: string option; Genus: string option; Form: string option; Sun: string option; Water: string option; Feature: string option; Wildlife: string option; Endemic: string option; Photos: string option }
+    type Query = { Q: string option; Family: string option; Genus: string option; Form: string option; Sun: string option; Water: string option; Feature: string option; Wildlife: string option; Endemic: string option; Photos: string option; Photographer: string option }
     type Response = { Plants: PlantCard list; Total: int }
     let endpoint : GetQuery<Query, Response> = GetQuery "/api/plants/search"

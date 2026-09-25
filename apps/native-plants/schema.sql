@@ -55,8 +55,155 @@ CREATE TABLE plant_photos (
     FOREIGN KEY (plant_id) REFERENCES plants(id)
 );
 
+CREATE TABLE plant_maps (
+    id TEXT PRIMARY KEY,
+    plant_id TEXT NOT NULL,
+    image TEXT NOT NULL,
+    caption TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    published INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL,
+    source_evidence TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    deleted_at INTEGER,
+    FOREIGN KEY (plant_id) REFERENCES plants(id)
+);
+
+CREATE TABLE glossary_terms (
+    id TEXT PRIMARY KEY,
+    term TEXT NOT NULL,
+    aliases TEXT NOT NULL,
+    definition TEXT NOT NULL,
+    illustration TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    source_evidence TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    published INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    deleted_at INTEGER
+);
+
+CREATE TABLE source_references (
+    id TEXT PRIMARY KEY,
+    source_key TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    number INTEGER NOT NULL,
+    citation TEXT NOT NULL,
+    aliases TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    source_evidence TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    published INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    deleted_at INTEGER
+);
+
+CREATE TABLE plant_notes (
+    id TEXT PRIMARY KEY,
+    plant_id TEXT NOT NULL,
+    owner_provider TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    is_correction INTEGER NOT NULL,
+    revision INTEGER NOT NULL,
+    reviewed_revision INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    deleted_at INTEGER,
+    FOREIGN KEY (plant_id) REFERENCES plants(id)
+);
+
+CREATE TABLE personal_plant_photos (
+    id TEXT PRIMARY KEY,
+    plant_id TEXT NOT NULL,
+    owner_provider TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    image_key TEXT NOT NULL,
+    thumbnail_key TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    stored_bytes INTEGER NOT NULL,
+    caption TEXT NOT NULL,
+    photographer TEXT NOT NULL,
+    offered INTEGER NOT NULL,
+    ready INTEGER NOT NULL,
+    revision INTEGER NOT NULL,
+    published_photo_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER,
+    deleted_at INTEGER,
+    FOREIGN KEY (plant_id) REFERENCES plants(id)
+);
+
+CREATE TABLE plant_view_preferences (
+    id TEXT PRIMARY KEY,
+    owner_provider TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    plant_id TEXT NOT NULL,
+    hero_photo_id TEXT,
+    FOREIGN KEY (plant_id) REFERENCES plants(id)
+);
+
+CREATE TABLE contribution_claims (
+    id TEXT PRIMARY KEY,
+    guest_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE guests (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER
+);
+
+CREATE TABLE identities (
+    id TEXT PRIMARY KEY,
+    guest_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    picture TEXT NOT NULL,
+    email TEXT,
+    activated_at INTEGER,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (guest_id) REFERENCES guests(id)
+);
+
+CREATE TABLE grants (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    enabled INTEGER NOT NULL,
+    granted_by TEXT,
+    created_at INTEGER NOT NULL
+);
+
 -- Indexes
 CREATE UNIQUE INDEX idx_plants_slug ON plants(slug);
 CREATE INDEX idx_plants_created_at ON plants(created_at DESC);
 CREATE INDEX idx_plant_photos_plant_id ON plant_photos(plant_id);
 CREATE INDEX idx_plant_photos_created_at ON plant_photos(created_at DESC);
+CREATE INDEX idx_plant_maps_plant_id ON plant_maps(plant_id);
+CREATE INDEX idx_plant_maps_created_at ON plant_maps(created_at DESC);
+CREATE UNIQUE INDEX idx_glossary_terms_term ON glossary_terms(term);
+CREATE INDEX idx_glossary_terms_created_at ON glossary_terms(created_at DESC);
+CREATE UNIQUE INDEX idx_source_references_source_key ON source_references(source_key);
+CREATE INDEX idx_source_references_created_at ON source_references(created_at DESC);
+CREATE INDEX idx_plant_notes_plant_id ON plant_notes(plant_id);
+CREATE INDEX idx_plant_notes_created_at ON plant_notes(created_at DESC);
+CREATE INDEX idx_personal_plant_photos_plant_id ON personal_plant_photos(plant_id);
+CREATE INDEX idx_personal_plant_photos_created_at ON personal_plant_photos(created_at DESC);
+CREATE INDEX idx_plant_view_preferences_plant_id ON plant_view_preferences(plant_id);
+CREATE UNIQUE INDEX idx_plant_view_preferences_owner_provider_owner_id_plant_id ON plant_view_preferences(owner_provider, owner_id, plant_id);
+CREATE UNIQUE INDEX idx_contribution_claims_guest_id ON contribution_claims(guest_id);
+CREATE INDEX idx_contribution_claims_created_at ON contribution_claims(created_at DESC);
+CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
+CREATE INDEX idx_identities_guest_id ON identities(guest_id);
+CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
+CREATE UNIQUE INDEX idx_grants_provider_provider_user_id_role ON grants(provider, provider_user_id, role);
+CREATE INDEX idx_grants_created_at ON grants(created_at DESC);

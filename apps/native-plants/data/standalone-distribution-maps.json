@@ -1,0 +1,463 @@
+{
+  "version": 1,
+  "images": [
+    {
+      "reference": "2026-corymbia-dunlopiana",
+      "plantId": "plant-34acd013445f3069",
+      "accountName": "Corymbia dunlopiana",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/Corymbia dunlopiana.jpg",
+      "sourceSha256": "7cc92e078b86e4a817dcdeb08a1b0ef7c4ced41b940a1709bd85f28b96015b76",
+      "originalCollectionPath": "Distribution maps/2026 originals/Corymbia dunlopiana.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Corymbia dunlopiana.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "5c79a2312c91c162f744f52cd6b3a1111ab0b306d690aef43e20b1809c1ec0a4",
+      "caption": "Corymbia dunlopiana — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia dunlopiana/PICK (C. dunlopiana)/Corymbia dunlopiana.jpg; SHA256 7cc92e078b86e4a817dcdeb08a1b0ef7c4ced41b940a1709bd85f28b96015b76; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-corymbia-chartacea",
+      "plantId": "plant-23c50b61658a9436",
+      "accountName": "Corymbia chartacea",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia chartacea/PICK/Corymbia chartacea.jpg",
+      "sourceSha256": "6bbb79135e1614e293f6c861ba1321e2cc025004dfda76e82ae53c28bf18c980",
+      "originalCollectionPath": "Distribution maps/2026 originals/Corymbia chartacea.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Corymbia chartacea.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "b8664839a9c0b7fea3c1206eb357524c40da5dec6aa3a378d3a11e879c59e2af",
+      "caption": "Corymbia chartacea — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia chartacea/PICK/Corymbia chartacea.jpg; SHA256 6bbb79135e1614e293f6c861ba1321e2cc025004dfda76e82ae53c28bf18c980; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-cleome-microaustralica",
+      "plantId": "plant-846d1c2e12151451",
+      "accountName": "Cleome microaustralica",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cleome microaustralica/PICK/C_microaustralasica.jpg",
+      "sourceSha256": "b8d374adc7e10ee1b4611fc054aad21baa7f1afc1a480d00d06f21849cd4400d",
+      "originalCollectionPath": "Distribution maps/2026 originals/Cleome microaustralica.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Cleome microaustralica.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "dfee701d8b97cb42940c40f2d692e993b12808c8dd194f731ecd84013730caf8",
+      "caption": "Cleome microaustralica — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Cleome microaustralica/PICK/C_microaustralasica.jpg; SHA256 b8d374adc7e10ee1b4611fc054aad21baa7f1afc1a480d00d06f21849cd4400d; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-eucalyptus-tintinnans",
+      "plantId": "plant-82925838b2c3bbd5",
+      "accountName": "Eucalyptus tintinnans",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tintinnans (use all 4 shots from 2022). (USE NEW MAP)/PICK/Eucalytpus tintinnans.jpg",
+      "sourceSha256": "3320a30d99b55a4a09c2c768944b80ba73243b01225fe12fa496a747db886195",
+      "originalCollectionPath": "Distribution maps/2026 originals/Eucalyptus tintinnans.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Eucalyptus tintinnans.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "9ef300c0527b38da8fc6fe6c606969be0f95b9c949448faf60f1c3be10972e45",
+      "caption": "Eucalyptus tintinnans — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus tintinnans (use all 4 shots from 2022). (USE NEW MAP)/PICK/Eucalytpus tintinnans.jpg; SHA256 3320a30d99b55a4a09c2c768944b80ba73243b01225fe12fa496a747db886195; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-brachychiton-megaphyllus",
+      "plantId": "plant-7dd6edb0cbfd7a62",
+      "accountName": "Brachychiton megaphyllus",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Brachychiton megaphyllus/PICK/Brachychiton megaphyllus.jpg",
+      "sourceSha256": "e234c322e5d525c8c72688bd8b0add6904056ae83ecc4c6b1d8630a9e4566cb5",
+      "originalCollectionPath": "Distribution maps/2026 originals/Brachychiton megaphyllus.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Brachychiton megaphyllus.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "ddb4d0122ede83340ea807636bdea876b42aeff18dc502279546702b7ce2b03d",
+      "caption": "Brachychiton megaphyllus — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Brachychiton megaphyllus/PICK/Brachychiton megaphyllus.jpg; SHA256 e234c322e5d525c8c72688bd8b0add6904056ae83ecc4c6b1d8630a9e4566cb5; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-blakella-bella",
+      "plantId": "plant-8367c6352e049326",
+      "accountName": "Blakella bella",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/Blakella bella MAP.jpg",
+      "sourceSha256": "5710017dbe076ee8fdeb2ed2945901cdb7d5fe94f795345ed03bea0433660bd6",
+      "originalCollectionPath": "Distribution maps/2026 originals/Blakella bella.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Blakella bella.png",
+      "crop": [
+        573,
+        451,
+        2943,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 934,
+      "height": 1600,
+      "sha256": "6b143a2755e3394afaca415c409e601909d48aefa433394878679a7de565a558",
+      "caption": "Blakella bella — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella bella (prev. Corymbia bella) USE NEW MAP)/PICK/Blakella bella MAP.jpg; SHA256 5710017dbe076ee8fdeb2ed2945901cdb7d5fe94f795345ed03bea0433660bd6; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-macropteranthes-kekwickii",
+      "plantId": "plant-db959f0f24b162c5",
+      "accountName": "Macropteranthes kekwickii",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Macropteranthes kekwickii (N)/PICK/M_keckwickii.jpg",
+      "sourceSha256": "7c8997e2b318490c1a8c37aef080db62ff57710c794fc90b9f63eb58c3701c7a",
+      "originalCollectionPath": "Distribution maps/2026 originals/Macropteranthes kekwickii.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Macropteranthes kekwickii.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "59e3f41f8380329a2bea3fb67f6be4abe932bca59928aba38dd25d71d40e7b8c",
+      "caption": "Macropteranthes kekwickii — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/MM/Macropteranthes kekwickii (N)/PICK/M_keckwickii.jpg; SHA256 7c8997e2b318490c1a8c37aef080db62ff57710c794fc90b9f63eb58c3701c7a; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-stenostegia-congesta",
+      "plantId": "plant-14e484cd38fd269e",
+      "accountName": "Stenostegia congesta",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Stenostegia congesta (N)/PICK/Stenostegia congesta.jpg",
+      "sourceSha256": "894b0780b5a03ba4faf644fa447fcc137b157aab4dabcd9a994598f310c7f8ee",
+      "originalCollectionPath": "Distribution maps/2026 originals/Stenostegia congesta.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Stenostegia congesta.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "8505053e4d273211b16d10ccdf88970f181ca09274200176a258e4bd26ef36ef",
+      "caption": "Stenostegia congesta — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/SS/Stenostegia congesta (N)/PICK/Stenostegia congesta.jpg; SHA256 894b0780b5a03ba4faf644fa447fcc137b157aab4dabcd9a994598f310c7f8ee; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-grevillea-sp-magela-creek",
+      "plantId": "plant-c6417d2c6792ec73",
+      "accountName": "Grevillea sp. Magela Creek",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea sp. Magela Creek (N)/PICK/Grevillea_sp._Magella.jpg",
+      "sourceSha256": "bc83f89a10b3ec1919596319ab96d0f6164d279c20d27b63d2919be64b44563e",
+      "originalCollectionPath": "Distribution maps/2026 originals/Grevillea sp. Magela Creek.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Grevillea sp. Magela Creek.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "3cca57009deff78a6bde2dbd25a61602c40cc16f9a8d46a3f9336234b939a44b",
+      "caption": "Grevillea sp. Magela Creek — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/GG/Grevillea sp. Magela Creek (N)/PICK/Grevillea_sp._Magella.jpg; SHA256 bc83f89a10b3ec1919596319ab96d0f6164d279c20d27b63d2919be64b44563e; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-hildegardia-australiensis",
+      "plantId": "plant-b80caea54383a1e6",
+      "accountName": "Hildegardia australiensis",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/Hildegardia australiensis.jpg",
+      "sourceSha256": "e8a91eb731a100829db47f029aafbc4d083d5ac97ac9c595d791472790bfb6f1",
+      "originalCollectionPath": "Distribution maps/2026 originals/Hildegardia australiensis.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Hildegardia australiensis.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "8a09fb2533f4bfc21826e8750e7eb91d196483a40d8e671c4779c303fa4d244b",
+      "caption": "Hildegardia australiensis — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hildegardia australienis (N)/PICK/Hildegardia australiensis.jpg; SHA256 e8a91eb731a100829db47f029aafbc4d083d5ac97ac9c595d791472790bfb6f1; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-hibiscus-petherickii",
+      "plantId": "plant-160db29e83db95df",
+      "accountName": "Hibiscus petherickii",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus petherickii (N)/PICK/Hibiscus petherickii.jpg",
+      "sourceSha256": "2bf7b93112cb3b77f6ad488154e69f43cde96db988e68673d760598ccb40a7de",
+      "originalCollectionPath": "Distribution maps/2026 originals/Hibiscus petherickii.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Hibiscus petherickii.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "5c782425e4ddf687e8da4bca1decb6a91e183e6a7e99835a92a9c5e4f79460d5",
+      "caption": "Hibiscus petherickii — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Hibiscus petherickii (N)/PICK/Hibiscus petherickii.jpg; SHA256 2bf7b93112cb3b77f6ad488154e69f43cde96db988e68673d760598ccb40a7de; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-helicteres-macrothrix",
+      "plantId": "plant-94426f0044625b94",
+      "accountName": "Helicteres macrothrix",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Helicteres macrothrix (N)/PICK/Helicteres macrothrix.jpg",
+      "sourceSha256": "c9cb0edec971f44178ee945328d784d3284507020ef7cca6a40a61dedf3de33f",
+      "originalCollectionPath": "Distribution maps/2026 originals/Helicteres macrothrix.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Helicteres macrothrix.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "a3823acbf328a43a5e3ba26868533ede81c65eeaacf488859c9ad28d3198b24a",
+      "caption": "Helicteres macrothrix — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Helicteres macrothrix (N)/PICK/Helicteres macrothrix.jpg; SHA256 c9cb0edec971f44178ee945328d784d3284507020ef7cca6a40a61dedf3de33f; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-harpullia-leichhardtii",
+      "plantId": "plant-07c55680092e6529",
+      "accountName": "Harpullia leichhardtii",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Harpullia leichhardtii (N)/PICK/H_leichardtii.jpg",
+      "sourceSha256": "d9ff3796c5279d84f188843ead6faa958850247ba014178e5f8676fc7369de38",
+      "originalCollectionPath": "Distribution maps/2026 originals/Harpullia leichhardtii.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Harpullia leichhardtii.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "c71b297d4516ba3250137ea6063a8c9bf9098215494b553b53f81e507c7bc628",
+      "caption": "Harpullia leichhardtii — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/HH/Harpullia leichhardtii (N)/PICK/H_leichardtii.jpg; SHA256 d9ff3796c5279d84f188843ead6faa958850247ba014178e5f8676fc7369de38; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-corymbia-arnhemensis",
+      "plantId": "plant-fe44f82b0c0c17fe",
+      "accountName": "Corymbia arnhemensis",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia arnhemensis. (use 2022 tree, fruit & bark photos)/PICK/Corymbia arnhemensis.jpg",
+      "sourceSha256": "1e50e7fe60686152d1ad91b4fb77b4d6930af061382795a6c689516b7ad65235",
+      "originalCollectionPath": "Distribution maps/2026 originals/Corymbia arnhemensis.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Corymbia arnhemensis.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "b7d145f999a46c7326eae5828f5b707ee15bddde58eec8896c18d7e29cfcbf30",
+      "caption": "Corymbia arnhemensis — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Corymbia arnhemensis. (use 2022 tree, fruit & bark photos)/PICK/Corymbia arnhemensis.jpg; SHA256 1e50e7fe60686152d1ad91b4fb77b4d6930af061382795a6c689516b7ad65235; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-calytrix-arborescens",
+      "plantId": "plant-1f351a5513330b5f",
+      "accountName": "Calytrix arborescens",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Calytrix arborescens (N)/PICK/Calytrix arborescens.jpg",
+      "sourceSha256": "46bb1a9c7a91f9ace6d5ae89e1912ef7e5bf0e5b4158c42e7c48c5e5f8b8f15d",
+      "originalCollectionPath": "Distribution maps/2026 originals/Calytrix arborescens.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Calytrix arborescens.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "3f5f38160f6393205667ebe14b11cf20e782849cb84a3a9301de21f7b0f012bc",
+      "caption": "Calytrix arborescens — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/CC/Calytrix arborescens (N)/PICK/Calytrix arborescens.jpg; SHA256 46bb1a9c7a91f9ace6d5ae89e1912ef7e5bf0e5b4158c42e7c48c5e5f8b8f15d; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-eucalyptus-patellaris",
+      "plantId": "plant-f2a47faccba62ff7",
+      "accountName": "Eucalyptus patellaris",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus patellaris (use 2022 tree bark & nuts) USE NEW MAP/PICK/Eucalyptus patellaris.jpg",
+      "sourceSha256": "e2106489297e72d11fa7bd62ea0723f0150c294a8b92dc2d9c2ee8befd4e252d",
+      "originalCollectionPath": "Distribution maps/2026 originals/Eucalyptus patellaris.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Eucalyptus patellaris.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "3c3a02f03e8537c1c2416742222ab2c474b899d3994330b3a16bcf139f31277b",
+      "caption": "Eucalyptus patellaris — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/EE/Eucalyptus patellaris (use 2022 tree bark & nuts) USE NEW MAP/PICK/Eucalyptus patellaris.jpg; SHA256 e2106489297e72d11fa7bd62ea0723f0150c294a8b92dc2d9c2ee8befd4e252d; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-flacourtia-territorialis",
+      "plantId": "plant-c6c1c93468c04c3e",
+      "accountName": "Flacourtia territorialis",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Flacourtia territorialis (NEW)/PICK/F_territorialis.jpg",
+      "sourceSha256": "7e49b0b702e2e726a789205c2e98b6108cfc83ec3b28c3be28db462343656647",
+      "originalCollectionPath": "Distribution maps/2026 originals/Flacourtia territorialis.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Flacourtia territorialis.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "f3bddc0f50887c0e50e7adba4994a20bcb3c4c364d4a10373fae6c4a7b45e8bc",
+      "caption": "Flacourtia territorialis — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/FF/Flacourtia territorialis (NEW)/PICK/F_territorialis.jpg; SHA256 7e49b0b702e2e726a789205c2e98b6108cfc83ec3b28c3be28db462343656647; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    },
+    {
+      "reference": "2026-blakella-polysciada",
+      "plantId": "plant-81ec04a603f2989f",
+      "accountName": "Blakella polysciada",
+      "sourcePath": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella polysciada (Use 2022 shots of tree & bark)/PICK/Blakella polysciada.jpg",
+      "sourceSha256": "cd708a5f3a2af5a454e7b3916957400ee39e51b4b7af0e3f6586358f76239514",
+      "originalCollectionPath": "Distribution maps/2026 originals/Blakella polysciada.jpg",
+      "outputPath": "Distribution maps/2026 normalized/Blakella polysciada.png",
+      "crop": [
+        573,
+        451,
+        2940,
+        4512
+      ],
+      "maxDimension": 1600,
+      "width": 933,
+      "height": 1600,
+      "sha256": "09b3950c1125739d7ce46dd20aa4dc621a96ba1138dcd5e148b1f8fb253010c9",
+      "caption": "Blakella polysciada — Northern Territory distribution",
+      "sourceLabel": "John Brock · 2026 source collection",
+      "published": true,
+      "sortOrder": 0,
+      "sourceEvidence": "# A A A A COMPLETE NPNA NEW ED 2026/A. A. PHOTOS AND IMAGES/D. PLANT DESCRIPTIONS GENERA A-Z/BB/Blakella polysciada (Use 2022 shots of tree & bark)/PICK/Blakella polysciada.jpg; SHA256 cd708a5f3a2af5a454e7b3916957400ee39e51b4b7af0e3f6586358f76239514; reviewed species folder and named standalone map; paper margins cropped, grayscale, longest edge capped at 1600px; no redrawing or geographic inference"
+    }
+  ],
+  "supersedesBookMaps": [
+    {
+      "plantId": "plant-7dd6edb0cbfd7a62",
+      "reference": "p066-o239"
+    },
+    {
+      "plantId": "plant-846d1c2e12151451",
+      "reference": "p076-o209"
+    },
+    {
+      "plantId": "plant-8367c6352e049326",
+      "reference": "p078-o187"
+    },
+    {
+      "plantId": "plant-81ec04a603f2989f",
+      "reference": "p084-o130"
+    },
+    {
+      "plantId": "plant-f2a47faccba62ff7",
+      "reference": "p102-o136"
+    },
+    {
+      "plantId": "plant-82925838b2c3bbd5",
+      "reference": "p105-o148"
+    }
+  ]
+}

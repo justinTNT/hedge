@@ -1,0 +1,5 @@
+[
+  { "identity": true, "assembly": "Models" },
+  { "identity": true, "assembly": "IdentityModels" },
+  { "identity": true, "assembly": "GrantModels", "namespace": "Grants" }
+]

@@ -16,7 +16,11 @@
     "db:seed": "node scripts/db-local.mjs seed",
     "preview": "wrangler dev --port 8794",
     "dev": "concurrently -k \"wrangler dev --port 8794\" \"vite\"",
-    "test": "python3 scripts/test-import.py && node --test test/*.test.mjs"
+    "test": "python3 scripts/test-import.py && node --test test/*.test.mjs",
+    "db:migrate:identity": "wrangler d1 execute native-plants-db --local --file migrations/0001_identity.sql",
+    "db:migrate:contributions": "wrangler d1 execute native-plants-db --local --file migrations/0002_contributions.sql",
+    "check:preview": "python3 scripts/check-preview.py && node --test test/preview-gate.test.mjs",
+    "deploy:preview": "npm run build && npm run check:preview && wrangler deploy --env preview"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
