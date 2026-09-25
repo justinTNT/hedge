@@ -219,6 +219,9 @@ type WorkerConfig = {
     /// each guest route so a missing/short GUEST_SECRET fails only guest operations, not content
     /// reads. Independent of OAuth: a host with no providers still issues/verifies signed guests.
     GuestSession: (obj -> WorkerRequest -> Hedge.GuestSession.Deps) option
+    /// Public comment-image uploads are separate from session support. Authenticated/private
+    /// contribution hosts leave this false and own their upload routes.
+    AllowGuestUploads: bool
     /// Extra client views mounted on other hosts of this same deploy (default []).
     Mounts: Mount list
     /// R2 key prefixes never served through the public /blobs/ route (C4). See BlobServingPolicy.
@@ -265,9 +268,12 @@ let createWorker (config: WorkerConfig) =
                     // acceptable, renew if due. resolveOrBootstrap carries the replacement (if any).
                     let! boot = resolveOrBootstrap (guestOf env request) (readCookie request)
                     let attach body =
-                        match boot.Replacement with
-                        | Some c -> okJsonWithCookie body c
-                        | None -> okJson body
+                        let response =
+                            match boot.Replacement with
+                            | Some c -> okJsonWithCookie body c
+                            | None -> okJson body
+                        response?headers?set("Cache-Control", "private, no-store") |> ignore
+                        response
                     if boot.IsNew then
                         // A brand-new guest is not revealed to the client — identity is established
                         // but the id stays in the httpOnly cookie only (unchanged /api/auth/me shape).
@@ -284,6 +290,20 @@ let createWorker (config: WorkerConfig) =
                                 return attach """{"guest":null}"""
                         | None ->
                             return attach """{"guest":null}"""
+            | _ ->
+
+            // Browser logout is a same-origin POST, separate from account disconnection.
+            match route with
+            | POST path when path = "/api/auth/logout" ->
+                let url = createUrl request.url
+                let origin : string = url?origin
+                if getHeader request "Origin" <> origin then
+                    return jsonResponse "{\"error\":\"Same-origin request required\"}" 403
+                else
+                    let secure = (url?protocol |> unbox<string>) = "https:"
+                    let response = okJsonWithCookie "{\"ok\":true}" (expiredCookie secure)
+                    response?headers?set("Cache-Control", "no-store") |> ignore
+                    return response
             | _ ->
 
             // Which providers can actually complete a login: known to the
@@ -325,7 +345,7 @@ let createWorker (config: WorkerConfig) =
                         // HMAC-signed OAuth state so the callback can require the same subject.
                         let! boot = resolveOrBootstrap (guestOf env request) (readCookie request)
                         let returnTo = getQueryParam request.url "returnTo"
-                        let returnTo = if isNull returnTo || returnTo = "" then "/" else returnTo
+                        let returnTo = OAuth.safeReturnPath returnTo
                         let! state = OAuth.generateState oauth.Secret boot.GuestId returnTo
                         let redirectUri =
                             let url = createUrl request.url
@@ -417,6 +437,8 @@ let createWorker (config: WorkerConfig) =
                 else
                     return unauthorized ()
             | POST path when matchPath "/api/blobs/guest" path = Some (Exact "/api/blobs/guest") ->
+                if not config.AllowGuestUploads then return notFound ()
+                else
                 // Guest comment-image upload — NOT admin-gated. A WRITE: require an ACCEPTED signed
                 // (or bridge-upgraded) guest via the shared policy, never create one on this path,
                 // and reject before touching storage otherwise. handleGuestBlobUpload enforces

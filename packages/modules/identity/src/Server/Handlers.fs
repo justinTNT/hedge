@@ -5,7 +5,7 @@ module Identity.Handlers
 // shared Identity.Server / Identity.Sql / Identity.Db / Identity.Attribution + Hedge primitives, and
 // takes every host seam through a Deps record — the app DB, the guest-write authorizer
 // (Server.GuestConfig.require), the site's attribution policy (which comment tables / statements), and
-// the return-navigation policy (the /curator auto-activate special case). Names no content module and
+// the return-navigation policy (direct activation versus a claim screen). Names no content module and
 // no app Env / Server.Db, so it composes into any identity host via identity.server.props.
 
 open Fable.Core
@@ -17,13 +17,13 @@ open Identity.Db
 
 /// Host seams for the OAuth-completion path (env-free): the site's attribution policy (which comment
 /// tables / reassign statements it composes) as data, plus the return-navigation policy that decides
-/// whether a returnTo means "a curator signed in to work" (auto-activate + full document nav to the
-/// standalone page) vs. the normal claim-page redirect. A host with no such surface passes
-/// `IsCuratorReturn = fun _ -> false`.
+/// whether verified login activates immediately and returns to the requested page, or goes through
+/// the host's claim screen. Identity-only apps can activate directly; hosts with anonymous content
+/// retain their claim policy. The path is validated before this policy is evaluated.
 type OAuthDeps =
     { ReassignStatements: string list
       CommentTables: string list
-      IsCuratorReturn: string -> bool }
+      ActivateOnReturn: string -> bool }
 
 /// Host seams for the identity WRITE handlers (activate / revert / disconnect / list): the app DB, the
 /// guest-write authorizer (the app's Server.GuestConfig.require partially applied over its Env), and
@@ -35,8 +35,9 @@ type WriteDeps =
       CommentTables: string list }
 
 let private identityJson (i: IdentityRow) : string =
-    let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
-    sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s}""" i.Id i.Provider i.Name i.Picture emailJson
+    let fields = [ "id" ==> i.Id; "provider" ==> i.Provider; "name" ==> i.Name; "picture" ==> i.Picture ]
+    let fields = match i.Email with Some email -> fields @ [ "email" ==> email ] | None -> fields
+    JS.JSON.stringify (createObj fields)
 
 let private avatarTypes = set [ "image/jpeg"; "image/png"; "image/gif"; "image/webp" ]
 
@@ -95,6 +96,7 @@ let private mergeDuplicateIdentities (db: D1Database) (reassignStatements: strin
 /// guestId + userInfo + returnTo arrive from the framework at call time.
 let onOAuthComplete (deps: OAuthDeps) (db: D1Database) (blobs: R2Bucket) (guestId: string) (userInfoObj: obj) (returnTo: string) : JS.Promise<OAuthComplete> =
     promise {
+        let returnTo = Hedge.OAuth.safeReturnPath returnTo
         let name : string = userInfoObj?Name
         let picture : string = userInfoObj?PictureUrl
         let provider : string = userInfoObj?Provider
@@ -159,11 +161,9 @@ let onOAuthComplete (deps: OAuthDeps) (db: D1Database) (blobs: R2Bucket) (guestI
                     return moved |> Map.tryFind finalId |> Option.defaultValue finalId
                 }
 
-        // Curator login: a curator explicitly signs in on the standalone /curator page to work, so
-        // auto-activate the just-authenticated identity and return straight there via a full document
-        // navigation — the blog SPA claim/merge switcher can't render on a separate document. The host
-        // supplies this policy (IsCuratorReturn); a host with no such surface never takes this branch.
-        if deps.IsCuratorReturn returnTo then
+        // The host chooses direct activation for account-only experiences and standalone views.
+        // Content hosts can retain a claim screen where anonymous content needs attribution choices.
+        if deps.ActivateOnReturn returnTo then
             let! _ = (bind (db.prepare Identity.Sql.setIdentityActive) [| box now; box landedId |]).run()
             return { RedirectUrl = returnTo; AdoptGuestId = adopt }
         else

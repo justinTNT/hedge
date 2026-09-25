@@ -90,6 +90,20 @@ let ensureSession () : JS.Promise<SessionReadiness> =
         return { Ready = raw?ready; Session = parseSession raw?session }
     }
 
+/// A fresh, server-authoritative read with explicit readiness (unlike display-only syncSession).
+[<Emit("window.HedgeGuest.refreshSession()")>]
+let private rawRefreshSession () : JS.Promise<obj> = jsNative
+
+let refreshSession () : JS.Promise<SessionReadiness> =
+    promise {
+        let! raw = rawRefreshSession ()
+        return { Ready = raw?ready; Session = parseSession raw?session }
+    }
+
+/// Log this browser out; account associations and other devices remain untouched.
+[<Emit("window.HedgeGuest.signOut()")>]
+let signOut () : JS.Promise<bool> = jsNative
+
 /// Drop the cached bootstrap so the next `ensureSession` re-fetches. Call on a write's 401 (the
 /// cookie expired/was cleared/the key changed since bootstrap) so the client re-establishes a
 /// session instead of resending the rejected credential until reload.
