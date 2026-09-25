@@ -189,6 +189,7 @@ fi
 
 echo ""
 node --test "$ROOT/test/guest-session-runtime.test.mjs"
+bash "$ROOT/test/BoundaryFixtures/run.sh"
 
 echo "=== Step 1g: Unified shell Stage 0 (client matrix + host-context probe) ==="
 # Stage 0 adds compatible hosting interfaces to the content modules (emptyHosted/

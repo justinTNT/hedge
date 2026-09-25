@@ -79,13 +79,16 @@ let private methodOf (m: string) : HttpMethod =
 /// CP-D: the Request's declared verb and headers are honoured (the contract), not dropped; a
 /// JSON body still adds Content-Type. No browser endpoint emits custom headers today, so header
 /// forwarding is future-proofing rather than a behaviour change.
-let browserTransport : Hedge.Http.Transport =
+[<Emit("$0.cache = 'no-store'")>]
+let private disableCache (options: obj) : unit = jsNative
+
+let private browserTransportWithCache (noStore: bool) : Hedge.Http.Transport =
     fun (req: Hedge.Http.Request) ->
         promise {
             let url = basePath + req.Path + buildQuery req.Query
             let headerList =
-                [ if req.Body.IsSome then ContentType "application/json"
-                  for (k, v) in req.Headers -> HttpRequestHeaders.Custom (k, box v) ]
+                [ if req.Body.IsSome then yield ContentType "application/json"
+                  for (k, v) in req.Headers do yield HttpRequestHeaders.Custom (k, box v) ]
             let baseProps = [ Method (methodOf req.Method); requestHeaders headerList ]
             let props =
                 match req.Body with
@@ -97,12 +100,20 @@ let browserTransport : Hedge.Http.Transport =
                 // typed ApiError. Only a request that never completes (network/CORS) is a
                 // TransportFailure. Fetch.fetch's throw-on-!ok would otherwise turn every 4xx into a
                 // TransportFailure, hiding real statuses from the generated client.
-                let! response = GlobalFetch.fetch(RequestInfo.Url url, requestProps props)
+                let options = requestProps props
+                if noStore then disableCache options
+                let! response = GlobalFetch.fetch(RequestInfo.Url url, options)
                 let! text = response.text()
                 return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
             with ex ->
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }
+
+/// Public requests retain the browser's ordinary caching behaviour.
+let browserTransport = browserTransportWithCache false
+
+/// Private reads/writes bypass the browser cache. Compose with GuestSession.transport when needed.
+let uncachedBrowserTransport = browserTransportWithCache true
 
 // -- WebSocket --
 

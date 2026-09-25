@@ -31,6 +31,7 @@ let post : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE articles_posts SET title = ?, teaser = ?, body = ?, image = ?, article_date = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE articles_posts SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Title"; "Teaser"; "Body"; "Image"; "ArticleDate"; "Slug"; "ViewCount"] }
 
 let comment : AdminTable =
@@ -55,6 +56,7 @@ let comment : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE articles_comments SET post_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
       Delete = "UPDATE articles_comments SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["PostId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
 
 let tables : AdminTable list = [

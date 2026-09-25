@@ -28,6 +28,7 @@ let page : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE pages SET name = ?, title = ?, teaser = ?, body = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE pages SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Name"; "Title"; "Teaser"; "Body"] }
 
 let menuItem : AdminTable =
@@ -51,6 +52,7 @@ let menuItem : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE menu_items SET item = ?, title = ?, link = ?, parent_item = ?, ordinal = ? WHERE id = ?"
       Delete = "UPDATE menu_items SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Item"; "Title"; "Link"; "ParentItem"; "Ordinal"] }
 
 let tables : AdminTable list = [

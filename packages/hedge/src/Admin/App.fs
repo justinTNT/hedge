@@ -7,12 +7,6 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Hedge.Schema
 
-[<Emit("localStorage.getItem($0) || ''")>]
-let private lsGet (key: string) : string = jsNative
-
-[<Emit("localStorage.setItem($0, $1)")>]
-let private lsSet (key: string) (value: string) : unit = jsNative
-
 [<Emit("$0[$1]")>]
 let private getField (record: obj) (key: string) : obj = jsNative
 
@@ -65,6 +59,7 @@ type Model = {
     /// including a second "New" form of the same type (which EditingId/CurrentType alone
     /// can't distinguish).
     FormSeq: int
+    CredentialEpoch: int
 }
 
 type Msg =
@@ -88,6 +83,8 @@ type Msg =
     | DeleteRecord of string
     | GotDelete of Result<bool, string>
     | DismissError
+    | CredentialChanged
+    | CredentialResult of epoch: int * result: Msg
 
 // ============================================================
 // TipTap editor lifecycle for rich content fields
@@ -194,9 +191,12 @@ let private idField (schema: TypeSchema) : string option =
 // Init / Update
 // ============================================================
 
+let mutable private stopCredentialSubscription : (unit -> unit) option = None
+let private scoped model constructor value = CredentialResult (model.CredentialEpoch, constructor value)
+
 let init () : Model * Cmd<Msg> =
     let route = Router.currentUrl ()
-    let key = lsGet "adminKey"
+    let key = Client.AdminCredential.read ()
     let model =
         { Route = route
           Key = key
@@ -209,11 +209,27 @@ let init () : Model * Cmd<Msg> =
           EditFields = Map.empty
           IsLoading = true   // discovery runs immediately (LoadTypes below); avoid a sign-in flash
           Error = None
-          FormSeq = 0 }
-    model, Cmd.ofMsg LoadTypes
+          FormSeq = 0
+          CredentialEpoch = 0 }
+    model, Cmd.batch [
+        Cmd.ofMsg LoadTypes
+        Cmd.ofEffect (fun dispatch ->
+            stopCredentialSubscription |> Option.iter (fun stop -> stop ())
+            stopCredentialSubscription <- Some (Client.AdminCredential.subscribe (fun () -> dispatch CredentialChanged)))
+    ]
 
-let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
+let rec update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
+    | CredentialChanged when model.Key=Client.AdminCredential.read () && model.Types.IsNone && model.IsLoading -> model, Cmd.none
+    | CredentialChanged ->
+        let key = Client.AdminCredential.read ()
+        { model with Key=key; KeyDraft=key; CredentialEpoch=model.CredentialEpoch+1
+                     Types=None; Records=None; CurrentType=None; EditingId=None; EditRecord=None
+                     EditFields=Map.empty; FormSeq=model.FormSeq+1; IsLoading=true; Error=None },
+        Cmd.batch [destroyEditorsCmd; Cmd.ofMsg LoadTypes]
+    | CredentialResult (epoch, result) when epoch=model.CredentialEpoch && model.Key=Client.AdminCredential.read () ->
+        update result model
+    | CredentialResult _ -> model, Cmd.none
     | UrlChanged route ->
         let cmd =
             match route with
@@ -234,14 +250,18 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with KeyDraft = key }, Cmd.none
 
     | SubmitKey ->
-        lsSet "adminKey" model.KeyDraft
-        { model with Key = model.KeyDraft; Error = None }, Cmd.ofMsg LoadTypes
+        match Client.AdminCredential.write model.KeyDraft with
+        | Ok () -> update CredentialChanged model
+        | Error error ->
+            { model with Types=None; Records=None; EditRecord=None; EditingId=None
+                         EditFields=Map.empty; FormSeq=model.FormSeq+1; CredentialEpoch=model.CredentialEpoch+1
+                         IsLoading=false; Error=Some error }, destroyEditorsCmd
 
     | LoadTypes ->
         // Discovery is authorization-scoped: send the admin key (owner) + the same-origin guest
         // cookie (a delegated curator). The permitted set comes back; 401 -> show the sign-in.
         { model with IsLoading = true },
-        Cmd.OfPromise.either (fun () -> Api.getTypes model.Key) () GotTypes (fun ex -> GotTypes (Error ex.Message))
+        Cmd.OfPromise.either (fun () -> Api.getTypes model.Key) () (scoped model GotTypes) (fun ex -> scoped model GotTypes (Error ex.Message))
 
     | GotTypes (Ok types) ->
         let cmd =
@@ -264,7 +284,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             destroyEditorsCmd
             Cmd.OfPromise.either
                 (fun () -> Api.listRecords model.Key typeName)
-                () GotRecords (fun ex -> GotRecords (Error ex.Message))
+                () (scoped model GotRecords) (fun ex -> scoped model GotRecords (Error ex.Message))
         ]
 
     | GotRecords (Ok records) ->
@@ -279,7 +299,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             destroyEditorsCmd
             Cmd.OfPromise.either
                 (fun () -> Api.getRecord model.Key typeName id)
-                () GotEditRecord (fun ex -> GotEditRecord (Error ex.Message))
+                () (scoped model GotEditRecord) (fun ex -> scoped model GotEditRecord (Error ex.Message))
         ]
 
     | NewRecord typeName ->
@@ -335,7 +355,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                     | Some id -> fun () -> Api.updateRecord model.Key typeName id body
                     | None -> fun () -> Api.createRecord model.Key typeName body
                 { model with IsLoading = true },
-                Cmd.OfPromise.either call () GotSave (fun ex -> GotSave (Error ex.Message))
+                Cmd.OfPromise.either call () (scoped model GotSave) (fun ex -> scoped model GotSave (Error ex.Message))
             | None ->
                 model, Cmd.none
         | None -> model, Cmd.none
@@ -363,7 +383,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             { model with IsLoading = true },
             Cmd.OfPromise.either
                 (fun () -> Api.deleteRecord model.Key typeName id)
-                () GotDelete (fun ex -> GotDelete (Error ex.Message))
+                () (scoped model GotDelete) (fun ex -> scoped model GotDelete (Error ex.Message))
         | None -> model, Cmd.none
 
     | GotDelete (Ok _) ->

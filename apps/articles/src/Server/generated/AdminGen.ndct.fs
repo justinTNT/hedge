@@ -24,6 +24,7 @@ let guest : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE guests SET session_id = ? WHERE id = ?"
       Delete = "UPDATE guests SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["SessionId"] }
 
 let identity : AdminTable =
@@ -48,6 +49,7 @@ let identity : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
       Delete = "DELETE FROM identities WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
 
 let private ownTables : AdminTable list = [

@@ -109,3 +109,16 @@ let signOut () : JS.Promise<bool> = jsNative
 /// session instead of resending the rejected credential until reload.
 [<Emit("window.HedgeGuest.invalidateSession()")>]
 let invalidateSession () : unit = jsNative
+
+/// Run a typed operation under the browser session lifecycle. The operation owns decoding;
+/// the runtime owns cookie serialization and rejects results from an invalidated session.
+[<Emit("window.HedgeGuest.withSessionRequest($0)")>]
+let withSessionRequest (action: unit -> JS.Promise<'T>) : JS.Promise<'T> = jsNative
+
+/// Optional adapter for generated clients. The inner transport must consume its response body
+/// before returning; HTTP and decoder errors remain Hedge.Http's responsibility.
+let transport (inner: Hedge.Http.Transport) : Hedge.Http.Transport =
+    fun request -> promise {
+        try return! withSessionRequest (fun () -> inner request)
+        with ex -> return Error (Hedge.Http.TransportFailure ex.Message)
+    }
