@@ -170,16 +170,16 @@ build, 18 importer tests, all 85 app Node tests and preview validation passed.
 Preview validation checked 4,041 media references and 4,609 deploy assets.
 
 
-## Boundary refactor prepared locally — not deployed
+## Boundary refactor integration and verification
 
 The shared Hedge boundary refactor is merged into main. The `native-plants`
 branch is rebased onto main at `3efa413` and includes the verified typed
 contribution API, credential events and explicit admin descriptors. The original
-app checkout now contains the completed integration. No schema migration, reseeding, changed OAuth
-configuration or new grant is required. The preview's current version and remote
-content are unchanged by this work.
+app checkout now contains the completed integration. No schema migration,
+reseeding, changed OAuth configuration or new grant is required. The release
+record below identifies the deployed version.
 
-A later `npm run deploy:preview` publishes the v2 client and Worker together.
+`npm run deploy:preview` publishes the v2 client and Worker together.
 The Worker retains the previous PascalCase JSON endpoints for old open tabs;
 retire those only after the compatibility window described in
 [CONTRIBUTIONS.md](CONTRIBUTIONS.md). Multipart uploads and private media keep
@@ -209,5 +209,40 @@ this refactor did not repeat live Google/GitHub sign-in or browser file selectio
 Post-rebase verification in the normal Native Plants checkout passed: full
 repository `./test.sh`, production app build, 18 importer tests, 95 Node tests,
 and private-preview validation (4,041 media references and 4,610 assets). The
-existing local Worker on port 8794 serves the v2 API. No remote deployment or
-data migration was performed.
+existing local Worker on port 8794 serves the v2 API. These checks preceded the
+release below; no data migration was needed.
+
+
+## Boundary refactor deployed — 25 September 2026
+
+Worker version `2c6e318d-d95b-4a1d-8500-0b9e60d1101c` deploys source `350cd35`
+to the existing password-protected preview. The normal release command rebuilt
+the app, checked 4,041 media references and 4,610 assets, and published the v2
+client and Worker together. The 531-plant catalogue and existing remote records
+remain in place. No schema migration, reseed, secret change or grant change ran.
+
+Live verification confirmed:
+
+- Pages, assets, both API versions, POST/OPTIONS requests and OAuth callbacks
+  remain behind the password gate, with private/no-store and noindex headers.
+- The updated client, catalogue and curated photographs load after the gate.
+- Signed anonymous sessions receive Secure/HttpOnly/SameSite=Lax cookies, but
+  cannot read/create personal contributions or enter the review API.
+- Old/new capabilities agree for anonymous and owner requests; invalid keys
+  confer no access. The generated client decodes live nested review data and
+  agrees with the legacy queue's pagination and counts.
+- Admin discovery exposes exactly the intended seven resources, with read-only
+  Identity. Guest/private contribution tables and private R2 paths stay hidden.
+- Google login redirects to the existing protected callback; no provider
+  credentials changed. This check did not complete another Google consent flow.
+- Cloudflare confirms version preview URLs remain disabled and the existing
+  preview DB/R2 and secret bindings are retained.
+
+The compatibility window is now active. Keep the v1 JSON adapters until a later
+release after old open tabs have been refreshed/accounted for; multipart uploads
+and private-media routes remain supported. Refresh a preview tab to load the new
+client. The preview password and owner key are unchanged.
+
+Sanitized live results are in ignored `.local/boundary-release-check.json` and
+`.local/preview-cloudflare-settings.json`. Live verification changed no
+catalogue, grant or contribution records.

@@ -189,7 +189,7 @@ notes/uploads, and anonymous versus verified species-page rendering. Google live
 sign-in was subsequently confirmed by the owner; GitHub remains pending.
 
 
-## Typed API integration — boundary refactor (local, not deployed)
+## Typed API integration — deployed 25 September 2026
 
 Ordinary private JSON now uses the generated `/api/plants/v2` surface declared
 in `Models/Api.fs`. Success responses use camelCase: capabilities expose
@@ -251,4 +251,7 @@ Retire the v1 JSON adapters only in a later release after v2 has been deployed,
 old clients have been given a refresh window, and any remaining old clients
 have been accounted for. Keep the upload and personal-media routes: they are
 deliberately outside this JSON migration. Do not remove v1 in this refactor.
-The remote preview still runs the earlier release until explicitly deployed.
+The private preview now runs the v2 client and Worker, version
+`2c6e318d-d95b-4a1d-8500-0b9e60d1101c` (source `350cd35`). The compatibility
+window starts with this deployment; v1 JSON adapters remain available for old
+open tabs. No existing catalogue, grants or contributions were changed.
