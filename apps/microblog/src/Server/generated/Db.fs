@@ -152,7 +152,49 @@ let updateGrant (id: string) (create: GrantCreate) (db: D1Database) : D1Prepared
 let deleteGrant (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM grants WHERE id = ?")) [| box id |]
 
+// ============================================================
+// MobileSession (mobile_sessions)
+// ============================================================
+
+type MobileSessionRow = {
+    Id: string
+    GuestId: string
+    ExpiresAt: int
+    CreatedAt: int
+}
+
+type MobileSessionCreate = {
+    GuestId: string
+    ExpiresAt: int
+}
+
+let parseMobileSessionRow (row: obj) : MobileSessionRow =
+    { Id = rowStr row "id"
+      GuestId = rowStr row "guest_id"
+      ExpiresAt = rowInt row "expires_at"
+      CreatedAt = rowInt row "created_at" }
+
+let selectMobileSessions (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, guest_id, expires_at, created_at FROM mobile_sessions ORDER BY created_at DESC LIMIT 100")
+
+let selectMobileSession (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, expires_at, created_at FROM mobile_sessions WHERE id = ?")) [| box id |]
+
+let insertMobileSession (db: D1Database) (id: string) (now: int) (create: MobileSessionCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO mobile_sessions (id, guest_id, expires_at, created_at) VALUES (?, ?, ?, ?)"))
+             [| box id; box create.GuestId; box create.ExpiresAt; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateMobileSession (id: string) (create: MobileSessionCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE mobile_sessions SET guest_id = ?, expires_at = ? WHERE id = ?"))
+         [| box create.GuestId; box create.ExpiresAt; box id |]
+
+let deleteMobileSession (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM mobile_sessions WHERE id = ?")) [| box id |]
+
 module Tables =
     let guest = "guests"
     let identity = "identities"
     let grant = "grants"
+    let mobileSession = "mobile_sessions"

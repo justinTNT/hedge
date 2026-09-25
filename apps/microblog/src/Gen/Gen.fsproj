@@ -11,6 +11,8 @@
     <!-- Identity slice assemblies (Assembly.Load by the gen): shared guests/identities + opt-in grants. -->
     <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/identity/src/Grants/GrantModels.fsproj" />
+    <!-- Opt-in mobile bearer-session table (Capacitor POC), microblog-only. -->
+    <ProjectReference Include="../../../../packages/modules/identity/src/Mobile/MobileModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <!-- C6: alerts Models loadable by the module-surface generator + the idealist site gen. -->
     <ProjectReference Include="../../../../packages/modules/alerts/src/Models/AlertsModels.fsproj" />

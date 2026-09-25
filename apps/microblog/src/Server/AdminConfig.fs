@@ -21,8 +21,13 @@ let private curatorReadable = set [ "AlertSource"; "PendingPost"; "Promotion" ]
 let private curatorPermits (resource: string) (op: AdminOp) : bool =
     Set.contains resource curatorReadable && (op = OpList || op = OpRead)
 
+/// mobile_sessions holds opaque bearer-session hashes (Capacitor POC) — never exposed through the
+/// generic admin (no CRUD, no discovery). Filtered by name so /api/admin/MobileSession 404s.
+let private adminTables =
+    Server.AdminGen.tables |> List.filter (fun t -> t.Name <> "MobileSession")
+
 let adminConfig : AdminConfig<Env> =
-    { Tables = Server.AdminGen.tables
+    { Tables = adminTables
       GetDb = fun env -> env.DB
       Authorize = fun request env -> promise {
           let key = getHeader request "X-Admin-Key"

@@ -31,6 +31,13 @@ CREATE TABLE grants (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE mobile_sessions (
+    id TEXT PRIMARY KEY,
+    guest_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE blog_items (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -96,6 +103,7 @@ CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
 CREATE UNIQUE INDEX idx_grants_provider_provider_user_id_role ON grants(provider, provider_user_id, role);
 CREATE INDEX idx_grants_created_at ON grants(created_at DESC);
+CREATE INDEX idx_mobile_sessions_created_at ON mobile_sessions(created_at DESC);
 CREATE UNIQUE INDEX idx_blog_items_slug ON blog_items(slug);
 CREATE INDEX idx_blog_items_created_at ON blog_items(created_at DESC);
 CREATE INDEX idx_blog_comments_item_id ON blog_comments(item_id);

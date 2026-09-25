@@ -75,9 +75,30 @@ let grant : AdminTable =
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Provider"; "ProviderUserId"; "Role"; "Enabled"; "GrantedBy"] }
 
+let mobileSession : AdminTable =
+    { Name = "MobileSession"
+      Table = "mobile_sessions"
+      Schema =
+        schema "MobileSession" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString []
+            fieldWith "ExpiresAt" FInt []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, expires_at, created_at FROM mobile_sessions ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, expires_at, created_at FROM mobile_sessions WHERE id = ?"
+      Insert = "INSERT INTO mobile_sessions (id, guest_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE mobile_sessions SET guest_id = ?, expires_at = ? WHERE id = ?"
+      Delete = "DELETE FROM mobile_sessions WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["GuestId"; "ExpiresAt"] }
+
 let private ownTables : AdminTable list = [
     guest
     identity
     grant
+    mobileSession
 ]
 let tables : AdminTable list = ownTables @ Blog.AdminGen.tables

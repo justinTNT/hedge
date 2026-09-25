@@ -13,6 +13,8 @@
     <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
     <!-- Opt-in access-control grants (module Grants.Domain) — microblog composes curator grants. -->
     <ProjectReference Include="../../../../packages/modules/identity/src/Grants/GrantModels.fsproj" />
+    <!-- Opt-in mobile bearer-session table (module Mobile.Domain) — Capacitor POC, microblog-only. -->
+    <ProjectReference Include="../../../../packages/modules/identity/src/Mobile/MobileModels.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />
