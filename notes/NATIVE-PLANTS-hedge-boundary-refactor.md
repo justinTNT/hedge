@@ -29,8 +29,8 @@ Implemented boundaries:
 The previous PascalCase JSON endpoints remain for one compatibility release.
 Multipart/media routes retain their existing paths and app-owned behavior.
 See `apps/native-plants/CONTRIBUTIONS.md` and `PREVIEW.md` for the compatibility
-window, validation record and deployment instructions. Deployment and retiring
-old clients remain separate release actions.
+window, validation record and deployment instructions. The private preview
+release is recorded below; retiring old clients remains a later release action.
 
 Local safety refs retain both published pre-rebase histories:
 `backup/native-plants-before-boundary-rebase-20260925` and
@@ -40,5 +40,13 @@ Local safety refs retain both published pre-rebase histories:
 Post-rebase verification in the normal Native Plants checkout passed: full
 repository `./test.sh`, production app build, 18 importer tests, 95 Node tests,
 and private-preview validation (4,041 media references and 4,610 assets). The
-existing local Worker on port 8794 serves the v2 API. No remote deployment or
-data migration was performed.
+existing local Worker on port 8794 serves the v2 API. These checks preceded the
+private preview release below; no data migration was required.
+
+
+Private preview released from `350cd35` on 25 September 2026 as Worker version
+`2c6e318d-d95b-4a1d-8500-0b9e60d1101c`. Live checks passed for the password
+gate, secure anonymous denials, owner capabilities, generated review decoding,
+legacy compatibility, explicit admin resources and Google's login redirect.
+Existing remote data and credentials are unchanged. Both API versions remain
+available during the documented compatibility window.
