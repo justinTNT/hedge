@@ -2129,6 +2129,50 @@ let private runEmitRecreate (displayName: string) =
         printfn "%s" (generateRecreateTableSql m currentCols metasByName)
         0
 
+/// Read-only deploy guardrail: diff the live (remote/local) schema for the current
+/// HEDGE_SITE against the model and return a non-zero exit code if any change is
+/// pending — WITHOUT writing a migration file or regenerating source. `predeploy`
+/// runs this so a deploy can't ship code whose schema isn't live yet (e.g. a tenant
+/// missing the grants table → /api/admin/Grant 500). Blocking only; the actual
+/// migration stays a deliberate human step (see estate-migration-rollout). The
+/// per-table diff conditions mirror runMigrate's — keep the two in sync.
+let private runCheck (remote: bool) : int =
+    validateSite ()
+    let metas = readModules () |> List.collect (fun mo -> let _, _, _, ms = reflectModule mo in ms)
+    let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
+    let dbName = getDbName ()
+    let siteLabel = match hedgeSite () with s when System.String.IsNullOrEmpty s -> "default" | s -> s
+    if dbName = "" then
+        eprintfn "check: could not find database_name for site '%s' in wrangler.toml" siteLabel
+        1
+    else
+        printfn "Schema check: %s database %s (site: %s)." (if remote then "REMOTE" else "local") dbName siteLabel
+        let currentTableSet = getCurrentTables remote dbName |> Set.ofList
+        let pending = ResizeArray<string>()
+        for m in topoSort metas metasByName do
+            if not (currentTableSet |> Set.contains m.TableName) then
+                pending.Add(sprintf "missing table '%s'" m.TableName)
+            else
+                let changes = diffTable m (getTableColumns remote dbName m.TableName)
+                let fkChanged = getTableForeignKeys remote dbName m.TableName <> desiredForeignKeys m metasByName
+                let currentIdx = getTableIndexNames remote dbName m.TableName
+                let desiredIdx = desiredIndexNames m
+                let idxDelta = Set.union (Set.difference desiredIdx currentIdx) (Set.difference currentIdx desiredIdx)
+                if not changes.IsEmpty || fkChanged || not idxDelta.IsEmpty then
+                    let bits =
+                        [ if not changes.IsEmpty then sprintf "%d column change(s)" (List.length changes)
+                          if fkChanged then "FK change"
+                          if not idxDelta.IsEmpty then sprintf "%d index change(s)" idxDelta.Count ]
+                    pending.Add(sprintf "table '%s': %s" m.TableName (String.concat ", " bits))
+        if pending.Count = 0 then
+            printfn "OK: %s matches the model — no pending schema changes." dbName
+            0
+        else
+            eprintfn "DEPLOY BLOCKED: %s (site: %s) has %d pending schema change(s):" dbName siteLabel pending.Count
+            for p in pending do eprintfn "  - %s" p
+            eprintfn "Migrate this site before deploying (npm run migrate:remote:dry to generate the diff, review, then apply). See estate-migration-rollout."
+            1
+
 [<EntryPoint>]
 let main (argv: string array) =
     // Module-emit pass: `-- module <path>` writes that module's own generated surface.
@@ -2140,4 +2184,7 @@ let main (argv: string array) =
     | _ ->
         match argv |> Array.tryFindIndex ((=) "emit-recreate") with
         | Some i when i + 1 < argv.Length -> runEmitRecreate argv.[i + 1]
-        | _ -> runSite argv
+        | _ ->
+            if argv |> Array.exists ((=) "check") then
+                runCheck (argv |> Array.exists ((=) "--remote"))
+            else runSite argv

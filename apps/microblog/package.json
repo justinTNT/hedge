@@ -34,6 +34,14 @@
     "deploy:usbase": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://usba.se SITE_SLUG=usbase SITE_TITLE=\"US Base\" ADMIN_TITLE=\"USBase Admin\" SITE_LOGO=\"/public/usbase.gif\" SITE_FEATURES=bigText npm run build && wrangler deploy --env usbase",
     "deploy:nonukes": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://archive.ntne.ws SITE_SLUG=nonukes SITE_TITLE=\"No Nukes\" ADMIN_TITLE=\"No Nukes Admin\" SITE_LOGO=\"/public/nonukes.gif\" npm run build && wrangler deploy --env nonukes",
     "deploy:mtmuse": "npm run clean:site && HEDGE_SITE= SITE_ORIGIN=https://mtmu.se SITE_SLUG=mtmuse SITE_TITLE=\"MT Muse\" ADMIN_TITLE=\"MT Muse Admin\" SITE_LOGO=\"/public/mtmuse.jpg\" SITE_FEATURES=bigText npm run build && wrangler deploy --env mtmuse",
+    "check:schema": "dotnet run --project src/Gen/Gen.fsproj -- check --remote",
+    "predeploy": "HEDGE_SITE= npm run check:schema",
+    "predeploy:wtfail": "HEDGE_SITE=wtfail npm run check:schema",
+    "predeploy:ntaidc": "HEDGE_SITE=ntaidc npm run check:schema",
+    "predeploy:idealist": "HEDGE_SITE=idealist npm run check:schema",
+    "predeploy:usbase": "HEDGE_SITE=usbase npm run check:schema",
+    "predeploy:nonukes": "HEDGE_SITE=nonukes npm run check:schema",
+    "predeploy:mtmuse": "HEDGE_SITE=mtmuse npm run check:schema",
     "deploy:all": "npm run deploy && npm run deploy:wtfail && npm run deploy:usbase && npm run deploy:nonukes && npm run deploy:mtmuse && npm run deploy:ntaidc && npm run deploy:idealist"
   },
   "devDependencies": {
