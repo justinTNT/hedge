@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sourcePath": "HD/AA NATIVE PLANTS OF NA 2021/FINAL FULL DRAFT/COMPLETE NPNA 2022.A.pdf",
+  "sourceSha256": "11ea11e096290c3ebf79936a5975b2b531745b5e9cf970f30cbbfb7876707df6",
+  "images": [
+    {
+      "term": "Flower",
+      "pdfPage": 184,
+      "printedPage": 366,
+      "scale": 3,
+      "crop": [
+        285,
+        480,
+        481,
+        600
+      ],
+      "coordinateConvention": "Top-left PDF points after rendering",
+      "outputPath": "Glossary/2022 flower diagram.png",
+      "sha256": "6cf5087fdeab89b1603b146f6c6692cd766d78999d9cb0ede91d5d1ff05983cf"
+    }
+  ]
+}

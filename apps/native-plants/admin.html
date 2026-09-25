@@ -1,1 +1,42 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Native Plants · edit catalogue</title><link rel="stylesheet" href="/admin.css"><style>:root{--admin-accent:#234a3b}body{background:#f5f3eb}.admin-field input{padding:.65rem} .admin-nav{max-height:100vh;overflow:auto}</style></head><body><div id="app"></div><script type="module" src="/dist/admin/App.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Native Plants · administration</title>
+  <link rel="stylesheet" href="/admin.css">
+  <style>
+    :root { --admin-accent: #234a3b; }
+    body { background: #f5f3eb; }
+    .admin-field input { padding: .65rem; }
+    .admin-nav { max-height: 100vh; overflow: auto; }
+    .plant-admin-help { max-width: 1200px; margin: 0 auto; padding: 1rem 1rem 0; font-size: .875rem; }
+    .plant-admin-help nav { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .plant-admin-help summary { cursor: pointer; }
+    .plant-admin-help ol { margin: .6rem 0 .6rem 1.5rem; }
+    .plant-admin-help p { margin-bottom: .5rem; }
+  </style>
+</head>
+<body>
+  <aside class="plant-admin-help" aria-label="Administration help">
+    <nav aria-label="Site administration">
+      <a href="/">Back to the guide</a>
+      <a href="/review" data-plants-access="review" hidden>Review contributions</a>
+    </nav>
+    <details data-plants-access="admin" hidden>
+      <summary>Assign curator access</summary>
+      <ol>
+        <li>Ask the person to sign in to this site once.</li>
+        <li>Open <strong>Identity</strong>, find their name or email, and copy <strong>Provider</strong> and <strong>ProviderUserId</strong>.</li>
+        <li>Open <strong>Grant → New</strong>, enter those values, set <strong>Role</strong> to <code>curator</code>, tick <strong>Enabled</strong>, and save. <strong>GrantedBy</strong> is optional.</li>
+        <li>They can then sign in and open <a href="/review">Review contributions</a>. They do not need your admin key.</li>
+      </ol>
+      <p>Untick <strong>Enabled</strong> to revoke access. Identities are read-only; use the provider account ID, not an identity or guest record ID. Curators review corrections and offered photographs; they cannot edit the catalogue or assign roles.</p>
+    </details>
+  </aside>
+  <div id="app"></div>
+  <script src="/lib/guest-session.js"></script>
+  <script type="module" src="/dist/admin/App.js"></script>
+  <script type="module" src="/src/Client/admin-access.mjs"></script>
+</body>
+</html>

@@ -4,9 +4,11 @@ open Models.Api
 open Models.Api.SearchPlants
 
 let emptyQuery : Query =
-    { Q=None; Family=None; Genus=None; Form=None; Sun=None; Water=None; Feature=None; Wildlife=None; Endemic=None; Photos=None }
+    { Q=None; Family=None; Genus=None; Form=None; Sun=None; Water=None; Feature=None; Wildlife=None; Endemic=None; Photos=None; Photographer=None }
 
 let normalize (s: string) = s.ToLowerInvariant().Trim().Replace("’", "'")
+let hasPhotoCredit (credit:string) =
+    not(System.String.IsNullOrWhiteSpace credit) && normalize credit <> "photographer not recorded"
 let values (s: string) = s.Split('|') |> Array.map (fun x -> x.Trim()) |> Array.filter ((<>) "") |> Array.toList
 let names (p: PlantCard) = [ p.ScientificName; p.CommonNames ] @ p.Aliases
 
@@ -37,6 +39,7 @@ let filter (query: Query) (plants: PlantCard list) =
         score q p < 99 && selected query.Family [p.Family] && selected query.Genus [p.Genus]
         && selected query.Form p.Forms && selected query.Sun p.Sun && selected query.Water p.Water
         && selected query.Feature p.GardenFeatures && selected query.Wildlife p.Wildlife
+        && selected query.Photographer p.Photographers
         && (query.Endemic <> Some "true" || p.EndemicNt) && (query.Photos <> Some "true" || p.Photo.IsSome))
     |> List.sortBy (fun p -> score q p, normalize p.ScientificName)
 

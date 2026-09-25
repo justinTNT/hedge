@@ -8,5 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/identity/src/Grants/GrantModels.fsproj" />
   </ItemGroup>
 </Project>

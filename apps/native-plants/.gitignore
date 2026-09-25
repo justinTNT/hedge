@@ -6,6 +6,7 @@ data/photo-audit.json
 data/photo-audit.md
 data/source-change-report.json
 public/admin.css
+public/lib/
 public/media/
 public/hero.webp
 .local/

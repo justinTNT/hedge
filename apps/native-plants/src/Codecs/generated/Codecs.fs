@@ -4,8 +4,6 @@ module Codecs
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Codec
-open Models.Domain
-open Models.Api
 
 /// Unwrap helpers — terse pattern matches used in Handlers.fs.
 let inline pk (PrimaryKey v) = v
@@ -21,8 +19,18 @@ let inline uq (Unique v) = v
 module Encode =
 
     // -- Domain types --
-    let inline plant (v: Plant) = encode v
-    let inline plantPhoto (v: PlantPhoto) = encode v
+    let inline plant (v: Models.Domain.Plant) = encode v
+    let inline plantPhoto (v: Models.Domain.PlantPhoto) = encode v
+    let inline plantMap (v: Models.Domain.PlantMap) = encode v
+    let inline glossaryTerm (v: Models.Domain.GlossaryTerm) = encode v
+    let inline sourceReference (v: Models.Domain.SourceReference) = encode v
+    let inline plantNote (v: Models.Domain.PlantNote) = encode v
+    let inline personalPlantPhoto (v: Models.Domain.PersonalPlantPhoto) = encode v
+    let inline plantViewPreference (v: Models.Domain.PlantViewPreference) = encode v
+    let inline contributionClaim (v: Models.Domain.ContributionClaim) = encode v
+    let inline guest (v: Models.Domain.Guest) = encode v
+    let inline identity (v: Models.Domain.Identity) = encode v
+    let inline grant (v: Grants.Domain.Grant) = encode v
 
     // -- API view types --
 
@@ -33,16 +41,26 @@ module Encode =
 module Decode =
 
     // -- Domain types --
-    let plant : Decoder<Plant> = decode<Plant>()
-    let plantPhoto : Decoder<PlantPhoto> = decode<PlantPhoto>()
+    let plant : Decoder<Models.Domain.Plant> = decode<Models.Domain.Plant>()
+    let plantPhoto : Decoder<Models.Domain.PlantPhoto> = decode<Models.Domain.PlantPhoto>()
+    let plantMap : Decoder<Models.Domain.PlantMap> = decode<Models.Domain.PlantMap>()
+    let glossaryTerm : Decoder<Models.Domain.GlossaryTerm> = decode<Models.Domain.GlossaryTerm>()
+    let sourceReference : Decoder<Models.Domain.SourceReference> = decode<Models.Domain.SourceReference>()
+    let plantNote : Decoder<Models.Domain.PlantNote> = decode<Models.Domain.PlantNote>()
+    let personalPlantPhoto : Decoder<Models.Domain.PersonalPlantPhoto> = decode<Models.Domain.PersonalPlantPhoto>()
+    let plantViewPreference : Decoder<Models.Domain.PlantViewPreference> = decode<Models.Domain.PlantViewPreference>()
+    let contributionClaim : Decoder<Models.Domain.ContributionClaim> = decode<Models.Domain.ContributionClaim>()
+    let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
+    let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
+    let grant : Decoder<Grants.Domain.Grant> = decode<Grants.Domain.Grant>()
 
     // -- API view types --
 
     // -- API response decoders --
-    let searchPlantsResponse : Decoder<SearchPlants.Response> = decode<SearchPlants.Response>()
-    let getRevisionResponse : Decoder<GetRevision.Response> = decode<GetRevision.Response>()
-    let getPlantResponse : Decoder<GetPlant.Response> = decode<GetPlant.Response>()
-    let getCatalogueResponse : Decoder<GetCatalogue.Response> = decode<GetCatalogue.Response>()
+    let searchPlantsResponse : Decoder<Models.Api.SearchPlants.Response> = decode<Models.Api.SearchPlants.Response>()
+    let getRevisionResponse : Decoder<Models.Api.GetRevision.Response> = decode<Models.Api.GetRevision.Response>()
+    let getPlantResponse : Decoder<Models.Api.GetPlant.Response> = decode<Models.Api.GetPlant.Response>()
+    let getCatalogueResponse : Decoder<Models.Api.GetCatalogue.Response> = decode<Models.Api.GetCatalogue.Response>()
 
     // -- API request decoders --
 

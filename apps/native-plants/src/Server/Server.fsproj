@@ -2,13 +2,18 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
+  <Import Project="../../../../packages/modules/identity/identity.server.props" />
+  <Import Project="../../../../packages/modules/identity/identity.grants.server.props" />
   <ItemGroup>
     <Compile Include="Env.fs" />
+    <Compile Include="ContributionOwnership.fs" />
+    <Compile Include="AuthConfig.fs" />
 
     <Compile Include="generated/Db.fs" />
     <Compile Include="../Core/Catalogue.fs" />
     <Compile Include="CatalogueStore.fs" />
     <Compile Include="Handlers.fs" />
+    <Compile Include="Contributions.fs" />
     <Compile Include="generated/AdminGen.fs" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" />

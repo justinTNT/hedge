@@ -7,12 +7,15 @@ open Elmish
 open Models.Api
 open NativePlants.Catalogue
 
-type Page = Home | Browse | Taxonomy | Detail of string | About
+type Page = Home | Browse | Taxonomy | Detail of string | About | GlossaryPage | ReferencesPage | ReviewPage
+
 type Model = {
     Page: Page; Query: SearchPlants.Query; Data: GetCatalogue.Response option; Plant: PlantDetail option
     Error: string option; DetailError: string option; Search: string; Suggest: bool; Active: int
     Limit: int; FiltersOpen: bool; Zoom: Photo option
-    Request: int; DetailRequest: int; Polling: bool; Loading: bool
+    Auth: Client.Auth.Model; Access: Client.Access.Model
+    Personal: Client.Personal.Model; Review: Client.Review.Model
+    Request: int; DetailRequest: int; Polling: bool; Loading: bool; PhotoSizes: Map<string,int*int>
 }
 type Msg =
     | Loaded of int * Result<GetCatalogue.Response,Hedge.Http.ApiError>
@@ -21,6 +24,11 @@ type Msg =
     | Navigate of string | LocationChanged | Refresh
     | SearchChanged of string | SearchFocus | SearchKey of string | SubmitSearch
     | FilterChanged of string * string | ClearFilters | More | ToggleFilters | Zoom of Photo option
+    | PhotoMeasured of string * int * int
+    | Auth of Client.Auth.Msg
+    | Personal of Client.Personal.Msg
+    | Review of Client.Review.Msg
+    | Access of Client.Access.Msg
 
 let api = Client.ClientGen.createClient Client.Api.browserTransport
 [<Emit("window.location.pathname")>]
@@ -35,6 +43,15 @@ let top () : unit = jsNative
 let enc (s:string) : string = jsNative
 [<Emit("document.title = $0")>]
 let title (s:string) : unit = jsNative
+[<Emit("(()=>{try{return decodeURIComponent(window.location.hash.slice(1))}catch{return ''}})()")>]
+let fragment () : string = jsNative
+[<Emit("document.getElementById($0)?.scrollIntoView({block:'start',behavior:'instant'})")>]
+let scrollToId (id:string) : unit = jsNative
+let sectionId (label:string) =
+    "section-" + System.Text.RegularExpressions.Regex.Replace(label.ToLowerInvariant(),"[^a-z0-9]+","-").Trim('-')
+let restoreFragment () =
+    let id=fragment()
+    if id<>"" then scrollToId (if id.StartsWith("section-") then sectionId(id.Substring(8)) else id)
 [<Emit("window.addEventListener('popstate',()=> $0());setInterval(()=>{if(!document.hidden)$1()},15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)$1()});document.addEventListener('keydown',e=>{if(e.key==='Escape')$2()})")>]
 let listen (location:unit->unit) (refresh:unit->unit) (escape:unit->unit) : unit = jsNative
 
@@ -42,15 +59,18 @@ let opt (s:string) = if isNull s || s.Trim()="" then None else Some s
 let readQuery () : SearchPlants.Query =
     { Q=opt(param "q");Family=opt(param "family");Genus=opt(param "genus");Form=opt(param "form")
       Sun=opt(param "sun");Water=opt(param "water");Feature=opt(param "feature");Wildlife=opt(param "wildlife")
-      Endemic=opt(param "endemic");Photos=opt(param "photos") }
+      Endemic=opt(param "endemic");Photos=opt(param "photos");Photographer=opt(param "photographer") }
 let route () =
     let bits=(path()).Trim('/').Split('/')
     if bits.[0]="plants" && bits.Length>1 then Detail bits.[1]
     elif bits.[0]="plants" then Browse
     elif bits.[0]="taxonomy" then Taxonomy
-    elif bits.[0]="about" then About else Home
+    elif bits.[0]="about" then About
+    elif bits.[0]="glossary" then GlossaryPage
+    elif bits.[0]="references" then ReferencesPage
+    elif bits.[0]="review" then ReviewPage else Home
 let queryUrl (q: SearchPlants.Query) =
-    let ps=["q",q.Q;"family",q.Family;"genus",q.Genus;"form",q.Form;"sun",q.Sun;"water",q.Water;"feature",q.Feature;"wildlife",q.Wildlife;"endemic",q.Endemic;"photos",q.Photos]
+    let ps=["q",q.Q;"family",q.Family;"genus",q.Genus;"form",q.Form;"sun",q.Sun;"water",q.Water;"feature",q.Feature;"wildlife",q.Wildlife;"endemic",q.Endemic;"photos",q.Photos;"photographer",q.Photographer]
     let qs=ps |> List.choose (fun (k,v) -> v |> Option.map (fun x -> k+"="+enc x)) |> String.concat "&"
     "/plants"+(if qs="" then "" else "?"+qs)
 let plantUrl (p:PlantCard) = "/plants/"+p.Id+"/"+p.Slug
@@ -58,11 +78,21 @@ let load request = Cmd.OfPromise.either api.getCatalogue () (fun r -> Loaded(req
 let loadPlant request id = Cmd.OfPromise.either api.getPlant id (fun r -> PlantLoaded(request,id,r)) (fun e -> PlantLoaded(request,id,Error(Hedge.Http.TransportFailure e.Message)))
 let currentPlant request = function Detail id -> loadPlant request id | _ -> Cmd.none
 let revision = Cmd.OfPromise.either api.getRevision () Revised (fun e -> Revised(Error(Hedge.Http.TransportFailure e.Message)))
+[<Emit("new Promise(resolve=>{const image=new Image();image.onload=()=>resolve([$0,image.naturalWidth,image.naturalHeight]);image.onerror=()=>resolve([$0,0,0]);image.src=$0;})")>]
+let measurePhoto (url:string) : JS.Promise<string*int*int> = jsNative
+let canEnlargePhoto width height = width>=200 && height>=200
+let canViewPhoto model (photo:Photo) =
+    model.PhotoSizes |> Map.tryFind photo.Image |> Option.exists(fun (w,h)->canEnlargePhoto w h)
 let init () =
     let q=readQuery()
     let p=route()
-    {Page=p;Query=q;Data=None;Plant=None;Error=None;DetailError=None;Search=Option.defaultValue "" q.Q;Suggest=false;Active= -1;Limit=36;FiltersOpen=false;Zoom=None;Request=1;DetailRequest=1;Polling=false;Loading=true},
-    Cmd.batch [load 1;currentPlant 1 p;Cmd.ofEffect(fun dispatch -> listen (fun ()->dispatch LocationChanged) (fun ()->dispatch Refresh) (fun ()->dispatch(Zoom None)))]
+    let auth,authCmd=Client.Auth.init()
+    {Personal=Client.Personal.empty 0;Review=Client.Review.empty 0;Auth=auth;Access=Client.Access.empty 0;Page=p;Query=q;Data=None;Plant=None;Error=None;DetailError=None;Search=Option.defaultValue "" q.Q;Suggest=false;Active= -1;Limit=36;FiltersOpen=false;Zoom=None;Request=1;DetailRequest=1;Polling=false;Loading=true;PhotoSizes=Map.empty},
+    Cmd.batch [load 1;currentPlant 1 p;Cmd.map Auth authCmd;Cmd.ofMsg(Access Client.Access.Refresh)
+               Cmd.ofEffect(fun dispatch ->
+                   listen (fun ()->dispatch LocationChanged) (fun ()->dispatch Refresh;dispatch(Auth Client.Auth.Refresh)) (fun ()->dispatch(Zoom None);dispatch(Auth Client.Auth.Close);dispatch(Review Client.Review.Close))
+                   Client.Auth.listen (fun ()->dispatch(Auth Client.Auth.SessionCleared)) (fun ()->dispatch(Auth Client.Auth.Refresh))
+                   Client.Access.listen (fun ()->dispatch(Access Client.Access.Refresh)))]
 let suggested model = model.Data |> Option.map (fun d -> suggestions model.Search d.Plants) |> Option.defaultValue []
 let setFilter key value (q:SearchPlants.Query) =
     match key with
@@ -75,13 +105,20 @@ let setFilter key value (q:SearchPlants.Query) =
     | "wildlife" -> {q with Wildlife=opt value}
     | "endemic" -> {q with Endemic=opt value}
     | "photos" -> {q with Photos=opt value}
+    | "photographer" -> {q with Photographer=opt value}
     | _ -> q
 let changeRoute model =
     let p=route()
     let q=readQuery()
     title "Native Plants of Northern Australia"
     let request=model.DetailRequest+1
-    {model with Page=p;Query=q;Search=Option.defaultValue "" q.Q;Plant=None;DetailError=None;Suggest=false;Active= -1;Limit=36;Zoom=None;DetailRequest=request},currentPlant request p
+    let personal,personalCmd =
+        match p with Detail id when Client.Auth.signedIn model.Auth -> Client.Personal.enter id (model.Personal.Epoch+1) | _ -> Client.Personal.empty (model.Personal.Epoch+1),Cmd.none
+    let review=Client.Review.clear model.Review
+    let access=if p=ReviewPage then Client.Access.clear model.Access else model.Access
+    let reviewCmd=if p=ReviewPage then Cmd.ofMsg(Access Client.Access.Refresh) else Cmd.none
+    {model with Personal=personal;Review=review;Access=access;Page=p;Query=q;Search=Option.defaultValue "" q.Q;Plant=None;DetailError=None;Suggest=false;Active= -1;Limit=36;Zoom=None;DetailRequest=request},
+    Cmd.batch [currentPlant request p;Cmd.map Personal personalCmd;reviewCmd]
 let update msg model =
     match msg with
     | Loaded(request,Ok data) when request=model.Request -> {model with Data=Some data;Error=None;Loading=false},Cmd.none
@@ -89,7 +126,9 @@ let update msg model =
     | Loaded _ -> model,Cmd.none
     | PlantLoaded(request,id,Ok data) when model.Page=Detail id && request=model.DetailRequest ->
         title (data.Plant.Card.ScientificName+" · Native Plants")
-        {model with Plant=Some data.Plant;DetailError=None},Cmd.none
+        let measurements = data.Plant.Photos |> List.filter(fun p -> not(Map.containsKey p.Image model.PhotoSizes))
+                           |> List.map(fun p -> Cmd.OfPromise.perform measurePhoto p.Image PhotoMeasured)
+        {model with Plant=Some data.Plant;DetailError=None},Cmd.batch measurements
     | PlantLoaded(request,id,Error _) when model.Page=Detail id && request=model.DetailRequest -> {model with Plant=None;DetailError=Some "This plant account is unavailable."},Cmd.none
     | PlantLoaded _ -> model,Cmd.none
     | Refresh when model.Loading || model.Polling -> model,Cmd.none
@@ -105,6 +144,8 @@ let update msg model =
         {model with Request=r;DetailRequest=d;Loading=true;Polling=false},Cmd.batch [load r;currentPlant d model.Page]
     | Revised(Error _) -> {model with Polling=false;Data=None;Plant=None;DetailRequest=model.DetailRequest+1;Error=Some "The collection couldn’t be refreshed. Please try again.";DetailError=Some "The plant account couldn’t be refreshed."},Cmd.none
     | Navigate url -> push url;top();changeRoute model
+    // A native fragment navigation keeps the rendered account available to the browser.
+    | LocationChanged when route()=model.Page && readQuery()=model.Query -> model,Cmd.none
     | LocationChanged -> changeRoute model
     | SearchChanged s -> {model with Search=s;Suggest=true;Active= -1},Cmd.none
     | SearchFocus -> {model with Suggest=true},Cmd.none
@@ -123,7 +164,57 @@ let update msg model =
     | ClearFilters -> model,Cmd.ofMsg(Navigate "/plants")
     | More -> {model with Limit=model.Limit+36},Cmd.none
     | ToggleFilters -> {model with FiltersOpen=not model.FiltersOpen},Cmd.none
+    | Zoom(Some photo) when not(canViewPhoto model photo) -> model,Cmd.none
     | Zoom photo -> {model with Zoom=photo;Suggest=false},Cmd.none
+    | PhotoMeasured(url,width,height) -> {model with PhotoSizes=Map.add url (width,height) model.PhotoSizes},Cmd.none
+    | Auth msg ->
+        let auth,cmd=Client.Auth.update msg model.Auth
+        let cleared =
+            match msg with Client.Auth.Logout | Client.Auth.SessionCleared -> true | _ -> auth.Account<>model.Auth.Account
+        let personal=if cleared then Client.Personal.empty (model.Personal.Epoch+1) else model.Personal
+        let review=if cleared then Client.Review.clear model.Review else model.Review
+        let access=if cleared then Client.Access.clear model.Access else model.Access
+        let ready =
+            match msg with
+            | Client.Auth.Loaded(request,Some result) -> request=model.Auth.Request && result.Ready && not auth.LoggingOut
+            | Client.Auth.LoggedOut true -> true
+            | _ -> false
+        let personal,personalCmd =
+            if ready && Client.Auth.signedIn auth then
+                match model.Page with
+                | Detail id when personal.PlantId<>id -> Client.Personal.enter id (personal.Epoch+1)
+                | Detail _ -> Client.Personal.update Client.Personal.Load personal
+                | _ -> personal,Cmd.none
+            else personal,Cmd.none
+        let accessCmd =
+            if (ready || cleared) && not auth.LoggingOut then Cmd.ofMsg(Access Client.Access.Refresh) else Cmd.none
+        {model with Auth=auth;Access=access;Personal=personal;Review=review;Zoom=if cleared then None else model.Zoom},
+        Cmd.batch [Cmd.map Auth cmd;Cmd.map Personal personalCmd;accessCmd]
+    | Personal _ when not(Client.Auth.signedIn model.Auth) -> model,Cmd.none
+    | Personal msg ->
+        let personal,cmd=Client.Personal.update msg model.Personal
+        let dataChanged=personal.Data<>model.Personal.Data
+        let sizes=personal.Data |> Option.map(fun d->d.Photos |> Array.fold(fun sizes p->Map.add p.Image (p.Width,p.Height) sizes) model.PhotoSizes) |> Option.defaultValue model.PhotoSizes
+        {model with Personal=personal;PhotoSizes=sizes;Zoom=if dataChanged then None else model.Zoom},Cmd.map Personal cmd
+    | Review(Client.Review.ImageLoaded(_,_,Ok url)) when not(Client.Access.canReview model.Access) ->
+        Client.Review.release url
+        model,Cmd.none
+    | Review _ when not(Client.Access.canReview model.Access) -> model,Cmd.none
+    | Review msg ->
+        let review,cmd=Client.Review.update msg model.Review
+        match msg with
+        | Client.Review.Loaded(epoch,Error _) when epoch=model.Review.Epoch ->
+            {model with Review={Client.Review.clear review with Error=review.Error};Access=Client.Access.clear model.Access},
+            Cmd.ofMsg(Access Client.Access.Refresh)
+        | _ -> {model with Review=review},Cmd.map Review cmd
+    | Access msg ->
+        let access,cmd=Client.Access.update msg model.Access
+        let review,reviewCmd =
+            if not(Client.Access.canReview access) then {Client.Review.clear model.Review with Error=model.Review.Error},Cmd.none
+            elif model.Page=ReviewPage && model.Review.Data.IsNone && model.Review.Error.IsNone && not model.Review.Busy then
+                Client.Review.enter access.Key (model.Review.Epoch+1)
+            else model.Review,Cmd.none
+        {model with Access=access;Review=review},Cmd.batch [Cmd.map Access cmd;Cmd.map Review reviewCmd]
 
 let a (url:string) (label:string) dispatch = Html.a [prop.href url;prop.text label;prop.onClick(fun e -> if not(e.ctrlKey || e.metaKey) then e.preventDefault();dispatch(Navigate url))]
 let button (label:string) action dispatch = Html.button [prop.type' "button";prop.text label;prop.onClick(fun _->dispatch action)]
@@ -173,13 +264,21 @@ let header model dispatch =
     Html.header [prop.className "site-header";prop.children [
         Html.a [prop.className "brand";prop.href "/";prop.onClick(fun e->e.preventDefault();dispatch(Navigate "/"));prop.children [leaf;Html.div [prop.children [Html.strong "Native Plants";Html.span "NORTHERN AUSTRALIA"]]]]
         Html.nav [prop.ariaLabel "Main navigation";prop.children [a "/plants" "Explore plants" dispatch;a "/taxonomy" "Taxonomy" dispatch;a "/about" "About the guide" dispatch]]
-        Html.span [prop.className "header-note";prop.text "A collection by John Brock"]
+        Html.div [prop.className "header-account";prop.children [Html.span [prop.className "header-note";prop.text "A collection by John Brock"];Client.Auth.view model.Auth (Auth >> dispatch)]]
     ]]
 
-let footer dispatch =
+let footer model dispatch =
     Html.footer [prop.className "site-footer";prop.children [
         Html.div [prop.children [Html.strong "Native Plants of Northern Australia";Html.p "A guide to John Brock’s collection, with a focus on the Top End."]]
-        Html.div [prop.className "footer-links";prop.children [a "/about" "Sources & acknowledgements" dispatch;Html.a [prop.href "/admin";prop.text "Edit catalogue"]]]
+        Html.div [prop.className "footer-links";prop.children [
+            a "/glossary" "Glossary" dispatch
+            a "/references" "References & bibliography" dispatch
+            a "/about" "About the guide" dispatch
+            if Client.Access.canEdit model.Access then
+                Html.a [prop.href "/admin";prop.text "Edit catalogue"]
+            if Client.Access.canReview model.Access then
+                a "/review" "Review contributions" dispatch
+        ]]
     ]]
 
 let home model (data:GetCatalogue.Response) dispatch =
@@ -230,7 +329,7 @@ let checkFilter (label:string) key (value:string option) dispatch =
 let browse model (data:GetCatalogue.Response) dispatch =
     let results=filter model.Query data.Plants
     let heading=Option.orElse model.Query.Family model.Query.Genus |> Option.defaultValue "Explore the plants"
-    let selectedCount=[model.Query.Family;model.Query.Genus;model.Query.Form;model.Query.Sun;model.Query.Water;model.Query.Feature;model.Query.Wildlife;model.Query.Endemic;model.Query.Photos] |> List.choose id |> List.length
+    let selectedCount=[model.Query.Family;model.Query.Genus;model.Query.Form;model.Query.Sun;model.Query.Water;model.Query.Feature;model.Query.Wildlife;model.Query.Endemic;model.Query.Photos;model.Query.Photographer] |> List.choose id |> List.length
     Html.main [prop.className "browse-page section";prop.children [
         Html.div [prop.className "page-heading";prop.children [Html.span [prop.className "eyebrow";prop.text "The plant collection"];Html.h1 heading;Html.p "Search by name, explore a family, or find plants suited to a place."]]
         searchBox model dispatch
@@ -245,6 +344,7 @@ let browse model (data:GetCatalogue.Response) dispatch =
                 filterSelect "Water requirements" "water" model.Query.Water (data.Water |> List.map(fun f->f.Name)) dispatch
                 filterSelect "Garden features" "feature" model.Query.Feature (data.GardenFeatures |> List.map(fun f->f.Name)) dispatch
                 filterSelect "Attracts wildlife" "wildlife" model.Query.Wildlife (data.Wildlife |> List.map(fun f->f.Name)) dispatch
+                filterSelect "Photographer" "photographer" model.Query.Photographer (data.Photographers |> List.map(fun f->f.Name)) dispatch
                 checkFilter "Recorded as NT endemic" "endemic" model.Query.Endemic dispatch
                 checkFilter "With a photograph" "photos" model.Query.Photos dispatch
                 Html.p [prop.className "filter-note";prop.text "Filters use recorded source attributes. An unrecorded trait does not mean the plant lacks it."]
@@ -272,42 +372,148 @@ let taxonomy model (data:GetCatalogue.Response) dispatch =
         ]]
     ]]
 
-let detail (plant:PlantDetail) dispatch =
+let photoImage model hero (photo:Photo) dispatch =
+    let image = Html.img [
+        prop.src(if hero then photo.Image else photo.Thumbnail)
+        prop.alt photo.Caption
+        if not hero then prop.custom("loading","lazy")
+    ]
+    if canViewPhoto model photo then
+        Html.button [prop.className "image-button";prop.ariaLabel(if hero then "Enlarge plant photograph" else "Enlarge: "+photo.Caption)
+                     prop.onClick(fun _->dispatch(Zoom(Some photo)));prop.children [image;Html.span "View photograph ↗"]]
+    else Html.div [prop.className "image-button photograph-static";prop.children [image]]
+
+let detail model (plant:PlantDetail) dispatch =
+    let signedIn=Client.Auth.signedIn model.Auth
+    let personal=if signedIn && model.Personal.PlantId=plant.Card.Id then model.Personal else Client.Personal.empty model.Personal.Epoch
+    let plant=Client.Personal.compose personal.Data plant
     let p=plant.Card
+    let glossary=model.Data |> Option.map(fun d->d.Glossary) |> Option.defaultValue [] |> NativePlants.Glossary.glossaryMatcher
+    let references=model.Data |> Option.map(fun d->d.References) |> Option.defaultValue []
+    let referenceNames=NativePlants.Glossary.referenceMatcher references
+    let rich=Client.Annotations.text glossary
+    let prose label value =
+        if label="Aboriginal uses · source account" then Client.Annotations.usage glossary references value
+        elif label="References" then
+            NativePlants.Glossary.annotate referenceNames value
+            |> List.collect(fun part -> if part.Note.IsSome then [part] else NativePlants.Glossary.annotate glossary part.Text)
+            |> Client.Annotations.chunks
+        else rich value
+    let supportingPhotos = plant.Photos |> List.filter(fun photo -> p.Photo |> Option.forall(fun hero -> hero.Id<>photo.Id))
+    let compactGallery = (not supportingPhotos.IsEmpty || signedIn) && supportingPhotos.Length<=2
+    let gallery (className:string) =
+        Html.section [prop.className className;prop.ariaLabel "More photographs";prop.children [
+            for photo in supportingPhotos do
+                Html.figure [prop.children [
+                    photoImage model false photo dispatch
+                    Html.figcaption [prop.children [Html.span [prop.children [rich photo.Caption]];if hasPhotoCredit photo.Photographer then Html.span("Photo: "+photo.Photographer)]]
+                    Client.Personal.controls personal photo (Personal >> dispatch)
+                ]]
+            if signedIn then Client.Personal.uploadTile personal (Personal >> dispatch)
+        ]]
+    let sections =
+        if plant.DistributionMaps.IsEmpty || (plant.Sections |> List.exists(fun s -> s.Label="Distribution")) then plant.Sections
+        else plant.Sections @ [{Label="Distribution";Text=""}]
     let attributes=["Growth form",String.concat ", " p.Forms;"Height",p.Height;"Sun",String.concat ", " p.Sun;"Water",String.concat ", " p.Water]
     Html.main [prop.className "detail-page section";prop.children [
         Html.nav [prop.className "breadcrumbs";prop.ariaLabel "Breadcrumb";prop.children [a "/plants" "Plants" dispatch;Html.span "/";a (queryUrl {emptyQuery with Family=Some p.Family}) p.Family dispatch;Html.span "/";a (queryUrl {emptyQuery with Genus=Some p.Genus}) p.Genus dispatch]]
-        Html.div [prop.className "detail-intro";prop.children [
+        Html.div [prop.className(if compactGallery then "detail-intro detail-intro--compact" else "detail-intro");prop.children [
             Html.div [prop.className "detail-title";prop.children [
                 yield Html.span [prop.className "eyebrow";prop.text p.Family]
-                yield Html.h1 p.ScientificName
-                if p.CommonNames<>"" then yield Html.p [prop.className "detail-common";prop.text(p.CommonNames.Replace(" | ",", "))]
-                if not p.Aliases.IsEmpty then yield Html.p [prop.className "aliases";prop.text("Previously recorded as "+String.concat ", " p.Aliases)]
-                if p.EndemicNt then yield Html.span [prop.className "pill";prop.text "Recorded as endemic to the Northern Territory"]
-                yield Html.p [prop.className "detail-summary";prop.text p.Summary]
-                yield Html.dl [prop.className "plant-facts";prop.children [for label,value in attributes do if value<>"" then Html.div [prop.children [Html.dt label;Html.dd value]]]]
+                yield Html.h1 [prop.children [rich p.ScientificName]]
+                if p.CommonNames<>"" then yield Html.p [prop.className "detail-common";prop.children [rich(p.CommonNames.Replace(" | ",", "))]]
+                if not p.Aliases.IsEmpty then yield Html.p [prop.className "aliases";prop.children [rich("Previously recorded as "+String.concat ", " p.Aliases)]]
+                if p.EndemicNt then yield Html.span [prop.className "pill";prop.children [rich "Recorded as endemic to the Northern Territory"]]
+                yield Html.p [prop.className "detail-summary";prop.children [rich p.Summary]]
+                yield Html.dl [prop.className "plant-facts";prop.children [for label,value in attributes do if value<>"" then Html.div [prop.children [Html.dt [prop.children [rich label]];Html.dd [prop.children [rich value]]]]]]
             ]]
             Html.figure [prop.className "detail-figure";prop.children [
                 match p.Photo with
                 | Some photo ->
-                    Html.button [prop.className "image-button";prop.ariaLabel "Enlarge plant photograph";prop.onClick(fun _->dispatch(Zoom(Some photo)));prop.children [Html.img [prop.src photo.Image;prop.alt photo.Caption];Html.span "View photograph ↗"]]
-                    Html.figcaption [prop.children [Html.span photo.Caption;Html.span("Photo: "+photo.Photographer)]]
+                    photoImage model true photo dispatch
+                    Html.figcaption [prop.children [Html.span [prop.children [rich photo.Caption]];if hasPhotoCredit photo.Photographer then Html.span("Photo: "+photo.Photographer)]]
+                    Client.Personal.controls personal photo (Personal >> dispatch)
                 | None -> Html.div [prop.className "no-photo detail-no-photo";prop.children [leaf;Html.p "A photograph is still to be selected for this account."]]
             ]]
+            if compactGallery then gallery "photo-gallery photo-gallery--compact"
         ]]
-        if plant.Photos.Length>1 then Html.section [prop.className "photo-gallery";prop.ariaLabel "More photographs";prop.children [
-            for photo in plant.Photos |> List.skip 1 do
-                Html.figure [prop.children [
-                    Html.button [prop.className "image-button";prop.ariaLabel("Enlarge: "+photo.Caption);prop.onClick(fun _->dispatch(Zoom(Some photo)));prop.children [Html.img [prop.src photo.Thumbnail;prop.alt photo.Caption;prop.custom("loading","lazy")];Html.span "View photograph ↗"]]
-                    Html.figcaption [prop.children [Html.span photo.Caption;Html.span("Photo: "+photo.Photographer)]]
-                ]]
-        ]]
+        if not compactGallery && (not supportingPhotos.IsEmpty || signedIn) then gallery "photo-gallery"
+        if signedIn then
+            Client.Personal.galleryFeedback personal
+            Client.Personal.photoEditor personal (Personal >> dispatch)
+            Client.Personal.view personal (fun ()->dispatch(Auth Client.Auth.Toggle)) (Personal >> dispatch)
         Html.div [prop.className "account-layout";prop.children [
-            Html.aside [prop.className "account-nav";prop.children [Html.span [prop.className "eyebrow";prop.text "In this account"];for s in plant.Sections do if s.Label<>"Recognise this plant" then Html.a [prop.href("#section-"+enc s.Label);prop.text s.Label]]]
-            Html.div [prop.className "account-sections";prop.children [for s in plant.Sections do if s.Label<>"Recognise this plant" then Html.section [prop.id("section-"+enc s.Label);prop.children [Html.h2 s.Label;Html.p s.Text]]]]
+            Html.aside [prop.className "account-nav";prop.children [Html.span [prop.className "eyebrow";prop.text "In this account"];for s in sections do if s.Label<>"Recognise this plant" then Html.a [prop.href("#"+sectionId s.Label);prop.text s.Label]]]
+            Html.div [prop.className "account-sections";prop.children [
+                for s in sections do
+                    if s.Label<>"Recognise this plant" then
+                        Html.section [prop.id(sectionId s.Label);prop.children [
+                            Html.h2 [prop.children [rich s.Label]]
+                            if s.Text<>"" then Html.p [prop.children [prose s.Label s.Text]]
+                            if s.Label="Distribution" then
+                                for map in plant.DistributionMaps do
+                                    Html.figure [prop.className "distribution-map";prop.children [
+                                        Html.div [prop.className "map-image";prop.children [
+                                            Html.img [prop.src map.Image;prop.alt map.Caption;prop.custom("loading","lazy")]
+                                        ]]
+                                        Html.figcaption [prop.children [Html.span [prop.children [rich map.Caption]];Html.span map.SourceLabel]]
+                                    ]]
+                        ]]
+            ]]
         ]]
-        if not p.GardenFeatures.IsEmpty || not p.Wildlife.IsEmpty then Html.section [prop.className "plant-associations";prop.children [Html.h2 "In the garden & landscape";Html.div [prop.className "pills";prop.children [for v in p.GardenFeatures @ p.Wildlife do Html.span [prop.className "pill";prop.text v]]]]]
-        Html.div [prop.className "source-line";prop.text "Plant account: John Brock, Native Plants of Northern Australia · 2026 source collection."]
+        if not p.GardenFeatures.IsEmpty || not p.Wildlife.IsEmpty then Html.section [prop.className "plant-associations";prop.children [Html.h2 "In the garden & landscape";Html.div [prop.className "pills";prop.children [for v in p.GardenFeatures @ p.Wildlife do Html.span [prop.className "pill";prop.children [rich v]]]]]]
+    ]]
+
+[<ReactComponent>]
+let PlantAccount (model:Model) (plant:PlantDetail) dispatch =
+    // Direct links arrive before the asynchronously loaded account exists in the DOM.
+    React.useEffect((fun () -> restoreFragment()),[|box plant.Card.Id|])
+    detail model plant dispatch
+
+let glossaryPage model (data:GetCatalogue.Response) dispatch =
+    let matcher=NativePlants.Glossary.glossaryMatcher data.Glossary
+    let query=normalize model.Search
+    let entries=data.Glossary |> List.filter(fun g -> normalize(String.concat " " (g.Term::g.Definition::g.Aliases)) |> fun text->text.Contains query)
+    Html.main [prop.className "reference-page section";prop.children [
+        Html.div [prop.className "page-heading";prop.children [Html.span [prop.className "eyebrow";prop.text "John Brock’s guide"];Html.h1 "Glossary";Html.p "Botanical terms from the source glossary. Definitions are also available wherever these terms occur in plant account text."]]
+        Html.input [prop.type' "search";prop.className "reference-search";prop.ariaLabel "Search the glossary";prop.placeholder "Find a term or definition…";prop.value model.Search;prop.onChange(fun s->dispatch(SearchChanged s))]
+        Html.p [prop.role "status";prop.text(sprintf "%i glossary %s" entries.Length (if entries.Length=1 then "term" else "terms"))]
+        Html.dl [prop.className "glossary-list";prop.children [
+          for entry in entries do
+            Html.div [prop.id entry.Id;prop.children [
+                Html.dt entry.Term
+                Html.dd [prop.children [
+                    Client.Annotations.text matcher entry.Definition
+                    if entry.Illustration<>"" then Html.img [prop.src entry.Illustration;prop.alt(entry.Term+" illustration");prop.custom("loading","lazy")]
+                    Html.small entry.SourceLabel
+                ]]
+            ]]
+        ]]
+    ]]
+
+let referencesPage model (data:GetCatalogue.Response) dispatch =
+    let query=normalize model.Search
+    let numberSearch=System.Text.RegularExpressions.Regex.IsMatch(query,"^[0-9]{1,2}$")
+    let entries=data.References |> List.filter(fun r ->
+        if numberSearch then r.Kind="usage" && r.Number=int query
+        else (normalize r.Citation).Contains query)
+    Html.main [prop.className "reference-page section";prop.children [
+        Html.div [prop.className "page-heading";prop.children [Html.span [prop.className "eyebrow";prop.text "John Brock’s source collection"];Html.h1 "References & bibliography";Html.p "The numbered references support Aboriginal plant-use citations. The bibliography preserves the source entries; additional references are retained on individual plant accounts."]]
+        Html.input [prop.type' "search";prop.className "reference-search";prop.ariaLabel "Search references";prop.placeholder "Find an author, title or reference number…";prop.value model.Search;prop.onChange(fun s->dispatch(SearchChanged s))]
+        Html.p [prop.role "status";prop.text(sprintf "%i %s" entries.Length (if entries.Length=1 then "entry" else "entries"))]
+        for kind,heading in ["usage","Aboriginal plant-use references";"bibliography","Bibliography"] do
+            Html.section [prop.children [
+                Html.h2 heading
+                if kind="usage" && not(data.References |> List.exists(fun r->r.Kind="usage" && r.Number=22)) then Html.p "The supplied list omits reference 22. Citations retain their original numbering."
+                Html.ol [prop.className("reference-list"+(if kind="bibliography" then " bibliography-list" else ""));prop.children [
+                  for entry in entries |> List.filter(fun r->r.Kind=kind) do
+                    Html.li [
+                        prop.id entry.Id
+                        if entry.Number>0 then prop.value entry.Number
+                        prop.children [Html.p entry.Citation]
+                    ]
+                ]]
+            ]]
     ]]
 
 let about dispatch =
@@ -318,7 +524,8 @@ let about dispatch =
         Html.h2 "A collection with a sense of place"
         Html.p "The accounts have particular depth in the Top End: its sandstone country, woodlands, wetlands, monsoon forests and coast. They describe the plants covered by the source material, rather than every species occurring across northern Australia."
         Html.h2 "Names, descriptions and photographs"
-        Html.p "Scientific names and descriptions follow the source collection. Former names are searchable where the account explicitly records them. Photo credits are shown with each image; where a photographer has not yet been established, that is stated."
+        Html.p "Scientific names and descriptions follow the source collection. Former names are searchable where the account explicitly records them. Photo credits are shown where the photographer is known."
+        Html.p [prop.children [a "/glossary" "Explore the glossary" dispatch;Html.text " · ";a "/references" "Read the references and bibliography" dispatch]]
         Html.h2 "Finding a plant"
         Html.p "Search a scientific or common name, follow a family to its genera, or combine the recorded growing requirements and characteristics. Filters reflect what the source records: missing information is not evidence that a plant lacks a trait."
         Html.h2 "Reading the accounts"
@@ -332,21 +539,40 @@ let view model dispatch =
         header model dispatch
         Html.div [prop.id "main";prop.children [
             match model.Page,model.Data with
+            | ReviewPage,_ when Client.Access.canReview model.Access ->
+                Client.Review.view (Client.Access.canEdit model.Access) model.Review (Review >> dispatch)
+            | ReviewPage,_ ->
+                Html.main [prop.className "empty-state section";prop.children [
+                    if model.Access.Loading then
+                        Html.h1 [prop.role "status";prop.text "Checking review access…"]
+                    elif model.Access.Failed then
+                        Html.h1 "Review access could not be checked"
+                        Html.p "Please try again."
+                        button "Retry access check" (Access Client.Access.Refresh) dispatch
+                    else
+                        Html.h1 "Review access required"
+                        Html.p "Sign in with a curator account using Login above, or ask the site owner for access."
+                    a "/" "Back to the guide" dispatch
+                ]]
             | About,_ -> about dispatch
+            | GlossaryPage,Some data -> glossaryPage model data dispatch
+            | ReferencesPage,Some data -> referencesPage model data dispatch
             | Detail _,_ ->
                 match model.Plant,model.DetailError with
-                | Some p,_ -> detail p dispatch
+                | Some p,_ -> PlantAccount model p dispatch
                 | None,Some error -> Html.main [prop.className "empty-state section";prop.children [Html.h1 error;a "/plants" "Back to the collection" dispatch]]
                 | _ -> Html.main [prop.className "loading section";prop.role "status";prop.text "Opening the plant account…"]
             | _,Some data ->
                 match model.Page with Home->home model data dispatch | Browse->browse model data dispatch | Taxonomy->taxonomy model data dispatch | _->Html.none
             | _,None -> Html.main [prop.className "loading section";prop.children [leaf;Html.h1 "Opening the collection";Html.p "Plants, places and the details that connect them.";if model.Error.IsSome then Html.div [prop.children [Html.p model.Error.Value;button "Try again" Refresh dispatch]]]]
         ]]
-        footer dispatch
+        footer model dispatch
         match model.Zoom with
-        | Some photo -> Html.div [prop.className "lightbox";prop.role "dialog";prop.custom("aria-modal",true);prop.ariaLabel photo.Caption;prop.onClick(fun _->dispatch(Zoom None));prop.children [
-            Html.button [prop.className "lightbox-close";prop.autoFocus true;prop.ariaLabel "Close photograph";prop.text "×";prop.onClick(fun _->dispatch(Zoom None))]
-            Html.figure [prop.onClick(fun e->e.stopPropagation());prop.children [Html.img [prop.src photo.Image;prop.alt photo.Caption];Html.figcaption [prop.text(photo.Caption+" · "+photo.Photographer)]]]
-          ]]
+        | Some photo ->
+            let credit=if hasPhotoCredit photo.Photographer then " · "+photo.Photographer else ""
+            Html.div [prop.className "lightbox lightbox-photograph";prop.role "dialog";prop.custom("aria-modal",true);prop.ariaLabel photo.Caption;prop.onClick(fun _->dispatch(Zoom None));prop.children [
+                Html.button [prop.className "lightbox-close";prop.autoFocus true;prop.ariaLabel "Close photograph";prop.text "×";prop.onClick(fun _->dispatch(Zoom None))]
+                Html.figure [prop.onClick(fun e->e.stopPropagation());prop.children [Html.img [prop.src photo.Image;prop.alt photo.Caption];Html.figcaption [prop.text(photo.Caption+credit)]]]
+            ]]
         | None -> Html.none
     ]]

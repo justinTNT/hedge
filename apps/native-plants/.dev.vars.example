@@ -1,0 +1,14 @@
+# Copy to .dev.vars and generate independent random signing secrets (at least 32 bytes each).
+ADMIN_KEY=
+ENVIRONMENT=development
+GUEST_SECRET=
+OAUTH_SECRET=
+# Configure the provider callback as http://localhost:8794/api/auth/google/callback for local use.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Optional second provider; only providers with both credentials are shown.
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# Private content requires a verified Google/GitHub identity.
+CONTRIBUTIONS_REQUIRE_LOGIN=true

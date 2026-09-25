@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Mine Brock's structured manuscript and curated photographs; never modify the archive.
 
-Imports are insert-only. Admin edits and publication decisions always win on re-import.
+Records are inserted once. Explicit media corrections use conditional updates; unrelated admin edits remain intact.
 Full evidence and unresolved joins remain in local data files, never the public catalogue.
 """
 from __future__ import annotations
-import argparse, collections, hashlib, json, re, subprocess, unicodedata
+import argparse, collections, hashlib, io, json, re, subprocess, unicodedata
 from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
@@ -26,7 +26,10 @@ FEATURES = dict(FL='Flower display', FRT='Interesting fruit', SFL='Form & foliag
                 GC='Groundcover', SCR='Screening', REV='Revegetation')
 WILDLIFE = dict(BEWA='Bees & wasps', BIN='Nectar-feeding birds', BUMO='Butterflies & moths',
                 BIC='Seed-eating birds', BIF='Fruit-eating birds')
-CREDITS = dict(IM='Ian Morris', WB='William Burgess', RD='Russell Dempster', GF='Gary Fox')
+CREDITS = dict(IM='Ian Morris', WB='William Burgess', RD='Russell Dempster', GF='Gary Fox',
+    KB='Kym Brennan', IC='Ian Cowie', DH='David Hancock', DL='Diane Lucas', AM='Anita Meadows',
+    KM='Keira Meadows', LP='Leigh Patterson', JP='Julia Perdevich', TR='Tissa Ratnayeke',
+    JRS='Jeremy Russell-Smith', NS='Nic Smith', BS='Ben Stuckey', AW='Aiden Webb')
 FIELDS = {'Habit':'habit','Bark':'bark','Leaves':'leaves','Phyllodes':'phyllodes','Flowers':'flowers',
           'Fruit':'fruit','Flowering':'flowering','Fruiting':'fruiting','Features':'features',
           'Habitat':'habitat','Cult':'cultivation','Aboriginal Uses':'traditional_uses',
@@ -137,7 +140,7 @@ def has_photo_label(filename,label):
     return bool(re.search(r'(?<![\w-])'+re.escape(photo_key(label))+r'(?![\w-])',photo_key(filename)))
 
 def photo_credit(filename):
-    initials=re.findall(r'(?:[.\s])('+'|'.join(CREDITS)+r')(?=\d|[.\s]|$)',filename)
+    initials=re.findall(r'(?:^|[._\s-])('+'|'.join(CREDITS)+r')(?=\d|[._\s-]|$)',filename)
     return CREDITS[initials[-1]] if initials else 'Photographer not recorded'
 
 def photo_candidates(root,plants,decisions=None):
@@ -199,9 +202,51 @@ def photo_candidates(root,plants,decisions=None):
         if any(c['path']==allocation['path'] for c in found): raise ValueError(f'Duplicate photo allocation: {path}')
         caption=allocation.get('caption',plant['scientific_name'])
         if not isinstance(caption,str) or not caption.strip(): raise ValueError(f'Invalid photo allocation caption: {path}')
-        found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=allocation['path'],credit=allocation['credit'],caption=caption,
+        photo_id=allocation.get('photoId')
+        if photo_id is not None and not re.fullmatch(r'photo-[0-9a-f]{20}',photo_id): raise ValueError('Invalid pinned photo identity')
+        found.append(dict(plantId=plant['id'],name=plant['scientific_name'],path=allocation['path'],credit=allocation['credit'],caption=caption,photoId=photo_id,
                           priority=allocation.get('priority',3),evidence='Explicit photo allocation: '+allocation['reason']))
     return found,issues
+
+def transparent_map_gif(payload):
+    """Keep dark map ink, make paper transparent; no dithering or resizing.
+
+    2022 stencil maps are binary, so their ink pixels remain exact. The grayscale
+    2026 scans retain pixels below 192 as black, discarding the pale paper/fringe.
+    GIF only supports binary transparency: no invented speckled/dithered marks.
+    """
+    with Image.open(io.BytesIO(payload)) as original:
+        ink=original.convert('L').point(lambda value: int(value<192), mode='P')
+        ink.putpalette([255,255,255,0,0,0])
+        output=io.BytesIO()
+        ink.save(output,'GIF',transparency=0,optimize=False)
+    return output.getvalue()
+
+
+def distribution_maps(root, plants, manifest, media):
+    """Explicit map allocations, kept separate from photographs and hero selection."""
+    if manifest.get('version') != 1: raise ValueError('Unsupported distribution map manifest')
+    plant_ids={p['id'] for p in plants}; rows=[]; seen=set()
+    for item in manifest['images']:
+        if item['plantId'] is None: continue
+        if item['plantId'] not in plant_ids: raise ValueError('Unknown map account: '+item['plantId'])
+        src=(root/item['outputPath']).resolve()
+        if not src.is_relative_to(root.resolve()) or not src.is_file(): raise ValueError('Invalid map path: '+str(src))
+        payload=src.read_bytes(); digest=hashlib.sha256(payload).hexdigest()
+        if digest!=item['sha256']: raise ValueError('Map changed; review required: '+item['outputPath'])
+        key='map-'+hashlib.sha256((item['plantId']+'|'+item['reference']).encode()).hexdigest()[:20]
+        if key in seen: raise ValueError('Duplicate map allocation: '+item['reference'])
+        seen.add(key)
+        display=transparent_map_gif(payload)
+        image=media/'maps'/(digest[:20]+'.gif'); image.parent.mkdir(parents=True,exist_ok=True)
+        if image.exists() and image.read_bytes()!=display: raise ValueError('Existing map asset differs: '+str(image))
+        if not image.exists(): image.write_bytes(display)
+        rows.append(dict(id=key,plant_id=item['plantId'],image='/media/maps/'+image.name,
+            caption=item['caption'],source_label=item['sourceLabel'],published=item.get('published',True),sort_order=item.get('sortOrder',0),
+            source_evidence=item.get('sourceEvidence') or f"{manifest['sourcePath']}; SHA256 {manifest['sourceSha256']}; PDF page {item['pdfPage']}; object {item['objectIndex']}; {item['reason']}",
+            created_at=1790204400,updated_at=None,deleted_at=None))
+    return rows
+
 
 def q(v):
     if v is None:return 'NULL'
@@ -209,6 +254,140 @@ def q(v):
     if isinstance(v,(int,float)):return str(v)
     return "'"+v.replace("'","''")+"'"
 def insert(table,row):return f'INSERT OR IGNORE INTO {table} ('+','.join(row)+') VALUES ('+','.join(q(v) for v in row.values())+');'
+
+def reviewed_media_updates(photos, decisions, maps, standalone):
+    """Apply reviewed media corrections once, preserving owner captions and choices."""
+    statements=[]; byid={p['id']:p for p in photos}
+    for allocation in decisions.get('photoAllocations',[]):
+        old=allocation.get('replacesSha256')
+        if not old:continue
+        photo=byid[allocation['photoId']]
+        note='; Reviewed crop correction: '+allocation['path']+'; SHA256 '+allocation['sha256']
+        statements.append('UPDATE plant_photos SET image='+q(photo['image'])+',thumbnail='+q(photo['thumbnail'])+
+            ',source_evidence=source_evidence||'+q(note)+' WHERE id='+q(photo['id'])+
+            ' AND image='+q('/media/'+old[:20]+'-large.webp')+' AND thumbnail='+q('/media/'+old[:20]+'-thumb.webp')+';')
+    for item in decisions.get('reclassifiedMapPhotos',[]):
+        marker='[classified as distribution map]'
+        statements.append('UPDATE plant_photos SET published=0,source_evidence=source_evidence||'+q('; '+marker+' '+item['reason'])+
+            ' WHERE id='+q(item['photoId'])+' AND instr(source_evidence,'+q(marker)+')=0;')
+    # Convert only the reviewed PNG URL; preserve owner replacements and all metadata.
+    for item in maps:
+        if item['image'].endswith('.gif'):
+            old=item['image'][:-4]+'.png'
+            statements.append('UPDATE plant_maps SET image='+q(item['image'])+' WHERE id='+q(item['id'])+' AND image='+q(old)+';')
+    map_byid={m['id']:m for m in maps}
+    for item in standalone.get('supersedesBookMaps',[]):
+        key='map-'+hashlib.sha256((item['plantId']+'|'+item['reference']).encode()).hexdigest()[:20]
+        old=map_byid[key];marker='[superseded by 2026 standalone map]'
+        statements.append('UPDATE plant_maps SET published=0,source_evidence=source_evidence||'+q('; '+marker)+
+            ' WHERE id='+q(key)+' AND image='+q(old['image'])+' AND instr(source_evidence,'+q(marker)+')=0;')
+    for photo in photos:
+        if photo['photographer'] not in ('','Photographer not recorded'):
+            statements.append('UPDATE plant_photos SET photographer='+q(photo['photographer'])+' WHERE id='+q(photo['id'])+
+                " AND photographer='Photographer not recorded';")
+    return '\n'.join(statements)
+
+
+def reference_material(root, media):
+    """Import the complete accepted glossary and source lists, retaining editorial gaps."""
+    path=next(root.rglob('4. NPNA 2026 REF, BIB, GLOSS, FAM LIST, ENDEM LIST, INDEX.docx'))
+    ps=paragraphs(path); digest=hashlib.sha256(path.read_bytes()).hexdigest()
+    bib=ps.index('BIBLIOGRAPHY'); glossary_start=ps.index('GLOSSARY'); glossary_end=ps.index('FAMILY LIST')
+    evidence=lambda i:f'{path.relative_to(root)}; SHA256 {digest}; accepted paragraph {i}'
+    common=dict(published=True,created_at=1790204400,updated_at=None,deleted_at=None)
+    references=[]; glossary=[]; issues=[]
+    for i in range(1,bib):
+        if not ps[i]:continue
+        match=re.fullmatch(r'(\d+)\.\s*(.+)',ps[i])
+        if not match:raise ValueError('Unparsed usage reference: '+ps[i])
+        number=int(match[1]); key='usage-'+str(number)
+        references.append(dict(id=key,source_key=key,kind='usage',number=number,citation=match[2],aliases='',
+                               source_label='John Brock · 2026 source collection',source_evidence=evidence(i),sort_order=number,**common))
+    numbers={r['number'] for r in references}
+    if len(numbers)!=len(references):raise ValueError('Duplicate usage reference numbers')
+    for number in range(1,max(numbers)+1):
+        if number not in numbers:issues.append(dict(kind='missing-numbered-reference',number=number))
+    for i in range(bib+1,glossary_start):
+        if not ps[i]:continue
+        # Preserve paragraph boundaries: some source entries are merged or incomplete.
+        key='bibliography-'+hashlib.sha256(ps[i].encode()).hexdigest()[:16]
+        aliases=[]
+        for marker,terms in [
+            ('Flora NT online:', ['Flora NT']),
+            ('Flora of Australia, various', ['Flora of Australia']),
+            ('Flora of Australia online:', ['Flora of Australia online']),
+            ('Flora of the Darwin Region Vol. 2', ['Flora of the Darwin Region']),
+            ('An-Me Arri-Ngun', ['An-Me Arri-Ngun, The Food We Eat']),
+            ('Plants of Cape York, the compact guide', ['Plants of Cape York The Compact Guide']),
+            ('Native Plants for Northern Australian Gardens', ['Native Plants for Northern Australian Gardens']),
+            ('Mangroves of the Northern Territory, Australia, Identification', ['Mangroves of the NT Australia. Identification and Traditional Use']),
+        ]:
+            if marker in ps[i]:aliases+=terms
+        references.append(dict(id=key,source_key=key,kind='bibliography',number=0,citation=ps[i],aliases='|'.join(aliases),
+                               source_label='John Brock · 2026 bibliography',source_evidence=evidence(i),sort_order=i,**common))
+        if ('Darwin.Midgley' in ps[i] or ps[i].endswith(' and') or ps[i].count('Byrnes, N. B.')>1):
+            issues.append(dict(kind='bibliography-editorial-review',paragraph=i,text=ps[i]))
+    plurals={
+        'Anther':'Anthers','Apex':'Apices','Aril':'Arils','Axil':'Axils','Berry':'Berries','Blade':'Blades',
+        'Bulb':'Bulbs','Bract':'Bracts','Buttress':'Buttresses','Calyx':'Calyces','Capsule':'Capsules','Carpel':'Carpels',
+        'Cladode':'Cladodes','Compound leaf':'Compound leaves','Cone':'Cones','Drupe':'Drupes','Epiphyte':'Epiphytes',
+        'Family':'Families','Female flower':'Female flowers','Filament':'Filaments','Flower':'Flowers','Follicle':'Follicles',
+        'Frond':'Fronds','Fruit':'Fruits','Funicle':'Funicles','Genus':'Genera','Geophyte':'Geophytes','Gland':'Glands',
+        'Habit':'Habits','Habitat':'Habitats','Head':'Heads','Herb':'Herbs','Inflorescence':'Inflorescences',
+        'Leaflet':'Leaflets','Legume':'Legumes','Lignotuber':'Lignotubers','Lobe':'Lobes','Male flower':'Male flowers',
+        'Midrib':'Midribs','Nut':'Nuts','Panicle':'Panicles','Parasite':'Parasites','Peaflower':'Peaflowers',
+        'Perennial':'Perennials','Petal':'Petals','Phyllode':'Phyllodes','Pistil':'Pistils','Pod':'Pods','Raceme':'Racemes',
+        'Rhizome':'Rhizomes','Rosette':'Rosettes','Sepal':'Sepals','Shrub':'Shrubs','Spike':'Spikes','Stamen':'Stamens',
+        'Stem':'Stems','Style':'Styles','Stigma':'Stigmas','Tree':'Trees','Tuber':'Tubers','Umbel':'Umbels','Whorl':'Whorls'}
+    alternatives={'Alluvium':['alluvial'],'Blade':['lamina','laminae'],'Bi-pinnate':['bipinnate'],
+                  'Midrib':['mid-vein','midvein','mid-veins','midveins'],'Subspecies':['subsp.','ssp.'],
+                  'Peaflower':['pea flower','pea flowers'],'Domatia':['domatium']}
+    for i in range(glossary_start+1,glossary_end):
+        if not ps[i]:continue
+        label,separator,definition=ps[i].partition(':')
+        if not separator or not definition.strip():raise ValueError('Unparsed glossary entry: '+ps[i])
+        term=re.sub(r'\s*\([^)]*\)','',label).strip()
+        aliases=([plurals[term]] if term in plurals else [])+alternatives.get(term,[])
+        glossary.append(dict(id='glossary-'+slug(term),term=term,aliases='|'.join(aliases),definition=definition.strip(),illustration='',
+                             source_label='John Brock · 2026 glossary',source_evidence=evidence(i),sort_order=len(glossary),**common))
+    if len({g['term'].lower() for g in glossary})!=len(glossary):raise ValueError('Duplicate glossary term')
+    # The DOCX embeds the dioecious-flower illustration immediately after that definition.
+    # The original image and its source credit (in the definition) remain intact.
+    with ZipFile(path) as archive:
+        xml=ET.fromstring(archive.read('word/document.xml')); paras=xml.findall('.//'+W+'body/'+W+'p')
+        rels={r.attrib['Id']:r.attrib for r in ET.fromstring(archive.read('word/_rels/document.xml.rels'))}
+        current=None
+        by_evidence={g['source_evidence']:g for g in glossary}
+        for i in range(glossary_start+1,glossary_end):
+            if evidence(i) in by_evidence:current=by_evidence[evidence(i)]
+            for blip in paras[i].iter('{http://schemas.openxmlformats.org/drawingml/2006/main}blip'):
+                relation=rels[blip.attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed']]
+                if not current or relation.get('TargetMode')=='External':raise ValueError('Unallocated glossary illustration')
+                target=relation['Target']
+                if not re.fullmatch(r'media/[\w.-]+',target):raise ValueError('Unexpected illustration path')
+                payload=archive.read('word/'+target);key=hashlib.sha256(payload).hexdigest()[:20]
+                out=media/'glossary'/(key+Path(target).suffix.lower());out.parent.mkdir(parents=True,exist_ok=True)
+                if out.exists() and out.read_bytes()!=payload:raise ValueError('Glossary image changed')
+                if not out.exists():out.write_bytes(payload)
+                current['illustration']='/media/glossary/'+out.name
+                current['source_evidence']+='; embedded '+target
+    illustrations=Path(__file__).resolve().parents[1]/'data/glossary-illustrations.json'
+    if illustrations.exists():
+        manifest=json.loads(illustrations.read_text())
+        for item in manifest['images']:
+            original=(root/item['outputPath']).resolve()
+            if not original.is_relative_to(root.resolve()):raise ValueError('Invalid glossary illustration path')
+            payload=original.read_bytes();digest=hashlib.sha256(payload).hexdigest()
+            if digest!=item['sha256']:raise ValueError('Glossary illustration changed')
+            out=media/'glossary'/(digest[:20]+'.png');out.parent.mkdir(parents=True,exist_ok=True)
+            if out.exists() and out.read_bytes()!=payload:raise ValueError('Existing glossary asset differs')
+            if not out.exists():out.write_bytes(payload)
+            entry=next(g for g in glossary if g['term']==item['term'])
+            entry['illustration']='/media/glossary/'+out.name
+            entry['source_label']+='; illustration: 2022 edition, p. '+str(item['printedPage'])
+            entry['source_evidence']+='; '+manifest['sourcePath']+'; PDF SHA256 '+manifest['sourceSha256']+'; illustration SHA256 '+digest
+    return glossary,references,issues
+
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--source',type=Path,default=Path.home()/'Desktop/brocky')
@@ -246,7 +425,7 @@ def main():
                             copy=im.copy();copy.thumbnail((width,width));copy.save(out,'WEBP',quality=83)
             except Exception as e:
                 issues.append(dict(kind='image-decode',path=c['path'],error=str(e)));continue
-            photos.append(dict(id='photo-'+key,plant_id=p['id'],image=f'/media/{key}-large.webp',thumbnail=f'/media/{key}-thumb.webp',
+            photos.append(dict(id=c.get('photoId') or 'photo-'+key,plant_id=p['id'],image=f'/media/{key}-large.webp',thumbnail=f'/media/{key}-thumb.webp',
                 caption=c.get('caption',p['scientific_name']),photographer=c['credit'],sort_order=n,published=True,
                 source_evidence=f"{c['path']}; SHA256 {digest}; {c['evidence']}; editorial image review pending",
                 created_at=1790118000,updated_at=None,deleted_at=None))
@@ -255,15 +434,23 @@ def main():
     conflicts={key for key,ids in owners.items() if len(ids)>1}
     if conflicts:issues.extend(dict(kind='same-image-multiple-accounts',photoId=key,plantIds=sorted(owners[key])) for key in conflicts)
     photos=[p for p in photos if p['id'] not in conflicts]
-    report.update(photos=len(photos),plantsWithPhotos=len({p['plant_id'] for p in photos}),families=len({p['family'] for p in plants}),
+    map_manifest=data/'book-distribution-maps.json'
+    maps=distribution_maps(root,plants,json.loads(map_manifest.read_text()),media) if map_manifest.exists() else []
+    standalone_path=data/'standalone-distribution-maps.json'
+    standalone=json.loads(standalone_path.read_text()) if standalone_path.exists() else {'version':1,'images':[]}
+    maps+=distribution_maps(root,plants,standalone,media)
+    glossary,references,reference_issues=reference_material(root,media)
+    issues+=reference_issues
+    report.update(glossaryTerms=len(glossary),numberedReferences=sum(r['kind']=='usage' for r in references),bibliographyParagraphs=sum(r['kind']=='bibliography' for r in references))
+    report.update(distributionMaps=len(maps),publishedMaps=sum(m['published'] for m in maps),plantsWithMaps=len({m['plant_id'] for m in maps if m['published']}),photos=len(photos),plantsWithPhotos=len({p['plant_id'] for p in photos}),families=len({p['family'] for p in plants}),
                   genera=len({p['genus'] for p in plants}),photoCandidates=len(candidates),issues=issues,
                   reviewStatus='Local prototype from accepted manuscript text. Final-proof comparison and editorial photo/credit review pending.')
     lock.write_text(json.dumps(fingerprint,indent=2)+'\n')
-    (data/'catalogue-source.json').write_text(json.dumps(dict(plants=plants,photos=photos),ensure_ascii=False,indent=2))
+    (data/'catalogue-source.json').write_text(json.dumps(dict(plants=plants,photos=photos,maps=maps,glossary=glossary,references=references),ensure_ascii=False,indent=2))
     (data/'photo-candidates.json').write_text(json.dumps(candidates,ensure_ascii=False,indent=2))
     (data/'import-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
-    (data/'import.sql').write_text('-- Insert-only source import: existing admin edits and deletions are preserved.\nPRAGMA foreign_keys=ON;\n'+
-        '\n'.join(insert('plants',p) for p in plants)+'\n'+'\n'.join(insert('plant_photos',p) for p in photos)+'\n')
+    (data/'import.sql').write_text('-- Insert records once, then apply conditional reviewed media corrections; preserve unrelated admin edits and deletions.\nPRAGMA foreign_keys=ON;\n'+
+        '\n'.join(insert('plants',p) for p in plants)+'\n'+'\n'.join(insert('plant_photos',p) for p in photos)+'\n'+'\n'.join(insert('plant_maps',m) for m in maps)+'\n'+reviewed_media_updates(photos,decisions,maps,standalone)+'\n'+'\n'.join(insert('glossary_terms',g) for g in glossary)+'\n'+'\n'.join(insert('source_references',r) for r in references)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='issues'},indent=2));print(f'Editorial issues: {len(issues)} (private data/import-report.json)')
 
 if __name__=='__main__':main()

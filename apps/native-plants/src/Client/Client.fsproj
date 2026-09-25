@@ -7,6 +7,13 @@
 
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="../Core/Catalogue.fs" />
+    <Compile Include="../Core/Glossary.fs" />
+    <Compile Include="Annotations.fs" />
+    <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
+    <Compile Include="Auth.fs" />
+    <Compile Include="Access.fs" />
+    <Compile Include="Personal.fs" />
+    <Compile Include="Review.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
