@@ -62,7 +62,7 @@ To assign a curator:
    They do not need the admin key and cannot use catalogue or grant CRUD.
 5. Untick **Enabled** on the grant to revoke access; the next review request checks it.
 
-The site footer and admin navigation use `/api/plants/access`, which applies the
+The site footer and admin navigation use `/api/plants/v2/access`, which applies the
 same owner-key and curator-grant checks as the protected endpoints. Catalogue
 links appear only after the saved admin key is validated. Review links and the
 review interface appear only for an owner or curator. Direct `/review` navigation
@@ -187,3 +187,68 @@ the sign-in requirement. The current policy also has coverage for denied anonymo
 reads/writes/uploads/media, unchanged browsing, legacy content adoption, verified
 notes/uploads, and anonymous versus verified species-page rendering. Google live
 sign-in was subsequently confirmed by the owner; GitHub remains pending.
+
+
+## Typed API integration — boundary refactor (local, not deployed)
+
+Ordinary private JSON now uses the generated `/api/plants/v2` surface declared
+in `Models/Api.fs`. Success responses use camelCase: capabilities expose
+`canEditCatalogue`/`canReview`; personal and review endpoints return a `personal`
+or `review` snapshot containing codec-checked nested records and lists.
+`Client.ContributionsApi` adapts these to the existing array-based view models.
+
+| Method | Path beneath `/api/plants/v2` | Operation |
+| --- | --- | --- |
+| GET | `/access` | Current owner/reviewer capabilities. |
+| GET | `/personal/:plantId` | Own notes, photos, hero and capacities. |
+| GET | `/review?page=0` | Authorized correction/offered-photo queue. |
+| POST | `/notes/save`, `/notes/delete` | Revision-checked note changes. |
+| POST | `/photos/update`, `/photos/delete` | Revision-checked personal-photo changes. |
+| POST | `/hero` | Select or clear an own-photo hero. |
+| POST | `/review/correction`, `/review/promote` | Read/unread or publish a current contribution. |
+
+Mutation DTOs carry the plant/item/revision values explicitly; there is no
+dynamic wire `Action` field. The app authorizes before reading the POST body,
+checks origin/content type, caps streaming JSON at 24,000 bytes even without
+Content-Length, and only then invokes the generated decoder. Handlers recheck
+the active owner/reviewer and species visibility. Validation, claims, limits,
+revisions and storage changes remain in the same app commands used by v1.
+The schema and migrations are unchanged.
+
+Private generated requests use Hedge's no-store browser transport inside the
+existing guest-session lock, consume responses before releasing it and keep
+HTTP/decode/transport failures distinct until the view renders an error. The
+request captures its owner key/viewer token. Existing client generations still
+discard late results after navigation or session/key changes. Public catalogue
+requests keep their ordinary transport.
+
+Multipart upload and authorized media routes keep their existing URLs. Upload
+consumes its response inside its own lock, returns a typed success/error result,
+then loads a generated personal snapshot in a separate lock. It does not decode
+the legacy upload response as an unchecked personal record or nest locks.
+
+The main app and admin-page links use the same typed capability loader and
+shared credential subscription. Applying/removing an owner key in this tab or
+another tab invalidates capabilities; the admin shell no longer polls storage
+every second. Its 15-second server refresh remains for grant revocation, along
+with focus/visibility/session refresh. Subscriptions provide disposal. The
+shared admin also clears loaded data and rejects older-key completions.
+
+Admin registration explicitly names Plant, PlantPhoto, PlantMap, GlossaryTerm,
+SourceReference, Grant and Identity descriptors. Identity supports only list/read.
+This ceiling is enforced even for AdminOwner. New generated descriptors cannot
+silently enter the admin. Curators still receive no catalogue CRUD rights.
+
+### Compatibility window
+
+The previous PascalCase JSON endpoints (`/api/plants/access`, `/personal/:id`,
+and `/review`) remain for one compatibility release. They parse old inputs and
+invoke the same typed commands as v2; they are not a second implementation of
+contribution policy. This allows already-open/cached clients to keep working
+when the new Worker and client are deployed together.
+
+Retire the v1 JSON adapters only in a later release after v2 has been deployed,
+old clients have been given a refresh window, and any remaining old clients
+have been accounted for. Keep the upload and personal-media routes: they are
+deliberately outside this JSON migration. Do not remove v1 in this refactor.
+The remote preview still runs the earlier release until explicitly deployed.

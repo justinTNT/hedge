@@ -92,7 +92,7 @@ let init () =
                Cmd.ofEffect(fun dispatch ->
                    listen (fun ()->dispatch LocationChanged) (fun ()->dispatch Refresh;dispatch(Auth Client.Auth.Refresh)) (fun ()->dispatch(Zoom None);dispatch(Auth Client.Auth.Close);dispatch(Review Client.Review.Close))
                    Client.Auth.listen (fun ()->dispatch(Auth Client.Auth.SessionCleared)) (fun ()->dispatch(Auth Client.Auth.Refresh))
-                   Client.Access.listen (fun ()->dispatch(Access Client.Access.Refresh)))]
+                   Client.Access.listen (fun ()->dispatch(Access Client.Access.Refresh)) |> ignore)]
 let suggested model = model.Data |> Option.map (fun d -> suggestions model.Search d.Plants) |> Option.defaultValue []
 let setFilter key value (q:SearchPlants.Query) =
     match key with
@@ -196,9 +196,12 @@ let update msg model =
         let dataChanged=personal.Data<>model.Personal.Data
         let sizes=personal.Data |> Option.map(fun d->d.Photos |> Array.fold(fun sizes p->Map.add p.Image (p.Width,p.Height) sizes) model.PhotoSizes) |> Option.defaultValue model.PhotoSizes
         {model with Personal=personal;PhotoSizes=sizes;Zoom=if dataChanged then None else model.Zoom},Cmd.map Personal cmd
-    | Review(Client.Review.ImageLoaded(_,_,Ok url)) when not(Client.Access.canReview model.Access) ->
+    | Review(Client.Review.ImageLoaded(_,_,Ok url)) when model.Access.Key<>Client.Access.storedKey() || not(Client.Access.canReview model.Access) ->
         Client.Review.release url
         model,Cmd.none
+    | Review _ when model.Access.Key<>Client.Access.storedKey() ->
+        {model with Access=Client.Access.clear model.Access;Review=Client.Review.clear model.Review},
+        Cmd.ofMsg(Access Client.Access.Refresh)
     | Review _ when not(Client.Access.canReview model.Access) -> model,Cmd.none
     | Review msg ->
         let review,cmd=Client.Review.update msg model.Review

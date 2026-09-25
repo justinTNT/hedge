@@ -10,6 +10,8 @@
     <Compile Include="../Core/Glossary.fs" />
     <Compile Include="Annotations.fs" />
     <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
+    <Compile Include="../../../../packages/hedge/src/Client/AdminCredential.fs" />
+    <Compile Include="ContributionsApi.fs" />
     <Compile Include="Auth.fs" />
     <Compile Include="Access.fs" />
     <Compile Include="Personal.fs" />

@@ -1,25 +1,6 @@
 const base = () => window.BASE_PATH || '';
 export function uuid() { return crypto.randomUUID(); }
 
-async function checked(response) {
-  const data = await response.json();
-  if (!response.ok) {
-    const error = new Error(data.error || 'Your changes could not be saved.');
-    error.status = response.status; throw error;
-  }
-  return data;
-}
-export function request(path, method, payload, viewer, adminKey = '') {
-  return window.HedgeGuest.withSessionRequest(async () => {
-    const headers = {};
-    if (viewer) headers['X-Contribution-Viewer'] = viewer;
-    if (adminKey) headers['X-Admin-Key'] = adminKey;
-    const options = { method, headers, credentials: 'same-origin', cache: 'no-store' };
-    if (payload != null) { headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(payload); }
-    return checked(await fetch(base() + path, options));
-  });
-}
-
 function render(image, edge) {
   const factor = Math.min(1, edge / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement('canvas');
@@ -45,10 +26,11 @@ export async function upload(plantId, id, file, viewer) {
         throw new Error('Choose a photograph up to 80 megapixels.');
       const full = await render(image, 3200), thumb = await render(image, 480);
       const data = new FormData(); data.append('image', full, 'image.jpg'); data.append('thumbnail', thumb, 'thumbnail.jpg');
-      return checked(await fetch(base() + '/api/plants/personal/' + encodeURIComponent(plantId) + '/photos/' + id, {
+      const response = await fetch(base() + '/api/plants/personal/' + encodeURIComponent(plantId) + '/photos/' + id, {
         method: 'POST', credentials: 'same-origin', cache: 'no-store', body: data,
         headers: { 'X-Contribution-Viewer': viewer }
-      }));
+      });
+      return {Status:response.status, Body:await response.text()};
     } finally { URL.revokeObjectURL(url); }
   });
 }

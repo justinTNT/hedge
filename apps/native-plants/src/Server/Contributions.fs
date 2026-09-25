@@ -128,7 +128,7 @@ let private capacities env plantId who = promise {
 let private noteLimitResponse cookie = error cookie 409 (sprintf "You can keep %i notes per species. Delete an existing note before adding another." noteLimit)
 let private photoLimitResponse cookie = error cookie 409 (sprintf "You can keep %i photos per species. Delete one of your existing photos before adding another." photoLimit)
 
-let personal env plantId who = promise {
+let personalData env plantId who = promise {
     let args=Array.append [|box plantId|] (ownerArgs who)
     let! notes=rows env "SELECT * FROM plant_notes WHERE plant_id=? AND owner_provider=? AND owner_id=? AND deleted_at IS NULL ORDER BY created_at DESC,id" args
     let! photos=rows env "SELECT * FROM personal_plant_photos WHERE plant_id=? AND owner_provider=? AND owner_id=? AND deleted_at IS NULL AND ready=1 ORDER BY created_at,id" args
@@ -136,24 +136,39 @@ let personal env plantId who = promise {
     let hero=pref |> Option.map(fun r -> if isNull r?hero_photo_id then "" else unbox<string> r?hero_photo_id) |> Option.defaultValue ""
     let! token=viewerToken who.Provider who.Id
     let! noteCapacity,photoCapacity=capacities env plantId who
-    return response who.Cookie 200 {Anonymous=who.Provider="guest";ViewerToken=token;Notes=Array.map noteDto notes;Photos=Array.map photoDto photos;HeroPhotoId=hero;NoteCapacity=noteCapacity;PhotoCapacity=photoCapacity}
+    return {Anonymous=who.Provider="guest";ViewerToken=token;Notes=Array.map noteDto notes;Photos=Array.map photoDto photos;HeroPhotoId=hero;NoteCapacity=noteCapacity;PhotoCapacity=photoCapacity}
 }
 
-let mutate env request plantId who = promise {
-    let! body=promise {try return! readJson request with ex -> return invalid ex.Message}
-    let action=textField "Action" 30 body
-    let id=textField "Id" 100 body
+let personal env plantId who = promise {
+    let! data=personalData env plantId who
+    return response who.Cookie 200 data
+}
+
+let checkedText name limit (text:string) =
+    if isNull text then invalid ("Missing "+name+".")
+    let text=text.Trim()
+    if text.Length>limit then invalid (name+" is too long.")
+    text
+let checkedRevision revision =
+    if not(isInt(box revision)) || revision<0 then invalid "Missing revision."
+
+let mutateCommand env plantId who command onSuccess = promise {
+    let id,revision =
+        match command with
+        | SaveNote(id,revision,_,_) | DeleteNote(id,revision)
+        | UpdatePhoto(id,revision,_,_,_) | DeletePhoto(id,revision) -> id,revision
+        | SelectHero id -> id,0
     if id<>"" && not(validId id) then invalid "Invalid item."
-    let revision=revisionField body
+    checkedRevision revision
     let args=Array.append [|box id;box plantId|] (ownerArgs who)
     let guard=ownerArgs who
     let now=box(epochNow())
     let! changed=promise {
-        match action with
-        | "saveNote" ->
-            let text=textField "Text" 6000 body
+        match command with
+        | SaveNote(_,_,value,isCorrection) ->
+            let text=checkedText "Text" 6000 value
             if text="" then invalid "Write a note before saving."
-            let correction=if boolField "Correction" body then 1 else 0
+            let correction=if isCorrection then 1 else 0
             if id="" then invalid "Missing note ID."
             if revision=0 then
                 return! run env ("INSERT OR IGNORE INTO plant_notes (id,plant_id,owner_provider,owner_id,text,is_correction,revision,reviewed_revision,created_at,updated_at,deleted_at) SELECT ?,?,?,?,?,?,1,NULL,?,NULL,NULL WHERE "+visiblePlant+claimGuard+" AND (SELECT COUNT(*) FROM plant_notes WHERE "+noteSlot+")<? AND (SELECT COUNT(*) FROM plant_notes WHERE owner_provider=? AND owner_id=? AND deleted_at IS NULL)<2000")
@@ -161,23 +176,23 @@ let mutate env request plantId who = promise {
             else
                 return! run env ("UPDATE plant_notes SET text=?,is_correction=?,revision=revision+1,updated_at=? WHERE "+owned+" AND revision=? AND deleted_at IS NULL"+claimGuard)
                     (Array.concat [[|box text;box correction;now|];args;[|box revision|];guard])
-        | "deleteNote" ->
+        | DeleteNote _ ->
             return! run env ("UPDATE plant_notes SET deleted_at=?,revision=revision+1 WHERE "+owned+" AND revision=? AND deleted_at IS NULL"+claimGuard)
                 (Array.concat [[|now|];args;[|box revision|];guard])
-        | "savePhoto" ->
-            let caption=textField "Caption" 500 body
-            let photographer=textField "Photographer" 160 body
-            let offered=if boolField "Offered" body then 1 else 0
+        | UpdatePhoto(_,_,caption,photographer,isOffered) ->
+            let caption=checkedText "Caption" 500 caption
+            let photographer=checkedText "Photographer" 160 photographer
+            let offered=if isOffered then 1 else 0
             return! run env ("UPDATE personal_plant_photos SET caption=?,photographer=?,offered=?,revision=revision+1,updated_at=? WHERE "+owned+" AND revision=? AND ready=1 AND deleted_at IS NULL AND (published_photo_id IS NULL OR ?=1)"+claimGuard)
                 (Array.concat [[|box caption;box photographer;box offered;now|];args;[|box revision;box offered|];guard])
-        | "hero" ->
+        | SelectHero _ ->
             if id<>"" then
                 let! photo=first env ("SELECT 1 FROM personal_plant_photos WHERE "+owned+" AND ready=1 AND deleted_at IS NULL") args
                 if photo.IsNone then invalid "Choose one of your photographs of this plant."
             let photoId=if id="" then null else box id
             return! run env ("INSERT INTO plant_view_preferences (id,plant_id,owner_provider,owner_id,hero_photo_id) SELECT ?,?,?,?,? WHERE "+visiblePlant+claimGuard+" ON CONFLICT(owner_provider,owner_id,plant_id) DO UPDATE SET hero_photo_id=excluded.hero_photo_id")
                 (Array.concat [[|box(newId());box plantId|];guard;[|photoId;box plantId|];guard])
-        | "deletePhoto" ->
+        | DeletePhoto _ ->
             let! photo=first env ("SELECT * FROM personal_plant_photos WHERE "+owned+" AND revision=?"+claimGuard) (Array.concat [args;[|box revision|];guard])
             match photo with
             | None -> return false
@@ -191,14 +206,33 @@ let mutate env request plantId who = promise {
                     let! _=run env "UPDATE personal_plant_photos SET stored_bytes=0,ready=0 WHERE id=? AND deleted_at IS NOT NULL" [|box id|]
                     let! _=run env "UPDATE plant_view_preferences SET hero_photo_id=NULL WHERE hero_photo_id=?" [|box id|]
                     return true
-        | _ -> return invalid "Unknown contribution action."
     }
-    if changed then return! personal env plantId who
-    elif action="saveNote" && revision=0 then
+    if changed then
+        let! data=personalData env plantId who
+        return onSuccess data
+    elif (match command with SaveNote(_,0,_,_) -> true | _ -> false) then
         let! notes,_=capacities env plantId who
         if notes.Used>=notes.Limit then return noteLimitResponse who.Cookie
         else return conflict who.Cookie
     else return conflict who.Cookie
+}
+
+// V1 is retained for cached clients for one compatibility release. All writes share
+// the same typed commands, ownership guards, revisions, quotas and SQL as v2.
+let mutate env request plantId who = promise {
+    let! body=promise {try return! readJson request with ex -> return invalid ex.Message}
+    let action=textField "Action" 30 body
+    let id=textField "Id" 100 body
+    let revision=revisionField body
+    let command =
+        match action with
+        | "saveNote" -> SaveNote(id,revision,textField "Text" 6000 body,boolField "Correction" body)
+        | "deleteNote" -> DeleteNote(id,revision)
+        | "savePhoto" -> UpdatePhoto(id,revision,textField "Caption" 500 body,textField "Photographer" 160 body,boolField "Offered" body)
+        | "deletePhoto" -> DeletePhoto(id,revision)
+        | "hero" -> SelectHero id
+        | _ -> invalid "Unknown contribution action."
+    return! mutateCommand env plantId who command (response who.Cookie 200)
 }
 
 let upload env request plantId id who = promise {
@@ -266,14 +300,19 @@ let media env request id size = promise {
                     "Vary" ==> "Cookie, X-Admin-Key";"X-Content-Type-Options" ==> "nosniff"]])
 }
 
-let reviewQueue env request cookie = promise {
-    let page=pageNumber request
+let reviewData env page = promise {
+    let page=max 0 (min 10000 page)
     let! notes=rows env "SELECT n.*,p.scientific_name FROM plant_notes n JOIN plants p ON p.id=n.plant_id WHERE n.deleted_at IS NULL AND n.is_correction=1 AND p.published=1 AND p.deleted_at IS NULL ORDER BY (n.reviewed_revision=n.revision) IS 1,n.created_at DESC,n.id LIMIT 51 OFFSET ?" [|box(page*50)|]
     let! photos=rows env "SELECT c.*,p.scientific_name FROM personal_plant_photos c JOIN plants p ON p.id=c.plant_id WHERE c.deleted_at IS NULL AND c.ready=1 AND c.offered=1 AND c.published_photo_id IS NULL AND p.published=1 AND p.deleted_at IS NULL ORDER BY c.created_at,c.id LIMIT 51 OFFSET ?" [|box(page*50)|]
-    return response cookie 200 {
+    return {
         Notes=notes |> Array.truncate 50 |> Array.map(fun n->{PlantId=n?plant_id;PlantName=n?scientific_name;Note=noteDto n})
         Photos=photos |> Array.truncate 50 |> Array.map(fun p->{PlantId=p?plant_id;PlantName=p?scientific_name;Photo=photoDto p})
         Page=page;HasMore=notes.Length>50 || photos.Length>50 }
+}
+
+let reviewQueue env request cookie = promise {
+    let! data=reviewData env (pageNumber request)
+    return response cookie 200 data
 }
 
 let promote env id revision = promise {
@@ -319,20 +358,34 @@ let promote env id revision = promise {
         | _ -> return false
 }
 
+let reviewCommand env cookie page command onSuccess = promise {
+    let id,revision=match command with CorrectionRead(id,revision,_) | PromotePhoto(id,revision) -> id,revision
+    if not(validId id) then invalid "Invalid item."
+    checkedRevision revision
+    let! changed=promise {
+        match command with
+        | CorrectionRead(_,_,read) ->
+            let reviewed=if read then box revision else null
+            return! run env "UPDATE plant_notes SET reviewed_revision=? WHERE id=? AND revision=? AND is_correction=1 AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM plants p WHERE p.id=plant_id AND p.published=1 AND p.deleted_at IS NULL)" [|reviewed;box id;box revision|]
+        | PromotePhoto _ -> return! promote env id revision
+    }
+    if changed then
+        let! data=reviewData env page
+        return onSuccess data
+    else return conflict cookie
+}
+
 let reviewMutation env request cookie = promise {
     let! body=promise {try return! readJson request with ex -> return invalid ex.Message}
-    let action=textField "Action" 30 body
     let id=textField "Id" 100 body
     let revision=revisionField body
-    let! changed=promise {
-        match action with
-        | "read" | "unread" ->
-            let reviewed=if action="read" then box revision else null
-            return! run env "UPDATE plant_notes SET reviewed_revision=? WHERE id=? AND revision=? AND is_correction=1 AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM plants p WHERE p.id=plant_id AND p.published=1 AND p.deleted_at IS NULL)" [|reviewed;box id;box revision|]
-        | "promote" -> return! promote env id revision
-        | _ -> return invalid "Unknown review action."
-    }
-    if changed then return! reviewQueue env request cookie else return conflict cookie
+    let command =
+        match textField "Action" 30 body with
+        | "read" -> CorrectionRead(id,revision,true)
+        | "unread" -> CorrectionRead(id,revision,false)
+        | "promote" -> PromotePhoto(id,revision)
+        | _ -> invalid "Unknown review action."
+    return! reviewCommand env cookie (pageNumber request) command (response cookie 200)
 }
 
 let dispatch request env =

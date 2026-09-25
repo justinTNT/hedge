@@ -168,3 +168,38 @@ records were changed and no migration was needed.
 Before committing the branch, the full repository `./test.sh`, app production
 build, 18 importer tests, all 85 app Node tests and preview validation passed.
 Preview validation checked 4,041 media references and 4,609 deploy assets.
+
+
+## Boundary refactor prepared locally — not deployed
+
+The `native-plants-boundaries` integration branch combines the shared Hedge
+boundary refactor with Native Plants' typed contribution API, credential events
+and explicit admin descriptors. No schema migration, reseeding, changed OAuth
+configuration or new grant is required. The preview's current version and remote
+content are unchanged by this work.
+
+A later `npm run deploy:preview` publishes the v2 client and Worker together.
+The Worker retains the previous PascalCase JSON endpoints for old open tabs;
+retire those only after the compatibility window described in
+[CONTRIBUTIONS.md](CONTRIBUTIONS.md). Multipart uploads and private media keep
+their existing paths. The outer preview gate, signed cookies and independent
+owner key retain their current behavior.
+
+Use the normal app build, tests and `check:preview` before deployment. The new
+Worker/SQLite tests exercise real generated clients, v1/v2 interoperability,
+bounded streaming bodies, malformed DTOs, ownership, role revocation, quotas,
+photo publication and explicit admin registration. Credential lifecycle tests
+cover both documents, delayed responses, logout independence and disposal.
+
+
+Local integration verification: the full repository gate passed; the production
+app build, 18 importer tests, 95 Node tests and preview checks passed. The preview
+check verified 4,041 media references and 4,610 assets. Cookie-renewal tests cover
+both successful reads and malformed requests; unexpected storage errors remain
+503 with private/no-store headers. No schema/migration files changed.
+
+Chrome on an isolated local Worker verified anonymous review denial, owner-key
+application, immediate admin navigation updates, read-only Identity and the
+generated review queue. Verified contributor/curator operations and revocation
+were exercised through the compiled Worker with SQLite and simulated providers;
+this refactor did not repeat live Google/GitHub sign-in or browser file selection.

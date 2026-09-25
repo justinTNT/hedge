@@ -55,6 +55,7 @@ let plant : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE plants SET slug = ?, scientific_name = ?, common_names = ?, family = ?, genus = ?, aliases = ?, forms = ?, height = ?, sun = ?, water = ?, garden_features = ?, wildlife = ?, habit = ?, bark = ?, leaves = ?, phyllodes = ?, flowers = ?, fruit = ?, flowering = ?, fruiting = ?, features = ?, habitat = ?, cultivation = ?, traditional_uses = ?, notes = ?, distribution = ?, source_references = ?, source_evidence = ?, endemic_nt = ?, published = ?, sort_order = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE plants SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Slug"; "ScientificName"; "CommonNames"; "Family"; "Genus"; "Aliases"; "Forms"; "Height"; "Sun"; "Water"; "GardenFeatures"; "Wildlife"; "Habit"; "Bark"; "Leaves"; "Phyllodes"; "Flowers"; "Fruit"; "Flowering"; "Fruiting"; "Features"; "Habitat"; "Cultivation"; "TraditionalUses"; "Notes"; "Distribution"; "SourceReferences"; "SourceEvidence"; "EndemicNt"; "Published"; "SortOrder"] }
 
 let plantPhoto : AdminTable =
@@ -82,6 +83,7 @@ let plantPhoto : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE plant_photos SET plant_id = ?, image = ?, thumbnail = ?, caption = ?, photographer = ?, sort_order = ?, published = ?, source_evidence = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE plant_photos SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["PlantId"; "Image"; "Thumbnail"; "Caption"; "Photographer"; "SortOrder"; "Published"; "SourceEvidence"] }
 
 let plantMap : AdminTable =
@@ -108,6 +110,7 @@ let plantMap : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE plant_maps SET plant_id = ?, image = ?, caption = ?, source_label = ?, published = ?, sort_order = ?, source_evidence = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE plant_maps SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["PlantId"; "Image"; "Caption"; "SourceLabel"; "Published"; "SortOrder"; "SourceEvidence"] }
 
 let glossaryTerm : AdminTable =
@@ -135,6 +138,7 @@ let glossaryTerm : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE glossary_terms SET term = ?, aliases = ?, definition = ?, illustration = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE glossary_terms SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Term"; "Aliases"; "Definition"; "Illustration"; "SourceLabel"; "SourceEvidence"; "SortOrder"; "Published"] }
 
 let sourceReference : AdminTable =
@@ -163,6 +167,7 @@ let sourceReference : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE source_references SET source_key = ?, kind = ?, number = ?, citation = ?, aliases = ?, source_label = ?, source_evidence = ?, sort_order = ?, published = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE source_references SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["SourceKey"; "Kind"; "Number"; "Citation"; "Aliases"; "SourceLabel"; "SourceEvidence"; "SortOrder"; "Published"] }
 
 let plantNote : AdminTable =
@@ -189,6 +194,7 @@ let plantNote : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE plant_notes SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "Text"; "IsCorrection"; "Revision"; "ReviewedRevision"] }
 
 let personalPlantPhoto : AdminTable =
@@ -222,6 +228,7 @@ let personalPlantPhoto : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE personal_plant_photos SET plant_id = ?, owner_provider = ?, owner_id = ?, image_key = ?, thumbnail_key = ?, width = ?, height = ?, stored_bytes = ?, caption = ?, photographer = ?, offered = ?, ready = ?, revision = ?, published_photo_id = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE personal_plant_photos SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "ImageKey"; "ThumbnailKey"; "Width"; "Height"; "StoredBytes"; "Caption"; "Photographer"; "Offered"; "Ready"; "Revision"; "PublishedPhotoId"] }
 
 let plantViewPreference : AdminTable =
@@ -242,6 +249,7 @@ let plantViewPreference : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE plant_view_preferences SET owner_provider = ?, owner_id = ?, plant_id = ?, hero_photo_id = ? WHERE id = ?"
       Delete = "DELETE FROM plant_view_preferences WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["OwnerProvider"; "OwnerId"; "PlantId"; "HeroPhotoId"] }
 
 let contributionClaim : AdminTable =
@@ -260,6 +268,7 @@ let contributionClaim : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE contribution_claims SET guest_id = ? WHERE id = ?"
       Delete = "DELETE FROM contribution_claims WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["GuestId"] }
 
 let guest : AdminTable =
@@ -279,6 +288,7 @@ let guest : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE guests SET session_id = ? WHERE id = ?"
       Delete = "UPDATE guests SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["SessionId"] }
 
 let identity : AdminTable =
@@ -303,6 +313,7 @@ let identity : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
       Delete = "DELETE FROM identities WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
 
 let grant : AdminTable =
@@ -325,6 +336,7 @@ let grant : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE grants SET provider = ?, provider_user_id = ?, role = ?, enabled = ?, granted_by = ? WHERE id = ?"
       Delete = "DELETE FROM grants WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Provider"; "ProviderUserId"; "Role"; "Enabled"; "GrantedBy"] }
 
 let tables : AdminTable list = [

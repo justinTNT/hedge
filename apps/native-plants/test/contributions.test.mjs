@@ -328,3 +328,145 @@ test('a failed capacity response cannot remove a completed upload; retrying its 
   const retry=await body200(await f.upload(a,'completed'));
   assert.equal(retry.Photos.length,1);assert.deepEqual(retry.PhotoCapacity,{Used:1,Limit:5});assert.equal(f.objects.size,2);
 });
+
+
+const v2='/api/plants/v2';
+async function v2post(f,cookie,path,data,extra={}) {
+  return f.call(v2+path,{method:'POST',headers:{Cookie:cookie,Origin:'http://plants.test','Content-Type':'application/json','X-Contribution-Viewer':await f.viewer(cookie),...extra},body:JSON.stringify(data)});
+}
+test('v2 codecs and v1 compatibility adapter share revisions, quotas, privacy and review state',async()=>{
+  const f=fixture(),cookie=await f.bootstrap(),other=await f.bootstrap();
+  const saved=await body200(await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'typed-note',revision:0,text:'A typed correction',correction:true}));
+  assert.equal(saved.personal.notes[0].text,'A typed correction');assert.equal(saved.personal.noteCapacity.used,1);
+  assert.equal((await body200(await f.personal(cookie))).Notes[0].Text,'A typed correction');
+  assert.equal((await body200(await f.get(v2+'/personal/plant-a',other))).personal.notes.length,0);
+  assert.equal((await v2post(f,other,'/notes/delete',{plantId:'plant-a',id:'typed-note',revision:1})).status,409);
+  assert.equal((await v2post(f,cookie,'/notes/delete',{plantId:'plant-b',id:'typed-note',revision:1})).status,409);
+  assert.equal((await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'typed-note',revision:0,text:'stale',correction:false})).status,409);
+  const queue=await body200(await f.get(v2+'/review?page=0','',{'X-Admin-Key':f.env.ADMIN_KEY}));
+  assert.equal(queue.review.notes[0].note.text,'A typed correction');
+  await body200(await v2post(f,cookie,'/review/correction',{id:'typed-note',revision:1,read:true,page:0},{'X-Admin-Key':f.env.ADMIN_KEY}));
+  assert.equal((await body200(await f.personal(cookie))).Notes[0].Read,true);
+  await body200(await f.post(cookie,note('typed-note','Legacy edit',true,1)));
+  assert.equal((await body200(await f.get(v2+'/personal/plant-a',cookie))).personal.notes[0].read,false);
+  for(let i=0;i<4;i++)await body200(await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'extra-'+i,revision:0,text:'A note',correction:false}));
+  assert.equal((await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'too-many',revision:0,text:'Extra',correction:false})).status,409);
+  await body200(await v2post(f,cookie,'/notes/delete',{plantId:'plant-a',id:'typed-note',revision:2}));
+  assert.equal((await body200(await f.review())).Notes.length,0);
+});
+
+test('v2 photo edits, personal hero, offers, promotion and deletion preserve private/public copies',async()=>{
+  const f=fixture(),cookie=await f.bootstrap();await body200(await f.upload(cookie));
+  await body200(await v2post(f,cookie,'/photos/update',{plantId:'plant-a',id:'photo-a',revision:1,caption:'Flowers',photographer:'Botanist',offered:true}));
+  const selected=await body200(await v2post(f,cookie,'/hero',{plantId:'plant-a',id:'photo-a'}));
+  assert.equal(selected.personal.heroPhotoId,'photo-a');
+  await body200(await v2post(f,cookie,'/review/promote',{id:'photo-a',revision:2,page:0},{'X-Admin-Key':f.env.ADMIN_KEY}));
+  const pub=f.db.prepare('SELECT * FROM plant_photos WHERE id=?').get('contributed-photo-a');assert.equal(pub.caption,'Flowers');
+  await body200(await v2post(f,cookie,'/photos/delete',{plantId:'plant-a',id:'photo-a',revision:2}));
+  assert.ok(f.objects.has(pub.image.slice('/blobs/'.length)));
+  const data=await body200(await f.get(v2+'/personal/plant-a',cookie));
+  assert.equal(data.personal.photos.length,0);assert.equal(data.personal.heroPhotoId,'');
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM plant_photos').get().n,1);
+});
+
+test('v2 auth, origin, viewer, decoder and byte bounds reject writes without changing data',async()=>{
+  const f=fixture(),cookie=await f.bootstrap();
+  const payload={plantId:'plant-a',id:'note-a',revision:0,text:'Valid',correction:false};
+  assert.equal((await v2post(f,cookie,'/notes/save',payload,{Origin:'https://attacker.test'})).status,403);
+  assert.equal((await v2post(f,cookie,'/notes/save',payload,{'X-Contribution-Viewer':'old'})).status,409);
+  for(const value of [{...payload,correction:'false'},{...payload,revision:1.5},{...payload,revision:-1},{...payload,text:'x'.repeat(6001)},{...payload,text:'x'.repeat(24001)}])
+    assert.equal((await v2post(f,cookie,'/notes/save',value)).status,400);
+  assert.equal((await v2post(f,cookie,'/notes/save',payload,{'Content-Type':'text/plain'})).status,400);
+  assert.equal((await f.get(v2+'/personal/plant-a','')).status,401);
+  assert.equal((await f.get(v2+'/review',cookie)).status,403);
+  assert.equal((await v2post(f,cookie,'/review/promote',{id:'photo-a',revision:1,page:0})).status,403);
+  assert.equal((await body200(await f.personal(cookie))).Notes.length,0);
+  const capabilities=await body200(await f.get(v2+'/access',cookie));
+  assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:false});
+  const invalidPage=await body200(await f.get(v2+'/review?page=oops','',{'X-Admin-Key':f.env.ADMIN_KEY}));
+  assert.equal(invalidPage.review.page,0);
+});
+
+test('v2 denies untrusted callers before consuming a streamed body; authorized bodies are capped without Content-Length',async()=>{
+  const f=fixture(),cookie=await f.bootstrap();
+  let reads=0;
+  const body=new ReadableStream({pull(controller){reads++;controller.enqueue(new Uint8Array(30000));}}, {highWaterMark:0});
+  const denied=await f.call(v2+'/notes/save',{method:'POST',headers:{Origin:'http://plants.test','Content-Type':'application/json'},body,duplex:'half'});
+  assert.equal(denied.status,401);assert.equal(reads,0);await body.cancel();
+  let cancelled=false;
+  const large=new ReadableStream({pull(c){c.enqueue(new Uint8Array(24001));},cancel(){cancelled=true}}, {highWaterMark:0});
+  const rejected=await f.call(v2+'/notes/save',{method:'POST',headers:{Cookie:cookie,Origin:'http://plants.test','Content-Type':'application/json'},body:large,duplex:'half'});
+  assert.equal(rejected.status,400);assert.equal(cancelled,true);
+});
+
+test('generated v2 client roundtrips actual worker data and preserves HTTP versus decode failures',async()=>{
+  const {createClient}=await import('../dist/client/generated/ClientGen.js');
+  const {FSharpResult$2:Result}=await import('../dist/client/fable_modules/fable-library-js.4.29.0/Result.js');
+  const f=fixture(),cookie=await f.bootstrap(),viewer=await f.viewer(cookie);
+  const transport=async req=>{
+    const headers={Cookie:cookie,Origin:'http://plants.test','Content-Type':'application/json','X-Contribution-Viewer':viewer};
+    const qs=new URLSearchParams([...req.Query]);
+    const response=await f.call(req.Path+(qs.size?'?'+qs:''),{method:req.Method,headers,body:req.Body});
+    return new Result(0,[{Status:response.status,Body:await response.text(),Headers:[]}]);
+  };
+  const client=createClient(transport);
+  const saved=await client.saveNote({PlantId:'plant-a',Id:'typed',Revision:0,Text:'Decoded',Correction:true});
+  assert.equal(saved.tag,0);assert.equal([...saved.fields[0].Personal.Notes][0].Text,'Decoded');
+  const read=await client.getPersonal('plant-a');assert.equal(read.tag,0);assert.equal([...read.fields[0].Personal.Notes].length,1);
+  const denied=await client.getReview({Page:'0'});assert.equal(denied.tag,1);assert.equal(denied.fields[0].tag,1);assert.equal(denied.fields[0].fields[0],403);
+  const broken=createClient(async()=>new Result(0,[{Status:200,Body:'{"personal":{"notes":"bad"}}',Headers:[]}]))
+  const malformed=await broken.getPersonal('plant-a');assert.equal(malformed.tag,1);assert.equal(malformed.fields[0].tag,3);
+});
+
+
+test('v2 enforces credential-backed contributors and current grants independently from owner keys',async()=>{
+  const f=fixture();f.env.CONTRIBUTIONS_REQUIRE_LOGIN='true';
+  const anon=await f.bootstrap();assert.equal((await f.get(v2+'/personal/plant-a',anon)).status,401);
+  const cookie=await f.login(anon);
+  await body200(await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'verified',revision:0,text:'Check this',correction:true}));
+  assert.equal((await f.get(v2+'/review',cookie)).status,403);
+  f.db.prepare('INSERT INTO grants (id,provider,provider_user_id,role,enabled,created_at) VALUES (?,?,?,?,?,?)').run('curator-v2','google','botanist','curator',1,1);
+  const capabilities=await body200(await f.get(v2+'/access',cookie));assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:true});
+  assert.equal((await body200(await f.get(v2+'/review',cookie))).review.notes.length,1);
+  assert.equal((await f.get('/api/admin/types',cookie)).status,401);
+  f.db.prepare('UPDATE grants SET enabled=0 WHERE id=?').run('curator-v2');
+  assert.equal((await f.get(v2+'/review',cookie)).status,403);
+  assert.equal((await v2post(f,cookie,'/review/correction',{id:'verified',revision:1,read:true,page:0})).status,403);
+  const owner=await body200(await f.get(v2+'/access','',{'X-Admin-Key':f.env.ADMIN_KEY}));assert.deepEqual(owner,{canEditCatalogue:true,canReview:true});
+});
+
+test('Native Plants explicitly registers only catalogue, grants and read-only identity descriptors',async()=>{
+  const f=fixture(),headers={'X-Admin-Key':f.env.ADMIN_KEY};
+  const {tables}=await import('../dist/server/generated/AdminGen.js');
+  const {adminConfig}=await import('../dist/server/AdminConfig.js');
+  // Changing the generated aggregate cannot register a table in the authored host list.
+  const before=[...adminConfig.Tables].map(t=>t.Name);tables.head={...tables.head,Name:'FuturePrivateTable'};
+  const data=await body200(await f.get('/api/admin/types','',headers));
+  assert.deepEqual(data.types.map(t=>t.name).sort(),['GlossaryTerm','Grant','Identity','Plant','PlantMap','PlantPhoto','SourceReference'].sort());
+  assert.deepEqual([...adminConfig.Tables].map(t=>t.Name),before);
+  for(const name of ['Guest','PlantNote','PersonalPlantPhoto','PlantViewPreference','ContributionClaim','FuturePrivateTable'])
+    assert.equal((await f.get('/api/admin/'+name,'',headers)).status,404);
+});
+
+
+test('v2 success and malformed requests preserve session renewal and private cache headers',async()=>{
+  const {deps}=await import('../dist/server/AuthConfig.js');
+  const {issue,verify}=await import('../dist/server/packages/hedge/src/Hedge/GuestCookie.js');
+  const f=fixture(),initial=await f.bootstrap();
+  const config=deps(f.env,new Request('http://plants.test/')).Config;
+  const verified=await verify(config,Math.floor(Date.now()/1000),initial.slice('hedge_guest='.length));
+  assert.equal(verified.tag,0);const guest=verified.fields[0].GuestId;
+  const token=await issue(config,Math.floor(Date.now()/1000)-86400,86460,guest);
+  const cookie='hedge_guest='+token;
+  for(const response of [await f.get(v2+'/personal/plant-a',cookie),await f.get(v2+'/access',cookie),
+    await v2post(f,cookie,'/notes/save',{bad:'body'})]) {
+    assert.ok([200,400].includes(response.status),await response.clone().text());
+    assert.match(response.headers.get('set-cookie'),/^hedge_guest=/);
+    assert.equal(response.headers.get('cache-control'),'private, no-store');
+    assert.match(response.headers.get('vary'),/Cookie/);
+  }
+  f.setBeforeRun(()=>{throw new Error('database fixture unavailable')});
+  const failed=await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'failed',revision:0,text:'Failure',correction:false});
+  assert.equal(failed.status,503);assert.equal(failed.headers.get('cache-control'),'private, no-store');
+  assert.doesNotMatch(await failed.text(),/database fixture/);
+});

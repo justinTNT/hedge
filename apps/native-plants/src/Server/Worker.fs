@@ -11,7 +11,10 @@ let exports = createWorker {
         let result =
             match Server.Contributions.dispatch request (env :?> Env) with
             | Some action -> Some action
-            | None -> Server.Routes.dispatch request (env :?> Env) ctx
+            | None ->
+                match Server.ContributionApi.dispatch request (env :?> Env) ctx Server.Routes.dispatch with
+                | Some action -> Some action
+                | None -> Server.Routes.dispatch request (env :?> Env) ctx
         match result with
         | Some result -> Some (promise {
             try
@@ -19,7 +22,7 @@ let exports = createWorker {
                 if not (response?headers?has("Cache-Control")) then
                     response?headers?set("Cache-Control", "no-store") |> ignore
                 return response
-            with _ -> return jsonResponse "{\"error\":\"The catalogue is temporarily unavailable. Please try again.\"}" 503
+            with _ -> return Server.ContributionApi.decorate None (jsonResponse "{\"error\":\"The catalogue is temporarily unavailable. Please try again.\"}" 503)
           })
         | None when request.url.Contains("/api/") -> Some (promise { return notFound () })
         | None -> None

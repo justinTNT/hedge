@@ -32,3 +32,65 @@ module SearchPlants =
     type Query = { Q: string option; Family: string option; Genus: string option; Form: string option; Sun: string option; Water: string option; Feature: string option; Wildlife: string option; Endemic: string option; Photos: string option; Photographer: string option }
     type Response = { Plants: PlantCard list; Total: int }
     let endpoint : GetQuery<Query, Response> = GetQuery "/api/plants/search"
+
+// Private, generated v2 surface. Public catalogue endpoints retain their ordinary transport.
+type PersonalSnapshot = {
+    Anonymous:bool; ViewerToken:string; Notes:Models.Contributions.Note list
+    Photos:Models.Contributions.Photo list; HeroPhotoId:string
+    NoteCapacity:Models.Contributions.Capacity; PhotoCapacity:Models.Contributions.Capacity
+}
+type ReviewSnapshot = {
+    Notes:Models.Contributions.ReviewNote list; Photos:Models.Contributions.ReviewPhoto list
+    Page:int; HasMore:bool
+}
+
+module GetAccess =
+    type Response = { CanEditCatalogue:bool; CanReview:bool }
+    let requestContext = true
+    let endpoint : Get<Response> = Get "/api/plants/v2/access"
+
+module GetPersonal =
+    type Response = { Personal:PersonalSnapshot }
+    let requestContext = true
+    let endpoint : GetBy<Response> = GetBy (sprintf "/api/plants/v2/personal/%s")
+
+module GetReview =
+    type Query = { Page:string option }
+    type Response = { Review:ReviewSnapshot }
+    let requestContext = true
+    let endpoint : GetQuery<Query,Response> = GetQuery "/api/plants/v2/review"
+
+module SaveNote =
+    type Request = { PlantId:string; Id:string; Revision:int; Text:string; Correction:bool }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/notes/save"
+
+module DeleteNote =
+    type Request = { PlantId:string; Id:string; Revision:int }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/notes/delete"
+
+module UpdatePhoto =
+    type Request = { PlantId:string; Id:string; Revision:int; Caption:string; Photographer:string; Offered:bool }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/photos/update"
+
+module DeletePhoto =
+    type Request = { PlantId:string; Id:string; Revision:int }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/photos/delete"
+
+module SelectHero =
+    type Request = { PlantId:string; Id:string }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/hero"
+
+module ReviewCorrection =
+    type Request = { Id:string; Revision:int; Read:bool; Page:int }
+    type Response = { Review:ReviewSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/review/correction"
+
+module PromotePhoto =
+    type Request = { Id:string; Revision:int; Page:int }
+    type Response = { Review:ReviewSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/review/promote"

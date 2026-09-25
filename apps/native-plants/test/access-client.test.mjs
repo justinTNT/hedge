@@ -79,14 +79,22 @@ test('capability fetch uses the session lock, sends only the supplied key and re
   const oldFetch=globalThis.fetch;let calls=0;
   window.HedgeGuest={withSessionRequest:async fn=>{calls++;return fn()}};
   globalThis.fetch=async(url,options)=>{
-    assert.equal(url,'/api/plants/access');assert.equal(options.cache,'no-store');assert.equal(options.credentials,'same-origin');
-    assert.equal(options.headers['X-Admin-Key'],'test-owner-key');return Response.json(owner);
+    assert.equal(url,'/api/plants/v2/access');assert.equal(options.cache,'no-store');assert.ok(options.credentials===undefined || options.credentials==='same-origin');
+    assert.equal(options.headers['X-Admin-Key'],'test-owner-key');return Response.json({canEditCatalogue:true,canReview:true});
   };
   try {
-    assert.deepEqual(await readCapabilities('test-owner-key'),{CanEditCatalogue:true,CanReview:true});assert.equal(calls,1);
+    const result=await readCapabilities('test-owner-key');assert.equal(result.CanEditCatalogue,true);assert.equal(result.CanReview,true);assert.equal(calls,1);
     globalThis.fetch=async()=>Response.json({CanReview:'true',CanEditCatalogue:'true'});
-    await assert.rejects(readCapabilities(''),/Access could not be checked/);
+    await assert.rejects(readCapabilities(''),/canEditCatalogue|canReview/);
     const storage=globalThis.localStorage;globalThis.localStorage={getItem(){throw new Error('Blocked')}};
     try{assert.equal(storedAdminKey(),'')}finally{globalThis.localStorage=storage}
   } finally {globalThis.fetch=oldFetch;delete window.HedgeGuest}
+});
+
+
+test('a review completion arriving before the credential event cannot restore the old queue',()=>{
+  key='first-owner';let m=permitted(owner);m.Review.Key=key;
+  const epoch=m.Review.Epoch;key='different-owner';
+  const [next]=appUpdate(new AppMsg(18,[new ReviewMsg(3,[epoch,ok(privateQueue)])]),m);
+  assert.equal(next.Review.Data,undefined);assert.equal(canReview(next.Access),false);key='';
 });

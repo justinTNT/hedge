@@ -12,20 +12,93 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
+    | GET path when matchPath "/api/plants/v2/access" path = Some (Exact "/api/plants/v2/access") ->
+        Some (Server.Handlers.getAccess request env ctx)
+
     | GET path when matchPath "/api/plants/revision" path = Some (Exact "/api/plants/revision") ->
         Some (Server.Handlers.getRevision env)
 
     | GET path when matchPath "/api/plants/catalogue" path = Some (Exact "/api/plants/catalogue") ->
         Some (Server.Handlers.getCatalogue env)
 
+    | GET path when matchPath "/api/plants/v2/review" path = Some (Exact "/api/plants/v2/review") ->
+        let query = ({ Page = (let v = (getQueryParam request.url "page") in if isNull v || v = "" then None else Some v) } : Models.Api.GetReview.Query)
+        Some (Server.Handlers.getReview query request env ctx)
+
     | GET path when matchPath "/api/plants/search" path = Some (Exact "/api/plants/search") ->
         let query = ({ Q = (let v = (getQueryParam request.url "q") in if isNull v || v = "" then None else Some v); Family = (let v = (getQueryParam request.url "family") in if isNull v || v = "" then None else Some v); Genus = (let v = (getQueryParam request.url "genus") in if isNull v || v = "" then None else Some v); Form = (let v = (getQueryParam request.url "form") in if isNull v || v = "" then None else Some v); Sun = (let v = (getQueryParam request.url "sun") in if isNull v || v = "" then None else Some v); Water = (let v = (getQueryParam request.url "water") in if isNull v || v = "" then None else Some v); Feature = (let v = (getQueryParam request.url "feature") in if isNull v || v = "" then None else Some v); Wildlife = (let v = (getQueryParam request.url "wildlife") in if isNull v || v = "" then None else Some v); Endemic = (let v = (getQueryParam request.url "endemic") in if isNull v || v = "" then None else Some v); Photos = (let v = (getQueryParam request.url "photos") in if isNull v || v = "" then None else Some v); Photographer = (let v = (getQueryParam request.url "photographer") in if isNull v || v = "" then None else Some v) } : Models.Api.SearchPlants.Query)
         Some (Server.Handlers.searchPlants query env)
 
     | GET path ->
+        match matchPath "/api/plants/v2/personal/:id" path with
+        | Some (WithParam (_, id)) -> Some (Server.Handlers.getPersonal id request env ctx)
+        | _ ->
         match matchPath "/api/plants/plant/:id" path with
         | Some (WithParam (_, id)) -> Some (Server.Handlers.getPlant id env)
         | _ ->
         None
+
+    | POST path when matchPath "/api/plants/v2/review/promote" path = Some (Exact "/api/plants/v2/review/promote") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.promotePhotoReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.promotePhoto req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/review/correction" path = Some (Exact "/api/plants/v2/review/correction") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.reviewCorrectionReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.reviewCorrection req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/hero" path = Some (Exact "/api/plants/v2/hero") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.selectHeroReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.selectHero req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/photos/delete" path = Some (Exact "/api/plants/v2/photos/delete") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.deletePhotoReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.deletePhoto req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/photos/update" path = Some (Exact "/api/plants/v2/photos/update") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.updatePhotoReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.updatePhoto req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/notes/delete" path = Some (Exact "/api/plants/v2/notes/delete") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.deleteNoteReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.deleteNote req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/notes/save" path = Some (Exact "/api/plants/v2/notes/save") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.saveNoteReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.saveNote req request env ctx
+        })
 
     | _ -> None
