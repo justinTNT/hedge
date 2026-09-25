@@ -28,6 +28,7 @@ let album : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE albums SET title = ?, slug = ?, cover = ?, release_date = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE albums SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Title"; "Slug"; "Cover"; "ReleaseDate"] }
 
 let track : AdminTable =
@@ -51,6 +52,7 @@ let track : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE tracks SET album_id = ?, title = ?, url = ?, track_index = ?, plays = ? WHERE id = ?"
       Delete = "UPDATE tracks SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["AlbumId"; "Title"; "Url"; "TrackIndex"; "Plays"] }
 
 let tables : AdminTable list = [

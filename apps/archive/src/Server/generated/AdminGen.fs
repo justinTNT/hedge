@@ -32,6 +32,7 @@ let article : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE articles SET aid = ?, title = ?, body = ?, section = ?, article_date = ?, attrib = ?, source = ?, view_count = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE articles SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Aid"; "Title"; "Body"; "Section"; "ArticleDate"; "Attrib"; "Source"; "ViewCount"] }
 
 let tables : AdminTable list = [

@@ -4,6 +4,20 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Hedge.Workers
 
+/// Normalize a same-site absolute path before signing it or navigating to it. Never accept an
+/// external/protocol-relative URL, backslash/control-character ambiguity or state delimiter.
+[<Emit("""((value) => {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\x00-\x20\x7f|]/.test(value)) return '/';
+  try {
+    const url = new URL(value, 'https://hedge.invalid');
+    if (url.origin !== 'https://hedge.invalid' || url.pathname.startsWith('//')) return '/';
+    return url.pathname + url.search + url.hash;
+  } catch (_) { return '/'; }
+})($0)""")>]
+let private normalizeReturnPath (value: string) : string = jsNative
+
+let safeReturnPath (value: string) : string = normalizeReturnPath value
+
 /// Normalized user info from any OAuth provider.
 type UserInfo = {
     Name: string

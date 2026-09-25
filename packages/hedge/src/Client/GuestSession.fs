@@ -90,8 +90,35 @@ let ensureSession () : JS.Promise<SessionReadiness> =
         return { Ready = raw?ready; Session = parseSession raw?session }
     }
 
+/// A fresh, server-authoritative read with explicit readiness (unlike display-only syncSession).
+[<Emit("window.HedgeGuest.refreshSession()")>]
+let private rawRefreshSession () : JS.Promise<obj> = jsNative
+
+let refreshSession () : JS.Promise<SessionReadiness> =
+    promise {
+        let! raw = rawRefreshSession ()
+        return { Ready = raw?ready; Session = parseSession raw?session }
+    }
+
+/// Log this browser out; account associations and other devices remain untouched.
+[<Emit("window.HedgeGuest.signOut()")>]
+let signOut () : JS.Promise<bool> = jsNative
+
 /// Drop the cached bootstrap so the next `ensureSession` re-fetches. Call on a write's 401 (the
 /// cookie expired/was cleared/the key changed since bootstrap) so the client re-establishes a
 /// session instead of resending the rejected credential until reload.
 [<Emit("window.HedgeGuest.invalidateSession()")>]
 let invalidateSession () : unit = jsNative
+
+/// Run a typed operation under the browser session lifecycle. The operation owns decoding;
+/// the runtime owns cookie serialization and rejects results from an invalidated session.
+[<Emit("window.HedgeGuest.withSessionRequest($0)")>]
+let withSessionRequest (action: unit -> JS.Promise<'T>) : JS.Promise<'T> = jsNative
+
+/// Optional adapter for generated clients. The inner transport must consume its response body
+/// before returning; HTTP and decoder errors remain Hedge.Http's responsibility.
+let transport (inner: Hedge.Http.Transport) : Hedge.Http.Transport =
+    fun request -> promise {
+        try return! withSessionRequest (fun () -> inner request)
+        with ex -> return Error (Hedge.Http.TransportFailure ex.Message)
+    }

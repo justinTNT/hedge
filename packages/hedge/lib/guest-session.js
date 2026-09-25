@@ -214,53 +214,111 @@
     return current;
   }
 
-  // Single-flight bootstrap. `readyPromise` holds the last SUCCESSFUL /api/auth/me (the signed
-  // cookie is set, the session is ready); a failure is not cached, so a later call retries.
+  // One authority for the cookie and its presentation cache. A generation prevents a late
+  // read from restoring an identity after logout/invalidation. Web Locks serialize cookie-
+  // renewing reads and logout across tabs; the promise queue is the single-document fallback.
   var readyPromise = null;
-
-  // Fetch /api/auth/me and resolve an explicit readiness result. `ready` is true ONLY on an HTTP
-  // success (the server bootstrapped/renewed the session and set the signed cookie); a network
-  // error or non-2xx yields ready:false with the cached session for DISPLAY only. Never rejects,
-  // so callers get a definite answer to gate writes on.
-  function fetchMe() {
-    var basePath = window.BASE_PATH || '';
-    return fetch(basePath + '/api/auth/me', { credentials: 'same-origin' })
-      .then(function(r) {
-        if (!r.ok) return { ready: false, session: getSession() };
-        return r.json().then(function(data) { return { ready: true, session: applyServer(data) }; });
-      })
-      .catch(function() { return { ready: false, session: getSession() }; });
+  var generation = 0;
+  var logoutPromise = null;
+  var logoutPending = false;
+  var queue = Promise.resolve();
+  var LOGOUT_KEY = 'hedge_session_logout';
+  function sessionLock(action) {
+    if (typeof navigator !== 'undefined' && navigator.locks)
+      return Promise.resolve().then(function() { return navigator.locks.request('hedge-session-cookie', action); });
+    var next = queue.then(action, action);
+    queue = next.catch(function() {});
+    return next;
   }
-
-  // Always fetch fresh (a display sync or a re-sync after an identity op needs current server
-  // state), and refresh the single-flight readiness cache from the result.
-  function refresh() {
-    readyPromise = fetchMe().then(function(res) { if (!res.ready) readyPromise = null; return res; });
-    return readyPromise;
+  function stale() { return { ready: false, session: getSession() }; }
+  function clearSession() {
+    generation++;
+    readyPromise = null;
+    applyServer({guest: null});
+    window.dispatchEvent(new CustomEvent('hedge:session-cleared'));
   }
-
-  // Readiness gate for writes: reuse the in-flight/succeeded bootstrap if there is one, else start
-  // one. The FIRST comment/upload (including a deep link) awaits this, so the signed cookie exists
-  // before the write. Resolves { ready, session }; ready:false means the write should not proceed.
-  function ensureSession() { return readyPromise || refresh(); }
-
-  // Drop the cached bootstrap so the next ensureSession re-fetches /api/auth/me. Call this when a
-  // write is rejected with 401 (the cookie expired, was cleared, or the signing key changed since
-  // bootstrap): the cached readyPromise would otherwise keep resending the same rejected credential
-  // until a full page reload. After invalidation the next attempt re-bootstraps (a fresh signed
-  // guest if the old cookie is gone) and can succeed.
-  function invalidateSession() { readyPromise = null; }
-
-  // Display sync (identity component boot + post-merge/disconnect re-sync): always fresh, returns
-  // the session object, and (re)establishes readiness for write gating.
-  function syncSession() { return refresh().then(function(res) { return res.session; }); }
+  function announceLogout(phase) {
+    localStorage.setItem(LOGOUT_KEY, JSON.stringify({phase: phase, nonce: Date.now() + ':' + Math.random()}));
+  }
+  window.addEventListener('storage', function(event) {
+    if (event.key !== LOGOUT_KEY || !event.newValue) return;
+    try {
+      logoutPending = JSON.parse(event.newValue).phase === 'begin';
+      clearSession();
+    } catch (_) {}
+  });
+  function fetchMe(epoch) {
+    return sessionLock(function() {
+      if (epoch !== generation || logoutPending) return stale();
+      return fetch((window.BASE_PATH || '') + '/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) return stale();
+          return r.json().then(function(data) {
+            if (epoch !== generation || logoutPending) return stale();
+            return { ready: true, session: applyServer(data) };
+          });
+        }).catch(stale);
+    }).catch(stale);
+  }
+  function refreshSession() {
+    if (logoutPending) return Promise.resolve(stale());
+    var epoch = generation;
+    var current = fetchMe(epoch).then(function(res) {
+      if (readyPromise === current && !res.ready) readyPromise = null;
+      return res;
+    });
+    readyPromise = current;
+    return current;
+  }
+  function ensureSession() { return readyPromise || refreshSession(); }
+  // A protected operation must finish reading its response before releasing the lock. The
+  // caller receives no stale private result after logout; queued writes are cancelled too.
+  function withSessionRequest(action) {
+    var epoch = generation;
+    return ensureSession().then(function(ready) {
+      if (!ready.ready) throw new Error('Your session is unavailable. Refresh and try again.');
+      return sessionLock(function() {
+        if (epoch !== generation || logoutPending) throw new Error('Your session changed. Refresh and try again.');
+        return Promise.resolve().then(action).then(function(result) {
+          if (epoch !== generation || logoutPending) throw new Error('Your session changed. Refresh and try again.');
+          return result;
+        });
+      });
+    });
+  }
+  function invalidateSession() { generation++; readyPromise = null; }
+  // Existing display consumers keep their API. Authenticated-only consumers use the readiness
+  // result: an unavailable server must not turn a cached display identity into authenticated UI.
+  function syncSession() { return refreshSession().then(function(res) { return res.session; }); }
+  function signOut() {
+    if (logoutPromise) return logoutPromise;
+    logoutPending = true;
+    clearSession();
+    announceLogout('begin');
+    logoutPromise = sessionLock(function() {
+      return fetch((window.BASE_PATH || '') + '/api/auth/logout', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: {'Content-Type': 'application/json'}, body: '{}'
+      }).then(function(r) { return r.ok; }).catch(function() { return false; });
+    }).catch(function() { return false; }).then(function(ok) {
+      logoutPending = false;
+      clearSession();
+      announceLogout('end');
+      logoutPromise = null;
+      return ok;
+    });
+    return logoutPromise;
+  }
 
   window.HedgeGuest = {
     getSession: getSession,
     avatarForAuthor: avatarForAuthor,
     anonName: anonName,
     syncSession: syncSession,
+    refreshSession: refreshSession,
     ensureSession: ensureSession,
-    invalidateSession: invalidateSession
+    invalidateSession: invalidateSession,
+    withSessionRequest: withSessionRequest,
+    signOut: signOut
   };
 })();

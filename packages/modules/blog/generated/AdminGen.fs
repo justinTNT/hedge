@@ -32,6 +32,7 @@ let item : AdminTable =
       HasUpdateTs = true
       Update = "UPDATE blog_items SET title = ?, link = ?, image = ?, extract = ?, owner_comment = ?, article_date = ?, slug = ?, view_count = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE blog_items SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Title"; "Link"; "Image"; "Extract"; "OwnerComment"; "ArticleDate"; "Slug"; "ViewCount"] }
 
 let itemComment : AdminTable =
@@ -56,6 +57,7 @@ let itemComment : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE blog_comments SET item_id = ?, identity_id = ?, parent_id = ?, author = ?, content = ?, removed = ? WHERE id = ?"
       Delete = "UPDATE blog_comments SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["ItemId"; "IdentityId"; "ParentId"; "Author"; "Content"; "Removed"] }
 
 let tag : AdminTable =
@@ -75,6 +77,7 @@ let tag : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE blog_tags SET name = ? WHERE id = ?"
       Delete = "UPDATE blog_tags SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Name"] }
 
 let itemTag : AdminTable =
@@ -94,6 +97,7 @@ let itemTag : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE blog_item_tags SET item_id = ?, tag_id = ? WHERE id = ?"
       Delete = "UPDATE blog_item_tags SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["ItemId"; "TagId"] }
 
 let itemSnapshot : AdminTable =
@@ -118,6 +122,7 @@ let itemSnapshot : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE blog_snapshots SET item_id = ?, kind = ?, blob_key = ?, source_url = ?, status = ?, error = ? WHERE id = ?"
       Delete = "UPDATE blog_snapshots SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["ItemId"; "Kind"; "BlobKey"; "SourceUrl"; "Status"; "Error"] }
 
 let tables : AdminTable list = [

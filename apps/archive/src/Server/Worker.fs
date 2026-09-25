@@ -17,6 +17,7 @@ let exports = createWorker {
     OAuth = None
     // No guest identity/comments on this deployment (acquires no GUEST_SECRET requirement).
     GuestSession = None
+    AllowGuestUploads = false
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
     Scheduled = None

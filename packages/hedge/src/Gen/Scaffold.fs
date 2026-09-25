@@ -140,6 +140,7 @@ let exports = createWorker {
     // No guest identity/comments by default; wire Server.GuestConfig.deps (and a GUEST_SECRET
     // binding) when the app adds guest commenting/uploads.
     GuestSession = None
+    AllowGuestUploads = false
     Mounts = []
     BlobServing = { PrivatePrefixes = [] }
     // No cron handler by default; set to Some to run a scheduled job (needs a [triggers] block).

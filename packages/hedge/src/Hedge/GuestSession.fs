@@ -68,6 +68,10 @@ let configFor (keyId: string) (secret: string) (audience: string) (previous: (Si
     if isNull (box audience) || audience = "" then failwith "guest signing: audience missing"
     { Active = { KeyId = keyId; Secret = secret }; Audience = audience; Previous = previous }
 
+/// Sign out this browser without moving/deleting provider identities or changing other devices.
+let expiredCookie (secure: bool) : string =
+    "hedge_guest=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0" + (if secure then "; Secure" else "")
+
 /// Parse a GUEST_KEYRING value into retiring (previous) signing keys for graceful rotation (Slice G).
 /// The value is a JSON array of { "keyId": string, "secret": >=32 chars, "retireAt": epoch-seconds }:
 /// each entry is a PREVIOUS key that still VERIFIES until retireAt but never signs (issue always uses

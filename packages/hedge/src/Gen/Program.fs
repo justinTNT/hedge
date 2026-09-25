@@ -159,6 +159,7 @@ type ParsedEndpoint = {
     ResponseType: Type option
     QueryType: Type option   // the 'query record for EGetQuery / EGetByQuery
     ViewTypes: Type list
+    RequestContext: bool
 }
 
 let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (routePrefix: string) (handlerNs: string) : ParsedEndpoint list =
@@ -217,6 +218,12 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                 if path = "" then None
                 else
 
+                let contextProp = moduleType.GetProperty("requestContext", BindingFlags.Public ||| BindingFlags.Static)
+                let requestContext =
+                    if isNull contextProp then false
+                    elif contextProp.PropertyType <> typeof<bool> then
+                        failwithf "%s.requestContext must be a bool" moduleType.FullName
+                    else unbox<bool> (contextProp.GetValue(null))
                 let nested = moduleType.GetNestedTypes(BindingFlags.Public)
                 let requestType = nested |> Array.tryFind (fun t -> t.Name = "Request")
                 let responseType = nested |> Array.tryFind (fun t -> t.Name = "Response")
@@ -240,6 +247,7 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                     ResponseType = responseType
                     QueryType = queryType
                     ViewTypes = viewTypes
+                    RequestContext = requestContext
                 })
         |> Array.toList
 
@@ -458,6 +466,7 @@ let generateAdminTable (m: TableMeta) : string list =
         sprintf "      HasUpdateTs = %s" (if m.HasUpdateTs then "true" else "false")
         sprintf "      Update = \"%s\"" m.Update
         sprintf "      Delete = \"%s\"" m.Delete
+        "      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]"
         sprintf "      MutableFields = [%s] }" mutableFieldsStr ]
 
 /// `moduleName` is the emitted F# module (site: "Server.AdminGen"; a surface: "Blog.AdminGen").
@@ -894,6 +903,10 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
         emit "let inline uq (Unique v) = v"
         emit ""
     emit "module Encode ="
+    // A read-only API module can have no domain, request or event encoders.
+    // Keep its empty namespace valid F# without inventing a wire contract.
+    if domainTypes.IsEmpty && wsTypes.IsEmpty && (endpoints |> List.forall (fun ep -> ep.RequestType.IsNone && ep.ViewTypes.IsEmpty)) then
+        emit "    do ()"
     emit ""
 
     // Domain types
@@ -1193,7 +1206,7 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
         emit "    NoEndpoints: unit"
     for ep in endpoints do
         let name = toCamelCase ep.ModuleName
-        let resp = "JS.Promise<WorkerResponse>"
+        let resp = if ep.RequestContext && ep.Method <> EPost then "WorkerRequest -> ExecutionContext -> JS.Promise<WorkerResponse>" else "JS.Promise<WorkerResponse>"
         let sigStr =
             match ep.Method with
             | EGet -> sprintf "unit -> %s" resp
@@ -1212,14 +1225,14 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
     for ep in endpoints |> List.filter (fun ep -> ep.Method = EGet) do
         let name = toCamelCase ep.ModuleName
         emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
-        emit (sprintf "        Some (handlers.%s ())" name)
+        emit (sprintf "        Some (handlers.%s ()%s)" name (if ep.RequestContext then " request ctx" else ""))
         emit ""
 
     for ep in endpoints |> List.filter (fun ep -> ep.Method = EGetQuery) do
         let name = toCamelCase ep.ModuleName
         emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
         emit (sprintf "        let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
-        emit (sprintf "        Some (handlers.%s query)" name)
+        emit (sprintf "        Some (handlers.%s query%s)" name (if ep.RequestContext then " request ctx" else ""))
         emit ""
 
     let getOnes = endpoints |> List.filter (fun ep -> ep.Method = EGetBy || ep.Method = EGetByQuery)
@@ -1232,9 +1245,9 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
             | EGetByQuery ->
                 emit "        | Some (WithParam (_, id)) ->"
                 emit (sprintf "            let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
-                emit (sprintf "            Some (handlers.%s id query)" name)
+                emit (sprintf "            Some (handlers.%s id query%s)" name (if ep.RequestContext then " request ctx" else ""))
             | _ ->
-                emit (sprintf "        | Some (WithParam (_, id)) -> Some (handlers.%s id)" name)
+                emit (sprintf "        | Some (WithParam (_, id)) -> Some (handlers.%s id%s)" name (if ep.RequestContext then " request ctx" else ""))
             emit "        | _ ->"
         emit "        None"
         emit ""
@@ -1288,7 +1301,7 @@ let generateRoutesFs (extraCodecOpens: string list) (ownedModuleNamespaces: stri
         for ep in getExacts do
             let handlerName = toCamelCase ep.ModuleName
             emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
-            emit (sprintf "        Some (%s.%s env)" ep.HandlerNs handlerName)
+            emit (sprintf "        Some (%s.%s %s)" ep.HandlerNs handlerName (if ep.RequestContext then "request env ctx" else "env"))
             emit ""
 
         // GET exact routes with a typed query (parse the query record, pass it in)
@@ -1297,7 +1310,7 @@ let generateRoutesFs (extraCodecOpens: string list) (ownedModuleNamespaces: stri
             let handlerName = toCamelCase ep.ModuleName
             emit (sprintf "    | GET path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
             emit (sprintf "        let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
-            emit (sprintf "        Some (%s.%s query env)" ep.HandlerNs handlerName)
+            emit (sprintf "        Some (%s.%s query %s)" ep.HandlerNs handlerName (if ep.RequestContext then "request env ctx" else "env"))
             emit ""
 
         // GET by path param (with or without a typed query) — one shared GET-path branch
@@ -1311,9 +1324,9 @@ let generateRoutesFs (extraCodecOpens: string list) (ownedModuleNamespaces: stri
                 | EGetByQuery ->
                     emit "        | Some (WithParam (_, id)) ->"
                     emit (sprintf "            let query = %s" (queryRecordExpr ep.QueryType.Value (queryTypeRef ep)))
-                    emit (sprintf "            Some (%s.%s id query env)" ep.HandlerNs handlerName)
+                    emit (sprintf "            Some (%s.%s id query %s)" ep.HandlerNs handlerName (if ep.RequestContext then "request env ctx" else "env"))
                 | _ ->
-                    emit (sprintf "        | Some (WithParam (_, id)) -> Some (%s.%s id env)" ep.HandlerNs handlerName)
+                    emit (sprintf "        | Some (WithParam (_, id)) -> Some (%s.%s id %s)" ep.HandlerNs handlerName (if ep.RequestContext then "request env ctx" else "env"))
                 emit "        | _ ->"
             emit "        None"
             emit ""
@@ -1375,28 +1388,28 @@ let generateHandlersFs (endpoints: ParsedEndpoint list) : string =
         let handlerName = toCamelCase ep.ModuleName
         match ep.Method with
         | EGet ->
-            emit (sprintf "let %s (env: Env) : JS.Promise<WorkerResponse> =" handlerName)
+            emit (sprintf "let %s %s : JS.Promise<WorkerResponse> =" handlerName (if ep.RequestContext then "(request: WorkerRequest) (env: Env) (ctx: ExecutionContext)" else "(env: Env)"))
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"
             emit "    }"
             emit ""
         | EGetBy ->
-            emit (sprintf "let %s (id: string) (env: Env) : JS.Promise<WorkerResponse> =" handlerName)
+            emit (sprintf "let %s (id: string) %s : JS.Promise<WorkerResponse> =" handlerName (if ep.RequestContext then "(request: WorkerRequest) (env: Env) (ctx: ExecutionContext)" else "(env: Env)"))
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"
             emit "    }"
             emit ""
         | EGetQuery ->
-            emit (sprintf "let %s (query: %s.Query) (env: Env) : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName)
+            emit (sprintf "let %s (query: %s.Query) %s : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName (if ep.RequestContext then "(request: WorkerRequest) (env: Env) (ctx: ExecutionContext)" else "(env: Env)"))
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"
             emit "    }"
             emit ""
         | EGetByQuery ->
-            emit (sprintf "let %s (id: string) (query: %s.Query) (env: Env) : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName)
+            emit (sprintf "let %s (id: string) (query: %s.Query) %s : JS.Promise<WorkerResponse> =" handlerName ep.ModuleName (if ep.RequestContext then "(request: WorkerRequest) (env: Env) (ctx: ExecutionContext)" else "(env: Env)"))
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"

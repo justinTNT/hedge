@@ -62,6 +62,7 @@ let exports = createWorker {
     // the single builder Server.GuestConfig.deps is shared with the identity handlers and module
     // comment services, so there is one policy for this app.
     GuestSession = Some (fun env request -> Server.GuestConfig.deps (env :?> Env) request)
+    AllowGuestUploads = true
     // darwin.news/rhymes: a second view over the same items, paired by rhyme-* tags.
     Mounts = [ { On = OnPath "/rhymes"; Shell = "/rhyming.html"; When = fun _ -> true } ]
     // C4: blog snapshot HTML lives under the blog feature's own private prefix — never served

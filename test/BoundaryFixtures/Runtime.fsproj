@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>netstandard2.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Models.fs" /><Compile Include="Env.fs" />
+    <Compile Include="generated/Codecs.fs" /><Compile Include="Handlers.fs" />
+    <Compile Include="generated/Routes.fs" /><Compile Include="generated/RouteContract.fs" /><Compile Include="generated/ClientGen.fs" />
+    <Compile Include="../../packages/hedge/src/Client/Api.fs" />
+    <Compile Include="../../packages/hedge/src/Client/GuestSession.fs" />
+    <Compile Include="../../packages/hedge/src/Client/AdminCredential.fs" />
+    <Compile Include="Runtime.fs" />
+  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+  </ItemGroup>
+</Project>

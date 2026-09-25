@@ -25,6 +25,7 @@ let alertSource : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE alerts_alert_sources SET topic = ?, feed_url = ?, enabled = ? WHERE id = ?"
       Delete = "DELETE FROM alerts_alert_sources WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Topic"; "FeedUrl"; "Enabled"] }
 
 let pendingPost : AdminTable =
@@ -51,6 +52,7 @@ let pendingPost : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE alerts_pending_posts SET source_id = ?, entry_key = ?, title = ?, link = ?, snippet = ?, published_at = ?, approved = ?, rejected = ?, owner_comment = ? WHERE id = ?"
       Delete = "DELETE FROM alerts_pending_posts WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["SourceId"; "EntryKey"; "Title"; "Link"; "Snippet"; "PublishedAt"; "Approved"; "Rejected"; "OwnerComment"] }
 
 let promotion : AdminTable =
@@ -70,6 +72,7 @@ let promotion : AdminTable =
       HasUpdateTs = false
       Update = "UPDATE alerts_promotions SET entry_key = ?, item_id = ? WHERE id = ?"
       Delete = "DELETE FROM alerts_promotions WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["EntryKey"; "ItemId"] }
 
 let tables : AdminTable list = [

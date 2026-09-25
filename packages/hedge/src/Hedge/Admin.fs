@@ -8,6 +8,15 @@ open Hedge.Schema
 open Hedge.SchemaCodec
 open Hedge.Router
 
+/// An admin operation on a resource — what an authorization decision keys on, alongside the table
+/// name. `List` = the collection read (`GET /api/admin/:type`); the rest are the obvious CRUD.
+type AdminOp =
+    | OpList
+    | OpRead
+    | OpCreate
+    | OpUpdate
+    | OpDelete
+
 /// A generated admin table descriptor. Gen emits values of this type into each
 /// app's Server/generated/AdminGen.fs; the schema-driven CRUD below runs off it,
 /// so there is ONE copy of the handlers (here) instead of one per app.
@@ -23,23 +32,16 @@ type AdminTable = {
     Update: string
     Delete: string
     MutableFields: string list
+    /// Operations this resource supports, even for an owner. The host may narrow generated defaults.
+    SupportedOps: AdminOp list
 }
-
-/// An admin operation on a resource — what an authorization decision keys on, alongside the table
-/// name. `List` = the collection read (`GET /api/admin/:type`); the rest are the obvious CRUD.
-type AdminOp =
-    | OpList
-    | OpRead
-    | OpCreate
-    | OpUpdate
-    | OpDelete
 
 /// The identity behind an admin request, resolved ONCE per request (subject + grant lookup are async);
 /// the per-(resource, operation) decision is then the sync `permits` predicate. Admin-owned (the app
 /// maps its ADMIN_KEY / Hedge.AccessControl.RoleResult onto it) so the admin need not depend on the
 /// access-control capability. The optional cookie is a guest-session renewal to echo on responses.
 type AdminAccess =
-    /// The owner (a matching ADMIN_KEY): permits every resource and operation.
+    /// The owner (a matching ADMIN_KEY): permits every exposed resource within its supported operations.
     | AdminOwner
     /// An authenticated subject; `permits resource op` is the app's permission matrix (an unlisted
     /// resource/op is denied → 403). `setCookie` is an optional guest-cookie renewal.
@@ -217,7 +219,13 @@ let private genericDelete (db: D1Database) (table: AdminTable) (id: string) : JS
 
 let private opName = function
     | OpList -> "list" | OpRead -> "read" | OpCreate -> "create" | OpUpdate -> "update" | OpDelete -> "delete"
-let private allOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+/// One intersection for discovery and direct CRUD; owner credentials never bypass a resource ceiling.
+let effectiveOperations (table: AdminTable) (access: AdminAccess) =
+    table.SupportedOps |> List.distinct |> List.filter (fun op ->
+        match access with
+        | AdminOwner -> true
+        | AdminSubject (permits, _) -> permits table.Name op
+        | AdminAnonymous _ -> false)
 
 /// Schema/type discovery — itself authorized (the plan: "type/schema discovery follows
 /// authorization"). Returns only the resources the caller may at least LIST, each annotated with the
@@ -231,20 +239,16 @@ let private typesResponse (config: AdminConfig<'env>) (access: AdminAccess) : Wo
         | Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c
         | None -> unauthorized ()
     | _ ->
-        let opsFor (name: string) : AdminOp list =
-            match access with
-            | AdminOwner -> allOps
-            | AdminSubject (permits, _) -> allOps |> List.filter (permits name)
-            | AdminAnonymous _ -> []
+        let opsFor table = effectiveOperations table access
         let cookie = match access with AdminSubject (_, c) -> c | _ -> None
-        let visible = config.Tables |> List.filter (fun t -> opsFor t.Name |> List.contains OpList)
+        let visible = config.Tables |> List.filter (fun t -> opsFor t |> List.contains OpList)
         let body =
             Encode.object [
                 "types", Encode.list (visible |> List.map (fun t ->
                     Encode.object [
                         "name", Encode.string t.Name
                         "schema", encodeTypeSchema t.Schema
-                        "ops", Encode.list (opsFor t.Name |> List.map (opName >> Encode.string))
+                        "ops", Encode.list (opsFor t |> List.map (opName >> Encode.string))
                     ]))
             ] |> Encode.toString 0
         match cookie with Some c -> okJsonWithCookie body c | None -> okJson body
@@ -297,16 +301,16 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
     let db = config.GetDb env
     let findTable (name: string) = config.Tables |> List.tryFind (fun t -> t.Name = name)
     // Resolve who is asking ONCE, then enforce the requested (resource, operation): owner acts on
-    // everything; a subject acts only where its permits matrix allows (else 403); no session is 401.
+    // supported operations; a subject is further bounded by its permits matrix. No session is 401.
     // Any guest-session renewal cookie rides through to the op's response (or the denial). The subject
     // + grant lookup are async, so this runs inside the matched route's promise, once per request.
-    let gated (resource: string) (op: AdminOp) (act: string option -> JS.Promise<WorkerResponse>) : JS.Promise<WorkerResponse> =
+    let gated (table: AdminTable) (op: AdminOp) (act: string option -> JS.Promise<WorkerResponse>) : JS.Promise<WorkerResponse> =
         promise {
             let! access = config.Authorize request env
             match access with
-            | AdminOwner -> return! act None
-            | AdminSubject (permits, cookie) ->
-                if permits resource op then return! act cookie
+            | AdminOwner | AdminSubject _ ->
+                let cookie = match access with AdminSubject (_, cookie) -> cookie | _ -> None
+                if effectiveOperations table access |> List.contains op then return! act cookie
                 else return (match cookie with Some c -> jsonResponseWithCookie """{"error":"Forbidden"}""" 403 c | None -> forbidden ())
             | AdminAnonymous cookie ->
                 return (match cookie with Some c -> jsonResponseWithCookie """{"error":"Unauthorized"}""" 401 c | None -> unauthorized ())
@@ -326,11 +330,11 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = typeName.Split('/')
             if parts.Length = 1 then
                 match findTable typeName with
-                | Some table -> Some (gated table.Name OpList (fun c -> listResponse db table c))
+                | Some table -> Some (gated table OpList (fun c -> listResponse db table c))
                 | None -> None
             elif parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table -> Some (gated table.Name OpRead (fun c -> getResponse db table parts.[1] c))
+                | Some table -> Some (gated table OpRead (fun c -> getResponse db table parts.[1] c))
                 | None -> None
             else None
         | _ -> None
@@ -340,7 +344,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
         match matchPath "/api/admin/:id" path with
         | Some (WithParam (_, entityName)) when not (entityName.Contains "/") ->
             match findTable entityName with
-            | Some table -> Some (gated table.Name OpCreate (fun c -> createResponse db table request c))
+            | Some table -> Some (gated table OpCreate (fun c -> createResponse db table request c))
             | None -> None
         | _ -> None
 
@@ -351,7 +355,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = rest.Split('/')
             if parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table -> Some (gated table.Name OpUpdate (fun c -> updateResponse db table parts.[1] request c))
+                | Some table -> Some (gated table OpUpdate (fun c -> updateResponse db table parts.[1] request c))
                 | None -> None
             else None
         | _ -> None
@@ -363,7 +367,7 @@ let handleRequest (config: AdminConfig<'env>) (request: WorkerRequest) (env: 'en
             let parts = rest.Split('/')
             if parts.Length = 2 then
                 match findTable parts.[0] with
-                | Some table -> Some (gated table.Name OpDelete (fun c -> deleteResponse db table parts.[1] c))
+                | Some table -> Some (gated table OpDelete (fun c -> deleteResponse db table parts.[1] c))
                 | None -> None
             else None
         | _ -> None

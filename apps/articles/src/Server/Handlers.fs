@@ -3,7 +3,7 @@ module Server.Handlers
 // This app's identity handlers now live in the shared identity module (Identity.Handlers, via
 // identity.server.props); this file just binds the host seams (Env DB, the guest-write authorizer,
 // this site's attribution policy) and re-exposes them under the names Worker.fs wires. This app has no
-// bespoke identity routes and no curator surface, so IsCuratorReturn is always false.
+// bespoke identity routes and no curator surface, so ActivateOnReturn is always false.
 
 open Fable.Core
 open Hedge.Workers
@@ -15,7 +15,7 @@ open Server.Env
 let private oauthDeps : Identity.Handlers.OAuthDeps =
     { ReassignStatements = Server.AttributionPolicy.reassignStatements
       CommentTables = Server.AttributionPolicy.commentTables
-      IsCuratorReturn = fun _ -> false }
+      ActivateOnReturn = fun _ -> false }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
 let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
