@@ -15,7 +15,7 @@ let resetFile (event:obj) : unit = jsNative
 [<Emit("window.confirm($0)")>]
 let confirm (message:string) : bool = jsNative
 
-type Draft = { Id:string; Revision:int; Text:string; Correction:bool }
+type Draft = { Id:string; Revision:int; Text:string; Purpose:string; PhotoIds:string list }
 type PhotoDraft = { Id:string; Revision:int; Caption:string; Photographer:string; Offered:bool }
 type Model = {
     PlantId:string; Epoch:int; Data:Personal option; Loading:bool; Busy:bool; Error:string option
@@ -29,6 +29,8 @@ type Msg =
     | CancelPhoto | SavePhoto | DeletePhoto of Photo | Hero of string | Upload of obj
     | Saved of int * string * Result<Personal,string>
     | PhotoLimit
+    | NewEntry of string | ToggleAttachment of string | UploadAttachment of obj
+    | NotePurpose of string | Withdraw of Note | AttachmentLimit | Preview of Photo
 
 [<Emit("requestAnimationFrame(()=>document.getElementById($0)?.scrollIntoView({block:'center',behavior:'smooth'}))")>]
 let scrollEditor (id:string) : unit = jsNative
@@ -44,7 +46,7 @@ let save label command model =
     | Some current ->
         let action,id,gallery =
             match command with
-            | Models.Contributions.SaveNote(id,_,_,_) -> "saveNote",id,false
+            | Models.Contributions.SaveNote(id,_,_,_) | SaveEntry(id,_,_,_,_) -> "saveNote",id,false
             | Models.Contributions.DeleteNote(id,_) -> "deleteNote",id,false
             | UpdatePhoto(id,_,_,_,_) -> "savePhoto",id,true
             | Models.Contributions.DeletePhoto(id,_) -> "deletePhoto",id,true
@@ -79,22 +81,40 @@ let update msg model =
     | Loaded _ | Saved _ when model.PlantId="" -> model,Cmd.none
     | Saved(epoch,label,Ok data) when epoch=model.Epoch ->
         let draft=model.Draft |> Option.filter(fun d->not(List.contains model.PendingAction ["saveNote";"deleteNote"] && d.Id=model.PendingId))
+        let draft =
+            if model.PendingAction="uploadAttachment" then
+                draft |> Option.map(fun d->{d with PhotoIds=d.PhotoIds @ [model.PendingId] |> List.distinct})
+            else draft
         let photoDraft=model.PhotoDraft |> Option.filter(fun d->not(List.contains model.PendingAction ["savePhoto";"deletePhoto"] && d.Id=model.PendingId))
         {model with Data=Some data;Busy=false;Draft=draft;PhotoDraft=photoDraft;PendingAction="";PendingId="";Error=None;Notice=Some label},Cmd.none
     | Saved(epoch,_,Error error) when epoch=model.Epoch ->
         {model with Busy=false;Error=Some error;Notice=None},Cmd.none
     | Loaded _ | Saved _ -> model,Cmd.none
     | _ when model.Busy -> model,Cmd.none
-    | NewNote when notesFull model -> noteLimit model
-    | NewNote -> {model with Draft=Some{Id=uuid();Revision=0;Text="";Correction=false};PhotoDraft=None;Notice=None;Error=None;FeedbackInGallery=false},focus "note-editor"
-    | EditNote note -> {model with Draft=Some{Id=note.Id;Revision=note.Revision;Text=note.Text;Correction=note.Correction};PhotoDraft=None;Notice=None;Error=None;FeedbackInGallery=false},focus "note-editor"
+    | NewNote | NewEntry _ when notesFull model -> noteLimit model
+    | NewNote | NewEntry _ ->
+        let purpose=match msg with NewEntry purpose -> purpose | _ -> "private"
+        {model with Draft=Some{Id=uuid();Revision=0;Text="";Purpose=purpose;PhotoIds=[]};PhotoDraft=None;Notice=None;Error=None;FeedbackInGallery=false},focus "note-editor"
+    | EditNote note -> {model with Draft=Some{Id=note.Id;Revision=note.Revision;Text=note.Text;Purpose=note.Purpose;PhotoIds=note.Photos |> List.map(fun p->p.Id)};PhotoDraft=None;Notice=None;Error=None;FeedbackInGallery=false},focus "note-editor"
     | NoteText text -> {model with Draft=model.Draft |> Option.map(fun d->{d with Text=text})},Cmd.none
-    | Correction value -> {model with Draft=model.Draft |> Option.map(fun d->{d with Correction=value})},Cmd.none
+    | Correction value ->
+        {model with Draft=model.Draft |> Option.map(fun d->{d with Purpose=(if value then "correction" else "private");PhotoIds=[]})},Cmd.none
+    | NotePurpose purpose ->
+        {model with Draft=model.Draft |> Option.map(fun d->{d with Purpose=purpose;PhotoIds=if purpose="private" then [] else d.PhotoIds})},Cmd.none
+    | ToggleAttachment id ->
+        let draft=model.Draft |> Option.map(fun d ->
+            if d.Purpose="private" then d
+            else {d with PhotoIds=if List.contains id d.PhotoIds then List.filter((<>) id) d.PhotoIds else d.PhotoIds @ [id]})
+        {model with Draft=draft},Cmd.none
+    | Withdraw note -> save "Submission withdrawn. Your text is now a private note." (SaveEntry(note.Id,note.Revision,note.Text,"private",[])) model
+    | Preview _ -> model,Cmd.none
     | CancelNote -> {model with Draft=None},Cmd.none
     | SaveNote ->
         match model.Draft with
         | Some d when d.Revision=0 && notesFull model -> noteLimit model
-        | Some d -> save "Note saved." (Models.Contributions.SaveNote(d.Id,d.Revision,d.Text,d.Correction)) model
+        | Some d when d.Purpose="identification" && d.PhotoIds.IsEmpty ->
+            {model with Error=Some "An ID request needs at least one photograph.";Notice=None;FeedbackInGallery=false},Cmd.none
+        | Some d -> save (if d.Purpose="private" then "Private note saved." else purposeLabel d.Purpose+" submitted.") (SaveEntry(d.Id,d.Revision,d.Text,d.Purpose,d.PhotoIds)) model
         | None -> model,Cmd.none
     | DeleteNote note -> save "Note deleted." (Models.Contributions.DeleteNote(note.Id,note.Revision)) model
     | EditPhoto photo ->
@@ -110,13 +130,19 @@ let update msg model =
     | DeletePhoto photo -> save "Your photograph was removed." (Models.Contributions.DeletePhoto(photo.Id,photo.Revision)) model
     | Hero id -> save (if id="" then "Using the site’s hero photograph." else "Your hero photograph is selected.") (SelectHero id) model
     | PhotoLimit -> photoLimit model
-    | Upload _ when photosFull model -> photoLimit model
-    | Upload file ->
+    | AttachmentLimit -> let m,c=photoLimit model in {m with FeedbackInGallery=false},c
+    | Upload _ | UploadAttachment _ when photosFull model ->
+        let m,c=photoLimit model
+        {m with FeedbackInGallery=match msg with UploadAttachment _ -> false | _ -> true},c
+    | Upload file | UploadAttachment file ->
         match model.Data with
         | None -> model,Cmd.none
+        | Some _ when (match msg,model.Draft with UploadAttachment _,Some d -> d.Purpose="private" | UploadAttachment _,None -> true | _ -> false) -> model,Cmd.none
         | Some current ->
-            let next={model with Busy=true;Error=None;Notice=Some "Preparing and uploading your photograph…";Epoch=model.Epoch+1;Loading=false;PendingAction="upload";PendingId="";FeedbackInGallery=true}
-            next,Cmd.OfPromise.either (fun ()->Client.ContributionsApi.upload model.PlantId (uuid()) file current.ViewerToken |> Client.ContributionsApi.forView) ()
+            let attachment=match msg with UploadAttachment _ -> true | _ -> false
+            let id=uuid()
+            let next={model with Busy=true;Error=None;Notice=Some "Preparing and uploading your photograph…";Epoch=model.Epoch+1;Loading=false;PendingAction=(if attachment then "uploadAttachment" else "upload");PendingId=id;FeedbackInGallery=not attachment}
+            next,Cmd.OfPromise.either (fun ()->Client.ContributionsApi.upload model.PlantId id file current.ViewerToken |> Client.ContributionsApi.forView) ()
                 (fun data->Saved(next.Epoch,"Photograph added.",Ok data))
                 (fun ex->Saved(next.Epoch,"",Error ex.Message))
 
@@ -182,11 +208,30 @@ let galleryFeedback model =
             match model.Notice with Some notice -> Html.p [prop.role "status";prop.text notice] |None -> ()
     ]]
 
+let responses (note:Note) =
+    Html.div [prop.className "identification-responses";prop.children [
+        for response in note.Responses do
+            let current=note.Purpose="identification" && response.Revision=note.Revision
+            Html.article [prop.key response.Id;prop.className("id-outcome id-outcome-"+response.Outcome+(if current then "" else " previous-response"));prop.children [
+                Html.strong(outcomeLabel response.Outcome)
+                Html.small(" · "+response.ReviewerName+(if current then "" else " · earlier version"))
+                if response.AlternativePlantId<>"" then
+                    Html.a [prop.href("/plants/"+response.AlternativePlantId);prop.text response.AlternativeName]
+                if response.Text<>"" then Html.p [prop.className "note-text";prop.text response.Text]
+                if not current then Html.details [prop.children [Html.summary "Original request";Html.p [prop.className "note-text";prop.text response.SubmittedText]]]
+            ]]
+    ]]
+
 let view model login dispatch =
     Html.section [prop.className "personal-content";prop.id "your-observations";prop.children [
         Html.div [prop.className "notebook-heading";prop.children [
             Html.h2 "Field notes"
-            if model.Data.IsSome then btn "Add a note" model.Busy NewNote dispatch
+            if model.Data.IsSome then
+                Html.div [prop.className "personal-actions";prop.children [
+                    btn "Private Note" model.Busy NewNote dispatch
+                    btn "Correction" model.Busy (NewEntry "correction") dispatch
+                    btn "ID request" model.Busy (NewEntry "identification") dispatch
+                ]]
         ]]
         match model.Data with
         | None ->
@@ -199,14 +244,59 @@ let view model login dispatch =
             | Some draft ->
                 Html.form [prop.className "note-editor";prop.id "note-editor";prop.onSubmit(fun e->e.preventDefault();dispatch SaveNote);prop.children [
                     Html.label [prop.children [Html.span "Your note";Html.textarea [prop.value draft.Text;prop.maxLength 6000;prop.rows 5;prop.disabled model.Busy;prop.onChange(NoteText >> dispatch);prop.autoFocus true]]]
-                    Html.label [prop.className "check-field";prop.children [Html.input [prop.type' "checkbox";prop.isChecked draft.Correction;prop.disabled model.Busy;prop.onChange(Correction >> dispatch)];Html.span "Send this note as a correction for the site’s reviewers"]]
-                    Html.div [prop.className "personal-actions";prop.children [Html.button [prop.type' "submit";prop.disabled(model.Busy || draft.Text.Trim()="");prop.text "Save note"];btn "Cancel" model.Busy CancelNote dispatch]]
+                    Html.label [prop.children [
+                        Html.span "Purpose"
+                        Html.select [prop.value draft.Purpose;prop.disabled model.Busy;prop.onChange(NotePurpose >> dispatch);prop.children [
+                            for purpose in ["private";"correction";"identification"] do Html.option [prop.value purpose;prop.text(purposeLabel purpose)]
+                        ]]
+                    ]]
+                    let audience =
+                        match draft.Purpose with
+                        | "correction" -> "Your text and selected photos will be shared with curators."
+                        | "identification" -> "Your text and selected photos will be shared with identifiers. Include at least one photo."
+                        | _ -> "Only you can read this note."
+                    Html.p [prop.className "entry-audience";prop.text audience]
+                    if draft.Purpose<>"private" then
+                        Html.fieldSet [prop.className "attachment-picker";prop.disabled model.Busy;prop.children [
+                            Html.legend "Photographs"
+                            Html.div [prop.className "attachment-options";prop.children [
+                                for photo in data.Photos do
+                                    let selected=List.contains photo.Id draft.PhotoIds
+                                    Html.button [prop.key photo.Id;prop.type' "button";prop.className(if selected then "attachment-choice selected" else "attachment-choice")
+                                                 prop.ariaLabel((if selected then "Unlink " else "Attach ")+(if photo.Caption="" then "photograph" else photo.Caption))
+                                                 prop.custom("aria-pressed",selected);prop.onClick(fun _->dispatch(ToggleAttachment photo.Id))
+                                                 prop.children [Html.img [prop.src photo.Thumbnail;prop.alt photo.Caption];Html.span(if selected then "Selected" else "Select")]]
+                                let inputId="attachment-upload-"+model.PlantId
+                                iconButton "Upload and attach a photograph" (cameraPlus()) model.Busy
+                                    (fun ()->if photosFull model then dispatch AttachmentLimit else openPicker inputId)
+                                Html.input [prop.id inputId;prop.type' "file";prop.hidden true;prop.accept "image/jpeg,image/png,image/webp";prop.ariaLabel "Upload an attachment"
+                                            prop.onChange(fun (e:Browser.Types.Event)->let file=selectedFile e in resetFile e; if not(isNull file) then dispatch(UploadAttachment file))]
+                            ]]
+                            Html.small "Uploads also join your photo roll. Sharing with reviewers does not offer a photo for the public guide."
+                        ]]
+                    Html.div [prop.className "personal-actions";prop.children [Html.button [prop.type' "submit";prop.disabled(model.Busy || draft.Text.Trim()="");prop.text(if draft.Purpose="private" then "Save note" else "Submit")];btn "Cancel" model.Busy CancelNote dispatch]]
                 ]]
             | None -> ()
             for note in data.Notes do
                 Html.article [prop.key note.Id;prop.className "personal-note";prop.children [
                     Html.p [prop.className "note-text";prop.text note.Text]
-                    if note.Correction then Html.small(if note.Read then "Correction · read by a reviewer" else "Correction · awaiting review")
+                    let status =
+                        match note.Purpose with
+                        | "correction" -> if note.Read then "Correction · read by a curator" else "Correction · awaiting review"
+                        | "identification" -> if note.Responses |> List.exists(fun r->r.Revision=note.Revision) then "ID request · answered" else "ID request · awaiting identification"
+                        | _ -> "Private Note"
+                    Html.small status
+                    Html.div [prop.className "note-attachments";prop.children [
+                        for photo in note.Photos do
+                            let thumbnail=Html.img [prop.src photo.Thumbnail;prop.alt(if photo.Caption="" then "Attached photograph" else photo.Caption)]
+                            if photo.Width>=200 && photo.Height>=200 then
+                                Html.button [prop.key photo.Id;prop.type' "button";prop.ariaLabel "View photograph";prop.onClick(fun _->dispatch(Preview photo));prop.children [thumbnail]]
+                            else thumbnail
+                    ]]
+                    responses note
+                    if note.Purpose<>"private" then
+                        Html.button [prop.type' "button";prop.className "withdraw-note";prop.disabled model.Busy;prop.text "Withdraw"
+                                     prop.onClick(fun _->if confirm "Withdraw this submission? The text becomes a private note; photos remain in your roll and earlier responses remain in your notebook." then dispatch(Withdraw note))]
                     Html.div [prop.className "note-actions";prop.children [
                         iconButton "Edit note" (pencil()) model.Busy (fun ()->dispatch(EditNote note))
                         iconButton "Delete note" (trash()) model.Busy (fun ()->if confirm "Delete this note?" then dispatch(DeleteNote note))

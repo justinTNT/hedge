@@ -95,16 +95,16 @@ test('anonymous species pages render only the curated gallery; verified users ge
   const plant=new PlantDetail(card,list,ofArray([sitePhoto]),list);
   let [model]=init();model.Personal={...blank(1),PlantId:'plant-a',Data:state()};
   const anon=renderToStaticMarkup(detail(model,plant,()=>{}));
-  for(const hidden of ['personal-content','personal-photo-controls','/api/image/own','Add a note','Add a photograph','Your field notebook'])assert.ok(!anon.includes(hidden),hidden);
+  for(const hidden of ['personal-content','personal-photo-controls','/api/image/own','Private Note','Add a photograph','Your field notebook'])assert.ok(!anon.includes(hidden),hidden);
   assert.ok(anon.includes('/site'));
   model.Auth={...model.Auth,Account:new IdentityData('google-id','google','Researcher',''),Loading:false};
   const signedIn=renderToStaticMarkup(detail(model,plant,()=>{}));
-  for(const visible of ['personal-content','personal-photo-controls','/api/image/own','Add a note','Add a photograph'])assert.ok(signedIn.includes(visible),visible);
+  for(const visible of ['personal-content','personal-photo-controls','/api/image/own','Private Note','Add a photograph'])assert.ok(signedIn.includes(visible),visible);
   assert.ok(!signedIn.includes('without logging in'));
   assert.ok(signedIn.indexOf('photo-upload-slot')<signedIn.indexOf('personal-content'));
   const notebook=renderToStaticMarkup(view(model.Personal,()=>{},()=>{}));
   assert.doesNotMatch(notebook,/type="file"|Add a photograph|photos per species/);
-  const noted={...model.Personal,Data:{...model.Personal.Data,Notes:[new Note('note','A field observation',false,1,false,1)]}};
+  const noted={...model.Personal,Data:{...model.Personal.Data,Notes:[new Note('note','A field observation',false,1,false,1,'private',empty(),empty())]}};
   const noteHtml=renderToStaticMarkup(view(noted,()=>{},()=>{}));
   assert.match(noteHtml,/aria-label="Edit note"/);assert.match(noteHtml,/aria-label="Delete note"/);
   assert.doesNotMatch(noteHtml,/>Edit note<|>Delete note</);
@@ -117,12 +117,12 @@ test('anonymous species pages render only the curated gallery; verified users ge
 test('limits remain quiet until an addition is attempted, and follow server capacity after an admin change',async()=>{
   const {renderToStaticMarkup}=await import('react-dom/server');
   const data=state('viewer',Array.from({length:4},(_,i)=>own('photo-'+i)));
-  data.Notes=[new Note('existing','Keep this note',false,1,false,1)];
+  data.Notes=[new Note('existing','Keep this note',false,1,false,1,'private',empty(),empty())];
   data.NoteCapacity=new Capacity(5,5);data.PhotoCapacity=new Capacity(5,5);
   let [model]=enter('plant-a',1);[model]=update(new Msg(1,[1,ok(data)]),model);
   const before=renderToStaticMarkup(view(model,()=>{},()=>{}));
   assert.doesNotMatch(before,/5\/5|Delete a note to add|contribution-capacity|type="file"/);
-  assert.doesNotMatch(before,/<button[^>]*disabled[^>]*>Add a note<\/button>/);
+  assert.doesNotMatch(before,/<button[^>]*disabled[^>]*>Private Note<\/button>/);
   let commands;
   [model,commands]=update(new Msg(2,[]),model);
   assert.equal(model.Draft,undefined);assert.equal([...commands].length,0);
@@ -149,7 +149,55 @@ test('full notebooks still allow editing old notes while preserving a new draft 
   [model]=update(new Msg(1,[1,ok(full)]),model);
   let commands;[model,commands]=update(new Msg(7,[]),model);
   assert.equal(model.Busy,false);assert.equal(model.Draft.Text,'Unfinished note');assert.equal([...commands].length,0);
-  [model]=update(new Msg(3,[new Note('existing','Still editable',false,1,false,1)]),model);
+  [model]=update(new Msg(3,[new Note('existing','Still editable',false,1,false,1,'private',empty(),empty())]),model);
   [model,commands]=update(new Msg(7,[]),model);
   assert.equal(model.Busy,true);assert.equal(model.PendingAction,'saveNote');assert.ok([...commands].length>0);
+});
+
+
+test('three entry actions enforce text-only private notes and required ID photos while preserving drafts',async()=>{
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  let [model]=enter('plant-a',1);[model]=update(new Msg(1,[1,ok(state())]),model);
+  let html=renderToStaticMarkup(view(model,()=>{},()=>{}));
+  for(const label of ['Private Note','Correction','ID request'])assert.ok(html.includes(label));
+  [model]=update(new Msg(2,[]),model);
+  assert.equal(model.Draft.Purpose,'private');assert.doesNotMatch(renderToStaticMarkup(view(model,()=>{},()=>{})),/attachment-picker|type="file"/);
+  [model]=update(new Msg(20,['identification']),model);[model]=update(new Msg(4,['Is this the right species?']),model);
+  let cmds;[model,cmds]=update(new Msg(7,[]),model);
+  assert.equal(model.Busy,false);assert.equal([...cmds].length,0);assert.match(model.Error,/at least one photograph/);
+  [model]=update(new Msg(21,['own']),model);
+  assert.deepEqual([...model.Draft.PhotoIds],['own']);
+  html=renderToStaticMarkup(view(model,()=>{},()=>{}));assert.match(html,/aria-pressed="true"/);assert.match(html,/Upload and attach/);
+  [model]=update(new Msg(23,['private']),model);
+  assert.deepEqual([...model.Draft.PhotoIds],[]);assert.equal(model.Draft.Text,'Is this the right species?');
+});
+
+test('attachment uploads preserve the entry, select the new photo and keep capacity feedback beside the note',()=>{
+  let [model]=enter('plant-a',1);[model]=update(new Msg(1,[1,ok(state())]),model);
+  [model]=update(new Msg(20,['correction']),model);[model]=update(new Msg(4,['Flowering time needs checking']),model);
+  [model]=update(new Msg(22,[{}]),model);
+  assert.equal(model.PendingAction,'uploadAttachment');assert.equal(model.FeedbackInGallery,false);
+  const id=model.PendingId,epoch=model.Epoch;
+  const data=state('viewer-a',[own(),own(id)]);
+  [model]=update(new Msg(18,[epoch,'Photograph added.',ok(data)]),model);
+  assert.equal(model.Draft.Text,'Flowering time needs checking');assert.deepEqual([...model.Draft.PhotoIds],[id]);
+  assert.equal(model.Data.PhotoCapacity.Used,2);assert.equal(model.Data.Photos.length,2);
+  model={...model,Data:{...model.Data,PhotoCapacity:new Capacity(5,5)}};
+  let cmds;[model,cmds]=update(new Msg(22,[{}]),model);
+  assert.equal(model.Busy,false);assert.equal([...cmds].length,0);assert.equal(model.FeedbackInGallery,false);
+  assert.match(model.Error,/5 photos per species/);assert.equal(model.Draft.Text,'Flowering time needs checking');
+});
+
+test('identification results distinguish alternatives/rejections and label responses to earlier revisions',async()=>{
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {Identification}=await import('../dist/client/Models/Contributions.js');
+  const {responses}=await import('../dist/client/Personal.js');
+  const history=ofArray([
+    new Identification('new',2,'Current question','rejected','Not this species','','','Identifier A',1),
+    new Identification('old',1,'Original question','alternative','Perhaps this','plant-b','Plant B','Identifier B',1)
+  ]);
+  const note=new Note('request','Current question',false,2,false,1,'identification',empty(),history);
+  const html=renderToStaticMarkup(responses(note));
+  assert.match(html,/id-outcome-rejected/);assert.match(html,/id-outcome-alternative previous-response/);
+  assert.match(html,/Identifier A/);assert.match(html,/earlier version/);assert.match(html,/Original question/);assert.match(html,/href="\/plants\/plant-b"/);
 });

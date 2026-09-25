@@ -1,3 +1,4 @@
+import { empty as emptyList } from '../dist/client/fable_modules/fable-library-js.4.29.0/List.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -14,9 +15,9 @@ globalThis.window={location:{pathname:'/review',search:''}};
 globalThis.document={title:''};
 let key='';globalThis.localStorage={getItem:()=>key};
 const ok=value=>new Result(0,[value]);
-const denied=new Capabilities(false,false),curator=new Capabilities(false,true),owner=new Capabilities(true,true);
+const denied=new Capabilities(false,false,false),curator=new Capabilities(false,true,false),owner=new Capabilities(true,true,true);
 const loaded=(epoch,data)=>new AccessMsg(1,[epoch,ok(data)]);
-const privateQueue=new Review([{PlantId:'plant-a',PlantName:'A plant',Note:new Note('note-a','Private correction for review',true,1,false,1)}],[],0,false);
+const privateQueue=new Review([{PlantId:'plant-a',PlantName:'A plant',Note:new Note('note-a','Private correction for review',true,1,false,1,'correction',emptyList(),emptyList())}],[],0,false);
 function permitted(capabilities) {
   let [m]=init();m.Access={...empty(1),Key:key,Data:capabilities};return m;
 }
@@ -80,7 +81,7 @@ test('capability fetch uses the session lock, sends only the supplied key and re
   window.HedgeGuest={withSessionRequest:async fn=>{calls++;return fn()}};
   globalThis.fetch=async(url,options)=>{
     assert.equal(url,'/api/plants/v2/access');assert.equal(options.cache,'no-store');assert.ok(options.credentials===undefined || options.credentials==='same-origin');
-    assert.equal(options.headers['X-Admin-Key'],'test-owner-key');return Response.json({canEditCatalogue:true,canReview:true});
+    assert.equal(options.headers['X-Admin-Key'],'test-owner-key');return Response.json({canEditCatalogue:true,canReview:true,canIdentify:true});
   };
   try {
     const result=await readCapabilities('test-owner-key');assert.equal(result.CanEditCatalogue,true);assert.equal(result.CanReview,true);assert.equal(calls,1);
@@ -97,4 +98,17 @@ test('a review completion arriving before the credential event cannot restore th
   const epoch=m.Review.Epoch;key='different-owner';
   const [next]=appUpdate(new AppMsg(18,[new ReviewMsg(3,[epoch,ok(privateQueue)])]),m);
   assert.equal(next.Review.Data,undefined);assert.equal(canReview(next.Access),false);key='';
+});
+
+
+test('losing one role clears the old queue even while another review capability remains',()=>{
+  key='';let m=permitted(owner);m.Review.Data=privateQueue;
+  const epoch=m.Review.Epoch;
+  const identifier=new Capabilities(false,false,true);
+  [m]=appUpdate(new AppMsg(19,[loaded(m.Access.Epoch,identifier)]),m);
+  assert.equal(canReview(m.Access),true);assert.equal(m.Review.Data,undefined);assert.ok(m.Review.Epoch>epoch);
+  [m]=appUpdate(new AppMsg(18,[new ReviewMsg(3,[epoch,ok(privateQueue)])]),m);
+  assert.equal(m.Review.Data,undefined);
+  assert.match(renderToStaticMarkup(footer(m,()=>{})),/Review contributions/);
+  assert.doesNotMatch(renderToStaticMarkup(footer(m,()=>{})),/Edit catalogue/);
 });

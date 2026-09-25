@@ -186,16 +186,45 @@ let plantNote : AdminTable =
             fieldWith "CreatedAt" FInt [CreateTimestamp]
             fieldWith "UpdatedAt" (FOption FInt) [UpdateTimestamp]
             fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
+            fieldWith "Purpose" (FOption FString) []
+            fieldWith "PhotoIds" (FOption FString) []
         ]
-      SelectAll = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE id = ? AND deleted_at IS NULL"
-      Insert = "INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      SelectAll = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at, purpose, photo_ids FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at, purpose, photo_ids FROM plant_notes WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, purpose, photo_ids, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = true
-      Update = "UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, updated_at = ? WHERE id = ?"
+      Update = "UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, purpose = ?, photo_ids = ?, updated_at = ? WHERE id = ?"
       Delete = "UPDATE plant_notes SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
-      MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "Text"; "IsCorrection"; "Revision"; "ReviewedRevision"] }
+      MutableFields = ["PlantId"; "OwnerProvider"; "OwnerId"; "Text"; "IsCorrection"; "Revision"; "ReviewedRevision"; "Purpose"; "PhotoIds"] }
+
+let identificationResponse : AdminTable =
+    { Name = "IdentificationResponse"
+      Table = "identification_responses"
+      Schema =
+        schema "IdentificationResponse" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "NoteId" FString [ForeignKey "PlantNote"]
+            fieldWith "NoteRevision" FInt []
+            fieldWith "SubmittedText" FString []
+            fieldWith "Outcome" FString []
+            fieldWith "Text" FString []
+            fieldWith "AlternativePlantId" (FOption FString) [ForeignKey "Plant"]
+            fieldWith "ReviewerProvider" FString []
+            fieldWith "ReviewerId" FString []
+            fieldWith "ReviewerName" FString []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses WHERE id = ?"
+      Insert = "INSERT INTO identification_responses (id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE identification_responses SET note_id = ?, note_revision = ?, submitted_text = ?, outcome = ?, text = ?, alternative_plant_id = ?, reviewer_provider = ?, reviewer_id = ?, reviewer_name = ? WHERE id = ?"
+      Delete = "DELETE FROM identification_responses WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["NoteId"; "NoteRevision"; "SubmittedText"; "Outcome"; "Text"; "AlternativePlantId"; "ReviewerProvider"; "ReviewerId"; "ReviewerName"] }
 
 let personalPlantPhoto : AdminTable =
     { Name = "PersonalPlantPhoto"
@@ -346,6 +375,7 @@ let tables : AdminTable list = [
     glossaryTerm
     sourceReference
     plantNote
+    identificationResponse
     personalPlantPhoto
     plantViewPreference
     contributionClaim

@@ -23,7 +23,7 @@ let private map projection operation = promise {
     let! result=operation
     return Result.map projection result
 }
-let access key = (client "" key).getAccess() |> map (fun data -> ({CanEditCatalogue=data.CanEditCatalogue;CanReview=data.CanReview}:Capabilities))
+let access key = (client "" key).getAccess() |> map (fun data -> ({CanEditCatalogue=data.CanEditCatalogue;CanReview=data.CanReview;CanIdentify=data.CanIdentify}:Capabilities))
 let personal plantId = (client "" "").getPersonal plantId |> map (fun data -> personalView data.Personal)
 let review key page = (client "" key).getReview {Page=Some(string page)} |> map (fun data -> reviewView data.Review)
 let change plantId viewer command =
@@ -31,6 +31,8 @@ let change plantId viewer command =
     match command with
     | SaveNote(id,revision,text,correction) ->
         api.saveNote {PlantId=plantId;Id=id;Revision=revision;Text=text;Correction=correction} |> map (fun data -> personalView data.Personal)
+    | SaveEntry(id,revision,text,purpose,photos) ->
+        api.saveFieldNote {PlantId=plantId;Id=id;Revision=revision;Text=text;Purpose=purpose;PhotoIds=photos} |> map (fun data -> personalView data.Personal)
     | DeleteNote(id,revision) -> api.deleteNote {PlantId=plantId;Id=id;Revision=revision} |> map (fun data -> personalView data.Personal)
     | UpdatePhoto(id,revision,caption,photographer,offered) ->
         api.updatePhoto {PlantId=plantId;Id=id;Revision=revision;Caption=caption;Photographer=photographer;Offered=offered} |> map (fun data -> personalView data.Personal)
@@ -40,6 +42,8 @@ let reviewChange key page command =
     let api=client "" key
     match command with
     | CorrectionRead(id,revision,read) -> api.reviewCorrection {Id=id;Revision=revision;Read=read;Page=page} |> map (fun data -> reviewView data.Review)
+    | Identify(id,revision,outcome,text,alternative) ->
+        api.identifyNote {Id=id;Revision=revision;Outcome=outcome;Text=text;AlternativePlantId=alternative;Page=page} |> map (fun data -> reviewView data.Review)
     | PromotePhoto(id,revision) -> api.promotePhoto {Id=id;Revision=revision;Page=page} |> map (fun data -> reviewView data.Review)
 
 type private UploadResponse = {Status:int;Body:string}

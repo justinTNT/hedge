@@ -1744,3 +1744,32 @@ em {
   .note-actions .icon-button {width:44px; height:44px;}
   .photo-gallery .photo-upload-slot {padding:8px;}
 }
+
+/* Field notes: app-owned purposes, attachments and identification outcomes. */
+.notebook-heading .personal-actions { margin:0; flex-wrap:wrap; }
+.entry-audience { font-size:.87rem; color:#53654e; }
+.note-editor select,.identification-editor select,.identification-editor textarea { width:100%; max-width:100%; padding:.7rem; font:inherit; color:inherit; background:#fff; border:1px solid #b1bfaa; border-radius:3px; }
+.attachment-picker { margin:1rem 0; border:1px solid #d6ddce; padding:1rem; min-width:0; }
+.attachment-options,.note-attachments { display:flex; flex-wrap:wrap; gap:.7rem; margin:.7rem 0; align-items:flex-start; }
+.attachment-choice { width:110px; padding:4px; border:2px solid transparent; background:#f6f6ef; border-radius:4px; }
+.attachment-choice.selected { border-color:#395d38; background:#e8efdc; }
+.attachment-choice img { width:98px; height:86px; object-fit:cover; display:block; }
+.attachment-choice span { display:block; font-size:.75rem; padding:.3rem; }
+.note-attachments button { padding:0; border:0; background:transparent; cursor:zoom-in; }
+.note-attachments img { width:auto; max-width:140px; height:105px; object-fit:contain; }
+.withdraw-note { margin:.7rem 0; font-size:.8rem; background:transparent; border:0; text-decoration:underline; }
+.id-outcome { margin:.9rem 0; border-left:4px solid #667360; padding:.75rem 1rem; background:#f1f3ec; }
+.id-outcome-confirmed { border-color:#3d7146; }
+.id-outcome-alternative { border-color:#446ea0; background:#edf2f9; }
+.id-outcome-rejected { border-color:#ad6047; background:#faf0eb; }
+.id-outcome-unknown { border-color:#9a8a64; background:#f8f5ec; }
+.id-outcome a { display:block; margin-top:.5rem; }
+.personal-note .id-outcome .note-text { padding:.5rem 0; min-height:0; border:0; box-shadow:none; background:transparent; }
+.previous-response { opacity:.8; }
+.identification-editor { margin:1rem 0; max-width:40rem; }
+.identification-editor label { display:block; margin:.8rem 0; }
+.identification-editor label > span { display:block; margin-bottom:.4rem; }
+@media (max-width:600px) {
+  .notebook-heading { flex-wrap:wrap; gap:.6rem; }
+  .note-attachments img { max-width:110px; height:90px; }
+}

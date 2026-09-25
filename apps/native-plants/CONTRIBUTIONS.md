@@ -5,7 +5,7 @@ Implemented 24 September 2026. Available locally and in the private Cloudflare p
 ## Experience
 
 - Signed-in species pages have **Field notes**, with compact edit/delete icons
-  and subtly inset note text. A correction checkbox shares a note with reviewers.
+  and subtly inset note text. Private Note, Correction and ID request actions\n  use the field-note workflow documented below.
 - A camera-plus button in the next gallery slot adds a photograph. Photo editing
   and upload feedback stay beside the gallery, separate from field notes.
 - Uploaded photos join the author's species gallery. **Make my hero** changes
@@ -44,12 +44,12 @@ anonymous-content integration fixtures; the client displays contribution feature
 only to verified accounts. `AuthConfig.subject` remains verified-only; the policy
 is centralized in `Server.Contributions.owner`. Login still claims legacy content.
 
-Review requires the existing site admin key or an enabled shared `curator` grant.
+Correction/photo review requires the site admin key or an enabled curator grant.\nID review requires the owner key or a separate identifier grant.
 It checks the grant on every request, so revocation takes effect immediately.
 Grant CRUD is in the owner-only admin. Its **Identity** section allows read-only
 account lookup; identity creation, editing and deletion are rejected by the server.
 Raw guest/session and private contribution tables remain excluded. Reviewers see
-only offered photos and corrections, not ordinary private material.
+only material shared with their role. Ordinary private notes and unrelated\npersonal photos stay private.
 
 To assign a curator:
 
@@ -255,3 +255,44 @@ The private preview now runs the v2 client and Worker, version
 `2c6e318d-d95b-4a1d-8500-0b9e60d1101c` (source `350cd35`). The compatibility
 window starts with this deployment; v1 JSON adapters remain available for old
 open tabs. No existing catalogue, grants or contributions were changed.
+
+## Field-note purposes and identification — 26 September 2026
+
+The notebook offers **Private Note** (text only), **Correction** (optional photos)
+and **ID request** (at least one photo). The editor selects from the owner's
+species roll or uploads into its remaining allowance. Uploads are selected
+automatically without losing the text draft; cancelling leaves them in the roll.
+
+Attachments are references. All three purposes count towards five notes; uploaded
+photos count towards the same five-photo limit. The server checks requirements,
+readiness and ownership inside the note write. Attachments do not automatically
+become offers for public publication.
+
+Assign **Role = identifier** through the same Identity → Grant workflow as
+curator. Identifiers review ID requests/photos and record confirmed, alternative,
+not-this-species or unknown outcomes. Curators keep corrections and offered
+photos. Grant both only when both are wanted. Neither role permits catalogue
+edits or role assignment.
+
+Responses preserve the original text and reviewer attribution. Alternatives link
+to another published catalogue species. No response moves photos or changes the
+catalogue. One response is allowed per submitted revision; author edits reopen
+review and label previous responses as older. Account IDs stay server-side.
+
+**Withdraw** makes the text private, unlinks photos and removes the review entry.
+The author retains response history. A linked photo must first be unlinked, or
+its entry withdrawn/deleted, before deletion. Responses/withdrawal do not free
+quota; deletion does.
+
+New generated endpoints: POST /api/plants/v2/notes/entry and
+POST /api/plants/v2/review/identify. Capabilities add canIdentify; the review queue
+is scoped to the caller's roles. Notes add purpose/photos/responses. Legacy reads
+remain; old checkbox saves cannot discard attachments or identification history.
+
+Existing databases must apply **migrations/0003_field_notes.sql** once before
+deployment. Locally: **npm run db:migrate:field-notes**. This adds two nullable
+columns and the response table/indexes, without rewriting catalogue, notes or
+photos. Fresh databases use the generated schema.
+
+See [the implementation note](../../notes/NATIVE-PLANTS-field-notes-and-identification.md)
+for lifecycle, storage, verification and deferred decisions.

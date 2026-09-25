@@ -48,6 +48,24 @@ let withReviewer request env action = promise {
         with InvalidInput message -> return error cookie 400 message
 }
 
+let withReviewAccess request env action = promise {
+    let! curate,cookie=reviewer env request
+    let! identify,renewal=identifier env request
+    let cookie=Option.orElse cookie renewal
+    if not(curate || identify) then return error cookie 403 "A curator or identifier grant, or the site admin key, is required."
+    else
+        try return! action cookie curate identify
+        with InvalidInput message -> return error cookie 400 message
+}
+
+let withIdentifier request env action = promise {
+    let! allowed,cookie=identifier env request
+    if not allowed then return error cookie 403 "Identifier access or the site admin key is required."
+    else
+        try return! action cookie
+        with InvalidInput message -> return error cookie 400 message
+}
+
 // The generated POST decoder uses request.text(). Authorize before consuming the
 // untrusted stream, cap it at 24,000 bytes, and pass only that bounded request on.
 // Never clone/tee the original stream. The handlers recheck subject/plant ownership.
@@ -64,7 +82,8 @@ let dispatch request env ctx routes =
         else
             let routeKind =
                 match rest with
-                | ["notes";"save"] | ["notes";"delete"] | ["photos";"update"] | ["photos";"delete"] | ["hero"] -> 1
+                | ["notes";"entry"] | ["notes";"save"] | ["notes";"delete"] | ["photos";"update"] | ["photos";"delete"] | ["hero"] -> 1
+                | ["review";"identify"] -> 3
                 | ["review";"correction"] | ["review";"promote"] -> 2
                 | _ -> 0
             let! allowed,cookie,status=promise {
@@ -73,6 +92,7 @@ let dispatch request env ctx routes =
                     let! who,cookie=owner env request
                     return who.IsSome,cookie,401
                 | 2 -> let! allowed,cookie=reviewer env request in return allowed,cookie,403
+                | 3 -> let! allowed,cookie=identifier env request in return allowed,cookie,403
                 | _ -> return false,None,404 }
             if not allowed then return error cookie status (if status=404 then "Unknown contribution endpoint." else "Contribution access is required.")
             else

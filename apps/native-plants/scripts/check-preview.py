@@ -17,6 +17,8 @@ db.execute('PRAGMA foreign_keys=ON')
 db.executescript(seed.read_text())
 for table in ('guests', 'identities', 'grants', 'plant_notes', 'personal_plant_photos', 'plant_view_preferences', 'contribution_claims'):
     assert db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0, f'Private seed data in {table}'
+if db.execute("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='identification_responses'").fetchone():
+    assert db.execute('SELECT COUNT(*) FROM identification_responses').fetchone()[0] == 0, 'Private seed responses'
 paths = set()
 for table, columns in [('plant_photos', ('image', 'thumbnail')), ('plant_maps', ('image',)), ('glossary_terms', ('illustration',))]:
     for column in columns:

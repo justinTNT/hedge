@@ -206,10 +206,11 @@ test('JPEG metadata stripping leaves scan data and rejects trailing payloads',()
 test('contribution migration matches generated schema without modifying existing catalogue records',()=>{
   const fresh=fixture().db,old=new DatabaseSync(':memory:');
   const objects=fresh.prepare("SELECT name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END,name").all();
-  const added=new Set(['plant_notes','personal_plant_photos','plant_view_preferences','contribution_claims','grants']);
+  const added=new Set(['plant_notes','personal_plant_photos','plant_view_preferences','contribution_claims','grants','identification_responses']);
   for(const o of objects.filter(o=>!added.has(o.tbl_name)))old.exec(o.sql);
   old.exec(readFileSync(new URL('../migrations/0002_contributions.sql',import.meta.url),'utf8'));
-  const shape=db=>db.prepare("SELECT name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY name").all();
+  old.exec(readFileSync(new URL('../migrations/0003_field_notes.sql',import.meta.url),'utf8'));
+  const shape=db=>db.prepare("SELECT name,sql,type FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(o=>o.type==='table'?{name:o.name,columns:db.prepare('PRAGMA table_info('+o.name+')').all(),keys:db.prepare('PRAGMA foreign_key_list('+o.name+')').all()} : o);
   assert.deepEqual(shape(old),shape(fresh));
 });
 
@@ -382,7 +383,7 @@ test('v2 auth, origin, viewer, decoder and byte bounds reject writes without cha
   assert.equal((await v2post(f,cookie,'/review/promote',{id:'photo-a',revision:1,page:0})).status,403);
   assert.equal((await body200(await f.personal(cookie))).Notes.length,0);
   const capabilities=await body200(await f.get(v2+'/access',cookie));
-  assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:false});
+  assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:false,canIdentify:false});
   const invalidPage=await body200(await f.get(v2+'/review?page=oops','',{'X-Admin-Key':f.env.ADMIN_KEY}));
   assert.equal(invalidPage.review.page,0);
 });
@@ -426,13 +427,13 @@ test('v2 enforces credential-backed contributors and current grants independentl
   await body200(await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'verified',revision:0,text:'Check this',correction:true}));
   assert.equal((await f.get(v2+'/review',cookie)).status,403);
   f.db.prepare('INSERT INTO grants (id,provider,provider_user_id,role,enabled,created_at) VALUES (?,?,?,?,?,?)').run('curator-v2','google','botanist','curator',1,1);
-  const capabilities=await body200(await f.get(v2+'/access',cookie));assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:true});
+  const capabilities=await body200(await f.get(v2+'/access',cookie));assert.deepEqual(capabilities,{canEditCatalogue:false,canReview:true,canIdentify:false});
   assert.equal((await body200(await f.get(v2+'/review',cookie))).review.notes.length,1);
   assert.equal((await f.get('/api/admin/types',cookie)).status,401);
   f.db.prepare('UPDATE grants SET enabled=0 WHERE id=?').run('curator-v2');
   assert.equal((await f.get(v2+'/review',cookie)).status,403);
   assert.equal((await v2post(f,cookie,'/review/correction',{id:'verified',revision:1,read:true,page:0})).status,403);
-  const owner=await body200(await f.get(v2+'/access','',{'X-Admin-Key':f.env.ADMIN_KEY}));assert.deepEqual(owner,{canEditCatalogue:true,canReview:true});
+  const owner=await body200(await f.get(v2+'/access','',{'X-Admin-Key':f.env.ADMIN_KEY}));assert.deepEqual(owner,{canEditCatalogue:true,canReview:true,canIdentify:true});
 });
 
 test('Native Plants explicitly registers only catalogue, grants and read-only identity descriptors',async()=>{
@@ -469,4 +470,147 @@ test('v2 success and malformed requests preserve session renewal and private cac
   const failed=await v2post(f,cookie,'/notes/save',{plantId:'plant-a',id:'failed',revision:0,text:'Failure',correction:false});
   assert.equal(failed.status,503);assert.equal(failed.headers.get('cache-control'),'private, no-store');
   assert.doesNotMatch(await failed.text(),/database fixture/);
+});
+
+
+// Field-note purposes share the same owner quotas but have separate review audiences.
+const entry=(id,purpose='private',photoIds=[],revision=0,text='Field observation')=>({plantId:'plant-a',id,revision,text,purpose,photoIds});
+const grant=(f,account,role)=>f.db.prepare('INSERT INTO grants (id,provider,provider_user_id,role,enabled,created_at) VALUES (?,?,?,?,1,1)').run(account+'-'+role,'google',account,role);
+const fieldSave=(f,cookie,data)=>v2post(f,cookie,'/notes/entry',data);
+const fieldQueue=(f,cookie='',key='')=>f.get(v2+'/review',cookie,{'X-Admin-Key':key});
+const identify=(f,cookie,id,revision=1,outcome='confirmed',extra={})=>v2post(f,cookie,'/review/identify',{id,revision,outcome,text:'Reviewed by me',alternativePlantId:'',page:0,...extra});
+
+test('field-note photo requirements, bounded associations and shared quota are enforced by the worker',async()=>{
+  const f=fixture(),a=await f.login(await f.bootstrap(),'author'),b=await f.login(await f.bootstrap(),'other');
+  await body200(await f.upload(a,'own'));await body200(await f.upload(a,'other-plant','plant-b'));await body200(await f.upload(b,'other-owner'));
+  for(const data of [
+    entry('private-photo','private',['own']),entry('empty-id','identification'),entry('bad-purpose','oops'),
+    entry('duplicate','correction',['own','own']),entry('too-many','correction',['1','2','3','4','5','6'])
+  ])assert.equal((await fieldSave(f,a,data)).status,400,data.id);
+  for(const id of ['missing','other-owner','other-plant'])
+    assert.equal((await fieldSave(f,a,entry('invalid-link','identification',[id]))).status,409,id);
+  const saved=await body200(await fieldSave(f,a,entry('request','identification',['own'])));
+  assert.equal(saved.personal.notes[0].photos[0].id,'own');assert.equal(saved.personal.notes[0].photos[0].offered,false);
+  assert.deepEqual(saved.personal.photoCapacity,{used:1,limit:5});
+  await body200(await fieldSave(f,a,entry('private')));
+  await body200(await fieldSave(f,a,entry('correction','correction')));
+  await body200(await fieldSave(f,a,entry('shared-photo','correction',['own'])));
+  await body200(await fieldSave(f,a,entry('fifth')));
+  assert.equal((await fieldSave(f,a,entry('sixth','correction'))).status,409);
+  // Linking the same uploaded image twice consumes one photo slot.
+  const data=await body200(await f.get(v2+'/personal/plant-a',a));
+  assert.equal(data.personal.noteCapacity.used,5);assert.equal(data.personal.photoCapacity.used,1);
+  // Old clients may read entries but cannot erase new-purpose data.
+  assert.equal((await f.post(a,note('request','Old client',false,1))).status,409);
+  assert.equal((await v2post(f,a,'/notes/save',{plantId:'plant-a',id:'shared-photo',revision:1,text:'Old client',correction:false})).status,409);
+});
+
+test('curator and identifier queues/media are isolated; withdrawal and grant revocation remove access',async()=>{
+  const f=fixture();f.env.CONTRIBUTIONS_REQUIRE_LOGIN='true';
+  const a=await f.login(await f.bootstrap(),'author'),c=await f.login(await f.bootstrap(),'curator'),i=await f.login(await f.bootstrap(),'identifier');
+  grant(f,'curator','curator');grant(f,'identifier','identifier');
+  for(const id of ['correction-photo','id-photo','private-photo','offered-photo'])await body200(await f.upload(a,id));
+  await body200(await f.post(a,photo('offered-photo')));
+  await body200(await fieldSave(f,a,entry('correction','correction',['correction-photo'])));
+  await body200(await fieldSave(f,a,entry('id','identification',['id-photo'])));
+  await body200(await fieldSave(f,a,entry('private')));
+  const cq=await body200(await fieldQueue(f,c)),iq=await body200(await fieldQueue(f,i));
+  assert.deepEqual(cq.review.notes.map(n=>n.note.id),['correction']);assert.equal(cq.review.photos.length,1);
+  assert.deepEqual(iq.review.notes.map(n=>n.note.id),['id']);assert.equal(iq.review.photos.length,0);
+  assert.deepEqual(await body200(await f.get(v2+'/access',i)),{canEditCatalogue:false,canReview:false,canIdentify:true});
+  for(const [cookie,allowed] of [[c,['correction-photo','offered-photo']],[i,['id-photo']]]) {
+    for(const id of ['correction-photo','id-photo','private-photo','offered-photo']){
+      const r=await f.get('/api/plants/personal-media/'+id+'/image',cookie);
+      assert.equal(r.status,allowed.includes(id)?200:404,id);
+      assert.equal(r.headers.get('set-cookie'),null);
+    }
+  }
+  assert.equal((await identify(f,c,'id')).status,403);
+  assert.equal((await v2post(f,i,'/review/correction',{id:'correction',revision:1,read:true,page:0})).status,403);
+  assert.equal((await v2post(f,i,'/review/promote',{id:'offered-photo',revision:2,page:0})).status,403);
+  // Generic admin remains unavailable to identifiers and hides private tables from owners.
+  assert.equal((await f.get('/api/admin/types',i)).status,401);
+  assert.equal((await f.get('/api/admin/IdentificationResponse','',{'X-Admin-Key':f.env.ADMIN_KEY})).status,404);
+  await body200(await fieldSave(f,a,entry('id','private',[],1)));
+  assert.equal((await body200(await fieldQueue(f,i))).review.notes.length,0);
+  assert.equal((await f.get('/api/plants/personal-media/id-photo/image',i)).status,404);
+  f.db.exec("UPDATE grants SET enabled=0 WHERE role='curator'");
+  assert.equal((await fieldQueue(f,c)).status,403);
+  assert.equal((await f.get('/api/plants/personal-media/correction-photo/image',c)).status,404);
+  assert.equal((await f.get('/api/plants/personal-media/private-photo/image','',{'X-Admin-Key':f.env.ADMIN_KEY})).status,404);
+});
+
+test('ID responses preserve author text, attribution and revision history without publishing or moving images',async()=>{
+  const f=fixture(),a=await f.login(await f.bootstrap(),'author'),i=await f.login(await f.bootstrap(),'identifier');
+  grant(f,'identifier','identifier');
+  await body200(await f.upload(a,'evidence'));
+  await body200(await fieldSave(f,a,entry('id','identification',['evidence'],0,'Original question')));
+  assert.equal((await identify(f,i,'id',1,'alternative',{alternativePlantId:'plant-a'})).status,409);
+  assert.equal((await identify(f,i,'id',1,'alternative')).status,400);
+  await body200(await identify(f,i,'id',1,'alternative',{alternativePlantId:'plant-b',text:'The leaves suggest this species'}));
+  const own=await body200(await f.get(v2+'/personal/plant-a',a));const n=own.personal.notes[0],r=n.responses[0];
+  assert.equal(n.text,'Original question');assert.equal(r.submittedText,n.text);assert.equal(r.revision,1);
+  assert.equal(r.outcome,'alternative');assert.equal(r.alternativePlantId,'plant-b');assert.equal(r.reviewerName,'Botanist');
+  assert.ok(!JSON.stringify(own).includes('reviewerProvider'));assert.ok(!JSON.stringify(own).includes('reviewerId'));
+  assert.equal(f.db.prepare('SELECT reviewer_provider,reviewer_id FROM identification_responses').get().reviewer_id,'identifier');
+  assert.equal((await identify(f,i,'id')).status,409);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM plant_photos').get().n,0);
+  assert.equal(f.db.prepare("SELECT plant_id,offered FROM personal_plant_photos WHERE id='evidence'").get().plant_id,'plant-a');
+  assert.equal(f.db.prepare("SELECT offered FROM personal_plant_photos WHERE id='evidence'").get().offered,0);
+  await body200(await fieldSave(f,a,entry('id','identification',['evidence'],1,'Updated question')));
+  let q=await body200(await fieldQueue(f,i));assert.equal(q.review.notes[0].note.revision,2);assert.equal(q.review.notes[0].note.responses[0].revision,1);
+  assert.equal((await identify(f,i,'id',1,'rejected')).status,409);
+  await body200(await identify(f,i,'id',2,'unknown'));
+  await body200(await fieldSave(f,a,entry('id','identification',['evidence'],2)));
+  await body200(await identify(f,i,'id',3,'rejected'));
+  await body200(await fieldSave(f,a,entry('id','identification',['evidence'],3)));
+  await body200(await identify(f,i,'id',4,'confirmed'));
+  const revised=await body200(await f.get(v2+'/personal/plant-a',a));
+  assert.deepEqual(revised.personal.notes[0].responses.map(r=>r.outcome),['confirmed','rejected','unknown','alternative']);
+  assert.equal(revised.personal.noteCapacity.used,1);
+  // Converting to a correction shares only that revision's text/photos, not the ID conversation.
+  await body200(await fieldSave(f,a,entry('id','correction',['evidence'],4)));
+  const curator=await f.login(await f.bootstrap(),'curator');grant(f,'curator','curator');
+  assert.equal((await body200(await fieldQueue(f,curator))).review.notes[0].note.responses.length,0);
+  await body200(await fieldSave(f,a,entry('id','private',[],5)));
+  assert.equal((await identify(f,i,'id',6)).status,409);
+  assert.equal((await body200(await f.get(v2+'/personal/plant-a',a))).personal.notes[0].responses.length,4);
+});
+
+test('linking, deleting and responding recheck invariants inside their write statements',async()=>{
+  const f=fixture(),a=await f.login(await f.bootstrap(),'author'),i=await f.login(await f.bootstrap(),'identifier');grant(f,'identifier','identifier');
+  await body200(await f.upload(a,'evidence'));
+  f.setBeforeRun(sql=>{if(sql.startsWith('INSERT OR IGNORE INTO plant_notes')){f.setBeforeRun(null);f.db.exec("UPDATE personal_plant_photos SET deleted_at=42 WHERE id='evidence'")}});
+  assert.equal((await fieldSave(f,a,entry('id','identification',['evidence']))).status,409);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM plant_notes').get().n,0);
+  f.db.exec("UPDATE personal_plant_photos SET deleted_at=NULL WHERE id='evidence'");
+  // A competing link wins before the photo deletion statement, which must now fail.
+  f.setBeforeRun(sql=>{if(sql.startsWith('UPDATE personal_plant_photos SET deleted_at=')){f.setBeforeRun(null);f.db.exec("INSERT INTO plant_notes (id,plant_id,owner_provider,owner_id,text,is_correction,revision,created_at,purpose,photo_ids) VALUES ('id','plant-a','google','author','Question',0,1,1,'identification','[\"evidence\"]')")}});
+  assert.equal((await f.post(a,{Action:'deletePhoto',Id:'evidence',Revision:1})).status,409);
+  assert.equal(f.db.prepare("SELECT deleted_at FROM personal_plant_photos WHERE id='evidence'").get().deleted_at,null);
+  const blocked=await f.post(a,{Action:'deletePhoto',Id:'evidence',Revision:1});
+  assert.equal(blocked.status,400);assert.match(await blocked.text(),/Unlink/);
+  f.setBeforeRun(sql=>{if(sql.startsWith('INSERT OR IGNORE INTO identification_responses')){f.setBeforeRun(null);f.db.exec("UPDATE plant_notes SET purpose='private',photo_ids='[]',revision=2 WHERE id='id'")}});
+  assert.equal((await identify(f,i,'id')).status,409);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM identification_responses').get().n,0);
+  await body200(await f.post(a,{Action:'deletePhoto',Id:'evidence',Revision:1}));
+  assert.equal((await body200(await f.personal(a))).PhotoCapacity.Used,0);
+});
+
+test('0003 preserves legacy notes, correction flags, photographs and catalogue records',async()=>{
+  const f=fixture(),a=await f.bootstrap();
+  await body200(await f.post(a,note('private','Legacy private text')));
+  await body200(await f.post(a,note('correction','Legacy correction text',true)));
+  await body200(await f.upload(a,'legacy-photo'));
+  f.db.exec('DROP TABLE identification_responses; ALTER TABLE plant_notes DROP COLUMN purpose; ALTER TABLE plant_notes DROP COLUMN photo_ids;');
+  const before=f.db.prepare('SELECT * FROM plant_notes ORDER BY id').all();
+  const plants=f.db.prepare('SELECT * FROM plants ORDER BY id').all();
+  const photos=f.db.prepare('SELECT * FROM personal_plant_photos').all();
+  f.db.exec(readFileSync(new URL('../migrations/0003_field_notes.sql',import.meta.url),'utf8'));
+  assert.deepEqual(f.db.prepare('SELECT * FROM plant_notes ORDER BY id').all().map(({purpose,photo_ids,...old})=>old),before.map(r=>({...r})));
+  assert.deepEqual(f.db.prepare('SELECT * FROM plants ORDER BY id').all(),plants);
+  assert.deepEqual(f.db.prepare('SELECT * FROM personal_plant_photos').all(),photos);
+  const data=await body200(await f.get(v2+'/personal/plant-a',a));
+  assert.deepEqual(data.personal.notes.map(n=>[n.id,n.purpose]).sort(),[['correction','correction'],['private','private']]);
+  assert.ok(data.personal.notes.every(n=>n.photos.length===0 && n.responses.length===0));
 });

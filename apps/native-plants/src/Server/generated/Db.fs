@@ -414,6 +414,8 @@ type PlantNoteRow = {
     CreatedAt: int
     UpdatedAt: int option
     DeletedAt: int option
+    Purpose: string option
+    PhotoIds: string option
 }
 
 type PlantNoteCreate = {
@@ -424,6 +426,8 @@ type PlantNoteCreate = {
     IsCorrection: bool
     Revision: int
     ReviewedRevision: int option
+    Purpose: string option
+    PhotoIds: string option
 }
 
 let parsePlantNoteRow (row: obj) : PlantNoteRow =
@@ -437,30 +441,100 @@ let parsePlantNoteRow (row: obj) : PlantNoteRow =
       ReviewedRevision = rowIntOpt row "reviewed_revision"
       CreatedAt = rowInt row "created_at"
       UpdatedAt = rowIntOpt row "updated_at"
-      DeletedAt = rowIntOpt row "deleted_at" }
+      DeletedAt = rowIntOpt row "deleted_at"
+      Purpose = rowStrOpt row "purpose"
+      PhotoIds = rowStrOpt row "photo_ids" }
 
 let selectPlantNotes (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at, purpose, photo_ids FROM plant_notes WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")
 
 let selectPlantNote (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE id = ? AND deleted_at IS NULL")) [| box id |]
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at, purpose, photo_ids FROM plant_notes WHERE id = ? AND deleted_at IS NULL")) [| box id |]
 
 let insertPlantNote (db: D1Database) (id: string) (now: int) (create: PlantNoteCreate) =
     let stmt =
-        bind (db.prepare("INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
-             [| box id; box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; box now |]
+        bind (db.prepare("INSERT INTO plant_notes (id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, purpose, photo_ids, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; optToDb create.Purpose; optToDb create.PhotoIds; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updatePlantNote (id: string) (create: PlantNoteCreate) (db: D1Database) : D1PreparedStatement =
     let now = epochNow()
-    bind (db.prepare("UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, updated_at = ? WHERE id = ?"))
-         [| box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; box now; box id |]
+    bind (db.prepare("UPDATE plant_notes SET plant_id = ?, owner_provider = ?, owner_id = ?, text = ?, is_correction = ?, revision = ?, reviewed_revision = ?, purpose = ?, photo_ids = ?, updated_at = ? WHERE id = ?"))
+         [| box create.PlantId; box create.OwnerProvider; box create.OwnerId; box create.Text; box create.IsCorrection; box create.Revision; optIntToDb create.ReviewedRevision; optToDb create.Purpose; optToDb create.PhotoIds; box now; box id |]
 
 let deletePlantNote (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("UPDATE plant_notes SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?")) [| box id |]
 
 let selectPlantNotesByPlantId (plantId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at FROM plant_notes WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
+    bind (db.prepare("SELECT id, plant_id, owner_provider, owner_id, text, is_correction, revision, reviewed_revision, created_at, updated_at, deleted_at, purpose, photo_ids FROM plant_notes WHERE plant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 100")) [| box plantId |]
+
+// ============================================================
+// IdentificationResponse (identification_responses)
+// ============================================================
+
+type IdentificationResponseRow = {
+    Id: string
+    NoteId: string
+    NoteRevision: int
+    SubmittedText: string
+    Outcome: string
+    Text: string
+    AlternativePlantId: string option
+    ReviewerProvider: string
+    ReviewerId: string
+    ReviewerName: string
+    CreatedAt: int
+}
+
+type IdentificationResponseCreate = {
+    NoteId: string
+    NoteRevision: int
+    SubmittedText: string
+    Outcome: string
+    Text: string
+    AlternativePlantId: string option
+    ReviewerProvider: string
+    ReviewerId: string
+    ReviewerName: string
+}
+
+let parseIdentificationResponseRow (row: obj) : IdentificationResponseRow =
+    { Id = rowStr row "id"
+      NoteId = rowStr row "note_id"
+      NoteRevision = rowInt row "note_revision"
+      SubmittedText = rowStr row "submitted_text"
+      Outcome = rowStr row "outcome"
+      Text = rowStr row "text"
+      AlternativePlantId = rowStrOpt row "alternative_plant_id"
+      ReviewerProvider = rowStr row "reviewer_provider"
+      ReviewerId = rowStr row "reviewer_id"
+      ReviewerName = rowStr row "reviewer_name"
+      CreatedAt = rowInt row "created_at" }
+
+let selectIdentificationResponses (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses ORDER BY created_at DESC LIMIT 100")
+
+let selectIdentificationResponse (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses WHERE id = ?")) [| box id |]
+
+let insertIdentificationResponse (db: D1Database) (id: string) (now: int) (create: IdentificationResponseCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO identification_responses (id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.NoteId; box create.NoteRevision; box create.SubmittedText; box create.Outcome; box create.Text; optToDb create.AlternativePlantId; box create.ReviewerProvider; box create.ReviewerId; box create.ReviewerName; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateIdentificationResponse (id: string) (create: IdentificationResponseCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE identification_responses SET note_id = ?, note_revision = ?, submitted_text = ?, outcome = ?, text = ?, alternative_plant_id = ?, reviewer_provider = ?, reviewer_id = ?, reviewer_name = ? WHERE id = ?"))
+         [| box create.NoteId; box create.NoteRevision; box create.SubmittedText; box create.Outcome; box create.Text; optToDb create.AlternativePlantId; box create.ReviewerProvider; box create.ReviewerId; box create.ReviewerName; box id |]
+
+let deleteIdentificationResponse (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM identification_responses WHERE id = ?")) [| box id |]
+
+let selectIdentificationResponsesByNoteId (noteId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses WHERE note_id = ? ORDER BY created_at DESC LIMIT 100")) [| box noteId |]
+
+let selectIdentificationResponsesByAlternativePlantId (alternativePlantId: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, note_id, note_revision, submitted_text, outcome, text, alternative_plant_id, reviewer_provider, reviewer_id, reviewer_name, created_at FROM identification_responses WHERE alternative_plant_id = ? ORDER BY created_at DESC LIMIT 100")) [| box alternativePlantId |]
 
 // ============================================================
 // PersonalPlantPhoto (personal_plant_photos)
@@ -789,6 +863,7 @@ module Tables =
     let glossaryTerm = "glossary_terms"
     let sourceReference = "source_references"
     let plantNote = "plant_notes"
+    let identificationResponse = "identification_responses"
     let personalPlantPhoto = "personal_plant_photos"
     let plantViewPreference = "plant_view_preferences"
     let contributionClaim = "contribution_claims"

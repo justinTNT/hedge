@@ -2,7 +2,7 @@ import { storedAdminKey, readCapabilities, subscribeCredentials } from './access
 
 export function showCapabilities(root, access) {
   for (const element of root.querySelectorAll('[data-plants-access]')) {
-    element.hidden = element.dataset.plantsAccess === 'review' ? access?.CanReview !== true : access?.CanEditCatalogue !== true;
+    element.hidden = element.dataset.plantsAccess === 'review' ? (access?.CanReview !== true && access?.CanIdentify !== true) : access?.CanEditCatalogue !== true;
   }
 }
 

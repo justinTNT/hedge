@@ -13,6 +13,7 @@
     <Compile Include="../Core/Catalogue.fs" />
     <Compile Include="CatalogueStore.fs" />
     <Compile Include="Contributions.fs" />
+    <Compile Include="FieldNotes.fs" />
     <Compile Include="ContributionApi.fs" />
     <Compile Include="Handlers.fs" />
     <Compile Include="generated/AdminGen.fs" />

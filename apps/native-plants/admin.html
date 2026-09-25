@@ -24,14 +24,14 @@
       <a href="/review" data-plants-access="review" hidden>Review contributions</a>
     </nav>
     <details data-plants-access="admin" hidden>
-      <summary>Assign curator access</summary>
+      <summary>Assign curator or identifier access</summary>
       <ol>
         <li>Ask the person to sign in to this site once.</li>
         <li>Open <strong>Identity</strong>, find their name or email, and copy <strong>Provider</strong> and <strong>ProviderUserId</strong>.</li>
-        <li>Open <strong>Grant → New</strong>, enter those values, set <strong>Role</strong> to <code>curator</code>, tick <strong>Enabled</strong>, and save. <strong>GrantedBy</strong> is optional.</li>
+        <li>Open <strong>Grant → New</strong>, enter those values, set <strong>Role</strong> to <code>curator</code> for corrections and offered photos, or <code>identifier</code> for identification requests, tick <strong>Enabled</strong>, and save. <strong>GrantedBy</strong> is optional.</li>
         <li>They can then sign in and open <a href="/review">Review contributions</a>. They do not need your admin key.</li>
       </ol>
-      <p>Untick <strong>Enabled</strong> to revoke access. Identities are read-only; use the provider account ID, not an identity or guest record ID. Curators review corrections and offered photographs; they cannot edit the catalogue or assign roles.</p>
+      <p>Untick <strong>Enabled</strong> to revoke access. Identities are read-only; use the provider account ID, not an identity or guest record ID. These roles are separate: identifiers can read and respond to ID requests and their attached photos; curators review corrections and offered photographs. Neither role can edit the catalogue or assign roles.</p>
     </details>
   </aside>
   <div id="app"></div>

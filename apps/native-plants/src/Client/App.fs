@@ -191,6 +191,7 @@ let update msg model =
         {model with Auth=auth;Access=access;Personal=personal;Review=review;Zoom=if cleared then None else model.Zoom},
         Cmd.batch [Cmd.map Auth cmd;Cmd.map Personal personalCmd;accessCmd]
     | Personal _ when not(Client.Auth.signedIn model.Auth) -> model,Cmd.none
+    | Personal(Client.Personal.Preview photo) -> {model with Zoom=Some(Client.Personal.apiPhoto photo)},Cmd.none
     | Personal msg ->
         let personal,cmd=Client.Personal.update msg model.Personal
         let dataChanged=personal.Data<>model.Personal.Data
@@ -214,6 +215,9 @@ let update msg model =
         let access,cmd=Client.Access.update msg model.Access
         let review,reviewCmd =
             if not(Client.Access.canReview access) then {Client.Review.clear model.Review with Error=model.Review.Error},Cmd.none
+            elif model.Page=ReviewPage && model.Access.Data<>access.Data && access.Data.IsSome then
+                let cleared=Client.Review.clear model.Review
+                Client.Review.enter access.Key cleared.Epoch
             elif model.Page=ReviewPage && model.Review.Data.IsNone && model.Review.Error.IsNone && not model.Review.Busy then
                 Client.Review.enter access.Key (model.Review.Epoch+1)
             else model.Review,Cmd.none
@@ -543,7 +547,7 @@ let view model dispatch =
         Html.div [prop.id "main";prop.children [
             match model.Page,model.Data with
             | ReviewPage,_ when Client.Access.canReview model.Access ->
-                Client.Review.view (Client.Access.canEdit model.Access) model.Review (Review >> dispatch)
+                Client.Review.view model.Access.Data.Value (model.Data |> Option.map(fun d->d.Plants) |> Option.defaultValue []) model.Review (Review >> dispatch)
             | ReviewPage,_ ->
                 Html.main [prop.className "empty-state section";prop.children [
                     if model.Access.Loading then
@@ -554,7 +558,7 @@ let view model dispatch =
                         button "Retry access check" (Access Client.Access.Refresh) dispatch
                     else
                         Html.h1 "Review access required"
-                        Html.p "Sign in with a curator account using Login above, or ask the site owner for access."
+                        Html.p "Sign in with a curator or identifier account using Login above, or ask the site owner for access."
                     a "/" "Back to the guide" dispatch
                 ]]
             | About,_ -> about dispatch

@@ -86,7 +86,7 @@ let owner (env:Env) request = promise {
                 else return Some{Provider="guest";Id=session.GuestId;Cookie=session.Replacement},session.Replacement
 }
 
-let reviewer env request = promise {
+let roleAccess role env request = promise {
     if Server.AuthConfig.isOwner env request then return true,None
     else
         let deps:Hedge.AccessControl.Deps = {
@@ -95,21 +95,45 @@ let reviewer env request = promise {
                 let! subject=Identity.Server.activeSubject env.DB guestId
                 return subject |> Option.map(fun (provider,id)->{Hedge.AccessControl.Subject.Provider=provider;ProviderUserId=id}) }
             HasGrant=Identity.Grants.hasGrant env.DB }
-        let! result=Hedge.AccessControl.requireRole deps "curator" (readCookie request)
+        let! result=Hedge.AccessControl.requireRole deps role (readCookie request)
         match result with
         | Hedge.AccessControl.Authorized(_,cookie) -> return true,cookie
         | Hedge.AccessControl.Forbidden(_,cookie) | Hedge.AccessControl.AuthRequired cookie -> return false,cookie
 }
 
-let noteDto (r:obj) : Note =
-    {Id=r?id;Text=r?text;Correction=(unbox<int> r?is_correction)=1;Revision=r?revision
-     Read=not(isNull r?reviewed_revision) && r?reviewed_revision=r?revision;CreatedAt=r?created_at}
+let reviewer env request = roleAccess "curator" env request
+let identifier env request = roleAccess "identifier" env request
+
+let purposeSql = "COALESCE(n.purpose,CASE WHEN n.is_correction=1 THEN 'correction' ELSE 'private' END)"
+let notePurpose (r:obj) =
+    if isNull r?purpose then (if (unbox<int> r?is_correction)=1 then "correction" else "private") else r?purpose
+
 let photoDto (r:obj) : Photo =
     let id:string=r?id
     {Id=id;Image="/api/plants/personal-media/"+id+"/image";Thumbnail="/api/plants/personal-media/"+id+"/thumbnail"
      Caption=r?caption;Photographer=r?photographer;Width=r?width;Height=r?height
      Offered=(unbox<int> r?offered)=1;Revision=r?revision
      PublicPhotoId=if isNull r?published_photo_id then "" else r?published_photo_id}
+
+// Decode only attachments belonging to this note's owner and species. A link
+// shares this entry's photos with its own reviewers, never the whole photo roll.
+let noteDto env (r:obj) : JS.Promise<Note> = promise {
+    let purpose=notePurpose r
+    let! photos=rows env "SELECT c.* FROM personal_plant_photos c JOIN plant_notes n ON n.id=? JOIN json_each(COALESCE(n.photo_ids,'[]')) j ON j.value=c.id WHERE c.plant_id=n.plant_id AND c.owner_provider=n.owner_provider AND c.owner_id=n.owner_id AND c.ready=1 AND c.deleted_at IS NULL ORDER BY j.key" [|r?id|]
+    let! replies=rows env "SELECT r.*,p.scientific_name FROM identification_responses r LEFT JOIN plants p ON p.id=r.alternative_plant_id WHERE r.note_id=? ORDER BY r.note_revision DESC" [|r?id|]
+    let responses=replies |> Array.map(fun v -> {
+        Id=v?id;Revision=v?note_revision;SubmittedText=v?submitted_text;Outcome=v?outcome;Text=v?text
+        AlternativePlantId=if isNull v?alternative_plant_id then "" else v?alternative_plant_id
+        AlternativeName=if isNull v?scientific_name then "" else v?scientific_name
+        ReviewerName=v?reviewer_name;CreatedAt=v?created_at }:Identification) |> Array.toList
+    return {
+        Id=r?id;Text=r?text;Correction=purpose="correction";Revision=r?revision
+        Read=not(isNull r?reviewed_revision) && r?reviewed_revision=r?revision;CreatedAt=r?created_at
+        Purpose=purpose
+        Photos=(if purpose="private" then [] else photos |> Array.map photoDto |> Array.toList)
+        Responses=responses
+    }
+}
 
 // These predicates serve both reported usage and the atomic insert guards. Future
 // admin lifecycle rules must change them together; review/offer/promotion do not
@@ -135,8 +159,9 @@ let personalData env plantId who = promise {
     let! pref=first env "SELECT hero_photo_id FROM plant_view_preferences WHERE plant_id=? AND owner_provider=? AND owner_id=?" args
     let hero=pref |> Option.map(fun r -> if isNull r?hero_photo_id then "" else unbox<string> r?hero_photo_id) |> Option.defaultValue ""
     let! token=viewerToken who.Provider who.Id
+    let! notes=notes |> Array.map (noteDto env) |> Promise.all
     let! noteCapacity,photoCapacity=capacities env plantId who
-    return {Anonymous=who.Provider="guest";ViewerToken=token;Notes=Array.map noteDto notes;Photos=Array.map photoDto photos;HeroPhotoId=hero;NoteCapacity=noteCapacity;PhotoCapacity=photoCapacity}
+    return {Anonymous=who.Provider="guest";ViewerToken=token;Notes=notes;Photos=Array.map photoDto photos;HeroPhotoId=hero;NoteCapacity=noteCapacity;PhotoCapacity=photoCapacity}
 }
 
 let personal env plantId who = promise {
@@ -155,7 +180,7 @@ let checkedRevision revision =
 let mutateCommand env plantId who command onSuccess = promise {
     let id,revision =
         match command with
-        | SaveNote(id,revision,_,_) | DeleteNote(id,revision)
+        | SaveNote(id,revision,_,_) | SaveEntry(id,revision,_,_,_) | DeleteNote(id,revision)
         | UpdatePhoto(id,revision,_,_,_) | DeletePhoto(id,revision) -> id,revision
         | SelectHero id -> id,0
     if id<>"" && not(validId id) then invalid "Invalid item."
@@ -165,17 +190,33 @@ let mutateCommand env plantId who command onSuccess = promise {
     let now=box(epochNow())
     let! changed=promise {
         match command with
-        | SaveNote(_,_,value,isCorrection) ->
+        | SaveNote _ | SaveEntry _ ->
+            let value,purpose,photoIds,legacy =
+                match command with
+                | SaveEntry(_,_,value,purpose,photos) -> value,purpose,photos,false
+                | SaveNote(_,_,value,correction) -> value,(if correction then "correction" else "private"),[],true
+                | _ -> failwith "Expected note"
             let text=checkedText "Text" 6000 value
             if text="" then invalid "Write a note before saving."
-            let correction=if isCorrection then 1 else 0
+            if not(List.contains purpose ["private";"correction";"identification"]) then invalid "Choose a note purpose."
+            if photoIds.Length>5 || List.distinct photoIds<>photoIds || List.exists (validId >> not) photoIds then invalid "Choose up to five different photographs."
+            if purpose="private" && not photoIds.IsEmpty then invalid "Private notes are text only."
+            if purpose="identification" && photoIds.IsEmpty then invalid "An ID request needs at least one photograph."
             if id="" then invalid "Missing note ID."
+            let json=JS.JSON.stringify(List.toArray photoIds)
+            let correction=if purpose="correction" then 1 else 0
+            // Recheck every link in the write itself, not only before the transaction.
+            let attachmentGuard=" AND NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM personal_plant_photos c WHERE c.id=j.value AND c.plant_id=? AND c.owner_provider=? AND c.owner_id=? AND c.ready=1 AND c.deleted_at IS NULL))"
+            let attachmentArgs=Array.concat [[|box json;box plantId|];guard]
+            // Cached clients cannot silently discard attachments or turn an ID request
+            // into a private note because they only know the old correction checkbox.
+            let legacyGuard=if legacy then " AND COALESCE(purpose,'')<>'identification' AND json_array_length(COALESCE(photo_ids,'[]'))=0 AND NOT EXISTS (SELECT 1 FROM identification_responses r WHERE r.note_id=plant_notes.id)" else ""
             if revision=0 then
-                return! run env ("INSERT OR IGNORE INTO plant_notes (id,plant_id,owner_provider,owner_id,text,is_correction,revision,reviewed_revision,created_at,updated_at,deleted_at) SELECT ?,?,?,?,?,?,1,NULL,?,NULL,NULL WHERE "+visiblePlant+claimGuard+" AND (SELECT COUNT(*) FROM plant_notes WHERE "+noteSlot+")<? AND (SELECT COUNT(*) FROM plant_notes WHERE owner_provider=? AND owner_id=? AND deleted_at IS NULL)<2000")
-                    (Array.concat [args;[|box text;box correction;now;box plantId|];guard;slotArgs plantId who;[|box noteLimit|];guard])
+                return! run env ("INSERT OR IGNORE INTO plant_notes (id,plant_id,owner_provider,owner_id,text,is_correction,revision,reviewed_revision,created_at,updated_at,deleted_at,purpose,photo_ids) SELECT ?,?,?,?,?,?,1,NULL,?,NULL,NULL,?,? WHERE "+visiblePlant+claimGuard+" AND (SELECT COUNT(*) FROM plant_notes WHERE "+noteSlot+")<? AND (SELECT COUNT(*) FROM plant_notes WHERE owner_provider=? AND owner_id=? AND deleted_at IS NULL)<2000"+attachmentGuard)
+                    (Array.concat [args;[|box text;box correction;now;box purpose;box json;box plantId|];guard;slotArgs plantId who;[|box noteLimit|];guard;attachmentArgs])
             else
-                return! run env ("UPDATE plant_notes SET text=?,is_correction=?,revision=revision+1,updated_at=? WHERE "+owned+" AND revision=? AND deleted_at IS NULL"+claimGuard)
-                    (Array.concat [[|box text;box correction;now|];args;[|box revision|];guard])
+                return! run env ("UPDATE plant_notes SET text=?,is_correction=?,purpose=?,photo_ids=?,revision=revision+1,updated_at=? WHERE "+owned+" AND revision=? AND deleted_at IS NULL"+claimGuard+attachmentGuard+legacyGuard)
+                    (Array.concat [[|box text;box correction;box purpose;box json;now|];args;[|box revision|];guard;attachmentArgs])
         | DeleteNote _ ->
             return! run env ("UPDATE plant_notes SET deleted_at=?,revision=revision+1 WHERE "+owned+" AND revision=? AND deleted_at IS NULL"+claimGuard)
                 (Array.concat [[|now|];args;[|box revision|];guard])
@@ -197,8 +238,11 @@ let mutateCommand env plantId who command onSuccess = promise {
             match photo with
             | None -> return false
             | Some p ->
+                // Keep attachment invariants even when linking and deleting race.
+                let! linked=first env "SELECT 1 FROM plant_notes n,json_each(COALESCE(n.photo_ids,'[]')) j WHERE j.value=? AND n.deleted_at IS NULL" [|box id|]
+                if linked.IsSome then invalid "Unlink this photograph from its field note, withdraw the entry, or delete the entry before deleting the photograph."
                 // Hide first; a failed R2 delete leaves keys and bytes tracked for retry.
-                let! hidden=run env ("UPDATE personal_plant_photos SET deleted_at=? WHERE "+owned+" AND revision=?"+claimGuard) (Array.concat [[|now|];args;[|box revision|];guard])
+                let! hidden=run env ("UPDATE personal_plant_photos SET deleted_at=? WHERE "+owned+" AND revision=?"+claimGuard+" AND NOT EXISTS (SELECT 1 FROM plant_notes n,json_each(COALESCE(n.photo_ids,'[]')) j WHERE j.value=personal_plant_photos.id AND n.deleted_at IS NULL)") (Array.concat [[|now|];args;[|box revision|];guard])
                 if not hidden then return false
                 else
                     do! env.BLOBS.delete(p?image_key)
@@ -210,7 +254,7 @@ let mutateCommand env plantId who command onSuccess = promise {
     if changed then
         let! data=personalData env plantId who
         return onSuccess data
-    elif (match command with SaveNote(_,0,_,_) -> true | _ -> false) then
+    elif (match command with SaveNote(_,0,_,_) | SaveEntry(_,0,_,_,_) -> true | _ -> false) then
         let! notes,_=capacities env plantId who
         if notes.Used>=notes.Limit then return noteLimitResponse who.Cookie
         else return conflict who.Cookie
@@ -285,8 +329,16 @@ let media env request id size = promise {
         let! who,_=owner env request
         let own=who |> Option.exists(fun who->p?owner_provider=who.Provider && p?owner_id=who.Id)
         let! canReview=promise {
-            if own || (unbox<int> p?offered)<>1 then return false
-            else let! allowed,_=reviewer env request in return allowed }
+            if own then return false
+            else
+                let! curate,_=reviewer env request
+                let! identify,_=identifier env request
+                if not(curate || identify) then return false
+                elif curate && (unbox<int> p?offered)=1 then return true
+                else
+                    let! linked=first env ("SELECT 1 FROM plant_notes n,json_each(COALESCE(n.photo_ids,'[]')) j WHERE j.value=? AND n.plant_id=? AND n.owner_provider=? AND n.owner_id=? AND n.deleted_at IS NULL AND (("+purposeSql+"='correction' AND ?=1) OR ("+purposeSql+"='identification' AND ?=1))")
+                                            [|box id;p?plant_id;p?owner_provider;p?owner_id;box(if curate then 1 else 0);box(if identify then 1 else 0)|]
+                    return linked.IsSome }
         if not(own || canReview) then return error None 404 "Photograph unavailable."
         else
             let key=if size="image" then p?image_key else p?thumbnail_key
@@ -300,15 +352,19 @@ let media env request id size = promise {
                     "Vary" ==> "Cookie, X-Admin-Key";"X-Content-Type-Options" ==> "nosniff"]])
 }
 
-let reviewData env page = promise {
+let reviewDataFor env page curate identify = promise {
     let page=max 0 (min 10000 page)
-    let! notes=rows env "SELECT n.*,p.scientific_name FROM plant_notes n JOIN plants p ON p.id=n.plant_id WHERE n.deleted_at IS NULL AND n.is_correction=1 AND p.published=1 AND p.deleted_at IS NULL ORDER BY (n.reviewed_revision=n.revision) IS 1,n.created_at DESC,n.id LIMIT 51 OFFSET ?" [|box(page*50)|]
-    let! photos=rows env "SELECT c.*,p.scientific_name FROM personal_plant_photos c JOIN plants p ON p.id=c.plant_id WHERE c.deleted_at IS NULL AND c.ready=1 AND c.offered=1 AND c.published_photo_id IS NULL AND p.published=1 AND p.deleted_at IS NULL ORDER BY c.created_at,c.id LIMIT 51 OFFSET ?" [|box(page*50)|]
-    return {
-        Notes=notes |> Array.truncate 50 |> Array.map(fun n->{PlantId=n?plant_id;PlantName=n?scientific_name;Note=noteDto n})
-        Photos=photos |> Array.truncate 50 |> Array.map(fun p->{PlantId=p?plant_id;PlantName=p?scientific_name;Photo=photoDto p})
-        Page=page;HasMore=notes.Length>50 || photos.Length>50 }
+    let! notes=rows env ("SELECT n.*,p.scientific_name FROM plant_notes n JOIN plants p ON p.id=n.plant_id WHERE n.deleted_at IS NULL AND (("+purposeSql+"='correction' AND ?=1) OR ("+purposeSql+"='identification' AND ?=1)) AND p.published=1 AND p.deleted_at IS NULL ORDER BY CASE WHEN "+purposeSql+"='correction' THEN (n.reviewed_revision=n.revision) IS 1 ELSE EXISTS(SELECT 1 FROM identification_responses r WHERE r.note_id=n.id AND r.note_revision=n.revision) END,n.created_at DESC,n.id LIMIT 51 OFFSET ?")
+                            [|box(if curate then 1 else 0);box(if identify then 1 else 0);box(page*50)|]
+    let! photos=if curate then rows env "SELECT c.*,p.scientific_name FROM personal_plant_photos c JOIN plants p ON p.id=c.plant_id WHERE c.deleted_at IS NULL AND c.ready=1 AND c.offered=1 AND c.published_photo_id IS NULL AND p.published=1 AND p.deleted_at IS NULL ORDER BY c.created_at,c.id LIMIT 51 OFFSET ?" [|box(page*50)|] else Promise.lift [||]
+    let! items=notes |> Array.truncate 50 |> Array.map(fun n->promise {
+        let! note=noteDto env n
+        // Corrections do not disclose earlier ID conversations to curators.
+        return {PlantId=n?plant_id;PlantName=n?scientific_name;Note=if note.Purpose="correction" then {note with Responses=[]} else note} }) |> Promise.all
+    return {Notes=items;Photos=photos |> Array.truncate 50 |> Array.map(fun p->{PlantId=p?plant_id;PlantName=p?scientific_name;Photo=photoDto p})
+            Page=page;HasMore=notes.Length>50 || photos.Length>50 }
 }
+let reviewData env page = reviewDataFor env page true false
 
 let reviewQueue env request cookie = promise {
     let! data=reviewData env (pageNumber request)
@@ -358,8 +414,8 @@ let promote env id revision = promise {
         | _ -> return false
 }
 
-let reviewCommand env cookie page command onSuccess = promise {
-    let id,revision=match command with CorrectionRead(id,revision,_) | PromotePhoto(id,revision) -> id,revision
+let applyCuratorCommand env command = promise {
+    let id,revision=match command with CorrectionRead(id,revision,_) | PromotePhoto(id,revision) | Identify(id,revision,_,_,_) -> id,revision
     if not(validId id) then invalid "Invalid item."
     checkedRevision revision
     let! changed=promise {
@@ -368,7 +424,13 @@ let reviewCommand env cookie page command onSuccess = promise {
             let reviewed=if read then box revision else null
             return! run env "UPDATE plant_notes SET reviewed_revision=? WHERE id=? AND revision=? AND is_correction=1 AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM plants p WHERE p.id=plant_id AND p.published=1 AND p.deleted_at IS NULL)" [|reviewed;box id;box revision|]
         | PromotePhoto _ -> return! promote env id revision
+        | Identify _ -> return invalid "Use the identification endpoint."
     }
+    return changed
+}
+
+let reviewCommand env cookie page command onSuccess = promise {
+    let! changed=applyCuratorCommand env command
     if changed then
         let! data=reviewData env page
         return onSuccess data
@@ -401,8 +463,9 @@ let dispatch request env =
                     return! media env request id size
                 | ["api";"plants";"access"] when request.method="GET" ->
                     let! allowed,cookie=reviewer env request
-                    let access:Capabilities={CanEditCatalogue=Server.AuthConfig.isOwner env request;CanReview=allowed}
-                    return response cookie 200 access
+                    let! identify,renewal=identifier env request
+                    let access:Capabilities={CanEditCatalogue=Server.AuthConfig.isOwner env request;CanReview=allowed;CanIdentify=identify}
+                    return response (Option.orElse cookie renewal) 200 access
                 | ["api";"plants";"review"] ->
                     let! allowed,cookie=reviewer env request
                     if not allowed then return error cookie 403 "Curator access or the site admin key is required."

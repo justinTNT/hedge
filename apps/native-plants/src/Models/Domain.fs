@@ -128,6 +128,27 @@ type PlantNote = {
     CreatedAt: CreateTimestamp
     UpdatedAt: UpdateTimestamp option
     DeletedAt: SoftDelete option
+    /// Null keeps the legacy is_correction interpretation until the next edit.
+    Purpose: string option
+    /// At most five IDs as JSON; replaced atomically with the note revision.
+    PhotoIds: string option
+}
+
+/// One attributed response per submitted revision; later author edits reopen review.
+[<Table "identification_responses">]
+[<UniqueTogether("NoteId", "NoteRevision")>]
+type IdentificationResponse = {
+    Id: PrimaryKey<string>
+    NoteId: ForeignKey<PlantNote>
+    NoteRevision: int
+    SubmittedText: string
+    Outcome: string
+    Text: string
+    AlternativePlantId: ForeignKey<Plant> option
+    ReviewerProvider: string
+    ReviewerId: string
+    ReviewerName: string
+    CreatedAt: CreateTimestamp
 }
 
 [<Table "personal_plant_photos">]
