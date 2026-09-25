@@ -38,6 +38,24 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
         | _ ->
         None
 
+    | POST path when matchPath "/api/plants/v2/review/identify" path = Some (Exact "/api/plants/v2/review/identify") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.identifyNoteReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.identifyNote req request env ctx
+        })
+
+    | POST path when matchPath "/api/plants/v2/notes/entry" path = Some (Exact "/api/plants/v2/notes/entry") ->
+        Some (promise {
+            let! bodyText = request.text()
+            match Decode.fromString Decode.saveFieldNoteReq bodyText with
+            | Error err -> return badRequest err
+            | Ok req ->
+                return! Server.Handlers.saveFieldNote req request env ctx
+        })
+
     | POST path when matchPath "/api/plants/v2/review/promote" path = Some (Exact "/api/plants/v2/review/promote") ->
         Some (promise {
             let! bodyText = request.text()

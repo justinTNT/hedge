@@ -14,7 +14,7 @@ type Msg = Refresh | Loaded of int * Result<Capabilities,string>
 let empty epoch = {Epoch=epoch;Key="";Data=None;Loading=false;Failed=false}
 let clear model = empty (model.Epoch+1)
 let canEdit model = model.Data |> Option.exists(fun a->a.CanEditCatalogue)
-let canReview model = model.Data |> Option.exists(fun a->a.CanReview)
+let canReview model = model.Data |> Option.exists(fun a->a.CanReview || a.CanIdentify)
 let update msg model =
     match msg with
     | Refresh ->

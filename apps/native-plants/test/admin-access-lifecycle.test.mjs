@@ -17,7 +17,7 @@ test('admin links react to same-tab and cross-tab key changes, reject late resul
     pending.push({resolve,key:options.headers['X-Admin-Key']||''});
   });
   let stop;
-  const reply=async(index,canEditCatalogue,canReview)=>{pending[index].resolve(Response.json({canEditCatalogue,canReview}));await tick()};
+  const reply=async(index,canEditCatalogue,canReview)=>{pending[index].resolve(Response.json({canEditCatalogue,canReview,canIdentify:false}));await tick()};
   try {
     stop=mountAdminAccess(root,host);await tick();
     assert.deepEqual(elements.map(e=>e.hidden),[true,true]);assert.deepEqual(timers.map(t=>t.ms),[15000]);

@@ -45,7 +45,7 @@ type ReviewSnapshot = {
 }
 
 module GetAccess =
-    type Response = { CanEditCatalogue:bool; CanReview:bool }
+    type Response = { CanEditCatalogue:bool; CanReview:bool; CanIdentify:bool }
     let requestContext = true
     let endpoint : Get<Response> = Get "/api/plants/v2/access"
 
@@ -94,3 +94,13 @@ module PromotePhoto =
     type Request = { Id:string; Revision:int; Page:int }
     type Response = { Review:ReviewSnapshot }
     let endpoint : Post<Request,Response> = Post "/api/plants/v2/review/promote"
+
+module SaveFieldNote =
+    type Request = { PlantId:string; Id:string; Revision:int; Text:string; Purpose:string; PhotoIds:string list }
+    type Response = { Personal:PersonalSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/notes/entry"
+
+module IdentifyNote =
+    type Request = { Id:string; Revision:int; Outcome:string; Text:string; AlternativePlantId:string; Page:int }
+    type Response = { Review:ReviewSnapshot }
+    let endpoint : Post<Request,Response> = Post "/api/plants/v2/review/identify"

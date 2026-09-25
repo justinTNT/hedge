@@ -1,74 +1,97 @@
 # Native Plants: field notes, corrections and identification requests
 
-Recorded: 25 September 2026. Status: agreed direction for later design; not implemented.
+Recorded 25 September 2026. Implemented 26 September 2026 following the owner's
+instruction and clarification of photo requirements.
 
-## User-facing model
+## Entry model
 
-The field-notes section can offer three separate actions, all creating the same
-kind of entry: authored text, a set of associated photographs, and a purpose.
+| Action | Photos | Audience |
+| --- | --- | --- |
+| Private Note | None; text only. | Author only. |
+| Correction | Optional, from the author's species photo roll. | Author and curators. |
+| ID request | At least one, from the author's species photo roll. | Author and identifiers. |
 
-| Action | Purpose and intended audience |
-| --- | --- |
-| Private Note | Personal observations, visible to their author. |
-| Correction | A suggested correction submitted for editorial review. |
-| ID request | A request for identification help, submitted to people granted the appropriate identification capability. |
+One editor serves all three actions. It selects existing photographs or uploads
+and selects a new one if the roll has room. Uploading keeps the text draft;
+cancelling the entry leaves the uploaded photo in the roll. Text is required,
+up to 6,000 characters. Standalone gallery uploads remain available.
 
-Use a common editor with the purpose selected by the entry action. Notes and
-corrections can be useful without photographs. Whether an ID request must have
-at least one photograph is an implementation decision for the later plan.
+All purposes share five notes per owner per species. Photos share the existing
+five-photo allowance. Linking an upload to multiple entries never consumes more
+photo slots. Offering a photo for publication is separate from attaching it.
 
-Photographs are linked from the owner's collection, not copied into each entry.
-The same photograph can appear in an entry and in the owner's species gallery
-without consuming two upload slots. Standalone gallery uploads remain useful.
-An offer for public gallery inclusion is separate from sharing an entry and its
-attachments with the relevant reviewers. Linking must never unintentionally
-expose other private notes or photographs.
+## Review and lifecycle
 
-## Identification outcomes
+- The existing **curator** grant reads corrections, marks their current revision
+  read/unread, and selects explicitly offered photos for publication.
+- A separate **identifier** grant reads ID requests and selected attachments,
+  and responds to a current revision. Neither role implies the other. The owner
+  key can do both; it does not expose private notes or unrelated personal photos.
+- Outcomes are **confirmed**, **alternative suggested**, **not this species**,
+  or **unable to determine**. An alternative selects a different, published
+  catalogue species. It never moves a photo or changes the public species page.
+- Responses store the verified reviewer subject, display name, timestamp,
+  submitted revision and original request text. Authors see attribution, not
+  private provider-account IDs. Owner-key responses say “Site owner”.
+- There is one immutable response per submitted revision. An author's edit
+  reopens review. Earlier responses stay visible to the author, labelled as
+  earlier versions, with the original request text. No conversation thread or
+  response-editing UI is introduced.
+- Withdrawal converts the entry into a text-only private note and removes its
+  attachments. It leaves photos in the roll and response history with the author.
+  Converting a former ID request to a correction does not share that conversation.
+- A linked photo cannot be deleted while an active entry references it. Unlink
+  it, withdraw the entry, or delete the entry first. This prevents deleting the
+  last photo out of a live ID request.
+- Deleting an entry/photo releases its slot. Read/unread, responses, withdrawal,
+  offers and publication do not. Public image copies remain independent.
 
-Possible responses include:
+Queues/media check current grants on every request. A role change clears the
+loaded queue even when another review role remains. Private records stay out
+of the public in-memory catalogue.
 
-- Confirmed as the suggested species.
-- An alternative identification suggested, with a distinct visual treatment.
-- Rejected as this species, without claiming to know the correct identification.
-- Unable to determine / unknown.
+## Storage and boundaries
 
-Preserve the author's original note and attach the reviewer's response and
-outcome. Do not overwrite the author's words or obscure who made the assertion.
-Suggesting an alternative and simply rejecting the proposed species convey
-different information. This workflow does not automatically change a public
-species account, move a photograph or publish an image.
+All domain behavior remains in Native Plants. Hedge supplies verified identity,
+grants, session locking, generated codecs/clients/routes, and owner-only admin.
 
-## Ownership and boundaries
+Migration **0003_field_notes.sql** adds nullable purpose and photo_ids fields to
+plant_notes, plus identification_responses. Null purpose derives from the old
+correction flag, preserving existing notes without rewriting them. Photo IDs are
+a bounded JSON list of at most five references, replaced in the same conditional
+SQL statement as text/purpose/revision. SQL checks readiness, species and owner;
+linking/deletion races cannot leave invalid attachments.
 
-This is Native Plants domain behavior: entry purpose, photo associations,
-identification responses, editorial states and presentation belong to the app.
-Use Hedge's identity and access-control capabilities for authenticated subjects
-and grants. An identification role/capability and its bounded actions still need
-to be defined; do not assume the existing curator role has these new powers.
+Responses have a unique (note_id, note_revision) index. Conditional inserts reject
+changed/deleted/withdrawn submissions and invalid alternatives. Private tables
+remain excluded from generic admin CRUD.
 
-The proposed allowance remains five notes per owner per species across all
-three purposes together, and five personal photographs per owner per species.
-Linking photographs does not create additional quota. Future resolve/archive/
-delete actions must explicitly decide whether they release an allowance; current
-correction read/unread and photo promotion do not do so.
+Generated endpoints add POST /api/plants/v2/notes/entry and
+POST /api/plants/v2/review/identify. Old checkbox-based save routes remain during
+the compatibility window, but cannot erase attachments or rewrite ID history.
 
-## Still to decide when implementing
+## Verification and release
 
-- Exact entry, attachment and reviewer-response schema and migration from the
-  existing correction flag; preserve current private notes and photographs.
-- Which reviewers can read a submitted entry and its attachments, and what
-  happens on withdrawal, purpose changes, photo deletion or a revised submission.
-- Review status, revision checks, response authorship, any follow-up conversation
-  and the effect of administrative lifecycle actions on the five-item limits.
-- Presentation of each purpose/outcome, including how proposed alternatives
-  refer to another taxon and what happens if its identification remains uncertain.
+Tests cover purpose/photo requirements, owner/species isolation, shared quotas,
+separate reviewer/media access, withdrawal/revocation, attribution/history,
+stale-write races, old-client safety, preservation migration, upload drafts and
+client role changes. The repository gate also passes.
 
-No implementation is authorized by this note alone. The immediate gallery and
-notebook visual cleanup is separate and already deployed.
+Chrome on an isolated in-memory fixture verified an ID submission using an
+existing photo, the review queue, an attributed response and its return to the
+author's notebook. Browser file selection was denied by the browser tool; a real
+browser upload remains a manual check. API upload and client draft tests pass.
 
-## Existing implementation and related plans
+See [PREVIEW.md](../apps/native-plants/PREVIEW.md) for deployment status.
 
-- [Current contributions, privacy and limits](../apps/native-plants/CONTRIBUTIONS.md)
-- [Identity and personal-contribution integration](../apps/native-plants/IDENTITY-INTEGRATION.md)
-- [Hedge identity/access-control boundaries](IDENTITY-ACCESS-CONTROL-overarching-plan.md)
+## Later decisions
+
+Follow-up conversation, editing a reviewer's response, alternatives outside the
+catalogue, reviewer assignment/notifications and archival lifecycle changes stay
+separate. None is required for these entry purposes.
+
+## Related notes
+
+- [Contributions, privacy and limits](../apps/native-plants/CONTRIBUTIONS.md)
+- [Identity integration](../apps/native-plants/IDENTITY-INTEGRATION.md)
+- [Shared identity/access-control boundaries](IDENTITY-ACCESS-CONTROL-overarching-plan.md)

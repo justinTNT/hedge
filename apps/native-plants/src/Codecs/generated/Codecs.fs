@@ -25,6 +25,7 @@ module Encode =
     let inline glossaryTerm (v: Models.Domain.GlossaryTerm) = encode v
     let inline sourceReference (v: Models.Domain.SourceReference) = encode v
     let inline plantNote (v: Models.Domain.PlantNote) = encode v
+    let inline identificationResponse (v: Models.Domain.IdentificationResponse) = encode v
     let inline personalPlantPhoto (v: Models.Domain.PersonalPlantPhoto) = encode v
     let inline plantViewPreference (v: Models.Domain.PlantViewPreference) = encode v
     let inline contributionClaim (v: Models.Domain.ContributionClaim) = encode v
@@ -35,6 +36,8 @@ module Encode =
     // -- API view types --
 
     // -- API request encoders --
+    let inline identifyNoteReq (v: Models.Api.IdentifyNote.Request) = encode v
+    let inline saveFieldNoteReq (v: Models.Api.SaveFieldNote.Request) = encode v
     let inline promotePhotoReq (v: Models.Api.PromotePhoto.Request) = encode v
     let inline reviewCorrectionReq (v: Models.Api.ReviewCorrection.Request) = encode v
     let inline selectHeroReq (v: Models.Api.SelectHero.Request) = encode v
@@ -54,6 +57,7 @@ module Decode =
     let glossaryTerm : Decoder<Models.Domain.GlossaryTerm> = decode<Models.Domain.GlossaryTerm>()
     let sourceReference : Decoder<Models.Domain.SourceReference> = decode<Models.Domain.SourceReference>()
     let plantNote : Decoder<Models.Domain.PlantNote> = decode<Models.Domain.PlantNote>()
+    let identificationResponse : Decoder<Models.Domain.IdentificationResponse> = decode<Models.Domain.IdentificationResponse>()
     let personalPlantPhoto : Decoder<Models.Domain.PersonalPlantPhoto> = decode<Models.Domain.PersonalPlantPhoto>()
     let plantViewPreference : Decoder<Models.Domain.PlantViewPreference> = decode<Models.Domain.PlantViewPreference>()
     let contributionClaim : Decoder<Models.Domain.ContributionClaim> = decode<Models.Domain.ContributionClaim>()
@@ -64,6 +68,8 @@ module Decode =
     // -- API view types --
 
     // -- API response decoders --
+    let identifyNoteResponse : Decoder<Models.Api.IdentifyNote.Response> = decode<Models.Api.IdentifyNote.Response>()
+    let saveFieldNoteResponse : Decoder<Models.Api.SaveFieldNote.Response> = decode<Models.Api.SaveFieldNote.Response>()
     let promotePhotoResponse : Decoder<Models.Api.PromotePhoto.Response> = decode<Models.Api.PromotePhoto.Response>()
     let reviewCorrectionResponse : Decoder<Models.Api.ReviewCorrection.Response> = decode<Models.Api.ReviewCorrection.Response>()
     let selectHeroResponse : Decoder<Models.Api.SelectHero.Response> = decode<Models.Api.SelectHero.Response>()
@@ -80,6 +86,8 @@ module Decode =
     let getCatalogueResponse : Decoder<Models.Api.GetCatalogue.Response> = decode<Models.Api.GetCatalogue.Response>()
 
     // -- API request decoders --
+    let identifyNoteReq : Decoder<Models.Api.IdentifyNote.Request> = decode<Models.Api.IdentifyNote.Request>()
+    let saveFieldNoteReq : Decoder<Models.Api.SaveFieldNote.Request> = decode<Models.Api.SaveFieldNote.Request>()
     let promotePhotoReq : Decoder<Models.Api.PromotePhoto.Request> = decode<Models.Api.PromotePhoto.Request>()
     let reviewCorrectionReq : Decoder<Models.Api.ReviewCorrection.Request> = decode<Models.Api.ReviewCorrection.Request>()
     let selectHeroReq : Decoder<Models.Api.SelectHero.Request> = decode<Models.Api.SelectHero.Request>()
@@ -94,6 +102,30 @@ module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
+
+    let identifyNoteSchema =
+        schema "Models.Api.IdentifyNote.Request" [
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Outcome" FString [Required; Trim]
+            fieldWith "Text" FString [Required; Trim]
+            fieldWith "AlternativePlantId" FString [Required; Trim]
+            fieldWith "Page" FInt []
+        ]
+
+    let inline identifyNoteReq (r: Models.Api.IdentifyNote.Request) = validate identifyNoteSchema r
+
+    let saveFieldNoteSchema =
+        schema "Models.Api.SaveFieldNote.Request" [
+            fieldWith "PlantId" FString [Required; Trim]
+            fieldWith "Id" FString [Required; Trim]
+            fieldWith "Revision" FInt []
+            fieldWith "Text" FString [Required; Trim]
+            fieldWith "Purpose" FString [Required; Trim]
+            fieldWith "PhotoIds" (FList FString) []
+        ]
+
+    let inline saveFieldNoteReq (r: Models.Api.SaveFieldNote.Request) = validate saveFieldNoteSchema r
 
     let promotePhotoSchema =
         schema "Models.Api.PromotePhoto.Request" [

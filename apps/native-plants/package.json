@@ -20,7 +20,8 @@
     "db:migrate:identity": "wrangler d1 execute native-plants-db --local --file migrations/0001_identity.sql",
     "db:migrate:contributions": "wrangler d1 execute native-plants-db --local --file migrations/0002_contributions.sql",
     "check:preview": "python3 scripts/check-preview.py && node --test test/preview-gate.test.mjs",
-    "deploy:preview": "npm run build && npm run check:preview && wrangler deploy --env preview"
+    "deploy:preview": "npm run build && npm run check:preview && wrangler deploy --env preview",
+    "db:migrate:field-notes": "wrangler d1 execute native-plants-db --local --file migrations/0003_field_notes.sql"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

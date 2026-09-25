@@ -32,7 +32,8 @@ let getRevision (env: Env) = promise {
 let inline private privateResponse cookie value = ContributionApi.decorate cookie (respond value)
 let getAccess request (env:Env) _ctx = promise {
     let! allowed,cookie=Contributions.reviewer env request
-    return privateResponse cookie ({CanEditCatalogue=AuthConfig.isOwner env request;CanReview=allowed}:GetAccess.Response)
+    let! identify,renewal=Contributions.identifier env request
+    return privateResponse (Option.orElse cookie renewal) ({CanEditCatalogue=AuthConfig.isOwner env request;CanReview=allowed;CanIdentify=identify}:GetAccess.Response)
 }
 let getPersonal id request (env:Env) _ctx =
     ContributionApi.withOwner request env id (fun who -> promise {
@@ -40,8 +41,8 @@ let getPersonal id request (env:Env) _ctx =
         return privateResponse who.Cookie ({Personal=ContributionApi.personalSnapshot data}:GetPersonal.Response)
     })
 let getReview (query:GetReview.Query) request (env:Env) _ctx =
-    ContributionApi.withReviewer request env (fun cookie -> promise {
-        let! data=Contributions.reviewData env (match System.Int32.TryParse(Option.defaultValue "0" query.Page) with true,n -> n | _ -> 0)
+    ContributionApi.withReviewAccess request env (fun cookie curate identify -> promise {
+        let! data=Contributions.reviewDataFor env (match System.Int32.TryParse(Option.defaultValue "0" query.Page) with true,n -> n | _ -> 0) curate identify
         return privateResponse cookie ({Review=ContributionApi.reviewSnapshot data}:GetReview.Response)
     })
 
@@ -70,12 +71,28 @@ let selectHero (body:SelectHero.Request) request (env:Env) _ctx =
         Contributions.mutateCommand env body.PlantId who (Models.Contributions.SelectHero body.Id)
             (fun data -> privateResponse who.Cookie ({Personal=ContributionApi.personalSnapshot data}:SelectHero.Response)))
 
-let reviewCorrection (body:ReviewCorrection.Request) request (env:Env) _ctx =
-    ContributionApi.withReviewer request env (fun cookie ->
-        Contributions.reviewCommand env cookie body.Page (Models.Contributions.CorrectionRead(body.Id,body.Revision,body.Read))
-            (fun data -> privateResponse cookie ({Review=ContributionApi.reviewSnapshot data}:ReviewCorrection.Response)))
+let reviewCorrection (body:ReviewCorrection.Request) request (env:Env) ctx =
+    ContributionApi.withReviewer request env (fun cookie -> promise {
+        let! changed=Contributions.applyCuratorCommand env (Models.Contributions.CorrectionRead(body.Id,body.Revision,body.Read))
+        if changed then return! getReview {Page=Some(string body.Page)} request env ctx
+        else return Contributions.conflict cookie
+    })
 
-let promotePhoto (body:PromotePhoto.Request) request (env:Env) _ctx =
-    ContributionApi.withReviewer request env (fun cookie ->
-        Contributions.reviewCommand env cookie body.Page (Models.Contributions.PromotePhoto(body.Id,body.Revision))
-            (fun data -> privateResponse cookie ({Review=ContributionApi.reviewSnapshot data}:PromotePhoto.Response)))
+let promotePhoto (body:PromotePhoto.Request) request (env:Env) ctx =
+    ContributionApi.withReviewer request env (fun cookie -> promise {
+        let! changed=Contributions.applyCuratorCommand env (Models.Contributions.PromotePhoto(body.Id,body.Revision))
+        if changed then return! getReview {Page=Some(string body.Page)} request env ctx
+        else return Contributions.conflict cookie
+    })
+
+let saveFieldNote (body:SaveFieldNote.Request) request (env:Env) _ctx =
+    ContributionApi.withOwner request env body.PlantId (fun who ->
+        Contributions.mutateCommand env body.PlantId who (Models.Contributions.SaveEntry(body.Id,body.Revision,body.Text,body.Purpose,body.PhotoIds))
+            (fun data -> privateResponse who.Cookie ({Personal=ContributionApi.personalSnapshot data}:SaveFieldNote.Response)))
+
+let identifyNote (body:IdentifyNote.Request) request (env:Env) ctx =
+    ContributionApi.withIdentifier request env (fun cookie -> promise {
+        let! changed=FieldNotes.identify env request body
+        if changed then return! getReview {Page=Some(string body.Page)} request env ctx
+        else return Contributions.conflict cookie
+    })

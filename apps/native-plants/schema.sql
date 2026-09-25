@@ -113,7 +113,25 @@ CREATE TABLE plant_notes (
     created_at INTEGER NOT NULL,
     updated_at INTEGER,
     deleted_at INTEGER,
+    purpose TEXT,
+    photo_ids TEXT,
     FOREIGN KEY (plant_id) REFERENCES plants(id)
+);
+
+CREATE TABLE identification_responses (
+    id TEXT PRIMARY KEY,
+    note_id TEXT NOT NULL,
+    note_revision INTEGER NOT NULL,
+    submitted_text TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    text TEXT NOT NULL,
+    alternative_plant_id TEXT,
+    reviewer_provider TEXT NOT NULL,
+    reviewer_id TEXT NOT NULL,
+    reviewer_name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (note_id) REFERENCES plant_notes(id),
+    FOREIGN KEY (alternative_plant_id) REFERENCES plants(id)
 );
 
 CREATE TABLE personal_plant_photos (
@@ -196,6 +214,10 @@ CREATE UNIQUE INDEX idx_source_references_source_key ON source_references(source
 CREATE INDEX idx_source_references_created_at ON source_references(created_at DESC);
 CREATE INDEX idx_plant_notes_plant_id ON plant_notes(plant_id);
 CREATE INDEX idx_plant_notes_created_at ON plant_notes(created_at DESC);
+CREATE INDEX idx_identification_responses_note_id ON identification_responses(note_id);
+CREATE INDEX idx_identification_responses_alternative_plant_id ON identification_responses(alternative_plant_id);
+CREATE UNIQUE INDEX idx_identification_responses_note_id_note_revision ON identification_responses(note_id, note_revision);
+CREATE INDEX idx_identification_responses_created_at ON identification_responses(created_at DESC);
 CREATE INDEX idx_personal_plant_photos_plant_id ON personal_plant_photos(plant_id);
 CREATE INDEX idx_personal_plant_photos_created_at ON personal_plant_photos(created_at DESC);
 CREATE INDEX idx_plant_view_preferences_plant_id ON plant_view_preferences(plant_id);

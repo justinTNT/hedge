@@ -9,6 +9,8 @@ open Codecs
 // --- Transport-neutral client (C2) ---
 
 type Client = {
+    identifyNote: Models.Api.IdentifyNote.Request -> JS.Promise<Result<Models.Api.IdentifyNote.Response, Hedge.Http.ApiError>>
+    saveFieldNote: Models.Api.SaveFieldNote.Request -> JS.Promise<Result<Models.Api.SaveFieldNote.Response, Hedge.Http.ApiError>>
     promotePhoto: Models.Api.PromotePhoto.Request -> JS.Promise<Result<Models.Api.PromotePhoto.Response, Hedge.Http.ApiError>>
     reviewCorrection: Models.Api.ReviewCorrection.Request -> JS.Promise<Result<Models.Api.ReviewCorrection.Response, Hedge.Http.ApiError>>
     selectHero: Models.Api.SelectHero.Request -> JS.Promise<Result<Models.Api.SelectHero.Response, Hedge.Http.ApiError>>
@@ -26,6 +28,8 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
+    identifyNote = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/review/identify"; Query = []; Headers = []; Body = Some (Encode.identifyNoteReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.identifyNoteResponse
+    saveFieldNote = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/notes/entry"; Query = []; Headers = []; Body = Some (Encode.saveFieldNoteReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.saveFieldNoteResponse
     promotePhoto = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/review/promote"; Query = []; Headers = []; Body = Some (Encode.promotePhotoReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.promotePhotoResponse
     reviewCorrection = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/review/correction"; Query = []; Headers = []; Body = Some (Encode.reviewCorrectionReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.reviewCorrectionResponse
     selectHero = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/plants/v2/hero"; Query = []; Headers = []; Body = Some (Encode.selectHeroReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.selectHeroResponse
