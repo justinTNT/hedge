@@ -172,9 +172,10 @@ Preview validation checked 4,041 media references and 4,609 deploy assets.
 
 ## Boundary refactor prepared locally — not deployed
 
-The `native-plants-boundaries` integration branch combines the shared Hedge
-boundary refactor with Native Plants' typed contribution API, credential events
-and explicit admin descriptors. No schema migration, reseeding, changed OAuth
+The shared Hedge boundary refactor is merged into main. The `native-plants`
+branch is rebased onto main at `3efa413` and includes the verified typed
+contribution API, credential events and explicit admin descriptors. The original
+app checkout now contains the completed integration. No schema migration, reseeding, changed OAuth
 configuration or new grant is required. The preview's current version and remote
 content are unchanged by this work.
 
@@ -203,3 +204,10 @@ application, immediate admin navigation updates, read-only Identity and the
 generated review queue. Verified contributor/curator operations and revocation
 were exercised through the compiled Worker with SQLite and simulated providers;
 this refactor did not repeat live Google/GitHub sign-in or browser file selection.
+
+
+Post-rebase verification in the normal Native Plants checkout passed: full
+repository `./test.sh`, production app build, 18 importer tests, 95 Node tests,
+and private-preview validation (4,041 media references and 4,610 assets). The
+existing local Worker on port 8794 serves the v2 API. No remote deployment or
+data migration was performed.
