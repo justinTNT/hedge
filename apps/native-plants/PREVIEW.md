@@ -246,3 +246,54 @@ client. The preview password and owner key are unchanged.
 Sanitized live results are in ignored `.local/boundary-release-check.json` and
 `.local/preview-cloudflare-settings.json`. Live verification changed no
 catalogue, grant or contribution records.
+
+## Field notes and identification deployed — 26 September 2026
+
+Worker version **01c70164-bd98-4357-ae25-daaaab6b9100**, source **53f2814**, adds
+Private Note (text only), Correction (optional photos), and ID request (required
+photos). The editor selects from the owner's photo roll or uploads into its
+remaining allowance. The separate **identifier** role reviews ID requests;
+curators keep corrections and offered photos. The owner key permits both.
+
+Responses preserve author wording and reviewer attribution. Author edits reopen
+review, older responses are labelled, and withdrawal makes the text private.
+Attachments share only the selected photos with the relevant role. They are
+independent from offering a photo for publication.
+
+Migration **0003_field_notes.sql** was applied once to the local database and
+the existing preview database before the Worker was deployed. It adds two nullable
+note columns and the response table/indexes. Both databases were backed up.
+A migration rehearsal and the live before/after comparison verified preservation
+of every existing row and column, including the 531 plants and all existing
+contributions, identities and grants. No data was reseeded; no new roles were
+assigned to anyone. Passwords, OAuth settings and preview gate are unchanged.
+
+Ignored backups and sanitized checks in apps/native-plants:
+- .local/backups/field-notes-local-before-20260926.sqlite
+- .local/backups/field-notes-preview-before-20260926.sql
+- .local/backups/field-notes-preview-after-20260926.sql
+- .local/field-notes-migration-validation.json
+- .local/field-notes-release-check.json
+
+Validation: repository ./test.sh, production app build, **104 Node tests**,
+**18 importer tests**, and preview checks (4,041 media references; 4,610 assets).
+Coverage includes purpose requirements, attachment ownership, shared quotas,
+independent grants/media access, withdrawal/revocation, four outcomes, attributed
+history, stale writes, legacy client guards and non-destructive migration.
+
+Chrome on an isolated in-memory fixture verified selecting a roll photo,
+submitting an ID request, reviewing it, and returning its attributed response to
+the author's notebook. Browser file selection was denied by the browser tool;
+a full browser upload remains a manual check. API upload and client
+draft-preservation tests pass.
+
+Live HTTPS checks verified the private gate, anonymous contribution denials,
+owner capabilities, generated nested review decoding, new endpoint validation,
+restricted admin resources, curated media and the existing Google redirect.
+An initial read returned 503 while the post-migration export was running;
+the complete check passed after the export finished. Live checks created no
+catalogue, grant or contribution records. No new live Google consent flow ran.
+
+Refresh the preview to load the new client. To delegate ID review, use the
+owner admin's Identity lookup and create an enabled Grant with Role **identifier**.
+Use both grants only for someone who should also curate corrections/photos.
