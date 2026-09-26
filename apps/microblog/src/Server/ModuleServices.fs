@@ -37,7 +37,9 @@ let blog (env: Env) (request: WorkerRequest) : Blog.Services.Services =
       Events = env.EVENTS
       AdminKey = env.ADMIN_KEY
       Author = authorResolver env.DB
-      Guest = Hedge.GuestSession.service (fun () -> Server.GuestConfig.deps env request)
+      // Bearer-first (Capacitor POC), else the signed cookie. A web request carries no bearer, so this
+      // is identical to the cookie-only service; a native client's Authorization: Bearer resolves here.
+      Guest = Hedge.MobileSession.service (Server.GuestConfig.mobileDeps env) (fun () -> Server.GuestConfig.deps env request)
       NewId = newId
       Now = epochNow
       CaptureEnabled = true }

@@ -57,6 +57,12 @@ let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
       LegacyEligible = (fun value -> Identity.Server.legacyEligible env.DB value migrationStart)
       LegacyHasLinkedIdentity = (fun guestId -> Identity.Server.hasLinkedIdentity env.DB guestId) }
 
+/// Bind the mobile bearer-session lookup (the server side of Hedge.MobileSession) for this env. `now`
+/// is fixed inside resolveByHash so absolute expiry is evaluated consistently per call. Only consulted
+/// when a request actually carries `Authorization: Bearer` — a web request never touches mobile_sessions.
+let mobileDeps (env: Env) : Hedge.MobileSession.Deps =
+    { LookupByHash = fun hash -> Identity.Mobile.resolveByHash env.DB (epochNow ()) hash }
+
 /// Resolve the guest for a WRITE (comment / identity mutation): verified or bridge-authorized, else
 /// Rejected. Never creates a guest — that is the bootstrap path's job (router /api/auth/me).
 let require (env: Env) (request: WorkerRequest) : JS.Promise<Hedge.GuestSession.RequireResult> =

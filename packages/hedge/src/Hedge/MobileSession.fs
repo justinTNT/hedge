@@ -76,3 +76,10 @@ let requireGuestOrBearer
         | Invalid -> return Rejected
         | NoBearer -> return! cookieResolve request
     }
+
+/// A bearer-aware guest WRITE service: bearer-first (fail-closed), else the app's cookie policy. A
+/// drop-in for GuestSession.service where a host also accepts native bearers — a web request (no
+/// bearer) behaves exactly as the cookie-only service, so existing browser writes are unchanged.
+let service (mobile: Deps) (getGuestDeps: unit -> GuestSession.Deps) : GuestSession.Service =
+    { Require = fun request ->
+        requireGuestOrBearer mobile (fun req -> requireGuest (getGuestDeps ()) (readCookie req)) request }

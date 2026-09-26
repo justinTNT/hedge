@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    OPTIONAL mobile bearer-session storage (Identity.Mobile) — the server side of Hedge.MobileSession's
+    injected hash lookup, for native (Capacitor) clients. Import ONLY in a host that mints/reads mobile
+    sessions (it must also add the MobileModels gen slice + apply the mobile_sessions migration). Import
+    AFTER identity.server.props and BEFORE the app's GuestConfig (which binds Identity.Mobile.resolveByHash
+    into Hedge.MobileSession.Deps). Hosts without native clients omit this import entirely.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Mobile.fs" />
+  </ItemGroup>
+</Project>

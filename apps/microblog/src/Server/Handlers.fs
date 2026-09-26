@@ -38,6 +38,37 @@ let resolveIdentity = Identity.Handlers.resolveIdentity
 let onOAuthComplete : D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete> =
     Identity.Handlers.onOAuthComplete oauthDeps
 
+// ---- Mobile bearer-session routes (Capacitor POC) ----
+
+/// 30-day absolute mobile session lifetime (the plan's default; provider re-auth after).
+let [<Literal>] private MobileSessionTtl = 2592000
+
+/// POST /api/mobile/bootstrap — mint an ANONYMOUS mobile bearer session (Capacitor POC first launch)
+/// so on-device commenting works before login. The app is cross-origin (capacitor://localhost), so no
+/// same-origin gate; POC only — rate-limiting/abuse controls are a follow-up. Returns the opaque bearer
+/// once; it authenticates only the fresh anonymous guest (possession is not proof of an identity).
+let mobileBootstrap (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let now = epochNow ()
+        do! Identity.Mobile.purgeExpired env.DB now
+        let guestId = newId ()
+        let! token = Identity.Mobile.mintSession env.DB guestId now MobileSessionTtl
+        return okJson (sprintf """{"token":"%s"}""" token)
+    }
+
+/// GET /api/mobile/me — resolve the request's bearer to its guest's active identity (or null when
+/// anonymous / no valid bearer). The bearer analogue of /api/auth/me for native clients.
+let mobileMe (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match! Hedge.MobileSession.resolve (Server.GuestConfig.mobileDeps env) request with
+        | Hedge.MobileSession.Valid guestId ->
+            let! identityJson = resolveIdentity env.DB guestId
+            match identityJson with
+            | Some json -> return okJson (sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guestId json)
+            | None -> return okJson """{"guest":null}"""
+        | _ -> return okJson """{"guest":null}"""
+    }
+
 /// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
 let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request
 let revertIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.revert (writeDeps env) request
