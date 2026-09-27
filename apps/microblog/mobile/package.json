@@ -1,0 +1,24 @@
+{
+  "name": "wtfail-mobile",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Capacitor POC shell for wt.fail (Android, browser-OAuth + opaque bearer session).",
+  "scripts": {
+    "build:web": "cd .. && HEDGE_SITE= SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" API_ORIGIN=https://wt.fail MOBILE=1 npm run build && rm -rf mobile/www && mkdir -p mobile/www && cp -r _site/* mobile/www/",
+    "add:android": "cap add android",
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "run:android": "cap run android",
+    "dev:android": "cap run android --live-reload --host $(ipconfig getifaddr en0 2>/dev/null || hostname) --port 3030"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/core": "^6.1.0",
+    "@aparajita/capacitor-secure-storage": "^3.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0"
+  }
+}
