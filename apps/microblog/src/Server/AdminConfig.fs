@@ -21,10 +21,12 @@ let private curatorReadable = set [ "AlertSource"; "PendingPost"; "Promotion" ]
 let private curatorPermits (resource: string) (op: AdminOp) : bool =
     Set.contains resource curatorReadable && (op = OpList || op = OpRead)
 
-/// mobile_sessions holds opaque bearer-session hashes (Capacitor POC) — never exposed through the
-/// generic admin (no CRUD, no discovery). Filtered by name so /api/admin/MobileSession 404s.
+/// mobile_sessions / mobile_auth_codes hold opaque bearer + one-time-code hashes (Capacitor POC) —
+/// never exposed through the generic admin (no CRUD, no discovery). Filtered by name so
+/// /api/admin/MobileSession and /api/admin/MobileAuthCode 404.
+let private mobileTables = set [ "MobileSession"; "MobileAuthCode" ]
 let private adminTables =
-    Server.AdminGen.tables |> List.filter (fun t -> t.Name <> "MobileSession")
+    Server.AdminGen.tables |> List.filter (fun t -> not (Set.contains t.Name mobileTables))
 
 let adminConfig : AdminConfig<Env> =
     { Tables = adminTables

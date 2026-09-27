@@ -23,6 +23,7 @@ module Encode =
     let inline identity (v: Models.Domain.Identity) = encode v
     let inline grant (v: Grants.Domain.Grant) = encode v
     let inline mobileSession (v: Mobile.Domain.MobileSession) = encode v
+    let inline mobileAuthCode (v: Mobile.Domain.MobileAuthCode) = encode v
 
     // -- API view types --
 
@@ -37,6 +38,7 @@ module Decode =
     let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
     let grant : Decoder<Grants.Domain.Grant> = decode<Grants.Domain.Grant>()
     let mobileSession : Decoder<Mobile.Domain.MobileSession> = decode<Mobile.Domain.MobileSession>()
+    let mobileAuthCode : Decoder<Mobile.Domain.MobileAuthCode> = decode<Mobile.Domain.MobileAuthCode>()
 
     // -- API view types --
 

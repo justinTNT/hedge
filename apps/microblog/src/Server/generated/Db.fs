@@ -193,8 +193,53 @@ let updateMobileSession (id: string) (create: MobileSessionCreate) (db: D1Databa
 let deleteMobileSession (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM mobile_sessions WHERE id = ?")) [| box id |]
 
+// ============================================================
+// MobileAuthCode (mobile_auth_codes)
+// ============================================================
+
+type MobileAuthCodeRow = {
+    Id: string
+    GuestId: string
+    Challenge: string
+    ExpiresAt: int
+    CreatedAt: int
+}
+
+type MobileAuthCodeCreate = {
+    GuestId: string
+    Challenge: string
+    ExpiresAt: int
+}
+
+let parseMobileAuthCodeRow (row: obj) : MobileAuthCodeRow =
+    { Id = rowStr row "id"
+      GuestId = rowStr row "guest_id"
+      Challenge = rowStr row "challenge"
+      ExpiresAt = rowInt row "expires_at"
+      CreatedAt = rowInt row "created_at" }
+
+let selectMobileAuthCodes (db: D1Database) : D1PreparedStatement =
+    db.prepare("SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes ORDER BY created_at DESC LIMIT 100")
+
+let selectMobileAuthCode (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes WHERE id = ?")) [| box id |]
+
+let insertMobileAuthCode (db: D1Database) (id: string) (now: int) (create: MobileAuthCodeCreate) =
+    let stmt =
+        bind (db.prepare("INSERT INTO mobile_auth_codes (id, guest_id, challenge, expires_at, created_at) VALUES (?, ?, ?, ?, ?)"))
+             [| box id; box create.GuestId; box create.Challenge; box create.ExpiresAt; box now |]
+    {| Stmt = stmt; Id = id; CreatedAt = now |}
+
+let updateMobileAuthCode (id: string) (create: MobileAuthCodeCreate) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("UPDATE mobile_auth_codes SET guest_id = ?, challenge = ?, expires_at = ? WHERE id = ?"))
+         [| box create.GuestId; box create.Challenge; box create.ExpiresAt; box id |]
+
+let deleteMobileAuthCode (id: string) (db: D1Database) : D1PreparedStatement =
+    bind (db.prepare("DELETE FROM mobile_auth_codes WHERE id = ?")) [| box id |]
+
 module Tables =
     let guest = "guests"
     let identity = "identities"
     let grant = "grants"
     let mobileSession = "mobile_sessions"
+    let mobileAuthCode = "mobile_auth_codes"

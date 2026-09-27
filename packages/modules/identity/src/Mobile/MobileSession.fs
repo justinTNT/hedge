@@ -22,3 +22,16 @@ type MobileSession = {
     ExpiresAt: int
     CreatedAt: CreateTimestamp
 }
+
+/// A short-lived, one-use PKCE authorization code for the browser-OAuth login handoff. Minted server
+/// -side after OAuth completes (bound to the verified guest + the app's `challenge = sha256(verifier)`),
+/// handed to the app via the `wtfail://auth?code=` deeplink, then CONSUMED at /api/mobile/exchange for a
+/// real bearer. `Id` is the SHA-256 hash of the opaque code (never the code itself). Short expiry;
+/// deleted on consume so it can't be replayed. Never exposed through the generic admin.
+type MobileAuthCode = {
+    Id: PrimaryKey<string>
+    GuestId: string
+    Challenge: string
+    ExpiresAt: int
+    CreatedAt: CreateTimestamp
+}

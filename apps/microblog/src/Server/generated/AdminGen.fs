@@ -95,10 +95,32 @@ let mobileSession : AdminTable =
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["GuestId"; "ExpiresAt"] }
 
+let mobileAuthCode : AdminTable =
+    { Name = "MobileAuthCode"
+      Table = "mobile_auth_codes"
+      Schema =
+        schema "MobileAuthCode" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString []
+            fieldWith "Challenge" FString []
+            fieldWith "ExpiresAt" FInt []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes WHERE id = ?"
+      Insert = "INSERT INTO mobile_auth_codes (id, guest_id, challenge, expires_at, created_at) VALUES (?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE mobile_auth_codes SET guest_id = ?, challenge = ?, expires_at = ? WHERE id = ?"
+      Delete = "DELETE FROM mobile_auth_codes WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["GuestId"; "Challenge"; "ExpiresAt"] }
+
 let private ownTables : AdminTable list = [
     guest
     identity
     grant
     mobileSession
+    mobileAuthCode
 ]
 let tables : AdminTable list = ownTables @ Blog.AdminGen.tables

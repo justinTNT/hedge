@@ -7,6 +7,7 @@ module Server.Handlers
 // darwin.news `getRhymes` route over the composed blog module's tables.
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Workers
@@ -24,7 +25,11 @@ open Blog.Db
 let private oauthDeps : Identity.Handlers.OAuthDeps =
     { ReassignStatements = Server.AttributionPolicy.reassignStatements
       CommentTables = Server.AttributionPolicy.commentTables
-      ActivateOnReturn = fun returnTo -> (returnTo.TrimEnd('/')).EndsWith("/curator") }
+      ActivateOnReturn = fun returnTo ->
+        (returnTo.TrimEnd('/')).EndsWith("/curator")
+        // The mobile browser-OAuth handoff returns to /api/mobile/return?challenge=… (a same-site path,
+        // so it survives safeReturnPath). Activate the verified identity there too — no claim screen.
+        || returnTo.StartsWith("/api/mobile/return") }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
 let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
@@ -67,6 +72,60 @@ let mobileMe (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
             | Some json -> return okJson (sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guestId json)
             | None -> return okJson """{"guest":null}"""
         | _ -> return okJson """{"guest":null}"""
+    }
+
+/// The app's registered custom scheme (POC). The one-time CODE (never a bearer) rides in the deeplink.
+let [<Literal>] private MobileDeeplink = "wtfail://auth"
+
+/// GET /api/mobile/return — the same-site landing after browser-OAuth. The system browser holds the
+/// verified guest cookie here (set by the OAuth callback, which activated the identity because
+/// ActivateOnReturn matches this path). Mint a one-time PKCE code bound to that guest + the app's
+/// challenge, then 302 to the app's deeplink; the app exchanges the code (+ its verifier) for a bearer.
+let mobileReturn (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let challenge = getQueryParam request.url "challenge"
+        let! authz = Server.GuestConfig.require env request
+        match authz with
+        | Hedge.GuestSession.Accepted guest when not (isNull (box challenge)) && challenge <> "" ->
+            let! code = Identity.Mobile.mintCode env.DB guest.GuestId challenge (epochNow ())
+            return redirectResponseOpt (sprintf "%s?code=%s" MobileDeeplink code) None
+        | Hedge.GuestSession.Accepted _ -> return redirectResponseOpt (sprintf "%s?error=challenge" MobileDeeplink) None
+        | Hedge.GuestSession.Rejected -> return redirectResponseOpt (sprintf "%s?error=session" MobileDeeplink) None
+    }
+
+/// POST /api/mobile/exchange {code, verifier} — the app trades its one-time code + PKCE verifier,
+/// presenting its OLD anonymous bearer, for a verified bearer. Verifies the code and the PKCE proof,
+/// MERGES the app's anonymous content into the verified identity (cross-guest reassign), rotates the
+/// old anon session out, and mints the verified session.
+let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! bodyText = request.text()
+        let parsed = JS.JSON.parse bodyText
+        let rawCode : string = parsed?code
+        let verifier : string = parsed?verifier
+        if isNull (box rawCode) || rawCode = "" || isNull (box verifier) || verifier = "" then
+            return badRequest "Missing code or verifier"
+        else
+            let now = epochNow ()
+            let! consumed = Identity.Mobile.consumeCode env.DB now rawCode
+            match consumed with
+            | None -> return unauthorized ()
+            | Some (verifiedGuestId, challenge) ->
+                let! proof = Hedge.MobileSession.sha256Hex verifier
+                if proof <> challenge then return unauthorized ()
+                else
+                    match Hedge.MobileSession.readBearer request with
+                    | Some rawBearer ->
+                        let! oldHash = Hedge.MobileSession.sha256Hex rawBearer
+                        let! anonGuestId = Identity.Mobile.resolveByHash env.DB now oldHash
+                        match anonGuestId with
+                        | Some ag ->
+                            do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId
+                            do! Identity.Mobile.revokeByHash env.DB oldHash
+                        | None -> ()
+                    | None -> ()
+                    let! token = Identity.Mobile.mintSession env.DB verifiedGuestId now MobileSessionTtl
+                    return okJson (sprintf """{"token":"%s"}""" token)
     }
 
 /// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).

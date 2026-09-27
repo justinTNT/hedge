@@ -23,6 +23,12 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Handlers.mobileBootstrap env)
     | GET path when matchPath "/api/mobile/me" path = Some (Exact "/api/mobile/me") ->
         Some (Server.Handlers.mobileMe request env)
+    // Browser-OAuth login handoff: the same-site return (mints a one-time code → deeplink) and the
+    // app's PKCE exchange (code + verifier + old anon bearer → merge → verified bearer).
+    | GET path when matchPath "/api/mobile/return" path = Some (Exact "/api/mobile/return") ->
+        Some (Server.Handlers.mobileReturn request env)
+    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
+        Some (Server.Handlers.mobileExchange request env)
     // darwin.news rhyming — a bespoke route over the composed blog module's tables,
     // deliberately hand-written (not a reflected/gen endpoint).
     | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
