@@ -115,6 +115,48 @@ let browserTransport = browserTransportWithCache false
 /// Private reads/writes bypass the browser cache. Compose with GuestSession.transport when needed.
 let uncachedBrowserTransport = browserTransportWithCache true
 
+// -- Transport-neutral native adapter (Capacitor POC) --
+
+/// Capacitor's native HTTP plugin, bound narrowly (not a global fetch patch) so only this transport is
+/// native. Returns { status; data; headers; url }; we force responseType 'text' so `data` is the raw
+/// body text (Hedge.Http's contract), whatever the status.
+[<Emit("CapacitorHttp.request($0)")>]
+let private capacitorHttpRequest (options: obj) : JS.Promise<obj> = jsNative
+
+/// A Hedge.Http.Transport over Capacitor native HTTP, for the BUNDLED mobile app whose WebView origin
+/// (capacitor://localhost) is not wt.fail. Resolves paths against the explicit `apiOrigin` (NOT the
+/// deployment basePath — mobile talks to the API absolutely), attaches the current opaque bearer, and
+/// disables auto-redirect for credentialed calls. Native HTTP → no browser CORS/preflight. A completed
+/// response (any status) is Ok with its status for Http.sendDecode to interpret; only a request that
+/// never completes is a TransportFailure. `bearer` is read PER REQUEST ("" = none), so a fresh login /
+/// sign-out is reflected without rebuilding the transport.
+let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http.Transport =
+    fun (req: Hedge.Http.Request) ->
+        promise {
+            let url = apiOrigin + req.Path + buildQuery req.Query
+            let token = bearer ()
+            let headers =
+                createObj [
+                    for (k, v) in req.Headers do yield k ==> v
+                    if req.Body.IsSome then yield "Content-Type" ==> "application/json"
+                    if token <> "" then yield "Authorization" ==> ("Bearer " + token) ]
+            let options =
+                createObj [
+                    yield "url" ==> url
+                    yield "method" ==> req.Method.ToUpperInvariant()
+                    yield "headers" ==> headers
+                    yield "disableRedirects" ==> true
+                    yield "responseType" ==> "text"
+                    match req.Body with Some b -> yield "data" ==> b | None -> () ]
+            try
+                let! response = capacitorHttpRequest options
+                let status : int = response?status
+                let body : string = response?data
+                return Ok ({ Status = status; Headers = []; Body = (if isNull (box body) then "" else body) }: Hedge.Http.Response)
+            with ex ->
+                return Error (Hedge.Http.TransportFailure ex.Message)
+        }
+
 // -- WebSocket --
 
 [<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]

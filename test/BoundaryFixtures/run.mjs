@@ -83,3 +83,20 @@ test('mobile bearer resolution is fail-closed and shares the role policy with co
   assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','','curator'),'auth-required');
   assert.equal(await runtime.mobileRole(bearer('wrong-token'),'good-token','g1','google','curator'),'auth-required');
 });
+test('capacitor transport resolves the API origin, attaches the bearer, and maps a completed response',async()=>{
+  let captured;
+  globalThis.CapacitorHttp={request:async(o)=>{captured=o;return {status:200,data:'{"ok":true}'}}};
+  try {
+    const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
+    const {ofArray,empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
+    const post=await api.capacitorTransport('https://wt.fail',()=>'tok123',new Request('POST','/api/mobile/exchange',empty(),empty(),'{"code":"c"}'));
+    assert.equal(post.tag,0);assert.equal(post.fields[0].Status,200);assert.equal(post.fields[0].Body,'{"ok":true}');
+    assert.equal(captured.url,'https://wt.fail/api/mobile/exchange');assert.equal(captured.method,'POST');
+    assert.equal(captured.disableRedirects,true);assert.equal(captured.responseType,'text');assert.equal(captured.data,'{"code":"c"}');
+    const ph=new Headers(captured.headers);assert.equal(ph.get('Authorization'),'Bearer tok123');assert.equal(ph.get('Content-Type'),'application/json');
+    // no bearer -> no Authorization; query folded onto the absolute URL; no body -> no Content-Type
+    await api.capacitorTransport('https://wt.fail',()=>'',new Request('GET','/api/mobile/me',ofArray([['q','red flower']]),empty(),undefined));
+    assert.equal(captured.url,'https://wt.fail/api/mobile/me?q=red%20flower');
+    assert.ok(!new Headers(captured.headers).get('Authorization'));assert.ok(!new Headers(captured.headers).get('Content-Type'));
+  } finally { delete globalThis.CapacitorHttp }
+});
