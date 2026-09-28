@@ -18,6 +18,15 @@ open Thoth.Json
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
 
+/// Absolute API origin for a bundled mobile build (window.API_ORIGIN, e.g. https://wt.fail); "" on web.
+/// The direct /api/auth helpers and the native transport resolve against it so the app reaches the API
+/// host, not the capacitor:// WebView. Declared here (before the helpers) so they can prefix it.
+[<Emit("window.API_ORIGIN || ''")>]
+let apiOrigin : string = jsNative
+
+/// What the direct helpers prefix: the API origin on a mobile build, else the deployment base path.
+let private reqBase = if apiOrigin <> "" then apiOrigin else basePath
+
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 
@@ -30,14 +39,14 @@ let buildQuery (pairs: (string * string) list) : string =
 
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch (basePath + url) []
+        let! response = fetch (reqBase + url) []
         let! text = response.text()
         return Decode.fromString decoder text
     }
 
 let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> =
     promise {
-        let! response = fetch (basePath + url) [
+        let! response = fetch (reqBase + url) [
             Method HttpMethod.POST
             requestHeaders [ ContentType "application/json" ]
             Body (BodyInit.Case3 body)
@@ -50,7 +59,7 @@ let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> 
 
 let fetchJsonRaw (url: string) : JS.Promise<obj> =
     promise {
-        let! response = fetch (basePath + url) []
+        let! response = fetch (reqBase + url) []
         let! text = response.text()
         return JS.JSON.parse text
     }
@@ -150,11 +159,6 @@ let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http
         }
 
 // -- Mobile bearer store + default transport selection (Capacitor POC) --
-
-/// The absolute API origin for a bundled mobile build (set on window by the mobile web build, e.g.
-/// https://wt.fail). Empty for an ordinary browser deployment — then the browser transport is used.
-[<Emit("window.API_ORIGIN || ''")>]
-let apiOrigin : string = jsNative
 
 /// The current opaque mobile bearer ("" = none), read live per request. localStorage-backed for the
 /// POC (swap to a Keychain/Keystore plugin in the login-flow slice); wrapped so a blocked/absent store
