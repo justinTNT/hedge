@@ -33,8 +33,11 @@ native provider SDK). Personal-device proof of concept — not published.
 
 This POC is on **Capacitor 8**, which sets the Android toolchain floor:
 
-- **JDK 21** (Capacitor 7 raised the minimum from 17 to 21; 8 keeps it). Capacitor 6 was the last major
-  that ran on JDK 17 — that's the one real reason the first cut used 6. `java -version` must show 21.
+- **JDK 21 installed** (Capacitor 7 raised the minimum from 17 to 21; 8 keeps it). Capacitor 6 was the last
+  major that ran on JDK 17 — that's the one real reason the first cut used 6. Your *global* `JAVA_HOME` need
+  not be 21: `npm run add:android`/`sync` pin this project's Gradle to JDK 21 (`org.gradle.java.home`,
+  resolved via `/usr/libexec/java_home -v 21`) so a machine that keeps an older JDK for other work still
+  builds this app. Without a JDK 21 present, Gradle fails with `invalid source release: 21`.
 - **Android Studio + Android SDK** at the versions Capacitor 8 requires (recent Android Studio, a current
   build-tools/Platform, AGP ≥ 8.x). Check the official [Capacitor upgrade guides](https://capacitorjs.com/docs/updating)
   (6→7 then 7→8) for the exact Android Studio / AGP / target-SDK minimums rather than trusting a number here.
@@ -51,11 +54,15 @@ This POC is on **Capacitor 8**, which sets the Android toolchain floor:
 
 ```bash
 cd apps/microblog/mobile
-npm install                # installs capacitor-secure-storage-plugin (declared in package.json) too
+npm install                # installs deps incl. capacitor-secure-storage-plugin
 npm run build:web          # builds the web bundle into ./www
-npx cap add android        # generates ./android (Gradle project) — network + SDK required
-npx cap sync android
+npm run add:android        # cap add android, then patch:android (deeplink + JDK-21 Gradle pin)
+npm run sync               # cap sync android (re-applies the patches)
 ```
+
+Use the `npm run add:android` / `npm run sync` wrappers, not raw `npx cap …`: they run `patch:android`
+afterward, which registers the `wtfail://auth` deeplink and pins Gradle to JDK 21 — both edits land in the
+generated, gitignored `android/`, so they must be re-applied after every scaffold (the wrappers do that).
 
 **Secure bearer storage (#7):** the bearer is stored via `capacitor-secure-storage-plugin` (registered as
 `SecureStoragePlugin`) — `guest-session.js` feature-detects it and keeps an in-memory cache so the
