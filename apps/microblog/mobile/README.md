@@ -38,18 +38,18 @@ native provider SDK). Personal-device proof of concept — not published.
 
 ```bash
 cd apps/microblog/mobile
-npm install
-npm install capacitor-secure-storage-plugin   # Keychain/Keystore for the bearer (see below); confirm a Capacitor-6 version
+npm install                # installs capacitor-secure-storage-plugin (declared in package.json) too
 npm run build:web          # builds the web bundle into ./www
 npx cap add android        # generates ./android (Gradle project) — network + SDK required
 npx cap sync android
 ```
 
 **Secure bearer storage (#7):** the bearer is stored via `capacitor-secure-storage-plugin` (registered as
-`SecureStoragePlugin`) when installed — `guest-session.js` feature-detects it and keeps an in-memory cache
-so the transport reads it synchronously. Without the plugin it falls back to WebView `localStorage` (fine
-for a quick spike, not for real 30-day sessions). Pin a version compatible with your Capacitor major; I
-couldn't verify the registry version from the build sandbox.
+`SecureStoragePlugin`) — `guest-session.js` feature-detects it and keeps an in-memory cache so the
+transport reads it synchronously. It is declared in `package.json` at `^0.10.0`, the release whose
+peer dependency is `@capacitor/core: ^6.0.0` (matching this POC's Capacitor 6); `0.11.0`+ requires
+Capacitor 7+, so bump it together with the `@capacitor/*` majors. Without the plugin the store falls
+back to WebView `localStorage` (fine for a quick spike, not for real 30-day sessions).
 
 Then register the deeplink scheme so `wtfail://auth?...` returns to the app. In
 `android/app/src/main/AndroidManifest.xml`, inside the main `<activity>`:

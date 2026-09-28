@@ -75,6 +75,22 @@ export function waitForElement(elementId, callback, maxAttempts = 20) {
  */
 const PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
+/**
+ * Resolve an app-served asset URL for the platform. On a bundled mobile build
+ * (window.API_ORIGIN set) a ROOT-relative path like /blobs/<key> is served by the
+ * API host, not the capacitor:// WebView, so prepend the API origin. Absolute
+ * (http/https/data:) and protocol-relative URLs, and empties, are returned unchanged;
+ * on web (no API_ORIGIN) always unchanged. Applied at DISPLAY/RENDER time only — the
+ * stored doc keeps the root-relative src. Mirrors Hedge.Client.GuestSession.assetUrl.
+ */
+function toMobileAsset(url) {
+    const origin = window.API_ORIGIN || ''
+    if (origin && typeof url === 'string' && url.length > 0 && url[0] === '/' && url.slice(0, 2) !== '//') {
+        return origin + url
+    }
+    return url
+}
+
 let placeholderId = 0
 
 /**
@@ -262,7 +278,9 @@ function createResizableImageView(node, view, getPos) {
 
     // The <img> element
     const img = document.createElement('img')
-    img.src = node.attrs.src
+    // Prefix root-relative /blobs/<key> srcs to the API host on mobile so a just-uploaded (or stored)
+    // image renders in the editor; node.attrs.src stays root-relative, so the saved doc is unchanged.
+    img.src = toMobileAsset(node.attrs.src)
     if (node.attrs.alt) img.alt = node.attrs.alt
     if (node.attrs.title) img.title = node.attrs.title
     if (node.attrs['data-upload-id']) {
@@ -865,6 +883,14 @@ const VIEWER_EXTENSIONS = [
                     default: null,
                     parseHTML: el => el.style.width || el.getAttribute('width') || null,
                     renderHTML: attrs => attrs.width ? { style: `width: ${attrs.width}` } : {},
+                },
+                // Root-relative /blobs/<key> srcs embedded in stored rich content must resolve to the API
+                // host on a bundled mobile build, not capacitor://localhost. Prefix at render only: this
+                // changes the emitted DOM/HTML src, not the stored node attr. No-op on web (no API_ORIGIN).
+                src: {
+                    default: null,
+                    parseHTML: el => el.getAttribute('src'),
+                    renderHTML: attrs => attrs.src ? { src: toMobileAsset(attrs.src) } : {},
                 },
             }
         },
