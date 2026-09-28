@@ -51,8 +51,10 @@ peer dependency is `@capacitor/core: ^6.0.0` (matching this POC's Capacitor 6); 
 Capacitor 7+, so bump it together with the `@capacitor/*` majors. Without the plugin the store falls
 back to WebView `localStorage` (fine for a quick spike, not for real 30-day sessions).
 
-Then register the deeplink scheme so `wtfail://auth?...` returns to the app. In
-`android/app/src/main/AndroidManifest.xml`, inside the main `<activity>`:
+The deeplink scheme `wtfail://auth?...` (browser-OAuth return) is registered **automatically**:
+`npm run add:android` and `npm run sync` both run `npm run deeplink`, which patches
+`android/app/src/main/AndroidManifest.xml` in place (idempotently) to add this intent-filter to the main
+`<activity>`:
 
 ```xml
 <intent-filter>
@@ -63,8 +65,10 @@ Then register the deeplink scheme so `wtfail://auth?...` returns to the app. In
 </intent-filter>
 ```
 
-(Custom scheme is fine for a personal-device POC; PKCE makes an intercepted deeplink useless. Android
-App Links backed by an `assetlinks.json` on wt.fail are the hardening upgrade.)
+The manifest is generated + gitignored, so this script (`scripts/register-deeplink.mjs`) is the committed
+source of truth — a rebuild always re-applies it. If it ever can't find `.MainActivity` it prints the
+snippet to add by hand. (Custom scheme is fine for a personal-device POC; PKCE makes an intercepted
+deeplink useless. Android App Links backed by an `assetlinks.json` on wt.fail are the hardening upgrade.)
 
 ## Loops
 

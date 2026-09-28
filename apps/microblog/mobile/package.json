@@ -5,8 +5,9 @@
   "description": "Capacitor POC shell for wt.fail (Android, browser-OAuth + opaque bearer session).",
   "scripts": {
     "build:web": "cd .. && HEDGE_SITE= SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" SITE_LOGO=\"/public/wtfail.png\" API_ORIGIN=https://wt.fail npm run build && rm -rf mobile/www && mkdir -p mobile/www && cp -r _site/* mobile/www/",
-    "add:android": "cap add android",
-    "sync": "cap sync android",
+    "add:android": "cap add android && npm run deeplink",
+    "sync": "cap sync android && npm run deeplink",
+    "deeplink": "node scripts/register-deeplink.mjs",
     "open:android": "cap open android",
     "run:android": "cap run android",
     "dev:android": "cap run android --live-reload --host $(ipconfig getifaddr en0 2>/dev/null || hostname) --port 3030"
