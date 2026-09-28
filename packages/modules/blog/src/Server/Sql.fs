@@ -27,8 +27,11 @@ let tagsForItem =
 let picturesForItemComments =
     sprintf "SELECT DISTINCT i.id, i.picture FROM identities i JOIN %s c ON c.identity_id = i.id WHERE c.item_id = ? AND c.deleted_at IS NULL" Tables.itemComment
 
+// identity_id follows the author identity's supersede pointer ATOMICALLY at insert time (COALESCE), so a
+// comment racing an anon->verified merge still lands under the surviving identity. Binds:
+// id, item_id, parent_id, author, content, removed, created_at, <author identity id> (the WHERE).
 let insertComment =
-    sprintf "INSERT INTO %s (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)" Tables.itemComment
+    sprintf "INSERT INTO %s (id, item_id, identity_id, parent_id, author, content, removed, created_at) SELECT ?, ?, COALESCE(i.superseded_by, i.id), ?, ?, ?, ?, ? FROM identities i WHERE i.id = ?" Tables.itemComment
 
 /// Re-attribute this module's comments from one identity to another on a merge.
 /// The module owns this because it owns the comment table; the host composes it

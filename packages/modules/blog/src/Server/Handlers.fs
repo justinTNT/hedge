@@ -190,7 +190,9 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
         let insertComment =
             bind
                 (services.DB.prepare Blog.Sql.insertComment)
-                [| box commentId; box itemId; box activeIdentityId; optToDb parentId; box author; box req.Content; box 0; box now |]
+                // id, item_id, parent_id, author, content, removed, created_at, then the author identity id
+                // (the WHERE — its superseded_by is followed by COALESCE so a merge race attributes correctly).
+                [| box commentId; box itemId; optToDb parentId; box author; box req.Content; box 0; box now; box activeIdentityId |]
 
         let! _ = services.DB.batch([| insertComment |])
 

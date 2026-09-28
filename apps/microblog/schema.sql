@@ -17,6 +17,7 @@ CREATE TABLE identities (
     picture TEXT NOT NULL,
     email TEXT,
     activated_at INTEGER,
+    superseded_by TEXT,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (guest_id) REFERENCES guests(id)
 );

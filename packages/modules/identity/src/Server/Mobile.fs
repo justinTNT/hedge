@@ -82,12 +82,18 @@ let consumeCode (db: D1Database) (now: int) (rawCode: string) (verifier: string)
         else return Some (row?guest_id : string)
     }
 
-/// "Activate + merge": reassign the APP's anonymous guest's content to the VERIFIED guest's active
+let setSupersededBy = "UPDATE identities SET superseded_by = ? WHERE id = ?"
+
+/// "Activate + merge": fold the APP's anonymous guest's content into the VERIFIED guest's active
 /// identity. Comments are attributed by identity_id (guest_id was dropped in migration 0009), so this
-/// resolves the anon guest's anonymous identity and the verified guest's active identity and reassigns
-/// between them (cross-guest — the two identities sit under different guests in the mobile flow). A
-/// no-op when the guests are the same, the anon guest never commented (no anon identity), or the
-/// verified guest has no active identity. `reassignStatements` is the host's attribution policy.
+/// resolves the anon guest's anonymous identity + the verified guest's active identity (cross-guest —
+/// they sit under different guests in the mobile flow) and:
+///   1. sets the anon identity's superseded_by = verified identity FIRST, so any insert racing this that
+///      resolves through Blog.Sql.insertComment's COALESCE lands under the verified identity, then
+///   2. reassigns comments already written under the anon identity (those that committed before step 1).
+/// Together with SQLite's single-writer serialization this closes the race the reviewer reproduced. A
+/// no-op when the guests are the same, the anon guest never commented (no anon identity — narrow first-
+/// comment residual), or the verified guest has no active identity. `reassignStatements` is host policy.
 let mergeAnonInto (db: D1Database) (reassignStatements: string list) (anonGuestId: string) (verifiedGuestId: string) : JS.Promise<unit> =
     promise {
         if anonGuestId = verifiedGuestId || anonGuestId = "" then return ()
@@ -96,5 +102,8 @@ let mergeAnonInto (db: D1Database) (reassignStatements: string list) (anonGuestI
             let! verifiedRow = (bind (db.prepare Identity.Sql.activeIdentityForGuest) [| box verifiedGuestId |]).first()
             if isNull (box anonRow) || isNull (box verifiedRow) then return ()
             else
-                do! Identity.Attribution.reassign db reassignStatements (anonRow?id : string) (verifiedRow?id : string)
+                let aId : string = anonRow?id
+                let vId : string = verifiedRow?id
+                let! _ = (bind (db.prepare setSupersededBy) [| box vId; box aId |]).run()
+                do! Identity.Attribution.reassign db reassignStatements aId vId
     }
