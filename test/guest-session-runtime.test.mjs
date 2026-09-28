@@ -73,3 +73,54 @@ test('protected writes queued before logout are cancelled rather than sent with 
   const second=f.api.withSessionRequest(()=>{writes++;return 'sent'});const cancelled=assert.rejects(second,/session changed/);await turn();
   const logout=f.api.signOut();release('old response');await Promise.all([rejected,cancelled,logout]);assert.equal(writes,0);
 });
+
+// --- Mobile (Capacitor) bearer session ---
+function mobileFixture(fetch,caps) {
+  const store=new Map();
+  const context={Promise,Math,Date,JSON,Array,Uint8Array,TextEncoder,URL,encodeURIComponent,fetch,
+    crypto:globalThis.crypto,navigator:{},
+    CustomEvent:class {constructor(t){this.type=t}},
+    localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},
+    window:{API_ORIGIN:'https://wt.fail',addEventListener(){},dispatchEvent(){},Capacitor:{Plugins:caps}}};
+  vm.runInNewContext(code,context);
+  return {api:context.window.HedgeGuest,store};
+}
+test('mobile session bootstraps an anonymous bearer then browser-OAuth exchanges for a verified one',async()=>{
+  const calls=[];
+  const fetch=async(url,opts)=>{
+    calls.push([url,opts]);
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'anon-bearer'})};
+    if(url.endsWith('/api/mobile/me')) return {ok:true,json:async()=>({guest:{guestId:'g',identity:null}})};
+    if(url.endsWith('/api/mobile/exchange')) return {ok:true,json:async()=>({token:'verified-bearer'})};
+    return {ok:false};
+  };
+  let opened=null,listener=null;
+  const caps={Browser:{open:async o=>{opened=o},close:async()=>{}},App:{addListener:async(_ev,fn)=>{listener=fn;return {remove(){}}}}};
+  const f=mobileFixture(fetch,caps);
+  // ensureSession mints an anonymous bearer (first launch) and reads /api/mobile/me
+  const s=await f.api.ensureSession();
+  assert.equal(s.ready,true);assert.equal(f.store.get('hedge_mobile_bearer'),'anon-bearer');
+  assert.ok(calls.some(c=>c[0].endsWith('/api/mobile/bootstrap')));
+  // signIn opens the SYSTEM browser with a PKCE challenge carried in returnTo, then the deeplink drives exchange
+  const done=f.api.signIn('google');await turn();
+  assert.ok(opened&&opened.url.includes('/api/auth/google/login?returnTo='));
+  assert.ok(opened.url.includes('challenge%3D'));assert.ok(listener,'deeplink listener registered');
+  listener({url:'wtfail://auth?code=abc123'});
+  await done;
+  assert.equal(f.store.get('hedge_mobile_bearer'),'verified-bearer');   // bearer rotated to the verified one
+  const ex=calls.find(c=>c[0].endsWith('/api/mobile/exchange'));
+  assert.equal(JSON.parse(ex[1].body).code,'abc123');assert.ok(JSON.parse(ex[1].body).verifier);
+  assert.equal(ex[1].headers.Authorization,'Bearer anon-bearer');       // old (anon) bearer presented for the merge
+});
+test('mobile sign-out drops the bearer and falls back to a fresh anonymous session',async()=>{
+  let n=0;
+  const fetch=async(url)=>{
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'anon-'+(++n)})};
+    if(url.endsWith('/api/mobile/me')) return {ok:true,json:async()=>({guest:null})};
+    return {ok:false};
+  };
+  const f=mobileFixture(fetch,{});
+  await f.api.ensureSession();assert.equal(f.store.get('hedge_mobile_bearer'),'anon-1');
+  assert.equal(await f.api.signOut(),true);
+  assert.equal(f.store.get('hedge_mobile_bearer'),'anon-2');            // a NEW anon bearer, not the old one
+});

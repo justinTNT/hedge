@@ -104,6 +104,16 @@ let refreshSession () : JS.Promise<SessionReadiness> =
 [<Emit("window.HedgeGuest.signOut()")>]
 let signOut () : JS.Promise<bool> = jsNative
 
+/// True in a bundled Capacitor build (window.API_ORIGIN set): identity uses the native bearer session,
+/// so provider login is the browser-OAuth deeplink flow, not a same-document redirect.
+[<Emit("window.HedgeGuest.isMobile === true")>]
+let isMobile : bool = jsNative
+
+/// Mobile-only: run the browser-OAuth sign-in (system browser -> deeplink -> exchange), then reload so
+/// the app re-renders with the verified session. A cancel/failure leaves the current (anon) session.
+[<Emit("window.HedgeGuest.signIn($0).then(function(){location.reload()}).catch(function(){})")>]
+let signInThenReload (provider: string) : unit = jsNative
+
 /// Drop the cached bootstrap so the next `ensureSession` re-fetches. Call on a write's 401 (the
 /// cookie expired/was cleared/the key changed since bootstrap) so the client re-establishes a
 /// session instead of resending the rejected credential until reload.

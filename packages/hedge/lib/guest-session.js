@@ -247,7 +247,78 @@
       clearSession();
     } catch (_) {}
   });
+  // --- Mobile (Capacitor) bearer session -------------------------------------------------------
+  // Feature-detected: when window.API_ORIGIN is set (a bundled mobile build) the session is an opaque
+  // BEARER over the native transport, not a cookie. Everything below is untouched when it is unset, so
+  // the web path is byte-for-byte the same.
+  var MOBILE = !!(typeof window !== 'undefined' && window.API_ORIGIN);
+  var API_BASE = MOBILE ? window.API_ORIGIN : (window.BASE_PATH || '');
+  var BEARER_KEY = 'hedge_mobile_bearer';
+  function getBearer() { try { return localStorage.getItem(BEARER_KEY) || ''; } catch (_) { return ''; } }
+  function setBearer(t) { try { t ? localStorage.setItem(BEARER_KEY, t) : localStorage.removeItem(BEARER_KEY); } catch (_) {} }
+  // Mint an anonymous bearer on first launch so on-device commenting works before login.
+  function ensureBearer() {
+    if (getBearer()) return Promise.resolve(getBearer());
+    return fetch(API_BASE + '/api/mobile/bootstrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.token) { setBearer(d.token); return d.token; } return ''; })
+      .catch(function() { return ''; });
+  }
+  function fetchMeMobile(epoch) {
+    return ensureBearer().then(function(token) {
+      if (epoch !== generation || !token) return stale();
+      return fetch(API_BASE + '/api/mobile/me', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) return stale();
+          return r.json().then(function(data) {
+            if (epoch !== generation) return stale();
+            return { ready: true, session: applyServer(data) };
+          });
+        }).catch(stale);
+    }).catch(stale);
+  }
+  function sha256hex(s) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function(b) {
+      return Array.from(new Uint8Array(b)).map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+    });
+  }
+  function randomVerifier() {
+    var a = new Uint8Array(32); crypto.getRandomValues(a);
+    return Array.from(a).map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+  }
+  // Browser-OAuth sign-in: open the SYSTEM browser (Google blocks OAuth in embedded WebViews), catch the
+  // wtfail://auth?code deeplink, exchange the code (+ PKCE verifier + the current anon bearer) for a
+  // verified bearer, then refresh. The anon guest's content is merged into the verified identity server
+  // side (that's why the old bearer is presented). Rejects on cancel/failure.
+  function signIn(provider) {
+    provider = provider || 'google';
+    var caps = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || {};
+    if (!caps.Browser || !caps.App) return Promise.reject(new Error('Sign-in needs the Capacitor Browser/App plugins'));
+    var verifier = randomVerifier();
+    return sha256hex(verifier).then(function(challenge) {
+      return new Promise(function(resolve, reject) {
+        var handlePromise = caps.App.addListener('appUrlOpen', function(event) {
+          var code = null, err = null;
+          try { var u = new URL(event.url); code = u.searchParams.get('code'); err = u.searchParams.get('error'); } catch (_) {}
+          remove();
+          try { caps.Browser.close(); } catch (_) {}
+          if (!code) { reject(new Error(err || 'Sign-in was cancelled or failed')); return; }
+          fetch(API_BASE + '/api/mobile/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getBearer() },
+            body: JSON.stringify({ code: code, verifier: verifier })
+          }).then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) { if (d && d.token) { setBearer(d.token); resolve(refreshSession()); } else reject(new Error('Token exchange failed')); })
+            .catch(reject);
+        });
+        function remove() { Promise.resolve(handlePromise).then(function(h) { if (h && h.remove) h.remove(); }).catch(function() {}); }
+        caps.Browser.open({ url: API_BASE + '/api/auth/' + provider + '/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + challenge) });
+      });
+    });
+  }
+
   function fetchMe(epoch) {
+    if (MOBILE) return fetchMeMobile(epoch);
     return sessionLock(function() {
       if (epoch !== generation || logoutPending) return stale();
       return fetch((window.BASE_PATH || '') + '/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
@@ -291,6 +362,13 @@
   // result: an unavailable server must not turn a cached display identity into authenticated UI.
   function syncSession() { return refreshSession().then(function(res) { return res.session; }); }
   function signOut() {
+    if (MOBILE) {
+      // Mobile sign-out: drop the bearer and fall back to a fresh anonymous session. Does not touch
+      // other devices or the provider identity; a late refresh can't restore the old bearer (it's gone).
+      setBearer('');
+      clearSession();
+      return ensureBearer().then(function() { clearSession(); return true; });
+    }
     if (logoutPromise) return logoutPromise;
     logoutPending = true;
     clearSession();
@@ -319,6 +397,9 @@
     ensureSession: ensureSession,
     invalidateSession: invalidateSession,
     withSessionRequest: withSessionRequest,
-    signOut: signOut
+    signOut: signOut,
+    // Mobile-only: browser-OAuth sign-in (no-op path on web, where the plugins are absent).
+    signIn: signIn,
+    isMobile: MOBILE
   };
 })();

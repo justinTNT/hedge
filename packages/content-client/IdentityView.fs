@@ -19,11 +19,17 @@ module IdentityView =
     let private loginButton (provider: string) (label: string) =
         let path = Browser.Dom.window.location.pathname
         let returnTo = if path.StartsWith "/auth/" then "/" else path
-        Html.a [
+        let baseProps = [
             prop.className (sprintf "login-btn login-%s" provider)
             prop.href (sprintf "/api/auth/%s/login?returnTo=%s" provider (Fable.Core.JS.encodeURIComponent returnTo))
-            prop.text label
-        ]
+            prop.text label ]
+        // On a bundled mobile build the href can't navigate the WebView to the API — intercept the click
+        // and run the browser-OAuth deeplink flow instead. Web is unchanged (plain link redirect).
+        let props =
+            if GuestSession.isMobile then
+                baseProps @ [ prop.onClick (fun (e: Browser.Types.MouseEvent) -> e.preventDefault(); GuestSession.signInThenReload provider) ]
+            else baseProps
+        Html.a props
 
     let private providerLabel (provider: string) =
         match provider with
