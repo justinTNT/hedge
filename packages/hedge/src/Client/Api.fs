@@ -27,6 +27,17 @@ let apiOrigin : string = jsNative
 /// What the direct helpers prefix: the API origin on a mobile build, else the deployment base path.
 let private reqBase = if apiOrigin <> "" then apiOrigin else basePath
 
+/// The current opaque mobile bearer ("" = none), read from the one store owned by guest-session.js.
+/// On web this is "" (cookies carry the session); on mobile the direct /api/auth helpers attach it so
+/// identity list/switch/disconnect resolve the same bearer session the rest of the app uses.
+[<Emit("(window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''")>]
+let currentBearer () : string = jsNative
+
+/// Authorization header list for the direct helpers: a Bearer on mobile, nothing on web.
+let private authHeaderList () : HttpRequestHeaders list =
+    let b = currentBearer ()
+    if b <> "" then [ HttpRequestHeaders.Custom ("Authorization", box ("Bearer " + b)) ] else []
+
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 
@@ -39,7 +50,7 @@ let buildQuery (pairs: (string * string) list) : string =
 
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch (reqBase + url) []
+        let! response = fetch (reqBase + url) [ requestHeaders (authHeaderList ()) ]
         let! text = response.text()
         return Decode.fromString decoder text
     }
@@ -48,7 +59,7 @@ let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> 
     promise {
         let! response = fetch (reqBase + url) [
             Method HttpMethod.POST
-            requestHeaders [ ContentType "application/json" ]
+            requestHeaders (ContentType "application/json" :: authHeaderList ())
             Body (BodyInit.Case3 body)
         ]
         if response.Ok then return Ok ()
@@ -59,7 +70,7 @@ let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> 
 
 let fetchJsonRaw (url: string) : JS.Promise<obj> =
     promise {
-        let! response = fetch (reqBase + url) []
+        let! response = fetch (reqBase + url) [ requestHeaders (authHeaderList ()) ]
         let! text = response.text()
         return JS.JSON.parse text
     }
@@ -158,25 +169,23 @@ let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }
 
-// -- Mobile bearer store + default transport selection (Capacitor POC) --
-
-/// The current opaque mobile bearer ("" = none), read live per request from the ONE store owned by
-/// guest-session.js (Keychain/Keystore-backed there, with an in-memory cache). Reading through
-/// HedgeGuest.currentBearer keeps a single source of truth — the transport never touches storage itself.
-[<Emit("(window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''")>]
-let mobileBearer () : string = jsNative
+// -- Default transport selection (Capacitor POC) --
 
 /// Pick the transport: native (Capacitor, bearer-carrying, absolute origin) when a mobile API origin is
 /// configured, else the ordinary browser transport. Pure in its inputs so it's unit-testable.
 let selectTransport (origin: string) (bearer: unit -> string) : Hedge.Http.Transport =
     if origin <> "" then capacitorTransport origin bearer else browserTransport
 
-/// The app's default transport, chosen once from window config. Generated clients build on this.
-let appTransport : Hedge.Http.Transport = selectTransport apiOrigin mobileBearer
+/// The app's default transport, chosen once from window config. Generated clients build on this. The
+/// bearer comes from the single store (currentBearer) that guest-session.js owns.
+let appTransport : Hedge.Http.Transport = selectTransport apiOrigin currentBearer
 
 // -- WebSocket --
 
-[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
+// On a bundled mobile build the WebView origin is capacitor://localhost, and native-fetch patching does
+// NOT cover WebSockets — so derive the socket base from the configured API origin (https->wss) there;
+// otherwise from the page location + base path as before.
+[<Emit("window.API_ORIGIN ? window.API_ORIGIN.replace(/^http/, 'ws') : ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || ''))")>]
 let wsBase () : string = jsNative
 
 [<Emit("""
