@@ -121,7 +121,7 @@ let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespon
                     let! anonGuestId = Identity.Mobile.resolveByHash env.DB now oldHash
                     match anonGuestId with
                     | Some ag ->
-                        do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId
+                        do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId now
                         do! Identity.Mobile.revokeByHash env.DB oldHash
                     | None -> ()
                 | None -> ()

@@ -94,16 +94,23 @@ let setSupersededBy = "UPDATE identities SET superseded_by = ? WHERE id = ?"
 /// Together with SQLite's single-writer serialization this closes the race the reviewer reproduced. A
 /// no-op when the guests are the same, the anon guest never commented (no anon identity — narrow first-
 /// comment residual), or the verified guest has no active identity. `reassignStatements` is host policy.
-let mergeAnonInto (db: D1Database) (reassignStatements: string list) (anonGuestId: string) (verifiedGuestId: string) : JS.Promise<unit> =
+let mergeAnonInto (db: D1Database) (reassignStatements: string list) (anonGuestId: string) (verifiedGuestId: string) (now: int) : JS.Promise<unit> =
     promise {
         if anonGuestId = verifiedGuestId || anonGuestId = "" then return ()
         else
-            let! anonRow = (bind (db.prepare Identity.Sql.anonymousIdentityForGuest) [| box anonGuestId |]).first()
             let! verifiedRow = (bind (db.prepare Identity.Sql.activeIdentityForGuest) [| box verifiedGuestId |]).first()
-            if isNull (box anonRow) || isNull (box verifiedRow) then return ()
+            if isNull (box verifiedRow) then return ()
             else
-                let aId : string = anonRow?id
-                let vId : string = verifiedRow?id
-                let! _ = (bind (db.prepare setSupersededBy) [| box vId; box aId |]).run()
-                do! Identity.Attribution.reassign db reassignStatements aId vId
+                // #3 — ensure the anon guest HAS an (activated) anonymous identity before superseding it,
+                // so a first-ever comment racing this login attaches to that identity and follows the
+                // supersede. ensureAnonymousStmt is idempotent under concurrency (INSERT .. WHERE NOT
+                // EXISTS active), so the comment path and this can't create dueling anon identities.
+                let! _ = (Identity.Server.ensureAnonymousStmt db (newId ()) anonGuestId "" now).run()
+                let! anonRow = (bind (db.prepare Identity.Sql.anonymousIdentityForGuest) [| box anonGuestId |]).first()
+                if isNull (box anonRow) then return ()
+                else
+                    let aId : string = anonRow?id
+                    let vId : string = verifiedRow?id
+                    let! _ = (bind (db.prepare setSupersededBy) [| box vId; box aId |]).run()
+                    do! Identity.Attribution.reassign db reassignStatements aId vId
     }

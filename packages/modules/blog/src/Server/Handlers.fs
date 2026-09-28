@@ -196,19 +196,30 @@ let submitComment (req: SubmitComment.Request) (request: WorkerRequest)
 
         let! _ = services.DB.batch([| insertComment |])
 
+        // The stored row already followed superseded_by (COALESCE in insertComment). Re-read the author
+        // identity's supersede pointer so the response + broadcast show the SAME surviving identity the row
+        // was attributed to — a comment racing an anon->verified merge must not echo the abandoned anon
+        // id/name/picture back to the client. `sup` null => not superseded; keep the original author fields.
+        let! effRow = (bind (services.DB.prepare Blog.Sql.effectiveIdentity) [| box activeIdentityId |]).first()
+        let effIdentityId, effAuthor, effPicture =
+            if not (isNull (box effRow)) && not (isNull (box (effRow?sup : obj))) then
+                (effRow?sup : string), (effRow?tname : string), (effRow?tpicture : string)
+            else
+                activeIdentityId, author, activePicture
+
         let newComment : SubmitComment.CommentItem =
             { Id = commentId
               ItemId = itemId
-              IdentityId = activeIdentityId
+              IdentityId = effIdentityId
               ParentId = parentId
-              Author = author
-              Picture = activePicture
+              Author = effAuthor
+              Picture = effPicture
               Content = RichContent req.Content
               Timestamp = now }
 
         let event : Blog.Ws.NewCommentEvent =
-            { Id = commentId; ItemId = ForeignKey itemId; IdentityId = IdentityRef activeIdentityId
-              ParentId = parentId |> Option.map ForeignKey; Author = author; Picture = activePicture
+            { Id = commentId; ItemId = ForeignKey itemId; IdentityId = IdentityRef effIdentityId
+              ParentId = parentId |> Option.map ForeignKey; Author = effAuthor; Picture = effPicture
               Content = req.Content; Timestamp = now }
 
         Hedge.Events.broadcast services.Events ctx itemId "NewComment" (Blog.Codecs.Encode.blogNewCommentEvent event)
