@@ -91,6 +91,10 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
     // Guest comment path authorizes with the httpOnly signed hedge_guest cookie (sent automatically
     // same-origin), not an admin key. Computed up here so both the load handler and the send gate use it.
     const isGuestUpload = /\/api\/blobs\/guest$/.test(endpoint)
+    // On a bundled mobile build the guest upload can't use the cookie route (capacitor://localhost isn't
+    // the API host, and that route is cookie-only) — target the bearer-aware app route on the API host.
+    const isMobileUpload = isGuestUpload && !!window.API_ORIGIN
+    const targetUrl = isMobileUpload ? (window.API_ORIGIN + '/api/mobile/blobs') : endpoint
     const id = `upload-${++placeholderId}`
 
     // Determine insert position
@@ -152,7 +156,7 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
         removePlaceholder(editor, id)
     })
 
-    xhr.open('POST', endpoint)
+    xhr.open('POST', targetUrl)
     // Admin uploads authorize with the admin key from localStorage (present only in the owner's
     // browser after signing into /admin). The guest comment path authorizes with the httpOnly signed
     // hedge_guest cookie instead — sent automatically for this same-origin request — so never attach
@@ -170,6 +174,11 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
             : Promise.resolve({ ready: true })
         gate.then(function (res) {
             if (res && res.ready) {
+                // Mobile: authorize with the bearer (read fresh after the session gate), not a cookie.
+                if (isMobileUpload) {
+                    var b = (window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''
+                    try { xhr.setRequestHeader('Authorization', 'Bearer ' + b) } catch (e) {}
+                }
                 xhr.send(formData)
             } else {
                 console.error('[hamlet-rt] Upload skipped: guest session not ready')

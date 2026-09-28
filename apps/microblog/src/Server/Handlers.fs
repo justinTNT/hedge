@@ -141,6 +141,16 @@ let mobileSignout (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespons
         return okJson """{"ok":true}"""
     }
 
+/// POST /api/mobile/blobs — bearer-authorized comment-image upload for the native app. The framework's
+/// /api/blobs/guest is cookie-only, so this resolves the bearer (GuestConfig.require is bearer-aware)
+/// and reuses the shared upload handler with the resolved guest.
+let mobileBlobUpload (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match! Server.GuestConfig.require env request with
+        | Hedge.GuestSession.Accepted a -> return! handleGuestBlobUpload request env.BLOBS a.GuestId a.Replacement
+        | Hedge.GuestSession.Rejected -> return unauthorized ()
+    }
+
 /// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
 let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request
 let revertIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.revert (writeDeps env) request

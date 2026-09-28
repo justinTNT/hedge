@@ -31,6 +31,8 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Handlers.mobileExchange request env)
     | POST path when matchPath "/api/mobile/signout" path = Some (Exact "/api/mobile/signout") ->
         Some (Server.Handlers.mobileSignout request env)
+    | POST path when matchPath "/api/mobile/blobs" path = Some (Exact "/api/mobile/blobs") ->
+        Some (Server.Handlers.mobileBlobUpload request env)
     // darwin.news rhyming — a bespoke route over the composed blog module's tables,
     // deliberately hand-written (not a reflected/gen endpoint).
     | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->
