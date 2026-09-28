@@ -52,8 +52,11 @@ let purgeExpired (db: D1Database) (now: int) : JS.Promise<unit> =
 
 let [<Literal>] CodeTtlSeconds = 300   // 5 minutes: the login round trip, not a session
 let insertCode = "INSERT INTO mobile_auth_codes (id, guest_id, challenge, expires_at, created_at) VALUES (?, ?, ?, ?, ?)"
-// Atomic one-use: delete + return in a single statement, so a replayed code finds nothing.
-let consumeCodeSql = "DELETE FROM mobile_auth_codes WHERE id = ? RETURNING guest_id, challenge, expires_at"
+// Consume ONLY a code that matches its PKCE proof AND is unexpired — the challenge check lives in the
+// DELETE so it is atomic: a wrong verifier finds no row and never burns a legitimate code, a replay
+// finds nothing, and an expired code is ignored (cleaned separately). One writer at a time in SQLite,
+// so this can't race a concurrent consume.
+let consumeCodeSql = "DELETE FROM mobile_auth_codes WHERE id = ? AND challenge = ? AND expires_at > ? RETURNING guest_id"
 
 /// Mint a one-time authorization code for `guestId`, bound to the app's PKCE `challenge`
 /// (= sha256 of its verifier). Stores only the code's SHA-256 hash + a short expiry; returns the raw
@@ -66,18 +69,17 @@ let mintCode (db: D1Database) (guestId: string) (challenge: string) (now: int) :
         return code
     }
 
-/// Consume a one-time code ATOMICALLY (delete + return). Returns (guestId, challenge) when a live,
-/// unexpired code matched; None when unknown, already-consumed or expired. The caller then verifies the
-/// PKCE proof (sha256(verifier) = challenge) before trusting guestId.
-let consumeCode (db: D1Database) (now: int) (rawCode: string) : JS.Promise<(string * string) option> =
+/// Consume a one-time code + verify its PKCE proof ATOMICALLY. Returns the bound guestId only when the
+/// code exists, is unexpired, and sha256(verifier) equals its stored challenge; None otherwise. A wrong
+/// verifier does NOT consume the code (the DELETE's challenge predicate misses), so a legitimate later
+/// exchange with the right verifier still works.
+let consumeCode (db: D1Database) (now: int) (rawCode: string) (verifier: string) : JS.Promise<string option> =
     promise {
         let! hash = Hedge.MobileSession.sha256Hex rawCode
-        let! row = (bind (db.prepare consumeCodeSql) [| box hash |]).first()
+        let! proof = Hedge.MobileSession.sha256Hex verifier
+        let! row = (bind (db.prepare consumeCodeSql) [| box hash; box proof; box now |]).first()
         if isNull (box row) then return None
-        else
-            let expiresAt : int = row?expires_at
-            if expiresAt <= now then return None
-            else return Some ((row?guest_id : string), (row?challenge : string))
+        else return Some (row?guest_id : string)
     }
 
 /// "Activate + merge": reassign the APP's anonymous guest's content to the VERIFIED guest's active

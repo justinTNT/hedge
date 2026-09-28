@@ -160,16 +160,11 @@ let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http
 
 // -- Mobile bearer store + default transport selection (Capacitor POC) --
 
-/// The current opaque mobile bearer ("" = none), read live per request. localStorage-backed for the
-/// POC (swap to a Keychain/Keystore plugin in the login-flow slice); wrapped so a blocked/absent store
-/// never throws. The login flow calls setMobileBearer after exchange; sign-out clears it.
-[<Emit("(()=>{try{return localStorage.getItem('hedge_mobile_bearer')||''}catch(e){return ''}})()")>]
+/// The current opaque mobile bearer ("" = none), read live per request from the ONE store owned by
+/// guest-session.js (Keychain/Keystore-backed there, with an in-memory cache). Reading through
+/// HedgeGuest.currentBearer keeps a single source of truth — the transport never touches storage itself.
+[<Emit("(window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''")>]
 let mobileBearer () : string = jsNative
-
-[<Emit("(t=>{try{t?localStorage.setItem('hedge_mobile_bearer',t):localStorage.removeItem('hedge_mobile_bearer')}catch(e){}})($0)")>]
-let setMobileBearer (token: string) : unit = jsNative
-
-let clearMobileBearer () : unit = setMobileBearer ""
 
 /// Pick the transport: native (Capacitor, bearer-carrying, absolute origin) when a mobile API origin is
 /// configured, else the ordinary browser transport. Pure in its inputs so it's unit-testable.

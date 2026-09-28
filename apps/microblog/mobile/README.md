@@ -39,9 +39,17 @@ native provider SDK). Personal-device proof of concept — not published.
 ```bash
 cd apps/microblog/mobile
 npm install
-npm run build:web          # builds the web bundle into ./www (needs C2 to actually call the API)
+npm install capacitor-secure-storage-plugin   # Keychain/Keystore for the bearer (see below); confirm a Capacitor-6 version
+npm run build:web          # builds the web bundle into ./www
 npx cap add android        # generates ./android (Gradle project) — network + SDK required
+npx cap sync android
 ```
+
+**Secure bearer storage (#7):** the bearer is stored via `capacitor-secure-storage-plugin` (registered as
+`SecureStoragePlugin`) when installed — `guest-session.js` feature-detects it and keeps an in-memory cache
+so the transport reads it synchronously. Without the plugin it falls back to WebView `localStorage` (fine
+for a quick spike, not for real 30-day sessions). Pin a version compatible with your Capacitor major; I
+couldn't verify the registry version from the build sandbox.
 
 Then register the deeplink scheme so `wtfail://auth?...` returns to the app. In
 `android/app/src/main/AndroidManifest.xml`, inside the main `<activity>`:

@@ -254,28 +254,65 @@
   var MOBILE = !!(typeof window !== 'undefined' && window.API_ORIGIN);
   var API_BASE = MOBILE ? window.API_ORIGIN : (window.BASE_PATH || '');
   var BEARER_KEY = 'hedge_mobile_bearer';
-  function getBearer() { try { return localStorage.getItem(BEARER_KEY) || ''; } catch (_) { return ''; } }
-  function setBearer(t) { try { t ? localStorage.setItem(BEARER_KEY, t) : localStorage.removeItem(BEARER_KEY); } catch (_) {} }
+  // #7 — the bearer lives in a Keychain/Keystore-backed store (Capacitor SecureStoragePlugin) when the
+  // plugin is present, with an in-memory cache so the native transport can read it SYNCHRONOUSLY per
+  // request. Falls back to localStorage (dev / no plugin), migrating any legacy plaintext bearer into
+  // the secure store once. The transport reads window.HedgeGuest.currentBearer() (= this cache).
+  var bearerCache = '';
+  var secureStore = (function() {
+    var p = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SecureStoragePlugin) || null;
+    if (p) return {
+      get: function() { return p.get({ key: BEARER_KEY }).then(function(r) { return (r && r.value) || ''; }).catch(function() { return ''; }); },
+      set: function(v) { return (v ? p.set({ key: BEARER_KEY, value: v }) : p.remove({ key: BEARER_KEY })).catch(function() {}); }
+    };
+    return {
+      get: function() { try { return Promise.resolve(localStorage.getItem(BEARER_KEY) || ''); } catch (_) { return Promise.resolve(''); } },
+      set: function(v) { try { v ? localStorage.setItem(BEARER_KEY, v) : localStorage.removeItem(BEARER_KEY); } catch (_) {} return Promise.resolve(); }
+    };
+  })();
+  function getBearer() { return bearerCache; }
+  function setBearer(t) { bearerCache = t || ''; return secureStore.set(bearerCache); }
+  var bearerLoaded = secureStore.get().then(function(v) {
+    if (v) { bearerCache = v; return v; }
+    var legacy = ''; try { legacy = localStorage.getItem(BEARER_KEY) || ''; } catch (_) {}
+    if (legacy) { bearerCache = legacy; secureStore.set(legacy); try { localStorage.removeItem(BEARER_KEY); } catch (_) {} }
+    return bearerCache;
+  }).catch(function() { return ''; });
+
+  // Revoke a bearer SERVER-side (idempotent). Used by sign-out (#1) and to discard a login that was
+  // superseded mid-flight (#2), so a leaked/replayed bearer no longer authenticates.
+  function revokeBearer(token) {
+    if (!token) return Promise.resolve();
+    return fetch(API_BASE + '/api/mobile/signout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
+      .then(function() {}).catch(function() {});
+  }
   // Mint an anonymous bearer on first launch so on-device commenting works before login.
   function ensureBearer() {
-    if (getBearer()) return Promise.resolve(getBearer());
-    return fetch(API_BASE + '/api/mobile/bootstrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) { if (d && d.token) { setBearer(d.token); return d.token; } return ''; })
-      .catch(function() { return ''; });
+    return bearerLoaded.then(function() {
+      if (getBearer()) return getBearer();
+      return fetch(API_BASE + '/api/mobile/bootstrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { if (d && d.token) { return setBearer(d.token).then(function() { return d.token; }); } return ''; })
+        .catch(function() { return ''; });
+    });
   }
+  // #5 — a dead bearer (revoked/expired) returns 401 from /me (a valid anon session is 200); clear it
+  // and re-bootstrap a fresh anon ONCE so the session recovers instead of wedging on the stale token.
   function fetchMeMobile(epoch) {
-    return ensureBearer().then(function(token) {
-      if (epoch !== generation || !token) return stale();
+    function meWith(token, allowRebootstrap) {
+      if (epoch !== generation || !token) return Promise.resolve(stale());
       return fetch(API_BASE + '/api/mobile/me', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
         .then(function(r) {
+          if (r.status === 401 && allowRebootstrap)
+            return setBearer('').then(ensureBearer).then(function(fresh) { return meWith(fresh, false); });
           if (!r.ok) return stale();
           return r.json().then(function(data) {
             if (epoch !== generation) return stale();
             return { ready: true, session: applyServer(data) };
           });
-        }).catch(stale);
-    }).catch(stale);
+        }).catch(function() { return stale(); });
+    }
+    return ensureBearer().then(function(token) { return meWith(token, true); }).catch(function() { return stale(); });
   }
   function sha256hex(s) {
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function(b) {
@@ -294,24 +331,39 @@
     provider = provider || 'google';
     var caps = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || {};
     if (!caps.Browser || !caps.App) return Promise.reject(new Error('Sign-in needs the Capacitor Browser/App plugins'));
+    var startEpoch = generation;                 // #2 — a sign-out/invalidate during login makes this stale
     var verifier = randomVerifier();
     return sha256hex(verifier).then(function(challenge) {
       return new Promise(function(resolve, reject) {
-        var handlePromise = caps.App.addListener('appUrlOpen', function(event) {
-          var code = null, err = null;
-          try { var u = new URL(event.url); code = u.searchParams.get('code'); err = u.searchParams.get('error'); } catch (_) {}
-          remove();
+        var settled = false;
+        function finish() { settled = true; removeH(urlHandle); removeH(finHandle); }
+        function removeH(h) { Promise.resolve(h).then(function(x) { if (x && x.remove) x.remove(); }).catch(function() {}); }
+        var urlHandle = caps.App.addListener('appUrlOpen', function(event) {
+          if (settled) return;
+          var code = null; try { code = new URL(event.url).searchParams.get('code'); } catch (_) {}
+          if (!code) return;                     // not our deeplink (or an error return) — let cancel handle it
+          finish();
           try { caps.Browser.close(); } catch (_) {}
-          if (!code) { reject(new Error(err || 'Sign-in was cancelled or failed')); return; }
           fetch(API_BASE + '/api/mobile/exchange', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getBearer() },
             body: JSON.stringify({ code: code, verifier: verifier })
           }).then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(d) { if (d && d.token) { setBearer(d.token); resolve(refreshSession()); } else reject(new Error('Token exchange failed')); })
+            .then(function(d) {
+              if (!d || !d.token) { reject(new Error('Token exchange failed')); return; }
+              if (startEpoch !== generation) {   // #2 — signed out mid-login: don't adopt it, revoke it
+                revokeBearer(d.token); reject(new Error('Sign-in was superseded')); return;
+              }
+              setBearer(d.token).then(function() { resolve(refreshSession()); });
+            })
             .catch(reject);
         });
-        function remove() { Promise.resolve(handlePromise).then(function(h) { if (h && h.remove) h.remove(); }).catch(function() {}); }
+        // #6 — closing the browser without completing disposes the listener and rejects, so a later login
+        // can't fire this stale verifier. The tick lets a deeplink arriving alongside the close win first.
+        var finHandle = caps.Browser.addListener('browserFinished', function() {
+          if (settled) return;
+          setTimeout(function() { if (!settled) { finish(); reject(new Error('Sign-in was cancelled')); } }, 0);
+        });
         caps.Browser.open({ url: API_BASE + '/api/auth/' + provider + '/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + challenge) });
       });
     });
@@ -363,11 +415,16 @@
   function syncSession() { return refreshSession().then(function(res) { return res.session; }); }
   function signOut() {
     if (MOBILE) {
-      // Mobile sign-out: drop the bearer and fall back to a fresh anonymous session. Does not touch
-      // other devices or the provider identity; a late refresh can't restore the old bearer (it's gone).
-      setBearer('');
+      // Mobile sign-out: REVOKE the bearer server-side (#1) so a replayed token no longer authenticates,
+      // then fall back to a fresh anonymous session. clearSession() bumps the generation synchronously so
+      // a login in flight is treated as stale (#2). Does not touch other devices or the provider identity.
+      var old = getBearer();
       clearSession();
-      return ensureBearer().then(function() { clearSession(); return true; });
+      return setBearer('')
+        .then(function() { return revokeBearer(old); })
+        .then(ensureBearer)
+        .then(function() { clearSession(); return true; })
+        .catch(function() { clearSession(); return true; });
     }
     if (logoutPromise) return logoutPromise;
     logoutPending = true;
@@ -400,6 +457,8 @@
     signOut: signOut,
     // Mobile-only: browser-OAuth sign-in (no-op path on web, where the plugins are absent).
     signIn: signIn,
-    isMobile: MOBILE
+    isMobile: MOBILE,
+    // The current bearer, read synchronously per request by the native transport (Client.Api).
+    currentBearer: getBearer
   };
 })();

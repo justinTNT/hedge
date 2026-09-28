@@ -70,8 +70,10 @@ let mobileMe (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
             let! identityJson = resolveIdentity env.DB guestId
             match identityJson with
             | Some json -> return okJson (sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guestId json)
-            | None -> return okJson """{"guest":null}"""
-        | _ -> return okJson """{"guest":null}"""
+            | None -> return okJson """{"guest":null}"""     // a VALID anonymous session (no linked identity)
+        // A present-but-unresolvable bearer (revoked/expired) or none at all is 401 — distinct from a
+        // valid anon session — so the client clears the dead token and re-bootstraps instead of looping.
+        | Hedge.MobileSession.Invalid | Hedge.MobileSession.NoBearer -> return unauthorized ()
     }
 
 /// The app's registered custom scheme (POC). The one-time CODE (never a bearer) rides in the deeplink.
@@ -107,25 +109,36 @@ let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRespon
             return badRequest "Missing code or verifier"
         else
             let now = epochNow ()
-            let! consumed = Identity.Mobile.consumeCode env.DB now rawCode
+            // Consume + PKCE-verify atomically: None = bad/expired code OR wrong verifier (which does
+            // NOT burn the code — see Identity.Mobile.consumeCode).
+            let! consumed = Identity.Mobile.consumeCode env.DB now rawCode verifier
             match consumed with
             | None -> return unauthorized ()
-            | Some (verifiedGuestId, challenge) ->
-                let! proof = Hedge.MobileSession.sha256Hex verifier
-                if proof <> challenge then return unauthorized ()
-                else
-                    match Hedge.MobileSession.readBearer request with
-                    | Some rawBearer ->
-                        let! oldHash = Hedge.MobileSession.sha256Hex rawBearer
-                        let! anonGuestId = Identity.Mobile.resolveByHash env.DB now oldHash
-                        match anonGuestId with
-                        | Some ag ->
-                            do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId
-                            do! Identity.Mobile.revokeByHash env.DB oldHash
-                        | None -> ()
+            | Some verifiedGuestId ->
+                match Hedge.MobileSession.readBearer request with
+                | Some rawBearer ->
+                    let! oldHash = Hedge.MobileSession.sha256Hex rawBearer
+                    let! anonGuestId = Identity.Mobile.resolveByHash env.DB now oldHash
+                    match anonGuestId with
+                    | Some ag ->
+                        do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId
+                        do! Identity.Mobile.revokeByHash env.DB oldHash
                     | None -> ()
-                    let! token = Identity.Mobile.mintSession env.DB verifiedGuestId now MobileSessionTtl
-                    return okJson (sprintf """{"token":"%s"}""" token)
+                | None -> ()
+                let! token = Identity.Mobile.mintSession env.DB verifiedGuestId now MobileSessionTtl
+                return okJson (sprintf """{"token":"%s"}""" token)
+    }
+
+/// POST /api/mobile/signout — revoke the presented bearer server-side (idempotent). The client reports
+/// sign-out success only after this returns, so a replayed bearer no longer authenticates.
+let mobileSignout (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match Hedge.MobileSession.readBearer request with
+        | Some rawBearer ->
+            let! hash = Hedge.MobileSession.sha256Hex rawBearer
+            do! Identity.Mobile.revokeByHash env.DB hash
+        | None -> ()
+        return okJson """{"ok":true}"""
     }
 
 /// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
