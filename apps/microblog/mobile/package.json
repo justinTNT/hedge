@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Capacitor POC shell for wt.fail (Android, browser-OAuth + opaque bearer session).",
   "scripts": {
-    "build:web": "cd .. && HEDGE_SITE= SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" API_ORIGIN=https://wt.fail MOBILE=1 npm run build && rm -rf mobile/www && mkdir -p mobile/www && cp -r _site/* mobile/www/",
+    "build:web": "cd .. && HEDGE_SITE= SITE_ORIGIN=https://wt.fail SITE_SLUG=wtfail SITE_TITLE=\"WT.Fail\" SITE_LOGO=\"/public/wtfail.png\" API_ORIGIN=https://wt.fail npm run build && rm -rf mobile/www && mkdir -p mobile/www && cp -r _site/* mobile/www/",
     "add:android": "cap add android",
     "sync": "cap sync android",
     "open:android": "cap open android",

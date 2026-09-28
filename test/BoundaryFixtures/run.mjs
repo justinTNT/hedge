@@ -84,25 +84,26 @@ test('mobile bearer resolution is fail-closed and shares the role policy with co
   assert.equal(await runtime.mobileRole(bearer('wrong-token'),'good-token','g1','google','curator'),'auth-required');
 });
 test('capacitor transport resolves the API origin, attaches the bearer, and maps a completed response',async()=>{
-  let captured;
-  globalThis.CapacitorHttp={request:async(o)=>{captured=o;return {status:200,data:'{"ok":true}'}}};
+  // Uses plain fetch (the CapacitorHttp plugin patches it to native on device); here we mock fetch.
+  let captured;const realFetch=globalThis.fetch;
+  globalThis.fetch=async(url,options)=>{captured={url,options};return new Response('{"ok":true}',{status:200})};
   try {
     const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
     const {ofArray,empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
     const post=await api.capacitorTransport('https://wt.fail',()=>'tok123',new Request('POST','/api/mobile/exchange',empty(),empty(),'{"code":"c"}'));
     assert.equal(post.tag,0);assert.equal(post.fields[0].Status,200);assert.equal(post.fields[0].Body,'{"ok":true}');
-    assert.equal(captured.url,'https://wt.fail/api/mobile/exchange');assert.equal(captured.method,'POST');
-    assert.equal(captured.disableRedirects,true);assert.equal(captured.responseType,'text');assert.equal(captured.data,'{"code":"c"}');
-    const ph=new Headers(captured.headers);assert.equal(ph.get('Authorization'),'Bearer tok123');assert.equal(ph.get('Content-Type'),'application/json');
+    assert.equal(captured.url,'https://wt.fail/api/mobile/exchange');assert.equal(captured.options.method,'POST');
+    assert.equal(captured.options.cache,'no-store');
+    const ph=new Headers(captured.options.headers);assert.equal(ph.get('Authorization'),'Bearer tok123');assert.equal(ph.get('Content-Type'),'application/json');
     // no bearer -> no Authorization; query folded onto the absolute URL; no body -> no Content-Type
     await api.capacitorTransport('https://wt.fail',()=>'',new Request('GET','/api/mobile/me',ofArray([['q','red flower']]),empty(),undefined));
     assert.equal(captured.url,'https://wt.fail/api/mobile/me?q=red%20flower');
-    assert.ok(!new Headers(captured.headers).get('Authorization'));assert.ok(!new Headers(captured.headers).get('Content-Type'));
-  } finally { delete globalThis.CapacitorHttp }
+    assert.ok(!new Headers(captured.options.headers).get('Authorization'));assert.ok(!new Headers(captured.options.headers).get('Content-Type'));
+  } finally { globalThis.fetch=realFetch }
 });
 test('selectTransport picks the native transport for a mobile origin and reads the bearer live',async()=>{
-  let captured;
-  globalThis.CapacitorHttp={request:async(o)=>{captured=o;return {status:200,data:'{}'}}};
+  let captured;const realFetch=globalThis.fetch;
+  globalThis.fetch=async(url,options)=>{captured={url,options};return new Response('{}',{status:200})};
   try {
     const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
     const {empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
@@ -110,9 +111,9 @@ test('selectTransport picks the native transport for a mobile origin and reads t
     const t=api.selectTransport('https://wt.fail',()=>tok);   // selectTransport returns the transport
     await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
     assert.equal(captured.url,'https://wt.fail/api/mobile/me');
-    assert.equal(new Headers(captured.headers).get('Authorization'),'Bearer tokA');
+    assert.equal(new Headers(captured.options.headers).get('Authorization'),'Bearer tokA');
     tok='';                               // cleared -> next request omits it (read per request)
     await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
-    assert.ok(!new Headers(captured.headers).get('Authorization'));
-  } finally { delete globalThis.CapacitorHttp }
+    assert.ok(!new Headers(captured.options.headers).get('Authorization'));
+  } finally { globalThis.fetch=realFetch }
 });

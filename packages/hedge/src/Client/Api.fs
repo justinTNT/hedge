@@ -117,42 +117,34 @@ let uncachedBrowserTransport = browserTransportWithCache true
 
 // -- Transport-neutral native adapter (Capacitor POC) --
 
-/// Capacitor's native HTTP plugin, bound narrowly (not a global fetch patch) so only this transport is
-/// native. Returns { status; data; headers; url }; we force responseType 'text' so `data` is the raw
-/// body text (Hedge.Http's contract), whatever the status.
-[<Emit("CapacitorHttp.request($0)")>]
-let private capacitorHttpRequest (options: obj) : JS.Promise<obj> = jsNative
-
-/// A Hedge.Http.Transport over Capacitor native HTTP, for the BUNDLED mobile app whose WebView origin
-/// (capacitor://localhost) is not wt.fail. Resolves paths against the explicit `apiOrigin` (NOT the
-/// deployment basePath — mobile talks to the API absolutely), attaches the current opaque bearer, and
-/// disables auto-redirect for credentialed calls. Native HTTP → no browser CORS/preflight. A completed
-/// response (any status) is Ok with its status for Http.sendDecode to interpret; only a request that
-/// never completes is a TransportFailure. `bearer` is read PER REQUEST ("" = none), so a fresh login /
-/// sign-out is reflected without rebuilding the transport.
+/// A Hedge.Http.Transport for the BUNDLED mobile app, whose WebView origin (capacitor://localhost) is
+/// not wt.fail. It uses ordinary `fetch` — the app enables Capacitor's CapacitorHttp plugin
+/// (capacitor.config.json: plugins.CapacitorHttp.enabled), which patches fetch/XHR to route NATIVELY,
+/// so this bypasses WebView CORS without any native symbol. Differences from browserTransport: it
+/// resolves paths against the explicit `apiOrigin` (mobile talks to the API absolutely, not via
+/// basePath) and attaches the opaque bearer, read PER REQUEST ("" = none) so a fresh login / sign-out
+/// is reflected without rebuilding the transport. A completed response (any status) is Ok with its
+/// status for Http.sendDecode to interpret; only a request that never completes is a TransportFailure.
 let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http.Transport =
     fun (req: Hedge.Http.Request) ->
         promise {
             let url = apiOrigin + req.Path + buildQuery req.Query
             let token = bearer ()
-            let headers =
-                createObj [
-                    for (k, v) in req.Headers do yield k ==> v
-                    if req.Body.IsSome then yield "Content-Type" ==> "application/json"
-                    if token <> "" then yield "Authorization" ==> ("Bearer " + token) ]
-            let options =
-                createObj [
-                    yield "url" ==> url
-                    yield "method" ==> req.Method.ToUpperInvariant()
-                    yield "headers" ==> headers
-                    yield "disableRedirects" ==> true
-                    yield "responseType" ==> "text"
-                    match req.Body with Some b -> yield "data" ==> b | None -> () ]
+            let headerList =
+                [ if req.Body.IsSome then yield ContentType "application/json"
+                  for (k, v) in req.Headers do yield HttpRequestHeaders.Custom (k, box v)
+                  if token <> "" then yield HttpRequestHeaders.Custom ("Authorization", box ("Bearer " + token)) ]
+            let baseProps = [ Method (methodOf req.Method); requestHeaders headerList ]
+            let props =
+                match req.Body with
+                | Some b -> baseProps @ [ Body (BodyInit.Case3 b) ]
+                | None -> baseProps
             try
-                let! response = capacitorHttpRequest options
-                let status : int = response?status
-                let body : string = response?data
-                return Ok ({ Status = status; Headers = []; Body = (if isNull (box body) then "" else body) }: Hedge.Http.Response)
+                let options = requestProps props
+                disableCache options
+                let! response = GlobalFetch.fetch(RequestInfo.Url url, options)
+                let! text = response.text()
+                return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
             with ex ->
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }
