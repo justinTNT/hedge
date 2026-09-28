@@ -6,8 +6,10 @@ native provider SDK). Personal-device proof of concept — not published.
 
 > **Scaffold status.** These config/scripts were authored in a sandbox that cannot run `npm install`,
 > the Android SDK, or a device — so the `android/` Gradle project is **not** generated here and nothing
-> below has been executed on hardware. Run the commands on your machine. Versions are a starting point;
-> `npm outdated` and bump the Capacitor major if a newer one is current.
+> below has been executed on hardware. Run the commands on your machine. Pinned to **Capacitor 8**
+> (current latest) so the reusable framework mobile stack is validated against the major a real app would
+> ship on; the secure-storage API was checked identical across the 6→8 bump (see below). The on-device
+> Capacitor-8 rebuild is yours to run — it needs the JDK 21 toolchain in Prerequisites.
 
 ## What already works (server side, on branch `hedge-capacitor-microblog`)
 
@@ -29,10 +31,21 @@ native provider SDK). Personal-device proof of concept — not published.
 
 ## Prerequisites (your machine)
 
-- Android Studio + Android SDK (Platform 34+), a JDK (17), and either a device with USB debugging or
-  an emulator (AVD).
+This POC is on **Capacitor 8**, which sets the Android toolchain floor:
+
+- **JDK 21** (Capacitor 7 raised the minimum from 17 to 21; 8 keeps it). Capacitor 6 was the last major
+  that ran on JDK 17 — that's the one real reason the first cut used 6. `java -version` must show 21.
+- **Android Studio + Android SDK** at the versions Capacitor 8 requires (recent Android Studio, a current
+  build-tools/Platform, AGP ≥ 8.x). Check the official [Capacitor upgrade guides](https://capacitorjs.com/docs/updating)
+  (6→7 then 7→8) for the exact Android Studio / AGP / target-SDK minimums rather than trusting a number here.
+- **Node ≥ 22** for `@capacitor/cli@8` (this repo already runs newer).
+- A device with USB debugging or an emulator (AVD).
 - The estate's existing **wt.fail Google OAuth web client** is reused unchanged — no new Google Cloud
   config, no Android OAuth client (browser-OAuth keeps the Worker as the OAuth client).
+
+> **Upgrading an existing checkout from the earlier Capacitor 6 cut:** the `android/` project is
+> gitignored and pinned to whatever Capacitor generated it, so `rm -rf android node_modules` and re-run
+> the first-time setup below on the Capacitor-8 CLI — `cap sync` alone will not migrate a v6 project to v8.
 
 ## First-time setup
 
@@ -46,10 +59,13 @@ npx cap sync android
 
 **Secure bearer storage (#7):** the bearer is stored via `capacitor-secure-storage-plugin` (registered as
 `SecureStoragePlugin`) — `guest-session.js` feature-detects it and keeps an in-memory cache so the
-transport reads it synchronously. It is declared in `package.json` at `^0.10.0`, the release whose
-peer dependency is `@capacitor/core: ^6.0.0` (matching this POC's Capacitor 6); `0.11.0`+ requires
-Capacitor 7+, so bump it together with the `@capacitor/*` majors. Without the plugin the store falls
-back to WebView `localStorage` (fine for a quick spike, not for real 30-day sessions).
+transport reads it synchronously. It is declared at `^0.13.0`, the release whose peer dependency is
+`@capacitor/core >=8.0.0`. Its API is **identical** to the Capacitor-6-era `0.10.0` this POC first used —
+same `SecureStoragePlugin` registration name and the same `get({key})→{value}` / `set({key,value})` /
+`remove({key})` shape the wrapper calls — so nothing in `guest-session.js` changed across the Cap-6→8
+bump. (Plugin version ↔ Capacitor major: `0.10.x`→Cap 6, `0.11/0.12`→Cap 7, `0.13`→Cap 8; bump it with
+the `@capacitor/*` majors.) Without the plugin the store falls back to WebView `localStorage` (fine for a
+quick spike, not for real 30-day sessions).
 
 The deeplink scheme `wtfail://auth?...` (browser-OAuth return) is registered **automatically**:
 `npm run add:android` and `npm run sync` both run `npm run deeplink`, which patches
