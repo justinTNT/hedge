@@ -75,8 +75,8 @@ test('protected writes queued before logout are cancelled rather than sent with 
 });
 
 // --- Mobile (Capacitor) bearer session ---
-function mobileFixture(fetch,caps,seed) {
-  const store=new Map();
+function mobileFixture(fetch,caps,seed,sharedStore) {
+  const store=sharedStore||new Map();               // pass a shared store to simulate an app restart
   if(seed) store.set('hedge_mobile_bearer',seed);   // pre-seed before boot (secure-store load reads it)
   const context={Promise,Math,Date,JSON,Array,Uint8Array,TextEncoder,URL,encodeURIComponent,fetch,setTimeout,
     crypto:globalThis.crypto,navigator:{},
@@ -163,4 +163,40 @@ test('a sign-out during login supersedes it: the verified bearer is discarded + 
   assert.notEqual(f.store.get('hedge_mobile_bearer'),'verified');   // verified bearer NOT adopted
   assert.ok(calls.some(x=>x[0].endsWith('/api/mobile/signout')&&x[1].headers.Authorization==='Bearer verified'),
             'the superseded verified bearer was revoked');
+});
+test('sign-out reports a failed revoke and retries it on next boot (#1)',async()=>{
+  const store=new Map();let signoutOk=false;const revoked=[];
+  const fetch=async(url,opts)=>{
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'anon-x'})};
+    if(url.endsWith('/api/mobile/me')) return {ok:true,json:async()=>({guest:null})};
+    if(url.endsWith('/api/mobile/signout')){ revoked.push(opts.headers.Authorization); return {ok:signoutOk}; }
+    return {ok:false}; };
+  const f=mobileFixture(fetch,{},undefined,store);
+  await f.api.ensureSession();
+  assert.equal(await f.api.signOut(),false);                       // revoke failed -> reported as false
+  assert.equal(JSON.parse(store.get('hedge_pending_revoke'))[0],'anon-x');  // token persisted for retry
+  // "restart" with the same secure store; revoke now succeeds -> boot retry clears the pending set
+  signoutOk=true;
+  const f2=mobileFixture(fetch,{},undefined,store);
+  await f2.api.ensureSession(); await turn(); await turn();
+  assert.ok(revoked.includes('Bearer anon-x'));
+  assert.ok(!store.get('hedge_pending_revoke'));                   // pending cleared
+});
+test('a stale /me 401 for an old token does not clear the bearer replaced by login (#2)',async()=>{
+  let releaseStale,meAnon=0;
+  const fetch=async(url,opts)=>{
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'anon-1'})};
+    if(url.endsWith('/api/mobile/exchange')) return {ok:true,json:async()=>({token:'verified'})};
+    if(url.endsWith('/api/mobile/signout')) return {ok:true};
+    if(url.endsWith('/api/mobile/me')){
+      if(opts.headers.Authorization==='Bearer anon-1'){ meAnon++; if(meAnon>=2) return new Promise(r=>{releaseStale=()=>r({ok:false,status:401})}); return {ok:true,json:async()=>({guest:null})}; }
+      return {ok:true,json:async()=>({guest:{guestId:'g',identity:null}})}; }
+    return {ok:false}; };
+  const c=mkCaps();const f=mobileFixture(fetch,c.plugins);
+  await f.api.ensureSession();                    // anon-1 (/me #1 ok)
+  const stale=f.api.refreshSession();await turn();// /me #2 (anon-1) held
+  const login=f.api.signIn('google');await turn();c.urlFn({url:'wtfail://auth?code=abc'});await login;
+  assert.equal(f.store.get('hedge_mobile_bearer'),'verified');
+  releaseStale();await stale;                      // stale 401 (anon-1) arrives after login
+  assert.equal(f.store.get('hedge_mobile_bearer'),'verified');  // NOT cleared (token guard)
 });
