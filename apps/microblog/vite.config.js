@@ -42,6 +42,10 @@ const siteInfoLabel = process.env.SITE_INFO_LABEL || '';
 const siteOrigin = (process.env.SITE_ORIGIN || '').replace(/\/$/, '');
 // Optional one-line description for the social-preview card. Omitted when unset.
 const siteDescription = process.env.SITE_DESCRIPTION || '';
+// Absolute API origin for a bundled mobile (Capacitor) build, e.g. https://wt.fail. The client's
+// appTransport switches to the native/bearer transport when this is set on window; empty for an
+// ordinary browser deployment (API calls stay relative to BASE_PATH).
+const apiOrigin = (process.env.API_ORIGIN || '').replace(/\/$/, '');
 
 const htmlEsc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
@@ -94,7 +98,9 @@ function siteConfig() {
         `window.SITE_TITLE=${JSON.stringify(siteTitle)};` +
         `window.SITE_INFO_URL=${JSON.stringify(siteInfoUrl)};` +
         `window.SITE_INFO_LABEL=${JSON.stringify(siteInfoLabel)};` +
-        `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};</script>`;
+        `window.SITE_FEATURES=${JSON.stringify(siteFeatures)};` +
+        (apiOrigin ? `window.API_ORIGIN=${JSON.stringify(apiOrigin)};` : '') +
+        `</script>`;
       // Deterministic order: shared base first, then the deployment override.
       const cssLinks =
         isAdmin ? '<link rel="stylesheet" href="./styles/admin.css">'

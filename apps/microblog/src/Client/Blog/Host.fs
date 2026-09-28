@@ -22,9 +22,11 @@ open Content.ClaimGlue   // shared OAuth claim-return glue (parseClaimFromRoute 
 // navigator, title set directly. Blog is primary (MOUNT_BASE=""), so it routes at the root.
 let private ctx : Content.HostContext = Content.HostContext.standalone Shared.navigateTo
 
-// CP-C: the host constructs the typed API client once (browser transport) and injects it, with
-// the host context, into the content update path. The module keeps the typed Hedge.Http.ApiError.
-let private api = Blog.ClientGen.createClient Client.Api.browserTransport
+// CP-C: the host constructs the typed API client once and injects it, with the host context, into the
+// content update path. The module keeps the typed Hedge.Http.ApiError. appTransport is the browser
+// transport for a web deployment and the Capacitor native/bearer transport for a bundled mobile build
+// (selected by window.API_ORIGIN) — the client is identical either way.
+let private api = Blog.ClientGen.createClient Client.Api.appTransport
 let private deps : Blog.Client.Types.Deps = { Ctx = ctx; Api = api }
 
 type Model =

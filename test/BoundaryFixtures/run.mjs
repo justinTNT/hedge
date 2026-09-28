@@ -100,3 +100,19 @@ test('capacitor transport resolves the API origin, attaches the bearer, and maps
     assert.ok(!new Headers(captured.headers).get('Authorization'));assert.ok(!new Headers(captured.headers).get('Content-Type'));
   } finally { delete globalThis.CapacitorHttp }
 });
+test('selectTransport picks the native transport for a mobile origin and reads the bearer live',async()=>{
+  let captured;
+  globalThis.CapacitorHttp={request:async(o)=>{captured=o;return {status:200,data:'{}'}}};
+  try {
+    const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
+    const {empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
+    let tok='tokA';                       // a live bearer thunk (the store is Emit-inlined; tested on-device)
+    const t=api.selectTransport('https://wt.fail',()=>tok);   // selectTransport returns the transport
+    await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
+    assert.equal(captured.url,'https://wt.fail/api/mobile/me');
+    assert.equal(new Headers(captured.headers).get('Authorization'),'Bearer tokA');
+    tok='';                               // cleared -> next request omits it (read per request)
+    await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
+    assert.ok(!new Headers(captured.headers).get('Authorization'));
+  } finally { delete globalThis.CapacitorHttp }
+});

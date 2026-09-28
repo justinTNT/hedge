@@ -157,6 +157,32 @@ let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }
 
+// -- Mobile bearer store + default transport selection (Capacitor POC) --
+
+/// The absolute API origin for a bundled mobile build (set on window by the mobile web build, e.g.
+/// https://wt.fail). Empty for an ordinary browser deployment — then the browser transport is used.
+[<Emit("window.API_ORIGIN || ''")>]
+let apiOrigin : string = jsNative
+
+/// The current opaque mobile bearer ("" = none), read live per request. localStorage-backed for the
+/// POC (swap to a Keychain/Keystore plugin in the login-flow slice); wrapped so a blocked/absent store
+/// never throws. The login flow calls setMobileBearer after exchange; sign-out clears it.
+[<Emit("(()=>{try{return localStorage.getItem('hedge_mobile_bearer')||''}catch(e){return ''}})()")>]
+let mobileBearer () : string = jsNative
+
+[<Emit("(t=>{try{t?localStorage.setItem('hedge_mobile_bearer',t):localStorage.removeItem('hedge_mobile_bearer')}catch(e){}})($0)")>]
+let setMobileBearer (token: string) : unit = jsNative
+
+let clearMobileBearer () : unit = setMobileBearer ""
+
+/// Pick the transport: native (Capacitor, bearer-carrying, absolute origin) when a mobile API origin is
+/// configured, else the ordinary browser transport. Pure in its inputs so it's unit-testable.
+let selectTransport (origin: string) (bearer: unit -> string) : Hedge.Http.Transport =
+    if origin <> "" then capacitorTransport origin bearer else browserTransport
+
+/// The app's default transport, chosen once from window config. Generated clients build on this.
+let appTransport : Hedge.Http.Transport = selectTransport apiOrigin mobileBearer
+
 // -- WebSocket --
 
 [<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
