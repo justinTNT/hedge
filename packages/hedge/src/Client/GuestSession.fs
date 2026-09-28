@@ -114,6 +114,18 @@ let isMobile : bool = jsNative
 [<Emit("window.HedgeGuest.signIn($0).then(function(){location.reload()}).catch(function(){})")>]
 let signInThenReload (provider: string) : unit = jsNative
 
+[<Emit("window.API_ORIGIN || ''")>]
+let private assetOrigin : string = jsNative
+
+/// Resolve an app-served asset URL (avatar, uploaded image, logo) for the platform. On a bundled mobile
+/// build (window.API_ORIGIN set) a ROOT-relative path like /blobs/avatars/x is served by the API host,
+/// not the capacitor:// WebView, so prepend the API origin. Absolute (http/https/data:) and protocol-
+/// relative URLs, and the empty string, are returned unchanged; on web (no API_ORIGIN) always unchanged.
+let assetUrl (url: string) : string =
+    if assetOrigin <> "" && not (isNull (box url)) && url.Length > 0 && url.[0] = '/' && not (url.StartsWith "//")
+    then assetOrigin + url
+    else url
+
 /// Drop the cached bootstrap so the next `ensureSession` re-fetches. Call on a write's 401 (the
 /// cookie expired/was cleared/the key changed since bootstrap) so the client re-establishes a
 /// session instead of resending the rejected credential until reload.

@@ -290,7 +290,7 @@ let view (ctx: Content.HostContext) (response: GetItem.Response) (model: Model) 
                 Html.h2 [ prop.text item.Title ]
             match item.Image with
             | Some (Image imgUrl) ->
-                Html.img [ prop.src imgUrl; prop.className "item-image" ]
+                Html.img [ prop.src (Client.GuestSession.assetUrl imgUrl); prop.className "item-image" ]
             | None -> Html.none
             match item.Extract with
             | Some extract -> richContent "extract" extract

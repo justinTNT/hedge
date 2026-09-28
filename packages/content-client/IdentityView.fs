@@ -14,7 +14,7 @@ module IdentityView =
 
     /// A round avatar image (shared, so the identity UI carries no module dependency).
     let avatar (url: string) =
-        Html.img [ prop.className "avatar"; prop.src url ]
+        Html.img [ prop.className "avatar"; prop.src (GuestSession.assetUrl url) ]
 
     let private loginButton (provider: string) (label: string) =
         let path = Browser.Dom.window.location.pathname
