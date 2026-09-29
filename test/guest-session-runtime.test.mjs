@@ -200,3 +200,54 @@ test('a stale /me 401 for an old token does not clear the bearer replaced by log
   releaseStale();await stale;                      // stale 401 (anon-1) arrives after login
   assert.equal(f.store.get('hedge_mobile_bearer'),'verified');  // NOT cleared (token guard)
 });
+// A Keychain/Keystore-backed store whose bearer read can be HELD, to simulate a sign-out that races the
+// initial secure-store load. get({key})->{value} / set / remove mirrors capacitor-secure-storage-plugin.
+function mkSecureStore(initial){
+  const m=new Map(Object.entries(initial||{}));let gate=null;
+  return {
+    plugin:{
+      get:async({key})=>{ if(gate&&key==='hedge_mobile_bearer') await gate; return {value:m.get(key)}; },
+      set:async({key,value})=>{ m.set(key,value); return {value:true}; },
+      remove:async({key})=>{ m.delete(key); return {value:true}; }
+    },
+    m, hold(){ let r; gate=new Promise(res=>{r=res;}); return ()=>{ gate=null; r(); }; }
+  };
+}
+test('mobile sign-out before the initial secure-store load still revokes the stored bearer (#3-round3)',async()=>{
+  const ss=mkSecureStore({hedge_mobile_bearer:'stored-bearer'});
+  const release=ss.hold();                          // hold the boot-time bearer load so getBearer() is empty
+  const revoked=[];
+  const fetch=async(url,opts)=>{
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'fresh-anon'})};
+    if(url.endsWith('/api/mobile/me')) return {ok:true,json:async()=>({guest:null})};
+    if(url.endsWith('/api/mobile/signout')){ revoked.push(opts.headers.Authorization); return {ok:true,json:async()=>({ok:true})}; }
+    return {ok:false}; };
+  const f=mobileFixture(fetch,{SecureStoragePlugin:ss.plugin});
+  const out=f.api.signOut();                        // sign out BEFORE the load resolves
+  await turn();
+  release();                                        // now the stored bearer loads
+  assert.equal(await out,true);
+  assert.ok(revoked.includes('Bearer stored-bearer'),'revoked the ACTUAL stored bearer, not the empty cache');
+  assert.equal(ss.m.get('hedge_mobile_bearer'),'fresh-anon');   // rotated to a fresh anon afterwards
+});
+test('a sign-out failure queued during a boot-time revoke retry is not lost (#3-queue)',async()=>{
+  const store=new Map();
+  store.set('hedge_pending_revoke',JSON.stringify(['old-tok']));   // one leftover to retry on boot
+  let releaseOldRevoke;const revoked=[];
+  const fetch=async(url,opts)=>{
+    if(url.endsWith('/api/mobile/bootstrap')) return {ok:true,json:async()=>({token:'cur'})};
+    if(url.endsWith('/api/mobile/me')) return {ok:true,json:async()=>({guest:null})};
+    if(url.endsWith('/api/mobile/signout')){
+      const auth=opts.headers.Authorization;revoked.push(auth);
+      if(auth==='Bearer old-tok') return new Promise(r=>{releaseOldRevoke=()=>r({ok:true})});  // retry HANGS
+      return {ok:false};                                           // the live sign-out's revoke FAILS -> queued
+    }
+    return {ok:false}; };
+  const f=mobileFixture(fetch,{},undefined,store);
+  await f.api.ensureSession();await turn();          // boot: retry starts + holds the lock on old-tok revoke
+  const out=f.api.signOut();await turn();            // revoke('cur') fails -> addPending('cur') waits on the lock
+  releaseOldRevoke();await out;await turn();await turn();
+  const pending=JSON.parse(store.get('hedge_pending_revoke')||'[]');
+  assert.ok(pending.includes('cur'),'the sign-out failure queued during the retry survived');
+  assert.ok(!pending.includes('old-tok'),'the confirmed-revoked token was removed');
+});

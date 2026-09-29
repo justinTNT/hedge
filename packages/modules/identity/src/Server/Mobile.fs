@@ -101,6 +101,11 @@ let mergeAnonInto (db: D1Database) (reassignStatements: string list) (anonGuestI
             let! verifiedRow = (bind (db.prepare Identity.Sql.activeIdentityForGuest) [| box verifiedGuestId |]).first()
             if isNull (box verifiedRow) then return ()
             else
+                // The mobile bootstrap mints an anon session WITHOUT a guests row (that row is created
+                // lazily on the first comment, via ResolveAuthor). So a sign-in BEFORE any comment reaches
+                // here with no parent guest, and inserting the anon identity below would fail the identities
+                // -> guests foreign key. Ensure the parent guest first; ensureGuest is INSERT OR IGNORE.
+                let! _ = (Identity.Server.ensureGuestStmt db anonGuestId now).run()
                 // #3 — ensure the anon guest HAS an (activated) anonymous identity before superseding it,
                 // so a first-ever comment racing this login attaches to that identity and follows the
                 // supersede. ensureAnonymousStmt is idempotent under concurrency (INSERT .. WHERE NOT

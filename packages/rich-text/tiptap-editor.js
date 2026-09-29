@@ -351,7 +351,10 @@ function createResizableImageView(node, view, getPos) {
         dom: wrapper,
         update(updatedNode) {
             if (updatedNode.type.name !== 'image') return false
-            img.src = updatedNode.attrs.src
+            // Same mobile prefixing as the initial render: replacePlaceholder swaps in a root-relative
+            // /blobs/<key> src via setNodeMarkup, which fires this update() — without toMobileAsset the
+            // just-uploaded photo would point at capacitor://localhost. Stored attr stays root-relative.
+            img.src = toMobileAsset(updatedNode.attrs.src)
             if (updatedNode.attrs.alt) img.alt = updatedNode.attrs.alt
             else img.removeAttribute('alt')
             if (updatedNode.attrs.title) img.title = updatedNode.attrs.title

@@ -293,20 +293,39 @@
   // #1 — persisted pending-revoke set: tokens whose server revoke failed, retried opportunistically so a
   // valid token is never orphaned (we lost local possession but the server session lives).
   function loadPending() { return secureStore.get(PENDING_KEY).then(function(s) { try { return s ? JSON.parse(s) : []; } catch (_) { return []; } }); }
+  // Serialize every read-modify-write of the pending set. Without this, a boot-time retry that reads the
+  // list, then (after slow network revokes) writes back its result, would clobber a sign-out failure that
+  // addPending queued in between — leaving that token valid until expiry. The lock makes each mutation
+  // atomic; retryPendingRevokes additionally removes ONLY confirmed tokens so nothing is dropped blind.
+  var pendingLock = Promise.resolve();
+  function withPendingLock(fn) {
+    var run = pendingLock.then(fn, fn);
+    pendingLock = run.then(function() {}, function() {});   // keep the chain alive across rejections
+    return run;
+  }
   function addPending(token) {
     if (!token) return Promise.resolve();
-    return loadPending().then(function(list) {
-      if (list.indexOf(token) < 0) { list.push(token); return secureStore.set(PENDING_KEY, JSON.stringify(list)); }
+    return withPendingLock(function() {
+      return loadPending().then(function(list) {
+        if (list.indexOf(token) < 0) { list.push(token); return secureStore.set(PENDING_KEY, JSON.stringify(list)); }
+      });
     });
   }
   function retryPendingRevokes() {
-    return loadPending().then(function(list) {
-      if (!list.length) return;
-      return Promise.all(list.map(function(t) { return revokeBearer(t).then(function(ok) { return ok ? null : t; }); }))
-        .then(function(results) {
-          var still = results.filter(function(t) { return !!t; });
-          return secureStore.set(PENDING_KEY, still.length ? JSON.stringify(still) : '');
-        });
+    return withPendingLock(function() {
+      return loadPending().then(function(list) {
+        if (!list.length) return;
+        return Promise.all(list.map(function(t) { return revokeBearer(t).then(function(ok) { return ok ? t : null; }); }))
+          .then(function(results) {
+            var confirmed = results.filter(function(t) { return !!t; });   // tokens the server CONFIRMED revoked
+            // Re-read and subtract only confirmed tokens (never overwrite with a stale snapshot), so any
+            // token queued in the meantime survives even if the lock above is ever loosened.
+            return loadPending().then(function(latest) {
+              var remaining = latest.filter(function(t) { return confirmed.indexOf(t) < 0; });
+              return secureStore.set(PENDING_KEY, remaining.length ? JSON.stringify(remaining) : '');
+            });
+          });
+      });
     }).catch(function() {});
   }
   bearerLoaded.then(retryPendingRevokes);   // retry any leftover revokes on boot
@@ -442,20 +461,25 @@
   function syncSession() { return refreshSession().then(function(res) { return res.session; }); }
   function signOut() {
     if (MOBILE) {
-      // Mobile sign-out: REVOKE the bearer server-side (#1) so a replayed token no longer authenticates,
-      // then fall back to a fresh anonymous session. clearSession() bumps the generation synchronously so
-      // a login in flight is treated as stale (#2). Returns the REVOKE result — false when the server
-      // didn't confirm — and persists the token for retry (loses local possession, not the ability to
-      // revoke). Does not touch other devices or the provider identity.
-      var old = getBearer();
-      clearSession();
-      return setBearer('')
-        .then(function() { return revokeBearer(old); })
-        .then(function(ok) {
-          var persist = ok ? Promise.resolve() : addPending(old);
-          return persist.then(ensureBearer).then(function() { clearSession(); return ok; });
-        })
-        .catch(function() { return addPending(old).then(ensureBearer).then(function() { clearSession(); return false; }); });
+      // Mobile sign-out: REVOKE the bearer server-side so a replayed token no longer authenticates, then
+      // fall back to a fresh anonymous session. Returns the REVOKE result — false when the server didn't
+      // confirm — and persists the token for retry (loses local possession, not the ability to revoke).
+      // Does not touch other devices or the provider identity.
+      clearSession();   // bump the generation synchronously so a login in flight is treated as stale
+      // Coordinate with the initial secure-store load: before bearerLoaded resolves getBearer() is empty,
+      // so a sign-out racing startup would setBearer('') (which also sets bearerWritten, suppressing the
+      // pending load) and silently drop the stored credential WITHOUT revoking or queuing it. Await the
+      // load first so `old` is the ACTUAL stored bearer.
+      return bearerLoaded.then(function() {
+        var old = getBearer();
+        return setBearer('')
+          .then(function() { return revokeBearer(old); })
+          .then(function(ok) {
+            var persist = ok ? Promise.resolve() : addPending(old);
+            return persist.then(ensureBearer).then(function() { clearSession(); return ok; });
+          })
+          .catch(function() { return addPending(old).then(ensureBearer).then(function() { clearSession(); return false; }); });
+      });
     }
     if (logoutPromise) return logoutPromise;
     logoutPending = true;
