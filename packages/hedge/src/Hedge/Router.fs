@@ -205,6 +205,10 @@ type OAuthConfig = {
     /// Called by /api/auth/me. App resolves guest → JSON string (or None for anon).
     ResolveIdentity: D1Database -> string -> JS.Promise<string option>
     OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete>
+    /// Passwordless email magic-link sender. None ⇒ email sign-in is off (routes 404, UI omits it).
+    SendEmail: Hedge.Email.EmailSender option
+    /// From-address for magic-link email (only meaningful when SendEmail is Some).
+    EmailFrom: string
 }
 
 /// Resolve a login provider name to its (config, creds) — bespoke first, then an OIDC registration
@@ -350,7 +354,9 @@ let createWorker (config: WorkerConfig) =
                             oauth.OidcProviders |> Map.toList
                             |> List.filter (fun (_, reg) -> hasCreds reg.ClientId reg.ClientSecret)
                             |> List.map fst
-                        bespoke @ oidc
+                        // Passwordless email is a pseudo-provider, listed only when a sender is configured.
+                        let email = if oauth.SendEmail.IsSome then [ "email" ] else []
+                        bespoke @ oidc @ email
                 let body =
                     configured
                     |> List.map (sprintf "\"%s\"")
@@ -435,6 +441,68 @@ let createWorker (config: WorkerConfig) =
                                         return redirectResponseOpt completion.RedirectUrl cookie
                 | _ ->
                     return badRequest (sprintf "Unknown provider: %s" providerName)
+
+            // Passwordless email magic-link. POST requests a link; GET verifies it and joins the SAME
+            // adopt/merge/activate path as the OAuth callback (with a synthesized email UserInfo).
+            | POST path, Some oauth when matchPath "/api/auth/email" path = Some (Exact "/api/auth/email") ->
+                match oauth.SendEmail with
+                | None -> return notFound ()
+                | Some sendEmail ->
+                    let! bodyText = request.text()
+                    let parsed = JS.JSON.parse bodyText
+                    let emailRaw : string = parsed?email
+                    if isNull (box emailRaw) || emailRaw.Trim() = "" then
+                        return badRequest "Missing email"
+                    else
+                        // Normalize: dedup is exact-string on (provider, provider_user_id), so lowercase now.
+                        let email = emailRaw.Trim().ToLowerInvariant()
+                        if not (email.Contains "@") || email.Contains " " then
+                            return badRequest "Invalid email"
+                        else
+                            let returnToRaw : string = parsed?returnTo
+                            let returnTo = OAuth.safeReturnPath returnToRaw
+                            let! token = Hedge.Email.generateEmailToken oauth.Secret email returnTo 900
+                            let origin : string = (createUrl request.url)?origin
+                            let link = sprintf "%s/api/auth/email/verify?token=%s" origin (JS.encodeURIComponent token)
+                            let msg : Hedge.Email.EmailMessage =
+                                {| To = email
+                                   Subject = "Your sign-in link"
+                                   Html = sprintf "<p>Click to sign in:</p><p><a href=\"%s\">Sign in</a></p><p>This link expires in 15 minutes. If you didn't request it, ignore this email.</p>" link
+                                   Text = sprintf "Sign in: %s\n\nThis link expires in 15 minutes. If you didn't request it, ignore this email." link |}
+                            let! sent = sendEmail msg
+                            match sent with
+                            | Ok () -> return okJson """{"sent":true}"""
+                            | Error e ->
+                                JS.console.error ("magic-link send failed: " + e)
+                                return serverError "Could not send sign-in email"
+
+            | GET path, Some oauth when matchPath "/api/auth/email/verify" path = Some (Exact "/api/auth/email/verify") ->
+                match oauth.SendEmail, config.GuestSession with
+                | Some _, Some guestOf ->
+                    let token = getQueryParam request.url "token"
+                    if isNull token || token = "" then return badRequest "Missing token"
+                    else
+                        let! verified = Hedge.Email.verifyEmailToken oauth.Secret token
+                        match verified with
+                        | Error err -> return badRequest (sprintf "Invalid sign-in link: %s" err)
+                        | Ok v ->
+                            // Bootstrap a guest in THIS browser — the link may open on another device, so
+                            // possession of the signed link is the proof (we do not require the initiating guest).
+                            let deps = guestOf env request
+                            let! boot = resolveOrBootstrap deps (readCookie request)
+                            let localPart = let at = v.Email.IndexOf '@' in if at > 0 then v.Email.Substring(0, at) else v.Email
+                            let userInfo : OAuth.UserInfo =
+                                { Name = localPart; PictureUrl = ""; Email = Some v.Email
+                                  ProviderUserId = v.Email; Provider = "email" }
+                            let db : D1Database = env?DB
+                            let blobs : R2Bucket = env?BLOBS
+                            let! completion = oauth.OnOAuthComplete db blobs boot.GuestId (box userInfo) v.ReturnTo
+                            let! cookie =
+                                match completion.AdoptGuestId with
+                                | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
+                                | None -> promise { return boot.Replacement }
+                            return redirectResponseOpt completion.RedirectUrl cookie
+                | _ -> return notFound ()
 
             | _ ->
 

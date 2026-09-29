@@ -22,6 +22,8 @@
     <Compile Include="AccessControl.fs" />
     <Compile Include="OAuth.fs" />
     <Compile Include="Oidc.fs" />
+    <Compile Include="Sigv4.fs" />
+    <Compile Include="Email.fs" />
     <Compile Include="Router.fs" />
     <Compile Include="EventHub.fs" />
     <Compile Include="Events.fs" />

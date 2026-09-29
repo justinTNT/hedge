@@ -38,8 +38,38 @@ module IdentityView =
         | "microsoft" -> "Microsoft"
         | "facebook" -> "Facebook"
         | "linkedin" -> "LinkedIn"
+        | "email" -> "Email"
         | "anonymous" -> "Anonymous"
         | p -> p
+
+    /// Passwordless email: an input + submit, then a "check your inbox" state. Web only — the mobile
+    /// app hides email (the mailed-link → deeplink handoff is a separate, deferred flow).
+    let private emailConnect (model: Identity.Model) (dispatch: Identity.Msg -> unit) =
+        match model.MagicLink with
+        | Identity.MlSent ->
+            Html.p [ prop.className "email-sent"; prop.text "Check your inbox for a sign-in link." ]
+        | _ ->
+            Html.div [
+                prop.className "connect-email"
+                prop.children [
+                    Html.input [
+                        prop.className "email-input"
+                        prop.type' "email"
+                        prop.placeholder "you@example.com"
+                        prop.value model.EmailInput
+                        prop.onChange (fun (v: string) -> dispatch (Identity.SetEmailInput v))
+                    ]
+                    Html.button [
+                        prop.className "login-btn login-email"
+                        prop.disabled (model.MagicLink = Identity.MlSending)
+                        prop.text (if model.MagicLink = Identity.MlSending then "Sending…" else "Email me a link")
+                        prop.onClick (fun _ -> dispatch Identity.RequestMagicLink)
+                    ]
+                    match model.MagicLink with
+                    | Identity.MlFailed err -> Html.p [ prop.className "email-error"; prop.text err ]
+                    | _ -> Html.none
+                ]
+            ]
 
     let private identitySwitcher (model: Identity.Model) (dispatch: Identity.Msg -> unit) =
         if not model.ShowIdentitySwitcher then Html.none
@@ -117,15 +147,20 @@ module IdentityView =
                     let unconnected =
                         model.AvailableProviders
                         |> List.filter (fun p -> model.Identities |> List.forall (fun i -> i.Provider <> p))
-                    if not unconnected.IsEmpty then
+                    // email is a pseudo-provider rendered as an input, not a link-button; hide it in the
+                    // mobile app (web-only v1). OAuth providers render as buttons.
+                    let oauthProviders = unconnected |> List.filter (fun p -> p <> "email")
+                    let showEmail = List.contains "email" unconnected && not GuestSession.isMobile
+                    if not oauthProviders.IsEmpty || showEmail then
                         Html.div [
                             prop.className "switcher-connect"
                             prop.children [
                                 Html.h4 [ prop.text "Add a connection" ]
                                 Html.div [
                                     prop.className "connect-options"
-                                    prop.children (unconnected |> List.map (fun p -> loginButton p (providerLabel p)))
+                                    prop.children (oauthProviders |> List.map (fun p -> loginButton p (providerLabel p)))
                                 ]
+                                if showEmail then emailConnect model dispatch
                             ]
                         ]
                 ]

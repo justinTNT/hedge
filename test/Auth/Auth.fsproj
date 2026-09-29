@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Auth provider + email fixtures (see packages/hedge/src/Hedge/{Oidc,Sigv4,Email}.fs). Fable→node,
+    mocking global fetch, so each piece is exercised deterministically: OIDC preset + discovery
+    endpoint resolution and claim parsing (standard sub/name/email, google `id`, microsoft Graph
+    override, given+family name fallback); the three email senders' request shapes (Resend Bearer/JSON,
+    Mailgun Basic/form, SES SigV4) + Ok/Error mapping + selectSender gating; the SES SigV4 signing key
+    against AWS's published derivation vector; and the magic-link token round-trip + tamper + expiry.
+    Wired into ../../test.sh.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+  </ItemGroup>
+</Project>
