@@ -2069,7 +2069,12 @@ let private runSite (argv: string array) =
     // manifest, e.g. justat = the superset) keeps the plain path. This makes each site's
     // deployed glue a committed, gen-stable artifact and lets `HEDGE_SITE=ndct gen` avoid
     // clobbering the default — no regen-swap-restore dance. The identity slice
-    // (Codecs/Db/ClientGen) is site-invariant, so it always keeps its default path.
+    // (Codecs/Db/ClientGen) is the SHARED, unsuffixed type surface every site's fsproj compiles
+    // against, so ONLY the default composition (siteSuffix = "") writes it: a site manifest composes
+    // different MODULES but must not overwrite the shared slice with its narrower reflection. (Before
+    // this guard, `HEDGE_SITE=idealist gen` stripped the opt-in mobile helpers from the default files,
+    // leaving the working tree dirty after every gate run.) This requires the default composition to be
+    // a superset of every site's identity slice — true today (default identity+grants+mobile ⊇ each site).
     let site = System.Environment.GetEnvironmentVariable "HEDGE_SITE"
     let siteSuffix =
         if not (System.String.IsNullOrEmpty site) && File.Exists (sprintf "gen-modules.%s.json" site)
@@ -2079,21 +2084,21 @@ let private runSite (argv: string array) =
     let admin = generateAdminFs "Server.AdminGen" ownedRegistries idMetas
     writeIfChanged (sprintf "src/Server/generated/AdminGen%s.fs" siteSuffix) admin
 
-    // Db — identity slice (site-invariant; owned modules ship Blog.Db etc.).
+    // Db — identity slice: shared/unsuffixed, so only the default composition writes it (see above).
     let db = generateDbFs "Server.Db" idMetas
-    writeIfChanged "src/Server/generated/Db.fs" db
+    if siteSuffix = "" then writeIfChanged "src/Server/generated/Db.fs" db
 
     // schema.sql — combined (cross-module FKs + topo span all modules).
     let schemaSql = generateSchemaSql metas
     writeIfChanged (sprintf "schema%s.sql" siteSuffix) schemaSql
 
-    // Codecs — identity slice (site-invariant) + the shared unwrap helpers.
+    // Codecs — identity slice: shared/unsuffixed, default composition only (see Db above).
     let codecs = generateCodecsFs idDomainTypes idEndpoints idWsTypes qualify singleNs "Codecs" true
-    writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
+    if siteSuffix = "" then writeIfChanged "src/Codecs/generated/Codecs.fs" codecs
 
-    // ClientGen — identity slice (site-invariant; owned modules ship Blog.ClientGen etc.).
+    // ClientGen — identity slice: shared/unsuffixed, default composition only (see Db above).
     let clientGen = generateClientGenFs idEndpoints idWsTypes qualify singleNs "Client.ClientGen" "Codecs"
-    writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
+    if siteSuffix = "" then writeIfChanged "src/Client/generated/ClientGen.fs" clientGen
 
     // Routes — content apps: a thin composer over each owned module's RouteContract.dispatch
     // (Server.Env-free); one-off apps: the pre-C3 env-based inline dispatch (empty owned list).
