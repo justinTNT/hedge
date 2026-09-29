@@ -247,7 +247,176 @@
       clearSession();
     } catch (_) {}
   });
+  // --- Mobile (Capacitor) bearer session -------------------------------------------------------
+  // Feature-detected: when window.API_ORIGIN is set (a bundled mobile build) the session is an opaque
+  // BEARER over the native transport, not a cookie. Everything below is untouched when it is unset, so
+  // the web path is byte-for-byte the same.
+  var MOBILE = !!(typeof window !== 'undefined' && window.API_ORIGIN);
+  var API_BASE = MOBILE ? window.API_ORIGIN : (window.BASE_PATH || '');
+  var BEARER_KEY = 'hedge_mobile_bearer';
+  var PENDING_KEY = 'hedge_pending_revoke';
+  // #7 — the bearer lives in a Keychain/Keystore-backed store (Capacitor SecureStoragePlugin) when the
+  // plugin is present, with an in-memory cache so the native transport can read it SYNCHRONOUSLY per
+  // request. Falls back to localStorage (dev / no plugin), migrating any legacy plaintext bearer into
+  // the secure store once. The transport reads window.HedgeGuest.currentBearer() (= this cache).
+  var bearerCache = '';
+  var bearerWritten = false;   // #2 — a mutation (login/sign-out) after boot must win over the async load
+  var secureStore = (function() {
+    var p = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SecureStoragePlugin) || null;
+    if (p) return {
+      get: function(k) { return p.get({ key: k }).then(function(r) { return (r && r.value) || ''; }).catch(function() { return ''; }); },
+      set: function(k, v) { return (v ? p.set({ key: k, value: v }) : p.remove({ key: k })).catch(function() {}); }
+    };
+    return {
+      get: function(k) { try { return Promise.resolve(localStorage.getItem(k) || ''); } catch (_) { return Promise.resolve(''); } },
+      set: function(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (_) {} return Promise.resolve(); }
+    };
+  })();
+  function getBearer() { return bearerCache; }
+  function setBearer(t) { bearerWritten = true; bearerCache = t || ''; return secureStore.set(BEARER_KEY, bearerCache); }
+  var bearerLoaded = secureStore.get(BEARER_KEY).then(function(v) {
+    // #2 — a login/sign-out that ran while this read was in flight already set bearerCache; don't clobber it.
+    if (bearerWritten) return bearerCache;
+    if (v) { bearerCache = v; return v; }
+    var legacy = ''; try { legacy = localStorage.getItem(BEARER_KEY) || ''; } catch (_) {}
+    if (legacy && !bearerWritten) { bearerCache = legacy; secureStore.set(BEARER_KEY, legacy); try { localStorage.removeItem(BEARER_KEY); } catch (_) {} }
+    return bearerCache;
+  }).catch(function() { return ''; });
+
+  // #1 — revoke a bearer SERVER-side; returns whether the server CONFIRMED it. A 500/network failure is
+  // NOT swallowed as success — the caller reports it and persists the token for retry.
+  function revokeBearer(token) {
+    if (!token) return Promise.resolve(true);
+    return fetch(API_BASE + '/api/mobile/signout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
+      .then(function(r) { return !!(r && r.ok); }).catch(function() { return false; });
+  }
+  // #1 — persisted pending-revoke set: tokens whose server revoke failed, retried opportunistically so a
+  // valid token is never orphaned (we lost local possession but the server session lives).
+  function loadPending() { return secureStore.get(PENDING_KEY).then(function(s) { try { return s ? JSON.parse(s) : []; } catch (_) { return []; } }); }
+  // Serialize every read-modify-write of the pending set. Without this, a boot-time retry that reads the
+  // list, then (after slow network revokes) writes back its result, would clobber a sign-out failure that
+  // addPending queued in between — leaving that token valid until expiry. The lock makes each mutation
+  // atomic; retryPendingRevokes additionally removes ONLY confirmed tokens so nothing is dropped blind.
+  var pendingLock = Promise.resolve();
+  function withPendingLock(fn) {
+    var run = pendingLock.then(fn, fn);
+    pendingLock = run.then(function() {}, function() {});   // keep the chain alive across rejections
+    return run;
+  }
+  function addPending(token) {
+    if (!token) return Promise.resolve();
+    return withPendingLock(function() {
+      return loadPending().then(function(list) {
+        if (list.indexOf(token) < 0) { list.push(token); return secureStore.set(PENDING_KEY, JSON.stringify(list)); }
+      });
+    });
+  }
+  function retryPendingRevokes() {
+    return withPendingLock(function() {
+      return loadPending().then(function(list) {
+        if (!list.length) return;
+        return Promise.all(list.map(function(t) { return revokeBearer(t).then(function(ok) { return ok ? t : null; }); }))
+          .then(function(results) {
+            var confirmed = results.filter(function(t) { return !!t; });   // tokens the server CONFIRMED revoked
+            // Re-read and subtract only confirmed tokens (never overwrite with a stale snapshot), so any
+            // token queued in the meantime survives even if the lock above is ever loosened.
+            return loadPending().then(function(latest) {
+              var remaining = latest.filter(function(t) { return confirmed.indexOf(t) < 0; });
+              return secureStore.set(PENDING_KEY, remaining.length ? JSON.stringify(remaining) : '');
+            });
+          });
+      });
+    }).catch(function() {});
+  }
+  bearerLoaded.then(retryPendingRevokes);   // retry any leftover revokes on boot
+  // Mint an anonymous bearer on first launch so on-device commenting works before login.
+  function ensureBearer() {
+    return bearerLoaded.then(function() {
+      if (getBearer()) return getBearer();
+      return fetch(API_BASE + '/api/mobile/bootstrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { if (d && d.token) { return setBearer(d.token).then(function() { return d.token; }); } return ''; })
+        .catch(function() { return ''; });
+    });
+  }
+  // #5 — a dead bearer (revoked/expired) returns 401 from /me (a valid anon session is 200); clear it
+  // and re-bootstrap a fresh anon ONCE so the session recovers instead of wedging on the stale token.
+  function fetchMeMobile(epoch) {
+    function meWith(token, allowRebootstrap) {
+      if (epoch !== generation || !token) return Promise.resolve(stale());
+      return fetch(API_BASE + '/api/mobile/me', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
+        .then(function(r) {
+          // #2 — only recover from a 401 if THIS token is still the current bearer and the generation
+          // hasn't moved; otherwise a stale /me (from before a login/sign-out) must not clear the new one.
+          if (r.status === 401 && allowRebootstrap && epoch === generation && getBearer() === token)
+            return setBearer('').then(ensureBearer).then(function(fresh) { return meWith(fresh, false); });
+          if (!r.ok) return stale();
+          return r.json().then(function(data) {
+            if (epoch !== generation) return stale();
+            return { ready: true, session: applyServer(data) };
+          });
+        }).catch(function() { return stale(); });
+    }
+    return ensureBearer().then(function(token) { return meWith(token, true); }).catch(function() { return stale(); });
+  }
+  function sha256hex(s) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function(b) {
+      return Array.from(new Uint8Array(b)).map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+    });
+  }
+  function randomVerifier() {
+    var a = new Uint8Array(32); crypto.getRandomValues(a);
+    return Array.from(a).map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+  }
+  // Browser-OAuth sign-in: open the SYSTEM browser (Google blocks OAuth in embedded WebViews), catch the
+  // wtfail://auth?code deeplink, exchange the code (+ PKCE verifier + the current anon bearer) for a
+  // verified bearer, then refresh. The anon guest's content is merged into the verified identity server
+  // side (that's why the old bearer is presented). Rejects on cancel/failure.
+  function signIn(provider) {
+    provider = provider || 'google';
+    var caps = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || {};
+    if (!caps.Browser || !caps.App) return Promise.reject(new Error('Sign-in needs the Capacitor Browser/App plugins'));
+    var startEpoch = generation;                 // #2 — a sign-out/invalidate during login makes this stale
+    var verifier = randomVerifier();
+    return sha256hex(verifier).then(function(challenge) {
+      return new Promise(function(resolve, reject) {
+        var settled = false;
+        function finish() { settled = true; removeH(urlHandle); removeH(finHandle); }
+        function removeH(h) { Promise.resolve(h).then(function(x) { if (x && x.remove) x.remove(); }).catch(function() {}); }
+        var urlHandle = caps.App.addListener('appUrlOpen', function(event) {
+          if (settled) return;
+          var code = null; try { code = new URL(event.url).searchParams.get('code'); } catch (_) {}
+          if (!code) return;                     // not our deeplink (or an error return) — let cancel handle it
+          finish();
+          try { caps.Browser.close(); } catch (_) {}
+          fetch(API_BASE + '/api/mobile/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getBearer() },
+            body: JSON.stringify({ code: code, verifier: verifier })
+          }).then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+              if (!d || !d.token) { reject(new Error('Token exchange failed')); return; }
+              if (startEpoch !== generation) {   // #2 — signed out mid-login: don't adopt it, revoke it
+                revokeBearer(d.token).then(function(ok) { if (!ok) addPending(d.token); });
+                reject(new Error('Sign-in was superseded')); return;
+              }
+              setBearer(d.token).then(function() { resolve(refreshSession()); });
+            })
+            .catch(reject);
+        });
+        // #6 — closing the browser without completing disposes the listener and rejects, so a later login
+        // can't fire this stale verifier. The tick lets a deeplink arriving alongside the close win first.
+        var finHandle = caps.Browser.addListener('browserFinished', function() {
+          if (settled) return;
+          setTimeout(function() { if (!settled) { finish(); reject(new Error('Sign-in was cancelled')); } }, 0);
+        });
+        caps.Browser.open({ url: API_BASE + '/api/auth/' + provider + '/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + challenge) });
+      });
+    });
+  }
+
   function fetchMe(epoch) {
+    if (MOBILE) return fetchMeMobile(epoch);
     return sessionLock(function() {
       if (epoch !== generation || logoutPending) return stale();
       return fetch((window.BASE_PATH || '') + '/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
@@ -291,6 +460,27 @@
   // result: an unavailable server must not turn a cached display identity into authenticated UI.
   function syncSession() { return refreshSession().then(function(res) { return res.session; }); }
   function signOut() {
+    if (MOBILE) {
+      // Mobile sign-out: REVOKE the bearer server-side so a replayed token no longer authenticates, then
+      // fall back to a fresh anonymous session. Returns the REVOKE result — false when the server didn't
+      // confirm — and persists the token for retry (loses local possession, not the ability to revoke).
+      // Does not touch other devices or the provider identity.
+      clearSession();   // bump the generation synchronously so a login in flight is treated as stale
+      // Coordinate with the initial secure-store load: before bearerLoaded resolves getBearer() is empty,
+      // so a sign-out racing startup would setBearer('') (which also sets bearerWritten, suppressing the
+      // pending load) and silently drop the stored credential WITHOUT revoking or queuing it. Await the
+      // load first so `old` is the ACTUAL stored bearer.
+      return bearerLoaded.then(function() {
+        var old = getBearer();
+        return setBearer('')
+          .then(function() { return revokeBearer(old); })
+          .then(function(ok) {
+            var persist = ok ? Promise.resolve() : addPending(old);
+            return persist.then(ensureBearer).then(function() { clearSession(); return ok; });
+          })
+          .catch(function() { return addPending(old).then(ensureBearer).then(function() { clearSession(); return false; }); });
+      });
+    }
     if (logoutPromise) return logoutPromise;
     logoutPending = true;
     clearSession();
@@ -319,6 +509,11 @@
     ensureSession: ensureSession,
     invalidateSession: invalidateSession,
     withSessionRequest: withSessionRequest,
-    signOut: signOut
+    signOut: signOut,
+    // Mobile-only: browser-OAuth sign-in (no-op path on web, where the plugins are absent).
+    signIn: signIn,
+    isMobile: MOBILE,
+    // The current bearer, read synchronously per request by the native transport (Client.Api).
+    currentBearer: getBearer
   };
 })();

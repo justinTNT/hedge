@@ -64,3 +64,56 @@ test('private browser adapter applies base, headers and no-store once and preser
     assert.equal(request.url,'/st/private');assert.equal(request.options.cache,'no-store');assert.equal(new Headers(request.options.headers).get('Content-Type'),'application/json');assert.equal(new Headers(request.options.headers).get('X-Admin-Key'),'captured');
   } finally {globalThis.fetch=fetch}
 });
+test('mobile bearer resolution is fail-closed and shares the role policy with cookies',async()=>{
+  const bearer=token=>new Request('https://test/x',{headers:{Authorization:'Bearer '+token}});
+  const noHeader=new Request('https://test/x');
+  // resolve: valid hash -> guest, present-but-wrong -> invalid, absent -> no-bearer
+  assert.equal(await runtime.mobileResolve(bearer('good-token'),'good-token','g1'),'valid:g1');
+  assert.equal(await runtime.mobileResolve(bearer('wrong-token'),'good-token','g1'),'invalid');
+  assert.equal(await runtime.mobileResolve(noHeader,'good-token','g1'),'no-bearer');
+  // requireGuestOrBearer: bearer wins; an INVALID bearer rejects WITHOUT the cookie fallback; a
+  // missing bearer falls through to the cookie (which here always accepts COOKIE-GID)
+  assert.equal(await runtime.mobileRequire(bearer('good-token'),'good-token','g1'),'accepted:g1');
+  assert.equal(await runtime.mobileRequire(bearer('wrong-token'),'good-token','g1'),'rejected');
+  assert.equal(await runtime.mobileRequire(noHeader,'good-token','g1'),'accepted:COOKIE-GID');
+  // shared role tail via a bearer-resolved session: same outcomes the cookie path would give
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','google','curator'),'authorized');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','google','editor'),'forbidden');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','anonymous','curator'),'auth-required');
+  assert.equal(await runtime.mobileRole(bearer('good-token'),'good-token','g1','','curator'),'auth-required');
+  assert.equal(await runtime.mobileRole(bearer('wrong-token'),'good-token','g1','google','curator'),'auth-required');
+});
+test('capacitor transport resolves the API origin, attaches the bearer, and maps a completed response',async()=>{
+  // Uses plain fetch (the CapacitorHttp plugin patches it to native on device); here we mock fetch.
+  let captured;const realFetch=globalThis.fetch;
+  globalThis.fetch=async(url,options)=>{captured={url,options};return new Response('{"ok":true}',{status:200})};
+  try {
+    const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
+    const {ofArray,empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
+    const post=await api.capacitorTransport('https://wt.fail',()=>'tok123',new Request('POST','/api/mobile/exchange',empty(),empty(),'{"code":"c"}'));
+    assert.equal(post.tag,0);assert.equal(post.fields[0].Status,200);assert.equal(post.fields[0].Body,'{"ok":true}');
+    assert.equal(captured.url,'https://wt.fail/api/mobile/exchange');assert.equal(captured.options.method,'POST');
+    assert.equal(captured.options.cache,'no-store');
+    const ph=new Headers(captured.options.headers);assert.equal(ph.get('Authorization'),'Bearer tok123');assert.equal(ph.get('Content-Type'),'application/json');
+    // no bearer -> no Authorization; query folded onto the absolute URL; no body -> no Content-Type
+    await api.capacitorTransport('https://wt.fail',()=>'',new Request('GET','/api/mobile/me',ofArray([['q','red flower']]),empty(),undefined));
+    assert.equal(captured.url,'https://wt.fail/api/mobile/me?q=red%20flower');
+    assert.ok(!new Headers(captured.options.headers).get('Authorization'));assert.ok(!new Headers(captured.options.headers).get('Content-Type'));
+  } finally { globalThis.fetch=realFetch }
+});
+test('selectTransport picks the native transport for a mobile origin and reads the bearer live',async()=>{
+  let captured;const realFetch=globalThis.fetch;
+  globalThis.fetch=async(url,options)=>{captured={url,options};return new Response('{}',{status:200})};
+  try {
+    const {Request}=await import('./dist/packages/hedge/src/Hedge/Http.js');
+    const {empty}=await import('./dist/fable_modules/fable-library-js.4.29.0/List.js');
+    let tok='tokA';                       // a live bearer thunk (the store is Emit-inlined; tested on-device)
+    const t=api.selectTransport('https://wt.fail',()=>tok);   // selectTransport returns the transport
+    await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
+    assert.equal(captured.url,'https://wt.fail/api/mobile/me');
+    assert.equal(new Headers(captured.options.headers).get('Authorization'),'Bearer tokA');
+    tok='';                               // cleared -> next request omits it (read per request)
+    await t(new Request('GET','/api/mobile/me',empty(),empty(),undefined));
+    assert.ok(!new Headers(captured.options.headers).get('Authorization'));
+  } finally { globalThis.fetch=realFetch }
+});

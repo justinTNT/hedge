@@ -18,6 +18,26 @@ open Thoth.Json
 [<Emit("window.BASE_PATH || ''")>]
 let basePath : string = jsNative
 
+/// Absolute API origin for a bundled mobile build (window.API_ORIGIN, e.g. https://wt.fail); "" on web.
+/// The direct /api/auth helpers and the native transport resolve against it so the app reaches the API
+/// host, not the capacitor:// WebView. Declared here (before the helpers) so they can prefix it.
+[<Emit("window.API_ORIGIN || ''")>]
+let apiOrigin : string = jsNative
+
+/// What the direct helpers prefix: the API origin on a mobile build, else the deployment base path.
+let private reqBase = if apiOrigin <> "" then apiOrigin else basePath
+
+/// The current opaque mobile bearer ("" = none), read from the one store owned by guest-session.js.
+/// On web this is "" (cookies carry the session); on mobile the direct /api/auth helpers attach it so
+/// identity list/switch/disconnect resolve the same bearer session the rest of the app uses.
+[<Emit("(window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''")>]
+let currentBearer () : string = jsNative
+
+/// Authorization header list for the direct helpers: a Bearer on mobile, nothing on web.
+let private authHeaderList () : HttpRequestHeaders list =
+    let b = currentBearer ()
+    if b <> "" then [ HttpRequestHeaders.Custom ("Authorization", box ("Bearer " + b)) ] else []
+
 [<Emit("encodeURIComponent($0)")>]
 let private uriEnc (s: string) : string = jsNative
 
@@ -30,16 +50,16 @@ let buildQuery (pairs: (string * string) list) : string =
 
 let fetchJson<'T> (url: string) (decoder: Decoder<'T>) : JS.Promise<Result<'T, string>> =
     promise {
-        let! response = fetch (basePath + url) []
+        let! response = fetch (reqBase + url) [ requestHeaders (authHeaderList ()) ]
         let! text = response.text()
         return Decode.fromString decoder text
     }
 
 let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> =
     promise {
-        let! response = fetch (basePath + url) [
+        let! response = fetch (reqBase + url) [
             Method HttpMethod.POST
-            requestHeaders [ ContentType "application/json" ]
+            requestHeaders (ContentType "application/json" :: authHeaderList ())
             Body (BodyInit.Case3 body)
         ]
         if response.Ok then return Ok ()
@@ -50,7 +70,7 @@ let postJsonRaw (url: string) (body: string) : JS.Promise<Result<unit, string>> 
 
 let fetchJsonRaw (url: string) : JS.Promise<obj> =
     promise {
-        let! response = fetch (basePath + url) []
+        let! response = fetch (reqBase + url) [ requestHeaders (authHeaderList ()) ]
         let! text = response.text()
         return JS.JSON.parse text
     }
@@ -115,9 +135,57 @@ let browserTransport = browserTransportWithCache false
 /// Private reads/writes bypass the browser cache. Compose with GuestSession.transport when needed.
 let uncachedBrowserTransport = browserTransportWithCache true
 
+// -- Transport-neutral native adapter (Capacitor POC) --
+
+/// A Hedge.Http.Transport for the BUNDLED mobile app, whose WebView origin (capacitor://localhost) is
+/// not wt.fail. It uses ordinary `fetch` — the app enables Capacitor's CapacitorHttp plugin
+/// (capacitor.config.json: plugins.CapacitorHttp.enabled), which patches fetch/XHR to route NATIVELY,
+/// so this bypasses WebView CORS without any native symbol. Differences from browserTransport: it
+/// resolves paths against the explicit `apiOrigin` (mobile talks to the API absolutely, not via
+/// basePath) and attaches the opaque bearer, read PER REQUEST ("" = none) so a fresh login / sign-out
+/// is reflected without rebuilding the transport. A completed response (any status) is Ok with its
+/// status for Http.sendDecode to interpret; only a request that never completes is a TransportFailure.
+let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http.Transport =
+    fun (req: Hedge.Http.Request) ->
+        promise {
+            let url = apiOrigin + req.Path + buildQuery req.Query
+            let token = bearer ()
+            let headerList =
+                [ if req.Body.IsSome then yield ContentType "application/json"
+                  for (k, v) in req.Headers do yield HttpRequestHeaders.Custom (k, box v)
+                  if token <> "" then yield HttpRequestHeaders.Custom ("Authorization", box ("Bearer " + token)) ]
+            let baseProps = [ Method (methodOf req.Method); requestHeaders headerList ]
+            let props =
+                match req.Body with
+                | Some b -> baseProps @ [ Body (BodyInit.Case3 b) ]
+                | None -> baseProps
+            try
+                let options = requestProps props
+                disableCache options
+                let! response = GlobalFetch.fetch(RequestInfo.Url url, options)
+                let! text = response.text()
+                return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
+            with ex ->
+                return Error (Hedge.Http.TransportFailure ex.Message)
+        }
+
+// -- Default transport selection (Capacitor POC) --
+
+/// Pick the transport: native (Capacitor, bearer-carrying, absolute origin) when a mobile API origin is
+/// configured, else the ordinary browser transport. Pure in its inputs so it's unit-testable.
+let selectTransport (origin: string) (bearer: unit -> string) : Hedge.Http.Transport =
+    if origin <> "" then capacitorTransport origin bearer else browserTransport
+
+/// The app's default transport, chosen once from window config. Generated clients build on this. The
+/// bearer comes from the single store (currentBearer) that guest-session.js owns.
+let appTransport : Hedge.Http.Transport = selectTransport apiOrigin currentBearer
+
 // -- WebSocket --
 
-[<Emit("(window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || '')")>]
+// On a bundled mobile build the WebView origin is capacitor://localhost, and native-fetch patching does
+// NOT cover WebSockets — so derive the socket base from the configured API origin (https->wss) there;
+// otherwise from the page location + base path as before.
+[<Emit("window.API_ORIGIN ? window.API_ORIGIN.replace(/^http/, 'ws') : ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + (window.BASE_PATH || ''))")>]
 let wsBase () : string = jsNative
 
 [<Emit("""

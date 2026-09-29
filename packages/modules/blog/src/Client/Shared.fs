@@ -197,7 +197,7 @@ let feedItem (ctx: Content.HostContext) (item: GetFeed.FeedItem) =
             Html.h2 [ prop.custom ("data-fit-headline", ""); prop.text item.Title ]
             let imageNode =
                 match item.Image with
-                | Some url -> Html.img [ prop.src url; prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
+                | Some url -> Html.img [ prop.src (Client.GuestSession.assetUrl url); prop.onError (fun (e: Browser.Types.Event) -> hideBrokenImg e) ]
                 | None -> Html.none
             // Show the image whenever it's set: beside the teaser when there's an extract,
             // otherwise as a standalone thumbnail (previously an item with an image but no
@@ -240,6 +240,6 @@ let dayDivider (day: string) =
 let avatar (url: string) =
     Html.img [
         prop.className "avatar"
-        prop.src url
+        prop.src (Client.GuestSession.assetUrl url)
     ]
 

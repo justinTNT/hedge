@@ -75,6 +75,22 @@ export function waitForElement(elementId, callback, maxAttempts = 20) {
  */
 const PLACEHOLDER_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
+/**
+ * Resolve an app-served asset URL for the platform. On a bundled mobile build
+ * (window.API_ORIGIN set) a ROOT-relative path like /blobs/<key> is served by the
+ * API host, not the capacitor:// WebView, so prepend the API origin. Absolute
+ * (http/https/data:) and protocol-relative URLs, and empties, are returned unchanged;
+ * on web (no API_ORIGIN) always unchanged. Applied at DISPLAY/RENDER time only — the
+ * stored doc keeps the root-relative src. Mirrors Hedge.Client.GuestSession.assetUrl.
+ */
+function toMobileAsset(url) {
+    const origin = window.API_ORIGIN || ''
+    if (origin && typeof url === 'string' && url.length > 0 && url[0] === '/' && url.slice(0, 2) !== '//') {
+        return origin + url
+    }
+    return url
+}
+
 let placeholderId = 0
 
 /**
@@ -91,6 +107,10 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
     // Guest comment path authorizes with the httpOnly signed hedge_guest cookie (sent automatically
     // same-origin), not an admin key. Computed up here so both the load handler and the send gate use it.
     const isGuestUpload = /\/api\/blobs\/guest$/.test(endpoint)
+    // On a bundled mobile build the guest upload can't use the cookie route (capacitor://localhost isn't
+    // the API host, and that route is cookie-only) — target the bearer-aware app route on the API host.
+    const isMobileUpload = isGuestUpload && !!window.API_ORIGIN
+    const targetUrl = isMobileUpload ? (window.API_ORIGIN + '/api/mobile/blobs') : endpoint
     const id = `upload-${++placeholderId}`
 
     // Determine insert position
@@ -152,7 +172,7 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
         removePlaceholder(editor, id)
     })
 
-    xhr.open('POST', endpoint)
+    xhr.open('POST', targetUrl)
     // Admin uploads authorize with the admin key from localStorage (present only in the owner's
     // browser after signing into /admin). The guest comment path authorizes with the httpOnly signed
     // hedge_guest cookie instead — sent automatically for this same-origin request — so never attach
@@ -170,6 +190,11 @@ function uploadAndInsertImage(editor, file, container, insertPos) {
             : Promise.resolve({ ready: true })
         gate.then(function (res) {
             if (res && res.ready) {
+                // Mobile: authorize with the bearer (read fresh after the session gate), not a cookie.
+                if (isMobileUpload) {
+                    var b = (window.HedgeGuest && window.HedgeGuest.currentBearer && window.HedgeGuest.currentBearer()) || ''
+                    try { xhr.setRequestHeader('Authorization', 'Bearer ' + b) } catch (e) {}
+                }
                 xhr.send(formData)
             } else {
                 console.error('[hamlet-rt] Upload skipped: guest session not ready')
@@ -253,7 +278,9 @@ function createResizableImageView(node, view, getPos) {
 
     // The <img> element
     const img = document.createElement('img')
-    img.src = node.attrs.src
+    // Prefix root-relative /blobs/<key> srcs to the API host on mobile so a just-uploaded (or stored)
+    // image renders in the editor; node.attrs.src stays root-relative, so the saved doc is unchanged.
+    img.src = toMobileAsset(node.attrs.src)
     if (node.attrs.alt) img.alt = node.attrs.alt
     if (node.attrs.title) img.title = node.attrs.title
     if (node.attrs['data-upload-id']) {
@@ -324,7 +351,10 @@ function createResizableImageView(node, view, getPos) {
         dom: wrapper,
         update(updatedNode) {
             if (updatedNode.type.name !== 'image') return false
-            img.src = updatedNode.attrs.src
+            // Same mobile prefixing as the initial render: replacePlaceholder swaps in a root-relative
+            // /blobs/<key> src via setNodeMarkup, which fires this update() — without toMobileAsset the
+            // just-uploaded photo would point at capacitor://localhost. Stored attr stays root-relative.
+            img.src = toMobileAsset(updatedNode.attrs.src)
             if (updatedNode.attrs.alt) img.alt = updatedNode.attrs.alt
             else img.removeAttribute('alt')
             if (updatedNode.attrs.title) img.title = updatedNode.attrs.title
@@ -856,6 +886,14 @@ const VIEWER_EXTENSIONS = [
                     default: null,
                     parseHTML: el => el.style.width || el.getAttribute('width') || null,
                     renderHTML: attrs => attrs.width ? { style: `width: ${attrs.width}` } : {},
+                },
+                // Root-relative /blobs/<key> srcs embedded in stored rich content must resolve to the API
+                // host on a bundled mobile build, not capacitor://localhost. Prefix at render only: this
+                // changes the emitted DOM/HTML src, not the stored node attr. No-op on web (no API_ORIGIN).
+                src: {
+                    default: null,
+                    parseHTML: el => el.getAttribute('src'),
+                    renderHTML: attrs => attrs.src ? { src: toMobileAsset(attrs.src) } : {},
                 },
             }
         },

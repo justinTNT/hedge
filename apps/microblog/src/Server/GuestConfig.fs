@@ -57,7 +57,18 @@ let deps (env: Env) (request: WorkerRequest) : Hedge.GuestSession.Deps =
       LegacyEligible = (fun value -> Identity.Server.legacyEligible env.DB value migrationStart)
       LegacyHasLinkedIdentity = (fun guestId -> Identity.Server.hasLinkedIdentity env.DB guestId) }
 
-/// Resolve the guest for a WRITE (comment / identity mutation): verified or bridge-authorized, else
-/// Rejected. Never creates a guest — that is the bootstrap path's job (router /api/auth/me).
+/// Bind the mobile bearer-session lookup (the server side of Hedge.MobileSession) for this env. `now`
+/// is fixed inside resolveByHash so absolute expiry is evaluated consistently per call. Only consulted
+/// when a request actually carries `Authorization: Bearer` — a web request never touches mobile_sessions.
+let mobileDeps (env: Env) : Hedge.MobileSession.Deps =
+    { LookupByHash = fun hash -> Identity.Mobile.resolveByHash env.DB (epochNow ()) hash }
+
+/// Resolve the guest for a WRITE (comment / identity mutation): a native bearer first (fail-closed),
+/// else the signed cookie; Rejected otherwise. Never creates a guest — that is the bootstrap path's job.
+/// Bearer-aware so the identity handlers (activate/revert/disconnect/list) work for a signed-in mobile
+/// user; a web request carries no bearer and behaves exactly as the cookie path.
 let require (env: Env) (request: WorkerRequest) : JS.Promise<Hedge.GuestSession.RequireResult> =
-    Hedge.GuestSession.requireGuest (deps env request) (Hedge.GuestSession.readCookie request)
+    Hedge.MobileSession.requireGuestOrBearer
+        (mobileDeps env)
+        (fun req -> Hedge.GuestSession.requireGuest (deps env req) (Hedge.GuestSession.readCookie req))
+        request

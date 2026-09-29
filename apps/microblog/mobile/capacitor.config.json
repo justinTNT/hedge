@@ -1,0 +1,11 @@
+{
+  "appId": "fail.wt.app",
+  "appName": "WT.Fail",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}

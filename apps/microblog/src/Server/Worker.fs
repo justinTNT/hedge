@@ -17,6 +17,22 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
         Some (Server.Handlers.disconnectIdentity request env)
     | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
         Some (Server.Handlers.getIdentities request env)
+    // Mobile bearer-session routes (Capacitor POC): anonymous bootstrap + a bearer /me. Minting the
+    // VERIFIED session on login is the OAuth native-return path (a separate slice).
+    | POST path when matchPath "/api/mobile/bootstrap" path = Some (Exact "/api/mobile/bootstrap") ->
+        Some (Server.Handlers.mobileBootstrap env)
+    | GET path when matchPath "/api/mobile/me" path = Some (Exact "/api/mobile/me") ->
+        Some (Server.Handlers.mobileMe request env)
+    // Browser-OAuth login handoff: the same-site return (mints a one-time code → deeplink) and the
+    // app's PKCE exchange (code + verifier + old anon bearer → merge → verified bearer).
+    | GET path when matchPath "/api/mobile/return" path = Some (Exact "/api/mobile/return") ->
+        Some (Server.Handlers.mobileReturn request env)
+    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
+        Some (Server.Handlers.mobileExchange request env)
+    | POST path when matchPath "/api/mobile/signout" path = Some (Exact "/api/mobile/signout") ->
+        Some (Server.Handlers.mobileSignout request env)
+    | POST path when matchPath "/api/mobile/blobs" path = Some (Exact "/api/mobile/blobs") ->
+        Some (Server.Handlers.mobileBlobUpload request env)
     // darwin.news rhyming — a bespoke route over the composed blog module's tables,
     // deliberately hand-written (not a reflected/gen endpoint).
     | GET path when matchPath "/api/rhymes" path = Some (Exact "/api/rhymes") ->

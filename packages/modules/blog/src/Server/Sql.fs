@@ -27,8 +27,18 @@ let tagsForItem =
 let picturesForItemComments =
     sprintf "SELECT DISTINCT i.id, i.picture FROM identities i JOIN %s c ON c.identity_id = i.id WHERE c.item_id = ? AND c.deleted_at IS NULL" Tables.itemComment
 
+// Both identity_id AND author follow the author identity's supersede pointer ATOMICALLY at insert time
+// (COALESCE), so a comment racing an anon->verified merge lands under the surviving identity with its
+// NAME, not the abandoned anonymous one. Binds: id, item_id, parent_id, author(fallback), content,
+// removed, created_at, <author identity id> (the WHERE). Bind order is unchanged from the plain insert.
 let insertComment =
-    sprintf "INSERT INTO %s (id, item_id, identity_id, parent_id, author, content, removed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)" Tables.itemComment
+    sprintf "INSERT INTO %s (id, item_id, identity_id, parent_id, author, content, removed, created_at) SELECT ?, ?, COALESCE(i.superseded_by, i.id), ?, COALESCE((SELECT t.name FROM identities t WHERE t.id = i.superseded_by), ?), ?, ?, ? FROM identities i WHERE i.id = ?" Tables.itemComment
+
+// The effective (surviving) identity for a just-inserted comment: when the author identity was
+// superseded (mobile anon->verified merge), the response/broadcast must show the verified id/name/picture,
+// not the abandoned anonymous one. `sup` null => not superseded (use the original author fields).
+let effectiveIdentity =
+    "SELECT i.superseded_by AS sup, (SELECT t.name FROM identities t WHERE t.id = i.superseded_by) AS tname, (SELECT t.picture FROM identities t WHERE t.id = i.superseded_by) AS tpicture FROM identities i WHERE i.id = ?"
 
 /// Re-attribute this module's comments from one identity to another on a merge.
 /// The module owns this because it owns the comment table; the host composes it

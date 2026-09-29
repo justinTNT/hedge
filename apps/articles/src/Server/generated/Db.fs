@@ -56,6 +56,7 @@ type IdentityRow = {
     Picture: string
     Email: string option
     ActivatedAt: int option
+    SupersededBy: string option
     CreatedAt: int
 }
 
@@ -67,6 +68,7 @@ type IdentityCreate = {
     Picture: string
     Email: string option
     ActivatedAt: int option
+    SupersededBy: string option
 }
 
 let parseIdentityRow (row: obj) : IdentityRow =
@@ -78,29 +80,30 @@ let parseIdentityRow (row: obj) : IdentityRow =
       Picture = rowStr row "picture"
       Email = rowStrOpt row "email"
       ActivatedAt = rowIntOpt row "activated_at"
+      SupersededBy = rowStrOpt row "superseded_by"
       CreatedAt = rowInt row "created_at" }
 
 let selectIdentitys (db: D1Database) : D1PreparedStatement =
-    db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100")
+    db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities ORDER BY created_at DESC LIMIT 100")
 
 let selectIdentity (id: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?")) [| box id |]
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities WHERE id = ?")) [| box id |]
 
 let insertIdentity (db: D1Database) (id: string) (now: int) (create: IdentityCreate) =
     let stmt =
-        bind (db.prepare("INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"))
-             [| box id; box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box now |]
+        bind (db.prepare("INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+             [| box id; box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; optToDb create.SupersededBy; box now |]
     {| Stmt = stmt; Id = id; CreatedAt = now |}
 
 let updateIdentity (id: string) (create: IdentityCreate) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"))
-         [| box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; box id |]
+    bind (db.prepare("UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ?, superseded_by = ? WHERE id = ?"))
+         [| box create.GuestId; box create.Provider; box create.ProviderUserId; box create.Name; box create.Picture; optToDb create.Email; optIntToDb create.ActivatedAt; optToDb create.SupersededBy; box id |]
 
 let deleteIdentity (id: string) (db: D1Database) : D1PreparedStatement =
     bind (db.prepare("DELETE FROM identities WHERE id = ?")) [| box id |]
 
 let selectIdentitysByGuestId (guestId: string) (db: D1Database) : D1PreparedStatement =
-    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
+    bind (db.prepare("SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities WHERE guest_id = ? ORDER BY created_at DESC LIMIT 100")) [| box guestId |]
 
 module Tables =
     let guest = "guests"

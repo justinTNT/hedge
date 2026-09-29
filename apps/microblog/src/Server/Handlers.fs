@@ -7,6 +7,7 @@ module Server.Handlers
 // darwin.news `getRhymes` route over the composed blog module's tables.
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Workers
@@ -24,7 +25,11 @@ open Blog.Db
 let private oauthDeps : Identity.Handlers.OAuthDeps =
     { ReassignStatements = Server.AttributionPolicy.reassignStatements
       CommentTables = Server.AttributionPolicy.commentTables
-      ActivateOnReturn = fun returnTo -> (returnTo.TrimEnd('/')).EndsWith("/curator") }
+      ActivateOnReturn = fun returnTo ->
+        (returnTo.TrimEnd('/')).EndsWith("/curator")
+        // The mobile browser-OAuth handoff returns to /api/mobile/return?challenge=… (a same-site path,
+        // so it survives safeReturnPath). Activate the verified identity there too — no claim screen.
+        || returnTo.StartsWith("/api/mobile/return") }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
 let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
@@ -37,6 +42,114 @@ let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
 let resolveIdentity = Identity.Handlers.resolveIdentity
 let onOAuthComplete : D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete> =
     Identity.Handlers.onOAuthComplete oauthDeps
+
+// ---- Mobile bearer-session routes (Capacitor POC) ----
+
+/// 30-day absolute mobile session lifetime (the plan's default; provider re-auth after).
+let [<Literal>] private MobileSessionTtl = 2592000
+
+/// POST /api/mobile/bootstrap — mint an ANONYMOUS mobile bearer session (Capacitor POC first launch)
+/// so on-device commenting works before login. The app is cross-origin (capacitor://localhost), so no
+/// same-origin gate; POC only — rate-limiting/abuse controls are a follow-up. Returns the opaque bearer
+/// once; it authenticates only the fresh anonymous guest (possession is not proof of an identity).
+let mobileBootstrap (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let now = epochNow ()
+        do! Identity.Mobile.purgeExpired env.DB now
+        let guestId = newId ()
+        let! token = Identity.Mobile.mintSession env.DB guestId now MobileSessionTtl
+        return okJson (sprintf """{"token":"%s"}""" token)
+    }
+
+/// GET /api/mobile/me — resolve the request's bearer to its guest's active identity (or null when
+/// anonymous / no valid bearer). The bearer analogue of /api/auth/me for native clients.
+let mobileMe (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match! Hedge.MobileSession.resolve (Server.GuestConfig.mobileDeps env) request with
+        | Hedge.MobileSession.Valid guestId ->
+            let! identityJson = resolveIdentity env.DB guestId
+            match identityJson with
+            | Some json -> return okJson (sprintf """{"guest":{"guestId":"%s","identity":%s}}""" guestId json)
+            | None -> return okJson """{"guest":null}"""     // a VALID anonymous session (no linked identity)
+        // A present-but-unresolvable bearer (revoked/expired) or none at all is 401 — distinct from a
+        // valid anon session — so the client clears the dead token and re-bootstraps instead of looping.
+        | Hedge.MobileSession.Invalid | Hedge.MobileSession.NoBearer -> return unauthorized ()
+    }
+
+/// The app's registered custom scheme (POC). The one-time CODE (never a bearer) rides in the deeplink.
+let [<Literal>] private MobileDeeplink = "wtfail://auth"
+
+/// GET /api/mobile/return — the same-site landing after browser-OAuth. The system browser holds the
+/// verified guest cookie here (set by the OAuth callback, which activated the identity because
+/// ActivateOnReturn matches this path). Mint a one-time PKCE code bound to that guest + the app's
+/// challenge, then 302 to the app's deeplink; the app exchanges the code (+ its verifier) for a bearer.
+let mobileReturn (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let challenge = getQueryParam request.url "challenge"
+        let! authz = Server.GuestConfig.require env request
+        match authz with
+        | Hedge.GuestSession.Accepted guest when not (isNull (box challenge)) && challenge <> "" ->
+            let! code = Identity.Mobile.mintCode env.DB guest.GuestId challenge (epochNow ())
+            return redirectResponseOpt (sprintf "%s?code=%s" MobileDeeplink code) None
+        | Hedge.GuestSession.Accepted _ -> return redirectResponseOpt (sprintf "%s?error=challenge" MobileDeeplink) None
+        | Hedge.GuestSession.Rejected -> return redirectResponseOpt (sprintf "%s?error=session" MobileDeeplink) None
+    }
+
+/// POST /api/mobile/exchange {code, verifier} — the app trades its one-time code + PKCE verifier,
+/// presenting its OLD anonymous bearer, for a verified bearer. Verifies the code and the PKCE proof,
+/// MERGES the app's anonymous content into the verified identity (cross-guest reassign), rotates the
+/// old anon session out, and mints the verified session.
+let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        let! bodyText = request.text()
+        let parsed = JS.JSON.parse bodyText
+        let rawCode : string = parsed?code
+        let verifier : string = parsed?verifier
+        if isNull (box rawCode) || rawCode = "" || isNull (box verifier) || verifier = "" then
+            return badRequest "Missing code or verifier"
+        else
+            let now = epochNow ()
+            // Consume + PKCE-verify atomically: None = bad/expired code OR wrong verifier (which does
+            // NOT burn the code — see Identity.Mobile.consumeCode).
+            let! consumed = Identity.Mobile.consumeCode env.DB now rawCode verifier
+            match consumed with
+            | None -> return unauthorized ()
+            | Some verifiedGuestId ->
+                match Hedge.MobileSession.readBearer request with
+                | Some rawBearer ->
+                    let! oldHash = Hedge.MobileSession.sha256Hex rawBearer
+                    let! anonGuestId = Identity.Mobile.resolveByHash env.DB now oldHash
+                    match anonGuestId with
+                    | Some ag ->
+                        do! Identity.Mobile.mergeAnonInto env.DB Server.AttributionPolicy.reassignStatements ag verifiedGuestId now
+                        do! Identity.Mobile.revokeByHash env.DB oldHash
+                    | None -> ()
+                | None -> ()
+                let! token = Identity.Mobile.mintSession env.DB verifiedGuestId now MobileSessionTtl
+                return okJson (sprintf """{"token":"%s"}""" token)
+    }
+
+/// POST /api/mobile/signout — revoke the presented bearer server-side (idempotent). The client reports
+/// sign-out success only after this returns, so a replayed bearer no longer authenticates.
+let mobileSignout (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match Hedge.MobileSession.readBearer request with
+        | Some rawBearer ->
+            let! hash = Hedge.MobileSession.sha256Hex rawBearer
+            do! Identity.Mobile.revokeByHash env.DB hash
+        | None -> ()
+        return okJson """{"ok":true}"""
+    }
+
+/// POST /api/mobile/blobs — bearer-authorized comment-image upload for the native app. The framework's
+/// /api/blobs/guest is cookie-only, so this resolves the bearer (GuestConfig.require is bearer-aware)
+/// and reuses the shared upload handler with the resolved guest.
+let mobileBlobUpload (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+    promise {
+        match! Server.GuestConfig.require env request with
+        | Hedge.GuestSession.Accepted a -> return! handleGuestBlobUpload request env.BLOBS a.GuestId a.Replacement
+        | Hedge.GuestSession.Rejected -> return unauthorized ()
+    }
 
 /// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
 let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request

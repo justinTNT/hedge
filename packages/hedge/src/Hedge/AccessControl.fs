@@ -42,23 +42,39 @@ type RoleResult =
     /// Identified, but the active identity holds no enabled grant for this role. -> 403.
     | Forbidden of subject: Subject * replacement: string option
 
+/// The role decision from an ALREADY-resolved session, however it was resolved — a signed guest cookie
+/// or a native bearer (Hedge.MobileSession). Chain: guestId -> active identity subject -> enabled grant.
+/// This is the ONE place the role policy lives, so the cookie path (requireRole) and a bearer path
+/// (MobileSession.requireGuestOrBearer, then this) never duplicate it. Takes the two lookups directly
+/// rather than the whole Deps, so a bearer-resolved caller need not fabricate a cookie policy. Honors
+/// revocation per-call (fresh HasGrant); the shared anonymous subject can never hold a role.
+let roleFromRequired
+    (activeSubject: string -> JS.Promise<Subject option>)
+    (hasGrant: string -> string -> string -> JS.Promise<bool>)
+    (role: string)
+    (required: RequireResult)
+    : JS.Promise<RoleResult> =
+    promise {
+        match required with
+        | Rejected -> return AuthRequired None
+        | Accepted a ->
+            let! subj = activeSubject a.GuestId
+            match subj with
+            | None -> return AuthRequired a.Replacement
+            | Some s when s.Provider = "anonymous" -> return AuthRequired a.Replacement  // never role the anon subject
+            | Some s ->
+                let! ok = hasGrant s.Provider s.ProviderUserId role
+                if ok then return Authorized (s, a.Replacement)
+                else return Forbidden (s, a.Replacement)
+    }
+
 /// Resolve whether a request's active identity holds `role`. Chain: accepted guest cookie -> guestId
 /// -> active identity subject -> enabled grant. Never mints a guest (wraps requireGuest, the WRITE
 /// path). Revocation is honored per-call (fresh HasGrant lookup; no caching).
 let requireRole (deps: Deps) (role: string) (cookieValue: string option) : JS.Promise<RoleResult> =
     promise {
         let! required = requireGuest deps.Guest cookieValue
-        match required with
-        | Rejected -> return AuthRequired None
-        | Accepted a ->
-            let! subj = deps.ActiveSubject a.GuestId
-            match subj with
-            | None -> return AuthRequired a.Replacement
-            | Some s when s.Provider = "anonymous" -> return AuthRequired a.Replacement  // never role the anon subject
-            | Some s ->
-                let! ok = deps.HasGrant s.Provider s.ProviderUserId role
-                if ok then return Authorized (s, a.Replacement)
-                else return Forbidden (s, a.Replacement)
+        return! roleFromRequired deps.ActiveSubject deps.HasGrant role required
     }
 
 /// The module-facing capability: authorize a role straight from the request. A consumer holds this in

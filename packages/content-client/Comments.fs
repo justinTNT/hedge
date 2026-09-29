@@ -54,7 +54,7 @@ module Comments =
           OnSubmit: unit -> unit }
 
     let private avatar (url: string) =
-        Html.img [ prop.className "avatar"; prop.src url ]
+        Html.img [ prop.className "avatar"; prop.src (Client.GuestSession.assetUrl url) ]
 
     let private richBody (content: RichContent) =
         let (RichContent text) = content

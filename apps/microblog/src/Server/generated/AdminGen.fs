@@ -40,17 +40,18 @@ let identity : AdminTable =
             fieldWith "Picture" FString []
             fieldWith "Email" (FOption FString) []
             fieldWith "ActivatedAt" (FOption FInt) []
+            fieldWith "SupersededBy" (FOption FString) []
             fieldWith "CreatedAt" FInt [CreateTimestamp]
         ]
-      SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at FROM identities WHERE id = ?"
-      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities WHERE id = ?"
+      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = false
-      Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ? WHERE id = ?"
+      Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ?, superseded_by = ? WHERE id = ?"
       Delete = "DELETE FROM identities WHERE id = ?"
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
-      MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"] }
+      MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"; "SupersededBy"] }
 
 let grant : AdminTable =
     { Name = "Grant"
@@ -75,9 +76,52 @@ let grant : AdminTable =
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
       MutableFields = ["Provider"; "ProviderUserId"; "Role"; "Enabled"; "GrantedBy"] }
 
+let mobileSession : AdminTable =
+    { Name = "MobileSession"
+      Table = "mobile_sessions"
+      Schema =
+        schema "MobileSession" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString []
+            fieldWith "ExpiresAt" FInt []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, expires_at, created_at FROM mobile_sessions ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, expires_at, created_at FROM mobile_sessions WHERE id = ?"
+      Insert = "INSERT INTO mobile_sessions (id, guest_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE mobile_sessions SET guest_id = ?, expires_at = ? WHERE id = ?"
+      Delete = "DELETE FROM mobile_sessions WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["GuestId"; "ExpiresAt"] }
+
+let mobileAuthCode : AdminTable =
+    { Name = "MobileAuthCode"
+      Table = "mobile_auth_codes"
+      Schema =
+        schema "MobileAuthCode" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString []
+            fieldWith "Challenge" FString []
+            fieldWith "ExpiresAt" FInt []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, challenge, expires_at, created_at FROM mobile_auth_codes WHERE id = ?"
+      Insert = "INSERT INTO mobile_auth_codes (id, guest_id, challenge, expires_at, created_at) VALUES (?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE mobile_auth_codes SET guest_id = ?, challenge = ?, expires_at = ? WHERE id = ?"
+      Delete = "DELETE FROM mobile_auth_codes WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["GuestId"; "Challenge"; "ExpiresAt"] }
+
 let private ownTables : AdminTable list = [
     guest
     identity
     grant
+    mobileSession
+    mobileAuthCode
 ]
 let tables : AdminTable list = ownTables @ Blog.AdminGen.tables
