@@ -37,6 +37,7 @@ module IdentityView =
         | "github" -> "GitHub"
         | "microsoft" -> "Microsoft"
         | "facebook" -> "Facebook"
+        | "linkedin" -> "LinkedIn"
         | "anonymous" -> "Anonymous"
         | p -> p
 

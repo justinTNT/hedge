@@ -68,9 +68,15 @@ let exports = createWorker {
     OAuth = Some (fun env ->
         let e = env :?> Env
         { Secret = e.OAUTH_SECRET
+          // Bespoke (non-OIDC).
           Providers = Map.ofList [
-              "google", {| ClientId = e.GOOGLE_CLIENT_ID; ClientSecret = e.GOOGLE_CLIENT_SECRET |}
               "github", {| ClientId = e.GITHUB_CLIENT_ID; ClientSecret = e.GITHUB_CLIENT_SECRET |}
+          ]
+          // Config-driven OIDC (presets carry endpoints/claims; a site adds an IdP by config, no code).
+          OidcProviders = Map.ofList [
+              "google",    { Hedge.Oidc.Preset = Some "google";    Issuer = None; AuthorizeUrl = None; TokenUrl = None; UserinfoUrl = None; Scopes = None; ClientId = e.GOOGLE_CLIENT_ID;    ClientSecret = e.GOOGLE_CLIENT_SECRET }
+              "microsoft", { Hedge.Oidc.Preset = Some "microsoft"; Issuer = None; AuthorizeUrl = None; TokenUrl = None; UserinfoUrl = None; Scopes = None; ClientId = e.MICROSOFT_CLIENT_ID; ClientSecret = e.MICROSOFT_CLIENT_SECRET }
+              "linkedin",  { Hedge.Oidc.Preset = Some "linkedin";  Issuer = None; AuthorizeUrl = None; TokenUrl = None; UserinfoUrl = None; Scopes = None; ClientId = e.LINKEDIN_CLIENT_ID;  ClientSecret = e.LINKEDIN_CLIENT_SECRET }
           ]
           ResolveIdentity = Server.Handlers.resolveIdentity
           OnOAuthComplete = Server.Handlers.onOAuthComplete })

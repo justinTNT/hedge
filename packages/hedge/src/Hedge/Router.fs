@@ -196,11 +196,32 @@ type OAuthComplete = {
 
 type OAuthConfig = {
     Secret: string
+    /// Bespoke (non-OIDC) providers: github, facebook. Name → client id/secret.
     Providers: Map<string, {| ClientId: string; ClientSecret: string |}>
+    /// Config-driven OpenID Connect providers (google, microsoft, linkedin, or any issuer). Name →
+    /// registration (preset / explicit endpoints / issuer-discovery + creds). Resolved to a
+    /// ProviderConfig at login/callback via Hedge.Oidc.toProviderConfig.
+    OidcProviders: Map<string, Hedge.Oidc.OidcRegistration>
     /// Called by /api/auth/me. App resolves guest → JSON string (or None for anon).
     ResolveIdentity: D1Database -> string -> JS.Promise<string option>
     OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete>
 }
+
+/// Resolve a login provider name to its (config, creds) — bespoke first, then an OIDC registration
+/// (which discovers/builds its ProviderConfig). None when unknown or missing credentials.
+let internal resolveOAuthProvider (oauth: OAuthConfig) (name: string)
+    : JS.Promise<(OAuth.ProviderConfig * {| ClientId: string; ClientSecret: string |}) option> =
+    promise {
+        match OAuth.providers.TryFind name, oauth.Providers.TryFind name with
+        | Some cfg, Some creds -> return Some (cfg, creds)
+        | _ ->
+            match oauth.OidcProviders.TryFind name with
+            | Some reg when not (isNull (box reg.ClientId)) && reg.ClientId <> ""
+                            && not (isNull (box reg.ClientSecret)) && reg.ClientSecret <> "" ->
+                let! cfg = Hedge.Oidc.toProviderConfig name reg
+                return Some (cfg, {| ClientId = reg.ClientId; ClientSecret = reg.ClientSecret |})
+            | _ -> return None
+    }
 
 /// C4 — which R2 key prefixes are PRIVATE: objects under them are never served through the
 /// generic public /blobs/ route (a feature owns a dedicated, isolated route for them, e.g.
@@ -316,15 +337,20 @@ let createWorker (config: WorkerConfig) =
                     match oauthCfg with
                     | None -> []
                     | Some oauth ->
-                        oauth.Providers
-                        |> Map.toList
-                        |> List.filter (fun (name, creds) ->
-                            OAuth.providers.ContainsKey name
-                            && not (isNull creds.ClientId)
-                            && creds.ClientId <> ""
-                            && not (isNull creds.ClientSecret)
-                            && creds.ClientSecret <> "")
-                        |> List.map fst
+                        let hasCreds (id: string) (secret: string) =
+                            not (isNull id) && id <> "" && not (isNull secret) && secret <> ""
+                        // Bespoke (github/facebook): known to the framework AND carrying credentials.
+                        let bespoke =
+                            oauth.Providers |> Map.toList
+                            |> List.filter (fun (name, creds) ->
+                                OAuth.providers.ContainsKey name && hasCreds creds.ClientId creds.ClientSecret)
+                            |> List.map fst
+                        // Config-driven OIDC (google/microsoft/linkedin/…): any registration with creds.
+                        let oidc =
+                            oauth.OidcProviders |> Map.toList
+                            |> List.filter (fun (_, reg) -> hasCreds reg.ClientId reg.ClientSecret)
+                            |> List.map fst
+                        bespoke @ oidc
                 let body =
                     configured
                     |> List.map (sprintf "\"%s\"")
@@ -336,8 +362,9 @@ let createWorker (config: WorkerConfig) =
             match route, oauthCfg with
             | GET path, Some oauth when matchPath "/api/auth/:id/login" path |> Option.isSome ->
                 let providerName = match (matchPath "/api/auth/:id/login" path).Value with WithParam (_, p) -> p | Exact _ -> ""
-                match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
-                | Some providerCfg, Some creds ->
+                let! resolved = resolveOAuthProvider oauth providerName
+                match resolved with
+                | Some (providerCfg, creds) ->
                     match config.GuestSession with
                     | None -> return serverError "Guest signing is not configured"
                     | Some guestOf ->
@@ -358,8 +385,9 @@ let createWorker (config: WorkerConfig) =
 
             | GET path, Some oauth when matchPath "/api/auth/:id/callback" path |> Option.isSome ->
                 let providerName = match (matchPath "/api/auth/:id/callback" path).Value with WithParam (_, p) -> p | Exact _ -> ""
-                match OAuth.providers.TryFind providerName, oauth.Providers.TryFind providerName with
-                | Some providerCfg, Some creds ->
+                let! resolved = resolveOAuthProvider oauth providerName
+                match resolved with
+                | Some (providerCfg, creds) ->
                     match config.GuestSession with
                     | None -> return serverError "Guest signing is not configured"
                     | Some guestOf ->

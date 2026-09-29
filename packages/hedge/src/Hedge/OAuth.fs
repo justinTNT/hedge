@@ -36,20 +36,8 @@ type ProviderConfig = {
     ParseUserinfo: obj -> UserInfo
 }
 
-/// Build provider configs.
-let private googleConfig : ProviderConfig = {
-    AuthorizeUrl = "https://accounts.google.com/o/oauth2/v2/auth"
-    TokenUrl = "https://oauth2.googleapis.com/token"
-    UserinfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo"
-    Scopes = "openid profile email"
-    ParseUserinfo = fun o ->
-        { Name = o?name |> unbox<string>
-          PictureUrl = o?picture |> unbox<string>
-          Email = let e : string = o?email |> unbox in if isNull e then None else Some e
-          ProviderUserId = o?id |> unbox<string>
-          Provider = "google" }
-}
-
+// Bespoke provider configs. google + microsoft moved to config-driven OIDC presets (Hedge.Oidc);
+// github + facebook are NOT OpenID Connect (custom APIs), so they stay hand-coded here.
 let private githubConfig : ProviderConfig = {
     AuthorizeUrl = "https://github.com/login/oauth/authorize"
     TokenUrl = "https://github.com/login/oauth/access_token"
@@ -61,19 +49,6 @@ let private githubConfig : ProviderConfig = {
           Email = let e : string = o?email |> unbox in if isNull e then None else Some e
           ProviderUserId = string (o?id |> unbox<int>)
           Provider = "github" }
-}
-
-let private microsoftConfig : ProviderConfig = {
-    AuthorizeUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
-    TokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-    UserinfoUrl = "https://graph.microsoft.com/v1.0/me"
-    Scopes = "openid profile email"
-    ParseUserinfo = fun o ->
-        { Name = o?displayName |> unbox<string>
-          PictureUrl = ""
-          Email = let e : string = o?mail |> unbox in if isNull e then None else Some e
-          ProviderUserId = o?id |> unbox<string>
-          Provider = "microsoft" }
 }
 
 let private facebookConfig : ProviderConfig = {
@@ -93,12 +68,11 @@ let private facebookConfig : ProviderConfig = {
           Provider = "facebook" }
 }
 
-/// All supported providers.
+/// Bespoke (non-OIDC) providers. OpenID Connect IdPs (google, microsoft, linkedin, …) are registered
+/// per-host as config-driven `Hedge.Oidc.OidcRegistration`s instead of appearing here.
 let providers : Map<string, ProviderConfig> =
     Map.ofList [
-        "google", googleConfig
         "github", githubConfig
-        "microsoft", microsoftConfig
         "facebook", facebookConfig
     ]
 

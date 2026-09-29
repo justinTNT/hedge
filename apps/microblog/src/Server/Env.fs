@@ -31,4 +31,10 @@ type Env = {
     GOOGLE_CLIENT_SECRET: string
     GITHUB_CLIENT_ID: string
     GITHUB_CLIENT_SECRET: string
+    // OIDC providers (google above is OIDC too, wired via Hedge.Oidc presets). Empty ⇒ the provider is
+    // filtered out of /api/auth/providers, so an unset secret hides it rather than erroring.
+    MICROSOFT_CLIENT_ID: string
+    MICROSOFT_CLIENT_SECRET: string
+    LINKEDIN_CLIENT_ID: string
+    LINKEDIN_CLIENT_SECRET: string
 }
