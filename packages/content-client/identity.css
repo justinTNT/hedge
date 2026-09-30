@@ -58,6 +58,19 @@ html.dark .switcher-connect { border-top-color: #444; }
 .login-google { background: #4285f4; }
 .login-github { background: #333; }
 html.dark .login-github { background: #555; }
+.login-linkedin { background: #0a66c2; }
+.login-microsoft { background: #2f2f2f; }
+html.dark .login-microsoft { background: #555; }
+.login-facebook { background: #1877f2; }
+.login-email { background: #4b5563; border: none; cursor: pointer; }
+.login-email:disabled { opacity: 0.6; cursor: default; }
+
+/* Passwordless email: input + submit + result states. */
+.connect-email { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-top: 0.4rem; }
+.email-input { padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-size: 0.8rem; }
+html.dark .email-input { background: #333; color: #eee; border-color: #555; }
+.email-sent { font-size: 0.8rem; color: #16a34a; margin: 0.4rem 0 0; }
+.email-error { font-size: 0.75rem; color: #dc2626; margin: 0.25rem 0 0; }
 
 .btn-merge, .btn-abandon, .btn-disconnect {
   padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
