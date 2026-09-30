@@ -401,9 +401,16 @@ let createWorker (config: WorkerConfig) =
                         // The callback must run under an accepted (signed / bridge-upgraded) credential
                         // — never sign a callback's unverified subject. It is not a bootstrap route.
                         let! required = requireGuest deps (readCookie request)
+                        let providerError = getQueryParam request.url "error"
                         let code = getQueryParam request.url "code"
                         let stateParam = getQueryParam request.url "state"
-                        if isNull code || code = "" then
+                        if not (isNull providerError) && providerError <> "" then
+                            // The provider redirected back with an error instead of a code (denied consent,
+                            // an unauthorized scope, a not-yet-approved product, …). Surface it so the
+                            // failure is diagnosable rather than the opaque "Missing code parameter".
+                            let desc = getQueryParam request.url "error_description"
+                            return badRequest (sprintf "%s login failed: %s%s" providerName providerError (if isNull desc || desc = "" then "" else " — " + desc))
+                        elif isNull code || code = "" then
                             return badRequest "Missing code parameter"
                         elif isNull stateParam || stateParam = "" then
                             return badRequest "Missing state parameter"
