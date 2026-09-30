@@ -265,7 +265,7 @@ let view model login dispatch =
                                     Html.button [prop.key photo.Id;prop.type' "button";prop.className(if selected then "attachment-choice selected" else "attachment-choice")
                                                  prop.ariaLabel((if selected then "Unlink " else "Attach ")+(if photo.Caption="" then "photograph" else photo.Caption))
                                                  prop.custom("aria-pressed",selected);prop.onClick(fun _->dispatch(ToggleAttachment photo.Id))
-                                                 prop.children [Html.img [prop.src photo.Thumbnail;prop.alt photo.Caption];Html.span(if selected then "Selected" else "Select")]]
+                                                 prop.children [Client.Images.View photo.Thumbnail [prop.alt photo.Caption];Html.span(if selected then "Selected" else "Select")]]
                                 let inputId="attachment-upload-"+model.PlantId
                                 iconButton "Upload and attach a photograph" (cameraPlus()) model.Busy
                                     (fun ()->if photosFull model then dispatch AttachmentLimit else openPicker inputId)
@@ -288,7 +288,7 @@ let view model login dispatch =
                     Html.small status
                     Html.div [prop.className "note-attachments";prop.children [
                         for photo in note.Photos do
-                            let thumbnail=Html.img [prop.src photo.Thumbnail;prop.alt(if photo.Caption="" then "Attached photograph" else photo.Caption)]
+                            let thumbnail=Client.Images.View photo.Thumbnail [prop.alt(if photo.Caption="" then "Attached photograph" else photo.Caption)]
                             if photo.Width>=200 && photo.Height>=200 then
                                 Html.button [prop.key photo.Id;prop.type' "button";prop.ariaLabel "View photograph";prop.onClick(fun _->dispatch(Preview photo));prop.children [thumbnail]]
                             else thumbnail

@@ -25,6 +25,8 @@ type Msg =
     | Logout
     | LoggedOut of bool
     | SessionCleared
+    | Login of string
+    | LoginFinished of Result<unit,string>
 
 let load request = Cmd.OfPromise.either refreshSession () (fun r -> Loaded(request,Some r)) (fun _ -> Loaded(request,None))
 let providers request =
@@ -43,8 +45,18 @@ let account (result: SessionReadiness option) =
 
 let signedIn model = model.Account.IsSome && not model.LoggingOut
 
+[<Emit("window.HedgeGuest.signIn($0).then(()=>undefined)")>]
+let private mobileLogin (provider:string) : JS.Promise<unit> = jsNative
+
 let update msg model =
     match msg with
+    | Login _ when model.Loading || model.LoggingOut -> model,Cmd.none
+    | Login provider ->
+        {model with Error=None;Loading=true;Request=model.Request+1}, Cmd.OfPromise.either mobileLogin provider (fun ()->LoginFinished(Ok())) (fun ex->LoginFinished(Error ex.Message))
+    | LoginFinished(Ok()) ->
+        let request=model.Request+1
+        {model with Request=request;Loading=true;Open=false},load request
+    | LoginFinished(Error error) -> {model with Error=Some error;Open=true;Loading=false},Cmd.none
     | Refresh when model.Loading || model.LoggingOut || (model.Error |> Option.exists(fun e->e.StartsWith("Logout"))) -> model,Cmd.none
     | Refresh ->
         let request=model.Request+1
@@ -106,6 +118,7 @@ let view model dispatch =
                     match model.Error with
                     | Some error ->
                         Html.p [prop.role "alert";prop.text error]
+                        if not(error.StartsWith("Logout")) then Html.button [prop.type' "button";prop.text "Try again";prop.onClick(fun _->dispatch Close)]
                         if error.StartsWith("Logout") then Html.button [prop.type' "button";prop.text "Retry logout";prop.onClick(fun _->dispatch Logout)]
                     | None ->
                         match model.Providers with
@@ -113,6 +126,9 @@ let view model dispatch =
                         | Some [] -> Html.p "Login is not available yet. You can continue exploring the guide."
                         | Some providers ->
                             for provider in providers do
-                                Html.a [prop.className "account-action";prop.href(loginUrl provider);prop.text("Continue with "+(if provider="google" then "Google" else "GitHub"))]
+                                let label="Continue with "+(if provider="google" then "Google" else "GitHub")
+                                if Client.GuestSession.isMobile then
+                                    Html.button [prop.type' "button";prop.className "account-action";prop.text label;prop.disabled model.Loading;prop.onClick(fun _->dispatch(Login provider))]
+                                else Html.a [prop.className "account-action";prop.href(loginUrl provider);prop.text label]
             ]]
     ]]

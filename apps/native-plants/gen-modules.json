@@ -1,5 +1,20 @@
 [
-  { "identity": true, "assembly": "Models" },
-  { "identity": true, "assembly": "IdentityModels" },
-  { "identity": true, "assembly": "GrantModels", "namespace": "Grants" }
+  {
+    "identity": true,
+    "assembly": "Models"
+  },
+  {
+    "identity": true,
+    "assembly": "IdentityModels"
+  },
+  {
+    "identity": true,
+    "assembly": "GrantModels",
+    "namespace": "Grants"
+  },
+  {
+    "identity": true,
+    "assembly": "MobileModels",
+    "namespace": "Mobile"
+  }
 ]

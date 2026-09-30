@@ -49,7 +49,7 @@ let Term (note:Note) (label:string) =
                        prop.children [
                            Html.strong note.Heading
                            Html.span [prop.className "definition-body";prop.text note.Body]
-                           if note.Image<>"" then Html.img [prop.src note.Image;prop.alt(note.Heading+" illustration")]
+                           if note.Image<>"" then Client.Images.View note.Image [prop.alt(note.Heading+" illustration")]
                            Html.small note.Source
                        ]]
     ]]

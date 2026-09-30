@@ -1,3 +1,4 @@
+import './helpers/browser.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { empty as blank, enter, update, Msg, compose, view, uploadTile, galleryFeedback, photoEditor } from '../dist/client/Personal.js';

@@ -8,13 +8,17 @@ open Server.Env
 [<ExportDefault>]
 let exports = createWorker {
     Routes = fun request env ctx ->
-        let result =
+        let appResult () =
             match Server.Contributions.dispatch request (env :?> Env) with
             | Some action -> Some action
             | None ->
                 match Server.ContributionApi.dispatch request (env :?> Env) ctx Server.Routes.dispatch with
                 | Some action -> Some action
                 | None -> Server.Routes.dispatch request (env :?> Env) ctx
+        let result =
+            match Server.MobileHandlers.dispatch request (env :?> Env) with
+            | Some action -> Some action
+            | None -> appResult ()
         match result with
         | Some result -> Some (promise {
             try

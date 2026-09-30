@@ -385,10 +385,16 @@
         function removeH(h) { Promise.resolve(h).then(function(x) { if (x && x.remove) x.remove(); }).catch(function() {}); }
         var urlHandle = caps.App.addListener('appUrlOpen', function(event) {
           if (settled) return;
-          var code = null; try { code = new URL(event.url).searchParams.get('code'); } catch (_) {}
+          var code = null;
+          try {
+            var incoming = new URL(event.url), expected = new URL(window.HEDGE_MOBILE_RETURN_URL || 'wtfail://auth');
+            if (incoming.protocol !== expected.protocol || incoming.host !== expected.host || incoming.pathname !== expected.pathname) return;
+            if (incoming.searchParams.has('error')) { finish(); reject(new Error('Sign-in did not complete. Please try again.')); return; }
+            code = incoming.searchParams.get('code');
+          } catch (_) {}
           if (!code) return;                     // not our deeplink (or an error return) — let cancel handle it
           finish();
-          try { caps.Browser.close(); } catch (_) {}
+          try { Promise.resolve(caps.Browser.close()).catch(function() {}); } catch (_) {}
           fetch(API_BASE + '/api/mobile/exchange', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getBearer() },
@@ -410,7 +416,7 @@
           if (settled) return;
           setTimeout(function() { if (!settled) { finish(); reject(new Error('Sign-in was cancelled')); } }, 0);
         });
-        caps.Browser.open({ url: API_BASE + '/api/auth/' + provider + '/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + challenge) });
+        Promise.resolve(caps.Browser.open({ url: API_BASE + '/api/auth/' + provider + '/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + challenge) })).catch(function(error) { if (!settled) { finish(); reject(error); } });
       });
     });
   }

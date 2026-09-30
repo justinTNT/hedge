@@ -20,7 +20,10 @@ let viewerToken (provider:string) (id:string) : JS.Promise<string> = jsNative
 [<Emit("new URL($0.url).pathname.split('/').filter(Boolean)")>]
 let path (request:WorkerRequest) : string array = jsNative
 [<Emit("($0.headers.get('Origin') === new URL($0.url).origin && $0.headers.get('Sec-Fetch-Site') !== 'cross-site')")>]
-let sameOrigin (request:WorkerRequest) : bool = jsNative
+let private browserOrigin (request:WorkerRequest) : bool = jsNative
+// Non-cookie credentials do not need a browser CSRF origin. Every operation below still
+// resolves the bearer and checks its current subject/role; an invalid bearer fails closed.
+let sameOrigin request = browserOrigin request || (Hedge.MobileSession.readBearer request).IsSome
 [<Emit("typeof $0 === 'string'")>]
 let isString (value:obj) : bool = jsNative
 [<Emit("typeof $0 === 'boolean'")>]
@@ -56,7 +59,7 @@ let run env sql args = promise { let! r=(stmt env sql args).run() in return (unb
 let response cookie status value =
     let result=jsonResponse (JS.JSON.stringify value) status
     result?headers?set("Cache-Control","private, no-store") |> ignore
-    result?headers?set("Vary","Cookie, X-Admin-Key") |> ignore
+    result?headers?set("Vary","Cookie, Authorization, X-Admin-Key") |> ignore
     match cookie with Some c -> result?headers?set("Set-Cookie",c) |> ignore |None -> ()
     result
 let error cookie status message = response cookie status (createObj ["error" ==> message])
@@ -69,7 +72,7 @@ let owned = "id=? AND plant_id=? AND owner_provider=? AND owner_id=?"
 
 /// Verified accounts are the default; explicit false is retained for legacy anonymous-content tests.
 let owner (env:Env) request = promise {
-    let! required=requireGuest (Server.AuthConfig.deps env request) (readCookie request)
+    let! required=Server.AuthConfig.require env request
     match required with
     | Rejected -> return None,None
     | Accepted session ->
@@ -95,7 +98,8 @@ let roleAccess role env request = promise {
                 let! subject=Identity.Server.activeSubject env.DB guestId
                 return subject |> Option.map(fun (provider,id)->{Hedge.AccessControl.Subject.Provider=provider;ProviderUserId=id}) }
             HasGrant=Identity.Grants.hasGrant env.DB }
-        let! result=Hedge.AccessControl.requireRole deps role (readCookie request)
+        let! required=Server.AuthConfig.require env request
+        let! result=Hedge.AccessControl.roleFromRequired deps.ActiveSubject deps.HasGrant role required
         match result with
         | Hedge.AccessControl.Authorized(_,cookie) -> return true,cookie
         | Hedge.AccessControl.Forbidden(_,cookie) | Hedge.AccessControl.AuthRequired cookie -> return false,cookie
@@ -349,7 +353,7 @@ let media env request id size = promise {
                 // Image loads cannot join the browser's logout lock. Do not renew cookies here.
                 return streamResponse blob.body (createObj ["headers" ==> createObj [
                     "Content-Type" ==> "image/jpeg";"Cache-Control" ==> "private, no-store"
-                    "Vary" ==> "Cookie, X-Admin-Key";"X-Content-Type-Options" ==> "nosniff"]])
+                    "Vary" ==> "Cookie, Authorization, X-Admin-Key";"X-Content-Type-Options" ==> "nosniff"]])
 }
 
 let reviewDataFor env page curate identify = promise {

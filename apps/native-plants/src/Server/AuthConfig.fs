@@ -19,6 +19,13 @@ let deps (env: Env) (request: WorkerRequest) : Deps =
       LegacyEligible = fun _ -> promise { return false }
       LegacyHasLinkedIdentity = fun _ -> promise { return false } }
 
+let mobileDeps (env:Env) : Hedge.MobileSession.Deps =
+    { LookupByHash = fun hash -> Identity.Mobile.resolveByHash env.DB (epochNow()) hash }
+
+let require (env:Env) request =
+    Hedge.MobileSession.requireGuestOrBearer (mobileDeps env)
+        (fun req -> requireGuest (deps env req) (readCookie req)) request
+
 let isOwner (env:Env) request =
     let key=getHeader request "X-Admin-Key"
     key<>"" && key=env.ADMIN_KEY
@@ -36,7 +43,7 @@ let resolveIdentity db guestId = promise {
 
 /// Verified subjects only. The app’s temporary anonymous contribution policy is separate.
 let subject (env: Env) (request: WorkerRequest) = promise {
-    let! guest = requireGuest (deps env request) (readCookie request)
+    let! guest = require env request
     match guest with
     | Rejected -> return None, None
     | Accepted accepted ->

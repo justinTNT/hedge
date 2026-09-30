@@ -11,7 +11,7 @@ let client viewer key =
         let headers = [
             if viewer<>"" then "X-Contribution-Viewer",viewer
             if key<>"" then "X-Admin-Key",key ]
-        Client.GuestSession.transport Client.Api.uncachedBrowserTransport {request with Headers=headers @ request.Headers})
+        Client.GuestSession.transport (if Client.Api.apiOrigin="" then Client.Api.uncachedBrowserTransport else Client.Api.appTransport) {request with Headers=headers @ request.Headers})
 
 let private personalView (data:Models.Api.PersonalSnapshot) : Personal =
     { Anonymous=data.Anonymous; ViewerToken=data.ViewerToken; Notes=List.toArray data.Notes

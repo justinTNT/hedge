@@ -1,4 +1,5 @@
-const base = () => window.BASE_PATH || '';
+const base = () => window.API_ORIGIN || window.BASE_PATH || '';
+const auth = () => { const token=window.HedgeGuest.currentBearer?.(); return token ? {Authorization:'Bearer '+token} : {}; };
 export function uuid() { return crypto.randomUUID(); }
 
 function render(image, edge) {
@@ -28,7 +29,7 @@ export async function upload(plantId, id, file, viewer) {
       const data = new FormData(); data.append('image', full, 'image.jpg'); data.append('thumbnail', thumb, 'thumbnail.jpg');
       const response = await fetch(base() + '/api/plants/personal/' + encodeURIComponent(plantId) + '/photos/' + id, {
         method: 'POST', credentials: 'same-origin', cache: 'no-store', body: data,
-        headers: { 'X-Contribution-Viewer': viewer }
+        headers: { ...auth(), 'X-Contribution-Viewer': viewer }
       });
       return {Status:response.status, Body:await response.text()};
     } finally { URL.revokeObjectURL(url); }
@@ -36,7 +37,7 @@ export async function upload(plantId, id, file, viewer) {
 }
 export function reviewImage(path, adminKey) {
   return window.HedgeGuest.withSessionRequest(async () => {
-    const response = await fetch(base() + path, { credentials: 'same-origin', cache: 'no-store', headers: adminKey ? {'X-Admin-Key': adminKey} : {} });
+    const response = await fetch(base() + path, { credentials: 'same-origin', cache: 'no-store', headers: {...auth(), ...(adminKey ? {'X-Admin-Key': adminKey} : {})} });
     if (!response.ok) throw new Error('This photograph is no longer available for review.');
     return URL.createObjectURL(await response.blob());
   });

@@ -4,10 +4,12 @@
   </PropertyGroup>
   <Import Project="../../../../packages/modules/identity/identity.server.props" />
   <Import Project="../../../../packages/modules/identity/identity.grants.server.props" />
+  <Import Project="../../../../packages/modules/identity/identity.mobile.server.props" />
   <ItemGroup>
     <Compile Include="Env.fs" />
     <Compile Include="ContributionOwnership.fs" />
     <Compile Include="AuthConfig.fs" />
+    <Compile Include="MobileHandlers.fs" />
 
     <Compile Include="generated/Db.fs" />
     <Compile Include="../Core/Catalogue.fs" />

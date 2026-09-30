@@ -1,0 +1,14 @@
+{
+  "appId": "au.nativeplants.guide",
+  "appName": "Native Plants",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  },
+  "loggingBehavior": "none"
+}

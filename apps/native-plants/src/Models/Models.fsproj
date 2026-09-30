@@ -13,6 +13,7 @@
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/identity/src/Grants/GrantModels.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/identity/src/Mobile/MobileModels.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

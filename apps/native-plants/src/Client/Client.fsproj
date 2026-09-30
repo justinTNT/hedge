@@ -8,6 +8,7 @@
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="../Core/Catalogue.fs" />
     <Compile Include="../Core/Glossary.fs" />
+    <Compile Include="Images.fs" />
     <Compile Include="Annotations.fs" />
     <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
     <Compile Include="../../../../packages/hedge/src/Client/AdminCredential.fs" />

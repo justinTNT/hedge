@@ -1,3 +1,4 @@
+import './helpers/browser.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mountAdminAccess} from '../src/Client/admin-access.mjs';

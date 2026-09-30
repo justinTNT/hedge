@@ -297,3 +297,37 @@ catalogue, grant or contribution records. No new live Google consent flow ran.
 Refresh the preview to load the new client. To delegate ID review, use the
 owner admin's Identity lookup and create an enabled Grant with Role **identifier**.
 Use both grants only for someone who should also curate corrections/photos.
+
+
+## Android support deployed — 30 September 2026
+
+Worker version `541ee8a1-50a3-40dd-ab54-ae1445fd15f4` adds the Native Plants
+Capacitor host endpoints and bearer-aware contributions. The browser site and
+OAuth callback URLs remain the same. The preview gate accepts a separate native
+`X-Preview-Authorization` credential, removes it before calling Hedge, and retains
+the account's bearer header. Browser Basic authentication continues unchanged.
+
+Before migration, the complete preview D1 database was exported to the ignored,
+mode-0600 `.local/pre-mobile-2026-09-30.sql`. Its SQL was restored into an in-memory
+SQLite database to verify the backup. Migration `0004_mobile.sql` was applied
+once locally and remotely. Live counts match the backup: 531 species, 1,872
+catalogue photos, two notes, three personal photos, one identity and one grant.
+The migration did not change existing records, secrets, provider configuration
+or role grants.
+
+Verification passed: 18 importer tests, 111 app tests, the full repository
+`./test.sh`, web production build, preview validation (4,041 media references and
+4,610 assets), the native bundle and Android debug build. Live HTTP checks covered
+the outer gate, native bootstrap/me, protected catalogue/media, anonymous content
+and admin/review denial, browser cookies, Google OAuth redirect, bad bearer
+precedence and server-side token revocation. Synthetic native sessions were revoked.
+Sanitized results: `.local/mobile-smoke-2026-09-30.json`.
+
+The Android APK was installed in the emulator. Its packaged config has no
+live-reload URL, native bridge logging is disabled, original catalogue images
+are not bundled, and the package was checked against configured server secrets.
+The app requires an internet connection and the existing preview password.
+Real Google login/return, a phone photo upload and persisted login across an
+app restart remain manual device checks; the automated browser inspection page
+was blocked by the environment's browser security policy. Build and testing
+instructions are in [mobile/README.md](mobile/README.md).

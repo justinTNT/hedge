@@ -1,3 +1,4 @@
+import './helpers/browser.mjs';
 import { hasPhotoCredit } from '../dist/client/Core/Catalogue.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

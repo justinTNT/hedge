@@ -18,7 +18,7 @@ function privateResponse(response) {
   result.headers.set('Referrer-Policy', 'no-referrer');
   result.headers.set('X-Content-Type-Options', 'nosniff');
   result.headers.set('X-Frame-Options', 'DENY');
-  result.headers.set('Vary', [result.headers.get('Vary'), 'Authorization'].filter(Boolean).join(', '));
+  result.headers.set('Vary', [result.headers.get('Vary'), 'Authorization', 'X-Preview-Authorization'].filter(Boolean).join(', '));
   return result;
 }
 
@@ -30,7 +30,8 @@ export function protectPreview(application) {
       if (typeof env.PREVIEW_PASSWORD !== 'string' || env.PREVIEW_PASSWORD.length < 32)
         return privateResponse(new Response('Private preview unavailable', {status: 503}));
 
-      const header = request.headers.get('Authorization') || '';
+      const nativeCredential = request.headers.get('X-Preview-Authorization');
+      const header = nativeCredential ?? request.headers.get('Authorization') ?? '';
       let credential = '';
       const encoded = header.length <= 1024 && /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(header);
       if (encoded) {
@@ -43,7 +44,8 @@ export function protectPreview(application) {
         }));
 
       const headers = new Headers(request.headers);
-      headers.delete('Authorization');
+      headers.delete('X-Preview-Authorization');
+      if (nativeCredential === null) headers.delete('Authorization');
       return privateResponse(await application.fetch(new Request(request, {headers}), env, context));
     },
   };

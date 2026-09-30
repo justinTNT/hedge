@@ -193,14 +193,15 @@ test('additive migration matches the fresh generated schema and leaves an existi
   const fresh=fixture().db;
   const old=new DatabaseSync(':memory:');
   const objects=fresh.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END,name").all();
-  for(const object of objects.filter(o=>!['guests','identities'].includes(o.tbl_name)))old.exec(object.sql);
+  for(const object of objects.filter(o=>!['guests','identities','mobile_sessions','mobile_auth_codes'].includes(o.tbl_name)))old.exec(object.sql);
   const fields=old.prepare('PRAGMA table_info(plants)').all().filter(c=>c.notnull || c.pk);
   const values=fields.map(c=>c.name==='id'?'preserved-plant':c.type==='INTEGER'?1:'Owner value');
   old.prepare('INSERT INTO plants ('+fields.map(c=>c.name).join(',')+') VALUES ('+fields.map(()=>'?').join(',')+')').run(...values);
   const before=old.prepare('SELECT * FROM plants').all();
   old.exec(readFileSync(new URL('../migrations/0001_identity.sql',import.meta.url),'utf8'));
+  old.exec(readFileSync(new URL('../migrations/0004_mobile.sql',import.meta.url),'utf8'));
   assert.deepEqual(old.prepare('SELECT * FROM plants').all(),before);
-  const describe=db=>db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name").all();
+  const describe=db=>db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name").all().map(o=>o.type==='table'?{name:o.name,columns:db.prepare('PRAGMA table_info('+o.name+')').all().map(({cid,...r})=>r).sort((a,b)=>a.name.localeCompare(b.name)),keys:db.prepare('PRAGMA foreign_key_list('+o.name+')').all()}:o);
   assert.deepEqual(describe(old),describe(fresh));
 });
 

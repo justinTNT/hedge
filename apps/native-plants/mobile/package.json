@@ -1,0 +1,26 @@
+{
+  "name": "native-plants-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:web": "npm --prefix .. run build:mobile",
+    "add:android": "cap add android && node scripts/prepare-android.mjs",
+    "sync": "cap sync android && node scripts/prepare-android.mjs",
+    "build:android": "npm run build:web && npm run sync && cd android && ./gradlew assembleDebug",
+    "open:android": "cap open android",
+    "run:android": "cap run android",
+    "dev:web": "npm --prefix .. run dev:mobile",
+    "dev:android": "node scripts/live-reload.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/browser": "8.0.4",
+    "@capacitor/core": "8.5.2",
+    "capacitor-secure-storage-plugin": "0.13.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

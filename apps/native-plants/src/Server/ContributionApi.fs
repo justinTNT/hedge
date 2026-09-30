@@ -19,7 +19,7 @@ let reviewSnapshot (data:Review) : ReviewSnapshot =
 
 let decorate cookie (result:WorkerResponse) =
     result?headers?set("Cache-Control","private, no-store") |> ignore
-    result?headers?set("Vary","Cookie, X-Admin-Key") |> ignore
+    result?headers?set("Vary","Cookie, Authorization, X-Admin-Key") |> ignore
     cookie |> Option.iter(fun c->result?headers?set("Set-Cookie",c) |> ignore)
     result
 

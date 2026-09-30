@@ -30,7 +30,7 @@ type Msg =
     | Review of Client.Review.Msg
     | Access of Client.Access.Msg
 
-let api = Client.ClientGen.createClient Client.Api.browserTransport
+let api = Client.ClientGen.createClient Client.Api.appTransport
 [<Emit("window.location.pathname")>]
 let path () : string = jsNative
 [<Emit("new URLSearchParams(window.location.search).get($0)")>]
@@ -78,7 +78,7 @@ let load request = Cmd.OfPromise.either api.getCatalogue () (fun r -> Loaded(req
 let loadPlant request id = Cmd.OfPromise.either api.getPlant id (fun r -> PlantLoaded(request,id,r)) (fun e -> PlantLoaded(request,id,Error(Hedge.Http.TransportFailure e.Message)))
 let currentPlant request = function Detail id -> loadPlant request id | _ -> Cmd.none
 let revision = Cmd.OfPromise.either api.getRevision () Revised (fun e -> Revised(Error(Hedge.Http.TransportFailure e.Message)))
-[<Emit("new Promise(resolve=>{const image=new Image();image.onload=()=>resolve([$0,image.naturalWidth,image.naturalHeight]);image.onerror=()=>resolve([$0,0,0]);image.src=$0;})")>]
+[<Import("measurePhoto", "./image-client.mjs")>]
 let measurePhoto (url:string) : JS.Promise<string*int*int> = jsNative
 let canEnlargePhoto width height = width>=200 && height>=200
 let canViewPhoto model (photo:Photo) =
@@ -231,7 +231,7 @@ let card (p:PlantCard) dispatch =
             prop.children [
                 Html.div [prop.className "card-image";prop.children [
                     match p.Photo with
-                    | Some photo -> Html.img [prop.src photo.Thumbnail;prop.alt p.ScientificName;prop.custom("loading","lazy")]
+                    | Some photo -> Client.Images.View photo.Thumbnail [prop.alt p.ScientificName;prop.custom("loading","lazy")]
                     | None -> Html.div [prop.className "no-photo";prop.children [leaf;Html.span "Photograph to come"]]
                     if p.EndemicNt then Html.span [prop.className "endemic-badge";prop.text "NT endemic"]
                 ]]
@@ -303,7 +303,7 @@ let home model (data:GetCatalogue.Response) dispatch =
             ]]
             match hero |> Option.bind(fun p->p.Photo |> Option.map(fun photo->p,photo)) with
             | Some(p,photo) -> Html.a [prop.href(plantUrl p);prop.className "hero-photo";prop.onClick(fun e->e.preventDefault();dispatch(Navigate(plantUrl p)));prop.children [
-                Html.img [prop.src photo.Image;prop.alt "Orange flowers of the Darwin woollybutt, Eucalyptus miniata";prop.custom("fetchpriority","high")]
+                Client.Images.View photo.Image [prop.alt "Orange flowers of the Darwin woollybutt, Eucalyptus miniata";prop.custom("fetchpriority","high")]
                 Html.div [prop.className "hero-caption";prop.children [Html.span "IN THE TOP END";Html.strong "Darwin woollybutt";Html.em p.ScientificName;Html.span "Meet this plant ↗"]]
               ]]
             | None -> Html.none
@@ -380,8 +380,7 @@ let taxonomy model (data:GetCatalogue.Response) dispatch =
     ]]
 
 let photoImage model hero (photo:Photo) dispatch =
-    let image = Html.img [
-        prop.src(if hero then photo.Image else photo.Thumbnail)
+    let image = Client.Images.View (if hero then photo.Image else photo.Thumbnail) [
         prop.alt photo.Caption
         if not hero then prop.custom("loading","lazy")
     ]
@@ -461,7 +460,7 @@ let detail model (plant:PlantDetail) dispatch =
                                 for map in plant.DistributionMaps do
                                     Html.figure [prop.className "distribution-map";prop.children [
                                         Html.div [prop.className "map-image";prop.children [
-                                            Html.img [prop.src map.Image;prop.alt map.Caption;prop.custom("loading","lazy")]
+                                            Client.Images.View map.Image [prop.alt map.Caption;prop.custom("loading","lazy")]
                                         ]]
                                         Html.figcaption [prop.children [Html.span [prop.children [rich map.Caption]];Html.span map.SourceLabel]]
                                     ]]
@@ -491,7 +490,7 @@ let glossaryPage model (data:GetCatalogue.Response) dispatch =
                 Html.dt entry.Term
                 Html.dd [prop.children [
                     Client.Annotations.text matcher entry.Definition
-                    if entry.Illustration<>"" then Html.img [prop.src entry.Illustration;prop.alt(entry.Term+" illustration");prop.custom("loading","lazy")]
+                    if entry.Illustration<>"" then Client.Images.View entry.Illustration [prop.alt(entry.Term+" illustration");prop.custom("loading","lazy")]
                     Html.small entry.SourceLabel
                 ]]
             ]]
@@ -579,7 +578,7 @@ let view model dispatch =
             let credit=if hasPhotoCredit photo.Photographer then " · "+photo.Photographer else ""
             Html.div [prop.className "lightbox lightbox-photograph";prop.role "dialog";prop.custom("aria-modal",true);prop.ariaLabel photo.Caption;prop.onClick(fun _->dispatch(Zoom None));prop.children [
                 Html.button [prop.className "lightbox-close";prop.autoFocus true;prop.ariaLabel "Close photograph";prop.text "×";prop.onClick(fun _->dispatch(Zoom None))]
-                Html.figure [prop.onClick(fun e->e.stopPropagation());prop.children [Html.img [prop.src photo.Image;prop.alt photo.Caption];Html.figcaption [prop.text(photo.Caption+credit)]]]
+                Html.figure [prop.onClick(fun e->e.stopPropagation());prop.children [Client.Images.View photo.Image [prop.alt photo.Caption];Html.figcaption [prop.text(photo.Caption+credit)]]]
             ]]
         | None -> Html.none
     ]]

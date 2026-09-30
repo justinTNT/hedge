@@ -298,3 +298,10 @@ An isolated, password-protected Cloudflare preview was deployed on 25 September
 See [PREVIEW.md](PREVIEW.md) for access, privacy and live verification. Public
 release still requires editorial review of source/proof differences, selected
 content, credits and unresolved names.
+
+
+## Android app
+
+The Capacitor shell lives in [mobile](mobile/README.md). It uses the existing
+private preview, Google/GitHub provider configuration, species catalogue and
+contribution controls. See that guide for APK builds, live reload and device checks.

@@ -1,3 +1,4 @@
+import './helpers/browser.mjs';
 import { empty as emptyList } from '../dist/client/fable_modules/fable-library-js.4.29.0/List.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
