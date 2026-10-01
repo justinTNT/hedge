@@ -58,10 +58,15 @@ let private googleParse (provider: string) (o: obj) : UserInfo =
       Email = (let e = strOr o?email in if e = "" then None else Some e)
       ProviderUserId = strOr o?id; Provider = provider }
 
-// microsoft: Graph /me shape (displayName/mail/id), matching the pre-migration bespoke config.
+// microsoft: Graph /me shape (displayName/mail/id). Personal accounts (MSA) and some Entra users have a
+// null `mail`, with the address in `userPrincipalName` — fall back to it when it looks like an address.
 let private microsoftParse (provider: string) (o: obj) : UserInfo =
+    let email =
+        let m = strOr o?mail
+        if m <> "" then Some m
+        else let upn = strOr o?userPrincipalName in (if upn.Contains "@" then Some upn else None)
     { Name = strOr o?displayName; PictureUrl = ""
-      Email = (let e = strOr o?mail in if e = "" then None else Some e)
+      Email = email
       ProviderUserId = strOr o?id; Provider = provider }
 
 let private presets : Map<string, Preset> =
@@ -101,10 +106,14 @@ let private discover (issuer: string) : JS.Promise<Endpoints> =
                 return failwith (sprintf "OIDC discovery failed for %s (%d): %s" issuer resp.status text)
             else
                 let! d = responseJson resp
+                // Discovered endpoints must be https (we send the client secret to the token endpoint).
+                let httpsOnly label (u: string) =
+                    if u.StartsWith "https://" then u
+                    else failwith (sprintf "OIDC discovery for %s returned a non-https %s endpoint" issuer label)
                 let ep : Endpoints =
-                    {| Authorize = strOr d?authorization_endpoint
-                       Token = strOr d?token_endpoint
-                       Userinfo = strOr d?userinfo_endpoint |}
+                    {| Authorize = httpsOnly "authorization" (strOr d?authorization_endpoint)
+                       Token = httpsOnly "token" (strOr d?token_endpoint)
+                       Userinfo = httpsOnly "userinfo" (strOr d?userinfo_endpoint) |}
                 discoveryCache <- discoveryCache.Add(issuer, ep)
                 return ep
     }
@@ -117,13 +126,16 @@ let toProviderConfig (name: string) (reg: OidcRegistration) : JS.Promise<Provide
         let! endpoints =
             match reg.AuthorizeUrl, reg.TokenUrl, reg.UserinfoUrl with
             | Some a, Some t, Some u -> promise { return ({| Authorize = a; Token = t; Userinfo = u |} : Endpoints) }
-            | _ ->
+            | None, None, None ->
                 match preset with
                 | Some p -> promise { return ({| Authorize = p.Authorize; Token = p.Token; Userinfo = p.Userinfo |} : Endpoints) }
                 | None ->
                     match reg.Issuer with
                     | Some iss -> discover iss
                     | None -> failwith (sprintf "OIDC provider '%s' needs a preset, explicit endpoints, or an issuer" name)
+            // A partial explicit override is a config mistake — fail loudly rather than silently falling back
+            // to the preset/discovery (the documented precedence is all-three-or-none).
+            | _ -> failwith (sprintf "OIDC provider '%s': set all of AuthorizeUrl/TokenUrl/UserinfoUrl, or none" name)
         let scopes =
             reg.Scopes
             |> Option.orElse (preset |> Option.map (fun p -> p.Scopes))

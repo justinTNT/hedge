@@ -46,6 +46,16 @@ let run () =
         check "microsoft: Graph override (displayName/mail/id)"
             (m.ProviderUserId = "M1" && m.Name = "Carol" && m.Email = Some "c@x.com")
         check "microsoft: userinfo is Graph /me" (mCfg.UserinfoUrl = "https://graph.microsoft.com/v1.0/me")
+        let mUpn = mCfg.ParseUserinfo (createObj [ "id" ==> "M2"; "displayName" ==> "Dee"; "userPrincipalName" ==> "dee@x.com" ])
+        check "microsoft: falls back to userPrincipalName when mail is absent" (mUpn.Email = Some "dee@x.com")
+
+        // Partial explicit endpoints are a config error (B#5/C#7) — must throw, not silently use the preset.
+        let mutable partialThrew = false
+        try
+            let! _ = Oidc.toProviderConfig "partial" { reg None None "x" with AuthorizeUrl = Some "https://a.test/auth" }
+            ()
+        with _ -> partialThrew <- true
+        check "oidc: partial endpoint override is rejected" partialThrew
 
         // ---- OIDC: discovery from an arbitrary issuer ----
         mockFetch true 200 "" (createObj [ "authorization_endpoint" ==> "https://idp.test/a"; "token_endpoint" ==> "https://idp.test/t"; "userinfo_endpoint" ==> "https://idp.test/u" ])
@@ -100,12 +110,12 @@ let run () =
 
         // ---- Magic-link token: round-trip, tamper, expiry ----
         let secret = "test-secret-at-least-32-bytes-long-string!!"
-        let! tok = Email.generateEmailToken secret "user@x.com" "/back" 900
+        let! tok = Email.generateEmailToken secret "guest-1" "user@x.com" "/back" 900
         let! v1 = Email.verifyEmailToken secret tok
-        check "token: round-trip returns email + returnTo" (match v1 with Ok r -> r.Email = "user@x.com" && r.ReturnTo = "/back" | _ -> false)
+        check "token: round-trip returns guest + email + returnTo" (match v1 with Ok r -> r.GuestId = "guest-1" && r.Email = "user@x.com" && r.ReturnTo = "/back" | _ -> false)
         let! v2 = Email.verifyEmailToken "different-secret-at-least-32-bytes-long!!" tok
         check "token: wrong secret rejected" (match v2 with Error _ -> true | _ -> false)
-        let! tokExp = Email.generateEmailToken secret "u@x.com" "/" -100
+        let! tokExp = Email.generateEmailToken secret "g" "u@x.com" "/" -100
         let! v3 = Email.verifyEmailToken secret tokExp
         check "token: expired rejected" (match v3 with Error _ -> true | _ -> false)
 

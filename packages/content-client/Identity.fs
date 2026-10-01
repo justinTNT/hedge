@@ -227,7 +227,9 @@ module Identity =
             { model with SelectedIdentity = selected }, Cmd.none, NoSignal
 
         | SetEmailInput value ->
-            { model with EmailInput = value; MagicLink = (match model.MagicLink with MlFailed _ -> MlIdle | s -> s) }, Cmd.none, NoSignal
+            // Editing (or the "use a different email" reset, which sends "") clears a prior failure/sent
+            // state so the form is usable again — e.g. after a typo'd address.
+            { model with EmailInput = value; MagicLink = (match model.MagicLink with MlFailed _ | MlSent -> MlIdle | s -> s) }, Cmd.none, NoSignal
 
         | RequestMagicLink ->
             let email = model.EmailInput.Trim().ToLowerInvariant()

@@ -47,7 +47,17 @@ module IdentityView =
     let private emailConnect (model: Identity.Model) (dispatch: Identity.Msg -> unit) =
         match model.MagicLink with
         | Identity.MlSent ->
-            Html.p [ prop.className "email-sent"; prop.text "Check your inbox for a sign-in link." ]
+            Html.div [
+                prop.className "connect-email"
+                prop.children [
+                    Html.p [ prop.className "email-sent"; prop.text "Check your inbox for a sign-in link — open it in this browser." ]
+                    Html.button [
+                        prop.className "email-again"
+                        prop.text "Use a different email"
+                        prop.onClick (fun _ -> dispatch (Identity.SetEmailInput ""))
+                    ]
+                ]
+            ]
         | _ ->
             Html.div [
                 prop.className "connect-email"

@@ -14,6 +14,9 @@ function fixture(fetch,{locks}={}) {
 }
 const response=()=>({ok:true,json:async()=>({guest:{guestId:'guest',identity:{id:'id',provider:'google',name:'Researcher',picture:''}}})});
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
+// signIn does an async sha256 (crypto.subtle.digest) before opening the browser + registering the
+// appUrlOpen listener, so a single `await turn()` can run before c.opened/c.urlFn are set. Poll instead.
+const settle=async(cond)=>{for(let i=0;i<100&&!cond();i++)await turn();};
 test('bootstrap is single-flight and a failure can be retried',async()=>{
   let calls=0;const f=fixture(async()=>{calls++;return calls===1?{ok:false}:response()});
   assert.equal(f.api.ensureSession(),f.api.ensureSession());
@@ -109,7 +112,7 @@ test('mobile session bootstraps an anonymous bearer then browser-OAuth exchanges
   const s=await f.api.ensureSession();
   assert.equal(s.ready,true);assert.equal(f.store.get('hedge_mobile_bearer'),'anon-bearer');
   assert.ok(calls.some(x=>x[0].endsWith('/api/mobile/bootstrap')));
-  const done=f.api.signIn('google');await turn();
+  const done=f.api.signIn('google');await settle(()=>c.opened&&c.urlFn);
   assert.ok(c.opened.url.includes('/api/auth/google/login?returnTo='));assert.ok(c.opened.url.includes('challenge%3D'));
   c.urlFn({url:'wtfail://auth?code=abc123'});
   await done;
@@ -155,7 +158,7 @@ test('a sign-out during login supersedes it: the verified bearer is discarded + 
     return {ok:false}; };
   const c=mkCaps();const f=mobileFixture(fetch,c.plugins);
   await f.api.ensureSession();
-  const login=f.api.signIn('google');await turn();
+  const login=f.api.signIn('google');await settle(()=>c.urlFn);
   c.urlFn({url:'wtfail://auth?code=abc'});await turn();   // exchange now pending on releaseExchange
   await f.api.signOut();                                  // sign out mid-exchange -> generation bumped
   releaseExchange();
@@ -195,7 +198,7 @@ test('a stale /me 401 for an old token does not clear the bearer replaced by log
   const c=mkCaps();const f=mobileFixture(fetch,c.plugins);
   await f.api.ensureSession();                    // anon-1 (/me #1 ok)
   const stale=f.api.refreshSession();await turn();// /me #2 (anon-1) held
-  const login=f.api.signIn('google');await turn();c.urlFn({url:'wtfail://auth?code=abc'});await login;
+  const login=f.api.signIn('google');await settle(()=>c.urlFn);c.urlFn({url:'wtfail://auth?code=abc'});await login;
   assert.equal(f.store.get('hedge_mobile_bearer'),'verified');
   releaseStale();await stale;                      // stale 401 (anon-1) arrives after login
   assert.equal(f.store.get('hedge_mobile_bearer'),'verified');  // NOT cleared (token guard)

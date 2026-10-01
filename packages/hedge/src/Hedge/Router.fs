@@ -205,10 +205,9 @@ type OAuthConfig = {
     /// Called by /api/auth/me. App resolves guest → JSON string (or None for anon).
     ResolveIdentity: D1Database -> string -> JS.Promise<string option>
     OnOAuthComplete: D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete>
-    /// Passwordless email magic-link sender. None ⇒ email sign-in is off (routes 404, UI omits it).
+    /// Passwordless email magic-link sender. None ⇒ email sign-in is off (routes 404, UI omits it). The
+    /// from-address is baked into the sender closure (Email.selectSender), so it isn't a field here.
     SendEmail: Hedge.Email.EmailSender option
-    /// From-address for magic-link email (only meaningful when SendEmail is Some).
-    EmailFrom: string
 }
 
 /// Resolve a login provider name to its (config, creds) — bespoke first, then an OIDC registration
@@ -435,53 +434,72 @@ let createWorker (config: WorkerConfig) =
                                             sprintf "%s/api/auth/%s/callback" origin providerName
                                         let! accessToken = OAuth.exchangeCode providerCfg code redirectUri creds.ClientId creds.ClientSecret
                                         let! userInfo = OAuth.fetchUserinfo providerCfg accessToken
-                                        let db : D1Database = env?DB
-                                        let blobs : R2Bucket = env?BLOBS
-                                        let! completion = oauth.OnOAuthComplete db blobs a.GuestId (box userInfo) returnTo
-                                        // Adoption is the privileged re-sign: issue a signed cookie for
-                                        // the adopted subject, but only after OnOAuthComplete's verified
-                                        // provider-ownership check. Otherwise carry any renewal cookie.
-                                        let! cookie =
-                                            match completion.AdoptGuestId with
-                                            | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
-                                            | None -> promise { return a.Replacement }
-                                        return redirectResponseOpt completion.RedirectUrl cookie
+                                        // OIDC requires a subject; reject a missing/empty provider_user_id
+                                        // rather than resolve everyone to the shared ("provider","") account.
+                                        if System.String.IsNullOrEmpty userInfo.ProviderUserId then
+                                            return badRequest (sprintf "%s did not return a user identifier" providerName)
+                                        else
+                                            let db : D1Database = env?DB
+                                            let blobs : R2Bucket = env?BLOBS
+                                            let! completion = oauth.OnOAuthComplete db blobs a.GuestId (box userInfo) returnTo
+                                            // Adoption is the privileged re-sign: issue a signed cookie for
+                                            // the adopted subject, but only after OnOAuthComplete's verified
+                                            // provider-ownership check. Otherwise carry any renewal cookie.
+                                            let! cookie =
+                                                match completion.AdoptGuestId with
+                                                | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
+                                                | None -> promise { return a.Replacement }
+                                            return redirectResponseOpt completion.RedirectUrl cookie
                 | _ ->
                     return badRequest (sprintf "Unknown provider: %s" providerName)
 
-            // Passwordless email magic-link. POST requests a link; GET verifies it and joins the SAME
-            // adopt/merge/activate path as the OAuth callback (with a synthesized email UserInfo).
+            // Passwordless email magic-link. POST requests a link bound to THIS browser's guest; GET
+            // verifies it under the SAME guest and joins the OAuth callback's adopt/merge/activate path.
+            // ABUSE NOTE: POST can be driven by any client, so enabling email also enables sending mail to
+            // arbitrary addresses. Put a rate limit in front of it before enabling a real sender —
+            // Cloudflare WAF rate-limiting on /api/auth/email (by IP) and/or Turnstile is the edge control;
+            // a per-email+IP D1 throttle is the server-side follow-up (see the auth plan's deferred list).
             | POST path, Some oauth when matchPath "/api/auth/email" path = Some (Exact "/api/auth/email") ->
-                match oauth.SendEmail with
-                | None -> return notFound ()
-                | Some sendEmail ->
+                match oauth.SendEmail, config.GuestSession with
+                | Some sendEmail, Some guestOf ->
                     let! bodyText = request.text()
-                    let parsed = JS.JSON.parse bodyText
-                    let emailRaw : string = parsed?email
-                    if isNull (box emailRaw) || emailRaw.Trim() = "" then
-                        return badRequest "Missing email"
-                    else
-                        // Normalize: dedup is exact-string on (provider, provider_user_id), so lowercase now.
-                        let email = emailRaw.Trim().ToLowerInvariant()
-                        if not (email.Contains "@") || email.Contains " " then
-                            return badRequest "Invalid email"
+                    // Guard the parse: a malformed body is a 400, not a 500.
+                    let parsed = try Some (JS.JSON.parse bodyText) with _ -> None
+                    match parsed with
+                    | None -> return badRequest "Invalid request body"
+                    | Some p ->
+                        let emailRaw : string = p?email
+                        if isNull (box emailRaw) || emailRaw.Trim() = "" then
+                            return badRequest "Missing email"
                         else
-                            let returnToRaw : string = parsed?returnTo
-                            let returnTo = OAuth.safeReturnPath returnToRaw
-                            let! token = Hedge.Email.generateEmailToken oauth.Secret email returnTo 900
-                            let origin : string = (createUrl request.url)?origin
-                            let link = sprintf "%s/api/auth/email/verify?token=%s" origin (JS.encodeURIComponent token)
-                            let msg : Hedge.Email.EmailMessage =
-                                {| To = email
-                                   Subject = "Your sign-in link"
-                                   Html = sprintf "<p>Click to sign in:</p><p><a href=\"%s\">Sign in</a></p><p>This link expires in 15 minutes. If you didn't request it, ignore this email.</p>" link
-                                   Text = sprintf "Sign in: %s\n\nThis link expires in 15 minutes. If you didn't request it, ignore this email." link |}
-                            let! sent = sendEmail msg
-                            match sent with
-                            | Ok () -> return okJson """{"sent":true}"""
-                            | Error e ->
-                                JS.console.error ("magic-link send failed: " + e)
-                                return serverError "Could not send sign-in email"
+                            // Normalize (dedup is exact-string on (provider, provider_user_id)) and validate:
+                            // must have '@', no '|' (the token delimiter), no whitespace (space/tab/newline).
+                            let email = emailRaw.Trim().ToLowerInvariant()
+                            if not (email.Contains "@") || email.Contains "|" || email |> Seq.exists System.Char.IsWhiteSpace then
+                                return badRequest "Invalid email"
+                            else
+                                let returnToRaw : string = p?returnTo
+                                let returnTo = OAuth.safeReturnPath returnToRaw
+                                // Bind the link to this browser's guest (bootstrapping one if needed) so verify
+                                // can require the same guest — the CSRF/adoption protection the OAuth state gives.
+                                let! boot = resolveOrBootstrap (guestOf env request) (readCookie request)
+                                let! token = Hedge.Email.generateEmailToken oauth.Secret boot.GuestId email returnTo 900
+                                let origin : string = (createUrl request.url)?origin
+                                let link = sprintf "%s/api/auth/email/verify?token=%s" origin (JS.encodeURIComponent token)
+                                let msg : Hedge.Email.EmailMessage =
+                                    {| To = email
+                                       Subject = "Your sign-in link"
+                                       Html = sprintf "<p>Click to sign in:</p><p><a href=\"%s\">Sign in</a></p><p>This link expires in 15 minutes and opens in this browser. If you didn't request it, ignore this email.</p>" link
+                                       Text = sprintf "Sign in: %s\n\nThis link expires in 15 minutes and opens in this browser. If you didn't request it, ignore this email." link |}
+                                let! sent = sendEmail msg
+                                match sent with
+                                | Ok () ->
+                                    let body = """{"sent":true}"""
+                                    return (match boot.Replacement with Some c -> okJsonWithCookie body c | None -> okJson body)
+                                | Error e ->
+                                    JS.console.error ("magic-link send failed: " + e)
+                                    return serverError "Could not send sign-in email"
+                | _ -> return notFound ()
 
             | GET path, Some oauth when matchPath "/api/auth/email/verify" path = Some (Exact "/api/auth/email/verify") ->
                 match oauth.SendEmail, config.GuestSession with
@@ -493,22 +511,30 @@ let createWorker (config: WorkerConfig) =
                         match verified with
                         | Error err -> return badRequest (sprintf "Invalid sign-in link: %s" err)
                         | Ok v ->
-                            // Bootstrap a guest in THIS browser — the link may open on another device, so
-                            // possession of the signed link is the proof (we do not require the initiating guest).
                             let deps = guestOf env request
-                            let! boot = resolveOrBootstrap deps (readCookie request)
-                            let localPart = let at = v.Email.IndexOf '@' in if at > 0 then v.Email.Substring(0, at) else v.Email
-                            let userInfo : OAuth.UserInfo =
-                                { Name = localPart; PictureUrl = ""; Email = Some v.Email
-                                  ProviderUserId = v.Email; Provider = "email" }
-                            let db : D1Database = env?DB
-                            let blobs : R2Bucket = env?BLOBS
-                            let! completion = oauth.OnOAuthComplete db blobs boot.GuestId (box userInfo) v.ReturnTo
-                            let! cookie =
-                                match completion.AdoptGuestId with
-                                | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
-                                | None -> promise { return boot.Replacement }
-                            return redirectResponseOpt completion.RedirectUrl cookie
+                            // Require the SAME guest the link was issued to (the OAuth-state analogue). A link
+                            // opened in a different browser carries a different guest and is refused — without
+                            // this, opening an attacker's link in a victim's browser would move the victim's
+                            // identities into the attacker's guest via OnOAuthComplete's adoption.
+                            let! required = requireGuest deps (readCookie request)
+                            match required with
+                            | Rejected -> return badRequest "Sign-in session expired; request a new link"
+                            | Accepted a ->
+                                if a.GuestId <> v.GuestId then
+                                    return badRequest "Open the sign-in link in the same browser you requested it from"
+                                else
+                                    let localPart = let at = v.Email.IndexOf '@' in if at > 0 then v.Email.Substring(0, at) else v.Email
+                                    let userInfo : OAuth.UserInfo =
+                                        { Name = localPart; PictureUrl = ""; Email = Some v.Email
+                                          ProviderUserId = v.Email; Provider = "email" }
+                                    let db : D1Database = env?DB
+                                    let blobs : R2Bucket = env?BLOBS
+                                    let! completion = oauth.OnOAuthComplete db blobs a.GuestId (box userInfo) v.ReturnTo
+                                    let! cookie =
+                                        match completion.AdoptGuestId with
+                                        | Some adopted -> promise { let! c = adopt deps adopted in return Some c }
+                                        | None -> promise { return a.Replacement }
+                                    return redirectResponseOpt completion.RedirectUrl cookie
                 | _ -> return notFound ()
 
             | _ ->

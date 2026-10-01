@@ -126,27 +126,33 @@ let selectSender (c: EmailConfig) : EmailSender option =
 
 // ---- Magic-link token: stateless, HMAC-signed (mirrors OAuth.generateState/verifyState) ----
 
-/// Mint a signed magic-link token binding an email + return path with a short TTL. No storage.
-let generateEmailToken (secret: string) (email: string) (returnTo: string) (ttlSeconds: int) : JS.Promise<string> =
+/// Mint a signed magic-link token binding the REQUESTING guest + email + return path with a short TTL.
+/// Binding the guest is the CSRF/adoption protection (the OAuth-state analogue): verify requires the same
+/// guest, so a link opened in a different browser can't complete and mutate that browser's identities.
+/// No storage. `guestId` and `email` never contain '|' (newId; email is validated at the route).
+let generateEmailToken (secret: string) (guestId: string) (email: string) (returnTo: string) (ttlSeconds: int) : JS.Promise<string> =
     promise {
         let expiry = epochNow () + ttlSeconds
-        let payload = sprintf "%s|%s|%d" email returnTo expiry
+        let payload = sprintf "%s|%s|%s|%d" guestId email returnTo expiry
         let! mac = hmacSha256 secret payload
         return base64urlEncode (payload + "|" + mac)
     }
 
-/// Verify a magic-link token: signature + expiry. Returns the bound email + return path, or an error.
-let verifyEmailToken (secret: string) (token: string) : JS.Promise<Result<{| Email: string; ReturnTo: string |}, string>> =
+/// Verify a magic-link token: signature + expiry. Returns the bound guest + email + return path. Exactly
+/// five '|' fields (guestId|email|returnTo|expiry|mac) — none of the first four contain '|' (guestId is a
+/// newId, email is route-validated, returnTo is safeReturnPath'd, expiry is digits), so any other count is
+/// tampering.
+let verifyEmailToken (secret: string) (token: string) : JS.Promise<Result<{| GuestId: string; Email: string; ReturnTo: string |}, string>> =
     promise {
         try
             let parts = (base64urlDecode token).Split('|')
-            if parts.Length < 4 then return Error "Invalid token"
+            if parts.Length <> 5 then return Error "Invalid token"
             else
-                let email, returnTo, expiry, mac = parts.[0], parts.[1], parts.[2], parts.[3]
-                let payload = sprintf "%s|%s|%s" email returnTo expiry
+                let guestId, email, returnTo, expiry, mac = parts.[0], parts.[1], parts.[2], parts.[3], parts.[4]
+                let payload = sprintf "%s|%s|%s|%s" guestId email returnTo expiry
                 let! expected = hmacSha256 secret payload
                 if mac <> expected then return Error "Invalid token signature"
                 elif int expiry < epochNow () then return Error "Token expired"
-                else return Ok {| Email = email; ReturnTo = returnTo |}
+                else return Ok {| GuestId = guestId; Email = email; ReturnTo = returnTo |}
         with _ -> return Error "Invalid token"
     }

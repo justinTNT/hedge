@@ -51,8 +51,7 @@ let exports = createWorker {
                 {| Provider = e.EMAIL_PROVIDER; From = e.EMAIL_FROM
                    ResendKey = e.RESEND_API_KEY
                    MailgunKey = e.MAILGUN_API_KEY; MailgunDomain = e.MAILGUN_DOMAIN
-                   SesId = e.AWS_SES_ACCESS_KEY_ID; SesSecret = e.AWS_SES_SECRET_ACCESS_KEY; SesRegion = e.AWS_SES_REGION |}
-          EmailFrom = e.EMAIL_FROM })
+                   SesId = e.AWS_SES_ACCESS_KEY_ID; SesSecret = e.AWS_SES_SECRET_ACCESS_KEY; SesRegion = e.AWS_SES_REGION |} })
     // Signed guest cookies (independent of OAuth). Bound per request so the audience is the host;
     // the single builder Server.GuestConfig.deps is shared with the identity handlers and module
     // comment services, so there is one policy for this app.
