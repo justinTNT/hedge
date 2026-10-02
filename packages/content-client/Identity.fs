@@ -25,6 +25,13 @@ module Identity =
           Picture: string
           ActivatedAt: int option }
 
+    /// State of the passwordless email magic-link request (web only).
+    type MagicLinkState =
+        | MlIdle
+        | MlSending
+        | MlSent
+        | MlFailed of string
+
     type Model =
         { GuestSession: GuestSession.GuestSessionData
           Identities: IdentityListItem list
@@ -36,7 +43,10 @@ module Identity =
           SelectedIdentity: string option
           /// Set on OAuth return; consumed once the host navigates back to the return
           /// route, to open the switcher pre-selected on the claimed identity.
-          PendingClaimFocus: string option }
+          PendingClaimFocus: string option
+          /// Passwordless email magic-link: the input value + request state (web only).
+          EmailInput: string
+          MagicLink: MagicLinkState }
 
     type Msg =
         | GotSessionSync of GuestSession.GuestSessionData
@@ -49,6 +59,9 @@ module Identity =
         | DisconnectIdentity of identityId: string
         | GotDisconnect of Result<unit, string>
         | SelectIdentity of identityId: string
+        | SetEmailInput of string
+        | RequestMagicLink
+        | GotMagicLink of Result<unit, string>
 
     /// What an identity update means for the rest of the host.
     type Signal =
@@ -72,6 +85,16 @@ module Identity =
 
     let private encodeDisconnect (identityId: string) (name: string) : string =
         Encode.object [ "identityId", Encode.string identityId; "name", Encode.string name ] |> Encode.toString 0
+
+    let private encodeMagicLink (email: string) (returnTo: string) : string =
+        Encode.object [ "email", Encode.string email; "returnTo", Encode.string returnTo ] |> Encode.toString 0
+
+    let private requestMagicLinkCmd (email: string) (returnTo: string) : Cmd<Msg> =
+        Cmd.OfPromise.either
+            (fun () -> Client.Api.postJsonRaw "/api/auth/email" (encodeMagicLink email returnTo))
+            ()
+            GotMagicLink
+            (fun ex -> GotMagicLink (Error ex.Message))
 
     let private providersDecoder : Decoder<string list> =
         Decode.field "providers" (Decode.list Decode.string)
@@ -139,7 +162,9 @@ module Identity =
               AvailableProviders = []
               ShowIdentitySwitcher = false
               SelectedIdentity = None
-              PendingClaimFocus = claimFocus }
+              PendingClaimFocus = claimFocus
+              EmailInput = ""
+              MagicLink = MlIdle }
         let bootCmds =
             [ syncCmd
               loadProvidersCmd
@@ -200,6 +225,27 @@ module Identity =
         | SelectIdentity identityId ->
             let selected = if model.SelectedIdentity = Some identityId then None else Some identityId
             { model with SelectedIdentity = selected }, Cmd.none, NoSignal
+
+        | SetEmailInput value ->
+            // Editing (or the "use a different email" reset, which sends "") clears a prior failure/sent
+            // state so the form is usable again — e.g. after a typo'd address.
+            { model with EmailInput = value; MagicLink = (match model.MagicLink with MlFailed _ | MlSent -> MlIdle | s -> s) }, Cmd.none, NoSignal
+
+        | RequestMagicLink ->
+            let email = model.EmailInput.Trim().ToLowerInvariant()
+            if email = "" || not (email.Contains "@") then
+                { model with MagicLink = MlFailed "Enter a valid email address" }, Cmd.none, NoSignal
+            else
+                // Return to the current route after the link is clicked (same rule as loginButton).
+                let path = Browser.Dom.window.location.pathname
+                let returnTo = if path.StartsWith "/auth/" then "/" else path
+                { model with MagicLink = MlSending }, requestMagicLinkCmd email returnTo, NoSignal
+
+        | GotMagicLink (Ok _) ->
+            { model with MagicLink = MlSent }, Cmd.none, NoSignal
+
+        | GotMagicLink (Error err) ->
+            { model with MagicLink = MlFailed err }, Cmd.none, NoSignal
 
     /// Consume a pending OAuth claim focus once the host has navigated back to the return
     /// route: open the switcher pre-selected on the claimed identity.

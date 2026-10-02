@@ -172,6 +172,25 @@ rm -rf "$GS_OUT"
 echo "--- Guest-session policy OK ---"
 
 echo ""
+echo "=== Step 1e4: Auth providers (OIDC) + email senders ==="
+# The config-driven OIDC provider subsystem (Hedge.Oidc: preset/discovery endpoint resolution + claim
+# parsing) and the email senders (Hedge.Email: Resend/Mailgun/SES request shapes + selectSender gating +
+# magic-link token) with a mocked fetch. SES's SigV4 signing key is checked against AWS's published
+# derivation vector, so a signing regression fails here. See test/Auth.
+cd "$ROOT"
+AUTH_OUT="$ROOT/test/Auth/dist"
+rm -rf "$AUTH_OUT"
+dotnet fable test/Auth/Auth.fsproj -o "$AUTH_OUT" >/dev/null 2>&1
+if ! node "$AUTH_OUT/Program.js" | grep -q "auth-fixtures:.*OK"; then
+    echo "!!! FAIL: auth providers / email senders — an OIDC, sender, SigV4, or token behavior regressed."
+    node "$AUTH_OUT/Program.js" || true
+    rm -rf "$AUTH_OUT"
+    exit 1
+fi
+rm -rf "$AUTH_OUT"
+echo "--- Auth providers + email senders OK ---"
+
+echo ""
 echo "=== Step 1f: Populated table recreate (P3) ==="
 # A schema change that forces a table rebuild (a column type/drop or any FK change)
 # emits copy -> DROP -> RENAME. On a populated DB with self-FKs (comments.parent_id) or

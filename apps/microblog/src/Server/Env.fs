@@ -31,4 +31,20 @@ type Env = {
     GOOGLE_CLIENT_SECRET: string
     GITHUB_CLIENT_ID: string
     GITHUB_CLIENT_SECRET: string
+    // OIDC providers (google above is OIDC too, wired via Hedge.Oidc presets). Empty ⇒ the provider is
+    // filtered out of /api/auth/providers, so an unset secret hides it rather than erroring.
+    MICROSOFT_CLIENT_ID: string
+    MICROSOFT_CLIENT_SECRET: string
+    LINKEDIN_CLIENT_ID: string
+    LINKEDIN_CLIENT_SECRET: string
+    // Email magic-link (Phase 2). EMAIL_PROVIDER selects the sender (resend|mailgun|ses|stub); empty/unset
+    // ⇒ email sign-in is off. Only the selected provider's creds need setting. From-address is EMAIL_FROM.
+    EMAIL_PROVIDER: string
+    EMAIL_FROM: string
+    RESEND_API_KEY: string
+    MAILGUN_API_KEY: string
+    MAILGUN_DOMAIN: string
+    AWS_SES_ACCESS_KEY_ID: string
+    AWS_SES_SECRET_ACCESS_KEY: string
+    AWS_SES_REGION: string
 }

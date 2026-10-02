@@ -3,6 +3,12 @@ main = "worker-entry.js"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Preserve the worker's current exposure. Declaring [[routes]] below otherwise defaults these to false,
+# which would disable the *.workers.dev URL + version preview URLs on deploy. Kept true to match the
+# live config (flip to false later if you want to retire the workers.dev URL — a deliberate change).
+workers_dev = true
+preview_urls = true
+
 # Local development
 [dev]
 port = 8787
@@ -40,6 +46,14 @@ directory = "./_site"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+
+# Custom domain for the DEFAULT deploy (darwin.news). It was created via the dashboard, so `wrangler
+# deploy` reported it as routes drift and could drop it. Declaring it here makes local match remote:
+# the drift disappears and wrangler owns/keeps the domain (idempotent when it already exists). Named
+# [env.*] tenants do NOT inherit top-level routes, so this affects only the darwin.news deploy.
+[[routes]]
+pattern = "darwin.news"
+custom_domain = true
 
 # Environment variables
 # ADMIN_KEY is deliberately absent: a plain-text var here would override a
