@@ -1,0 +1,8 @@
+{
+  "assembly": "IdentityModels",
+  "namespace": "IdentityHttp",
+  "tablePrefix": "",
+  "routePrefix": "/api/auth",
+  "handlerNs": "IdentityHttp.Handlers",
+  "namePrefix": "identityHttp"
+}
