@@ -50,6 +50,10 @@
          6 existing tenants); .idealist adds alerts (superset). schema.sql is suffixed the same way. -->
     <Compile Include="generated/AdminGen.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
     <Compile Include="generated/AdminGen.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
+    <!-- Explicit admin allowlist (Track 1): common registry + the site-selected table set. -->
+    <Compile Include="AdminTablesCommon.fs" />
+    <Compile Include="AdminTables.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
+    <Compile Include="AdminTables.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />
     <Compile Include="AdminConfig.fs" />
     <Compile Include="generated/Routes.fs" Condition="'$(HEDGE_SITE)' != 'idealist'" />
     <Compile Include="generated/Routes.idealist.fs" Condition="'$(HEDGE_SITE)' == 'idealist'" />

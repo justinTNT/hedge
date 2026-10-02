@@ -21,15 +21,11 @@ let private curatorReadable = set [ "AlertSource"; "PendingPost"; "Promotion" ]
 let private curatorPermits (resource: string) (op: AdminOp) : bool =
     Set.contains resource curatorReadable && (op = OpList || op = OpRead)
 
-/// mobile_sessions / mobile_auth_codes hold opaque bearer + one-time-code hashes (Capacitor POC) —
-/// never exposed through the generic admin (no CRUD, no discovery). Filtered by name so
-/// /api/admin/MobileSession and /api/admin/MobileAuthCode 404.
-let private mobileTables = set [ "MobileSession"; "MobileAuthCode" ]
-let private adminTables =
-    Server.AdminGen.tables |> List.filter (fun t -> not (Set.contains t.Name mobileTables))
-
+/// Admin resources are an EXPLICIT allowlist (Server.AdminTables, site-selected) with per-resource
+/// operation ceilings — not every generated/composed descriptor. Unregistered tables (Guest and the
+/// opaque-hash MobileSession/MobileAuthCode) are absent from discovery and 404. See AdminTablesCommon.
 let adminConfig : AdminConfig<Env> =
-    { Tables = adminTables
+    { Tables = Server.AdminTables.tables
       GetDb = fun env -> env.DB
       Authorize = fun request env -> promise {
           let key = getHeader request "X-Admin-Key"

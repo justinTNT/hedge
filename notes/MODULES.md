@@ -157,7 +157,12 @@ So the composed Codecs/Routes/ClientGen/AdminGen/Validate would emit duplicate
 - **Module shape** — Domain (+ prefix) + Api (+ route/client prefix) + Handlers +
   a Client bundle + admin entities; identity is consumed from the shared layer.
 - **Site/app composition** — the app lists the modules it mounts (per env), path-mounts
-  each client bundle, and the shared admin spans all modules' tables.
+  each client bundle, and **registers an explicit admin allowlist** (`Server.AdminTables`):
+  a table appears in `/api/admin` only if the host lists its descriptor and picks its
+  operation ceiling (`SupportedOps`). Generating/composing a table does NOT expose it —
+  unlisted tables (e.g. `Guest`, the mobile-session tables) 404 and are absent from
+  discovery, and a listed resource still needs the per-(resource, operation) permission the
+  host's `Authorize` grants (owner vs. delegated role). Ceilings bind even the owner.
 
 ## Phased sequencing
 
