@@ -13,6 +13,8 @@ let modular request ctx =
         by = fun id request ctx -> Server.Handlers.by id request env ctx
         query = fun q request ctx -> Server.Handlers.query q request env ctx
         both = fun id q request ctx -> Server.Handlers.both id q request env ctx
+        submit = fun req request ctx -> Server.Handlers.submit req request env ctx
+        ping = fun () request ctx -> Server.Handlers.ping request env ctx
     }
     Probe.RouteContract.dispatch handlers request ctx |> Option.get
 let private table = {

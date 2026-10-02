@@ -107,3 +107,8 @@ type GetByQuery<'query, 'resp> = GetByQuery of (string -> string)
 
 /// POST endpoint. Phantom types carry request and response shapes.
 type Post<'req, 'resp> = Post of string
+
+/// Parameterless POST: a POST with NO request body. The client takes unit and sends no body; dispatch
+/// never reads/decodes the body. The Api submodule declares a nested `Response` and NO `Request`.
+/// (For actions whose only input is the authenticated session, e.g. mobile bootstrap / signout.)
+type PostEmpty<'resp> = PostEmpty of string
