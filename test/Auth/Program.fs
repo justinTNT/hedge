@@ -119,6 +119,21 @@ let run () =
         let! v3 = Email.verifyEmailToken secret tokExp
         check "token: expired rejected" (match v3 with Error _ -> true | _ -> false)
 
+        // ---- Bounded JSON body guard (identity HTTP preflight primitives) ----
+        // readBodyCapped reads the raw request stream once with a byte cap (so a body with no
+        // Content-Length is still bounded), returning null past the cap; rebuildRequest re-attaches the
+        // bounded bytes so the generated POST dispatch downstream reads the SAME bounded body. These back
+        // Server.ModuleServices.identityHttp's preflight (refactor plan §2.5): 413 on excess, then dispatch.
+        let! under = Workers.readBodyCapped (Workers.createRequest "https://x/api/auth/activate" "POST" """{"identityId":"a","merge":false}""") 24000
+        check "bodyguard: under cap returns the body text" (not (Workers.isNull (box under)) && under = """{"identityId":"a","merge":false}""")
+        let! over = Workers.readBodyCapped (Workers.createRequest "https://x/" "POST" (String.replicate 30000 "x")) 24000
+        check "bodyguard: over cap returns null (413 path)" (Workers.isNull (box over))
+        let! atCap = Workers.readBodyCapped (Workers.createRequest "https://x/" "POST" (String.replicate 24000 "y")) 24000
+        check "bodyguard: a body exactly at the cap is accepted" (not (Workers.isNull (box atCap)) && atCap.Length = 24000)
+        let rebuilt = Workers.rebuildRequest (Workers.createRequest "https://x/api/auth/revert" "POST" "ORIGINAL-IGNORED") """{"identityId":"b","merge":true}"""
+        let! rebuiltBody = rebuilt.text()
+        check "bodyguard: rebuilt request carries the bounded body for downstream dispatch" (rebuiltBody = """{"identityId":"b","merge":true}""")
+
         if failures = 0 then printfn "auth-fixtures: all %d checks OK" checks
         else eprintfn "auth-fixtures: %d of %d checks FAILED" failures checks
     }

@@ -9,6 +9,10 @@
   <Import Project="../../../../packages/modules/blog/blog.codecs.props" />
   <!-- C6: alerts codecs only on idealist (its RouteContract/AdminGen open Alerts.Codecs). -->
   <Import Project="../../../../packages/modules/alerts/alerts.codecs.props" Condition="'$(HEDGE_SITE)' == 'idealist'" />
+  <!-- Identity HTTP contracts (IdentityHttp.Codecs) — the request/response codecs the server's
+       IdentityHttp.RouteContract dispatch opens. Contributes no tables; IdentityHttp.Api comes from
+       IdentityModels (referenced transitively via Models below). Import order is free. -->
+  <Import Project="../../../../packages/modules/identity/http/identity.http.codecs.props" />
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />

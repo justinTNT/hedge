@@ -6,17 +6,9 @@ open Hedge.Workers
 open Hedge.Router
 open Server.Env
 
-let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> option =
+let private authRoutes (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
-    | POST path when matchPath "/api/auth/activate" path = Some (Exact "/api/auth/activate") ->
-        Some (Server.Handlers.activateIdentity request env)
-    | POST path when matchPath "/api/auth/revert" path = Some (Exact "/api/auth/revert") ->
-        Some (Server.Handlers.revertIdentity request env)
-    | POST path when matchPath "/api/auth/disconnect" path = Some (Exact "/api/auth/disconnect") ->
-        Some (Server.Handlers.disconnectIdentity request env)
-    | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
-        Some (Server.Handlers.getIdentities request env)
     // Mobile bearer-session routes (Capacitor POC): anonymous bootstrap + a bearer /me. Minting the
     // VERIFIED session on login is the OAuth native-return path (a separate slice).
     | POST path when matchPath "/api/mobile/bootstrap" path = Some (Exact "/api/mobile/bootstrap") ->
@@ -47,13 +39,17 @@ let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerRe
     // config.Routes, which the framework reaches AFTER its own /blobs/ handler, so a guard
     // here is unreachable. The block lives in the framework blob route (Router.fs), before
     // generic serving; /archive/<id> above is the only sanctioned (sandboxed) path.
-    | _ -> None
+    //
+    // Identity lifecycle (/api/auth/{identities,disconnect,revert,activate}) — typed, generated dispatch
+    // through the composed IdentityHttp module, with a bounded-body preflight. Returns None (fall through
+    // to the framework) for every other path, including the framework-owned /api/auth/* routes.
+    | _ -> Server.ModuleServices.identityHttp env request ctx
 
 [<ExportDefault>]
 let exports = createWorker {
     Routes = fun request env ctx ->
         let e = env :?> Env
-        match authRoutes request e with
+        match authRoutes request e ctx with
         | Some p -> Some p
         | None ->
         // After the API routes, before the framework's SPA fallback: item URLs

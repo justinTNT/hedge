@@ -117,6 +117,8 @@ let okJsonWithCookie body cookie = jsonResponseWithCookie body 200 cookie
 let unauthorized () = jsonResponse """{"error":"Unauthorized"}""" 401
 let forbidden () = jsonResponse """{"error":"Forbidden"}""" 403
 let notFound () = jsonResponse """{"error":"Not found"}""" 404
+/// 413 for an over-cap request body — returned by the bounded-JSON-body guard before generated dispatch.
+let payloadTooLarge () = jsonResponse """{"error":"Request body too large"}""" 413
 let badRequest msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
     jsonResponse body 400

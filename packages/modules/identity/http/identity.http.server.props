@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    The identity HTTP module's server dispatch, for a consuming identity host to compose. This is the
+    typed, generated replacement for the host's hand-written /api/auth/{identities,disconnect,revert,
+    activate} route arms + body-reading wrappers. It contributes ZERO domain tables (the contracts in
+    IdentityHttp.Api carry no Domain records), so there is no Db/AdminGen/schema slice to wire — only the
+    generated RouteContract (the Handlers record + dispatch) and the authored Composition.bind that closes
+    those handlers over the host's Identity.Handlers.WriteDeps.
+
+    Ordering: IMPORT AFTER identity.server.props — Composition.bind closes over the shared Identity.Handlers
+    cores (switchDecoded / disconnectDecoded / getIdentitiesDecoded) defined there — and BEFORE the app's
+    ModuleServices (which builds the WriteDeps, runs the bounded-body preflight, and hands bind's result to
+    IdentityHttp.RouteContract.dispatch). The Codecs the generated RouteContract opens come from the Codecs
+    project via identity.http.codecs.props; this props must not be imported into the Codecs project.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
+  </ItemGroup>
+</Project>

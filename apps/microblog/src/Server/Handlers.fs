@@ -32,7 +32,8 @@ let private oauthDeps : Identity.Handlers.OAuthDeps =
         || returnTo.StartsWith("/api/mobile/return") }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
-let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
+/// Public: Server.ModuleServices.identityHttp builds the IdentityHttp dispatch over these deps.
+let writeDeps (env: Env) : Identity.Handlers.WriteDeps =
     { DB = env.DB
       RequireGuest = Server.GuestConfig.require env
       ReassignStatements = Server.AttributionPolicy.reassignStatements
@@ -151,11 +152,10 @@ let mobileBlobUpload (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResp
         | Hedge.GuestSession.Rejected -> return unauthorized ()
     }
 
-/// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
-let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request
-let revertIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.revert (writeDeps env) request
-let disconnectIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.disconnect (writeDeps env) request
-let getIdentities (request: WorkerRequest) (env: Env) = Identity.Handlers.getIdentities (writeDeps env) request
+// The /api/auth/{identities,disconnect,revert,activate} routes are now dispatched through the composed
+// IdentityHttp module (Server.ModuleServices.identityHttp over writeDeps), replacing the hand-wired wrappers
+// that used to live here. The shared Identity.Handlers still exposes the body-reading wrappers for hosts not
+// yet migrated (articles).
 
 // ---- darwin.news glue (app-specific) ----
 
