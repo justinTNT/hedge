@@ -8,6 +8,8 @@ module Server.ModuleServices
 
 open Fable.Core
 open Hedge.Workers
+open Hedge.Router
+open Hedge.GuestSession
 open Content.Server.Author
 open Server.Env
 
@@ -48,3 +50,41 @@ let private blog (env: Env) (request: WorkerRequest) : Blog.Services.Services =
 /// `env` + `request`, in the order the generated site Routes expects (articles then blog).
 let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
     Server.Routes.dispatch (Articles.Composition.bind (articles env request)) (Blog.Composition.bind (blog env request)) request ctx
+
+/// The identity lifecycle paths this module owns and dispatches through the composed IdentityHttp
+/// RouteContract. The framework-owned /api/auth/{me,providers,email*,login,callback,logout} are NOT here
+/// and fall through untouched — identityHttp must never read or decode their bodies.
+let private identityMutationPaths = [ "/api/auth/activate"; "/api/auth/revert"; "/api/auth/disconnect" ]
+let [<Literal>] private identityBodyCap = 24000
+
+/// Identity lifecycle HTTP dispatch (/api/auth/{identities,disconnect,revert,activate}) via the composed
+/// IdentityHttp module's generated RouteContract — the typed replacement for the host's hand-written route
+/// arms + body-reading wrappers. Returns None for every other path so the framework auth routes fall
+/// through. Preflight before the generated dispatch (refactor plan §2.5): each mutation POST resolves the
+/// guest-write authorizer FIRST (a present-but-invalid bearer fails closed, no cookie fallback), so an
+/// unauthenticated mutation is denied before any body is consumed; the body is then bounded to 24,000 bytes,
+/// read once from the raw stream (413 on excess), and the bounded bytes are reconstructed for the generated
+/// dispatch, which JSON-decodes (400 on malformed) and calls the typed handler. The handler re-resolves the
+/// guest request-locally and checks ownership before mutating. GET identities carries no body.
+let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    let deps = Server.Handlers.writeDeps env
+    let handlers = IdentityHttp.Composition.bind deps
+    let isMutation p = identityMutationPaths |> List.exists (fun pat -> matchPath pat p = Some (Exact pat))
+    match parseRoute request with
+    | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
+        IdentityHttp.RouteContract.dispatch handlers request ctx
+    | POST path when isMutation path ->
+        Some (promise {
+            let! authz = deps.RequireGuest request
+            match authz with
+            | Rejected -> return unauthorized ()
+            | Accepted _ ->
+                let! bounded = readBodyCapped request identityBodyCap
+                if isNull (box bounded) then
+                    return payloadTooLarge ()
+                else
+                    match IdentityHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
+                    | Some p -> return! p
+                    | None -> return notFound ()
+        })
+    | _ -> None

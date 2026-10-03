@@ -175,10 +175,10 @@ let onOAuthComplete (deps: OAuthDeps) (db: D1Database) (blobs: R2Bucket) (guestI
     }
 
 /// Switch the guest's active identity, optionally bringing attributed content along. Serves both
-/// /api/auth/activate (claim) and /api/auth/revert (switch) — the policy is identical.
-/// Switch the active identity from an ALREADY-DECODED (identityId, merge) — the core shared by the
-/// hand-written body-reading wrapper (below) and the generated IdentityHttp dispatch. Auth + ownership +
-/// optional merge-reassign + setActive + renewal-cookie response are identical to before.
+/// Switch the active identity from an ALREADY-DECODED (identityId, merge) — bound by the generated
+/// IdentityHttp dispatch (IdentityHttp.Composition) for both /api/auth/activate (claim) and
+/// /api/auth/revert (switch); the policy is identical. Auth + ownership + optional merge-reassign +
+/// setActive + renewal-cookie response are unchanged from the pre-module hand-written handlers.
 let switchDecoded (deps: WriteDeps) (request: WorkerRequest) (identityId: string) (merge: bool) : JS.Promise<WorkerResponse> =
     promise {
         // Identity mutation is a WRITE: require an accepted signed guest, never create one.
@@ -206,23 +206,6 @@ let switchDecoded (deps: WriteDeps) (request: WorkerRequest) (identityId: string
         | None -> return okJson """{"ok":true}"""
     }
 
-/// Hand-written wrapper (reads the body itself) — retained for hosts not yet migrated to the generated
-/// IdentityHttp dispatch. Serves both /api/auth/activate (claim) and /api/auth/revert (switch).
-let private switchIdentity (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
-    promise {
-        let! bodyText = request.text()
-        let parsed = JS.JSON.parse bodyText
-        let identityId : string = parsed?identityId
-        let merge : bool = parsed?merge |> unbox
-        return! switchDecoded deps request identityId merge
-    }
-
-let activate (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
-    switchIdentity deps request
-
-let revert (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
-    switchIdentity deps request
-
 /// Abandon a credentialed identity: it's parked on a fresh, cookieless guest with its comments still
 /// attached, so it sits waiting. Signing in with that provider again — from any browser — finds it by
 /// provider account and adopts it back, history intact. Nothing is deleted and nothing is re-attributed.
@@ -230,9 +213,9 @@ let revert (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerRespons
 /// Refuses the anonymous identity (it's the fallback, not a connection). The guest is left with an
 /// anonymous identity to be, created here if they never had one — which happens when someone signed in
 /// before ever commenting.
-/// Abandon an identity from ALREADY-DECODED (identityId, fallbackName) — the core shared by the
-/// hand-written body-reading wrapper (below) and the generated IdentityHttp dispatch. `fallbackName` is
-/// the already-defaulted display name for a freshly created anonymous identity ("Anonymous" when absent).
+/// Abandon an identity from ALREADY-DECODED (identityId, fallbackName) — bound by the generated IdentityHttp
+/// dispatch (IdentityHttp.Composition). `fallbackName` is the already-defaulted display name for a freshly
+/// created anonymous identity ("Anonymous" when absent).
 let disconnectDecoded (deps: WriteDeps) (request: WorkerRequest) (identityId: string) (fallbackName: string) : JS.Promise<WorkerResponse> =
     promise {
         // Identity mutation is a WRITE: require an accepted signed guest, never create one.
@@ -281,21 +264,7 @@ let disconnectDecoded (deps: WriteDeps) (request: WorkerRequest) (identityId: st
         | None -> return okJson """{"ok":true}"""
     }
 
-/// Hand-written wrapper (reads the body itself) — retained for hosts not yet migrated to the generated
-/// IdentityHttp dispatch.
-let disconnect (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
-    promise {
-        let! bodyText = request.text()
-        let parsed = JS.JSON.parse bodyText
-        let identityId : string = parsed?identityId
-        let fallbackName =
-            let n : string = parsed?name
-            if isNull n || n = "" then "Anonymous" else n
-        return! disconnectDecoded deps request identityId fallbackName
-    }
-
-/// Shared identity-list projection used by both the hand-written getIdentities wrapper and the generated
-/// IdentityHttp dispatch: the guest's identities as the existing wire JSON, with the renewal cookie.
+/// Identity-list projection: the guest's identities as the existing wire JSON, with the renewal cookie.
 let private listIdentitiesResponse (deps: WriteDeps) (guest: Authorized) : JS.Promise<WorkerResponse> =
     promise {
         let! rows = Identity.Server.listFor deps.DB guest.GuestId
@@ -311,21 +280,12 @@ let private listIdentitiesResponse (deps: WriteDeps) (guest: Authorized) : JS.Pr
         | None -> return okJson body
     }
 
-/// List a guest's linked identities (already-authorized core) — the generated IdentityHttp dispatch path.
-/// On a rejected credential it returns an empty list rather than bootstrapping (same policy as the wrapper).
+/// List a guest's linked identities (already-authorized core) — bound by the generated IdentityHttp
+/// dispatch for GET /api/auth/identities. Identity listing requires an accepted credential (it exposes a
+/// guest's linked accounts); without one it returns an empty list rather than bootstrapping — the client
+/// establishes a session via /api/auth/me first, then lists.
 let getIdentitiesDecoded (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
     promise {
-        let! authz = deps.RequireGuest request
-        match authz with
-        | Rejected -> return okJson """{"identities":[]}"""
-        | Accepted guest -> return! listIdentitiesResponse deps guest
-    }
-
-let getIdentities (deps: WriteDeps) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
-    promise {
-        // Identity listing requires an accepted credential (it exposes a guest's linked accounts).
-        // Without one, return an empty list rather than bootstrapping — the client establishes a
-        // session via /api/auth/me first, then lists.
         let! authz = deps.RequireGuest request
         match authz with
         | Rejected -> return okJson """{"identities":[]}"""

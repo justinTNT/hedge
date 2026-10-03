@@ -29,6 +29,11 @@
        both this import and the gen manifest (gen-modules.ndct.json omits blog), so
        ndct's generated Routes never reference Blog.Handlers. -->
   <Import Project="../../../../packages/modules/blog/blog.server.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
+  <!-- Identity HTTP module dispatch (IdentityHttp.RouteContract + Composition.bind) — the typed, generated
+       replacement for the hand-wired /api/auth/{identities,disconnect,revert,activate} arms. Contributes no
+       tables. Import AFTER identity.server.props (Composition.bind closes over Identity.Handlers) and BEFORE
+       ModuleServices.fs (which runs the bounded-body preflight and hands bind's result to the dispatch). -->
+  <Import Project="../../../../packages/modules/identity/http/identity.http.server.props" />
   <ItemGroup>
     <!-- The merge policy composes each composed module's own reassignComments, so it
          sits after the module props (needs Articles.Sql / Blog.Sql) and before Handlers
