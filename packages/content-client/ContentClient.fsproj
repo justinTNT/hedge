@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The shared content-client presentation layer (namespace Content): the OAuth claim-return glue
+    (ClaimGlue), the identity subsystem + its connection UI (Identity / IdentityView), and the comments
+    renderer (Comments). Explicit library dependencies: ContentHostContext (host nav/title contract),
+    RichText (Client.RichText renderer), Hedge.Client (Client.Api / Client.GuestSession) and Hedge (wire
+    types). The .css siblings (identity.css / comments.css) stay delivered by each app's Vite/prep:lib
+    pipeline — this project does not package or copy them. Distinct obj/ from ContentHostContext via this
+    directory's Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>ContentClient</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ClaimGlue.fs" />
+    <Compile Include="Identity.fs" />
+    <Compile Include="IdentityView.fs" />
+    <Compile Include="Comments.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="ContentHostContext.fsproj" />
+    <ProjectReference Include="../rich-text/RichText.fsproj" />
+    <ProjectReference Include="../hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../hedge/src/Hedge/Hedge.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Feliz" Version="2.9.0" />
+    <PackageReference Include="Fable.Elmish" Version="4.2.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+  </ItemGroup>
+</Project>

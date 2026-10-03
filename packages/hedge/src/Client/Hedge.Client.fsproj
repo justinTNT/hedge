@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The shared browser-client runtime: the admin-credential store (Client.AdminCredential), the HTTP client
+    (Client.Api) and the signed-guest-session coordinator (Client.GuestSession). References Hedge for the
+    shared wire types. Consumed by ContentClient and the app/admin clients + runtime fixtures; the one-off
+    `music` app keeps its own bespoke Client.GuestSession and is intentionally NOT a consumer.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Hedge.Client</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="AdminCredential.fs" />
+    <Compile Include="Api.fs" />
+    <Compile Include="GuestSession.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Hedge/Hedge.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+  </ItemGroup>
+</Project>

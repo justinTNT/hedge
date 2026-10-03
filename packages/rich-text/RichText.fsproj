@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The F# bindings (module Client.RichText) to the separately delivered rich-text JavaScript runtime
+    (bootstrap.js / tiptap-editor.js, shipped via each app's Vite/prep:lib pipeline — NOT by this project).
+    A leaf library: depends only on Fable.Core. Consumed by ContentClient (Comments) and the app clients.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>RichText</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="RichText.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+  </ItemGroup>
+</Project>

@@ -3,10 +3,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Shared content-server contract (C3 author resolution) the blog module's handlers
-         depend on instead of Server.Env/Server.Identity. Compiled once here, before the
-         module server props, mirroring content-client at the Client level. -->
-    <Compile Include="../../../../packages/content-server/Author.fs" />
+    <!-- Shared content-server contract (C3 author resolution) the blog module's handlers depend on instead
+         of Server.Env/Server.Identity — now a referenced library (Track 3: ContentServer, see below). -->
     <Compile Include="Env.fs" />
     <Compile Include="Sql.fs" />
     <Compile Include="generated/Db.fs" />
@@ -78,6 +76,9 @@
     <Compile Include="Worker.fs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Track 3: the shared author-resolution contract (Content.Server.Author), the blog/alerts module
+         server props resolve it from this referenced assembly. -->
+    <ProjectReference Include="../../../../packages/content-server/ContentServer.fsproj" />
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />

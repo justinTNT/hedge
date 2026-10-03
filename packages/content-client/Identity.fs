@@ -7,8 +7,9 @@ namespace Content
 // shell now, the ndct + microblog standalone hosts as they migrate — consumes ONE copy,
 // and the per-module identity duplication can then be deleted.
 //
-// Ordinary client code, file-linked into each consuming Client project (after the shared
-// Client.GuestSession/Client.Api it builds on, before the module .props). Not framework.
+// Ordinary shared client code, compiled into the ContentClient library (Track 3) and referenced by each
+// consuming Client project; it builds on the Hedge.Client (Client.GuestSession/Client.Api) and RichText
+// libraries. A packaged reusable library, not part of the core Hedge framework assembly.
 
 open Fable.Core.JsInterop
 open Elmish

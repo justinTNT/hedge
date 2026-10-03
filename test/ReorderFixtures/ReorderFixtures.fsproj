@@ -13,17 +13,11 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Shared client infra the generated ClientGen builds on (as the apps link it). -->
-    <Compile Include="../../packages/hedge/src/Client/GuestSession.fs" />
-    <Compile Include="../../packages/hedge/src/Client/Api.fs" />
-    <!-- Each module's generated codecs (Articles.Codecs / Blog.Codecs); their ClientGen opens them. -->
+    <!-- Each module's generated codecs (Articles.Codecs / Blog.Codecs); their ClientGen opens them. The
+         shared client infra + presentation the module clients build on are now referenced libraries (Track
+         3): Hedge.Client, RichText, ContentHostContext, ContentClient — see the ProjectReferences below. -->
     <Compile Include="../../packages/modules/articles/generated/Codecs.fs" />
     <Compile Include="../../packages/modules/blog/generated/Codecs.fs" />
-    <Compile Include="../../packages/rich-text/RichText.fs" />
-    <!-- Shared content-client contract the module clients reference. -->
-    <Compile Include="../../packages/content-client/HostContext.fs" />
-    <!-- Shared comments renderer the module Item pages now call. -->
-    <Compile Include="../../packages/content-client/Comments.fs" />
   </ItemGroup>
   <!-- The module client components (own their file lists) — the code under test. -->
   <Import Project="../../packages/modules/articles/articles.client.props" />
@@ -32,6 +26,11 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Track 3 shared libraries (replace the former source includes above). -->
+    <ProjectReference Include="../../packages/hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../../packages/rich-text/RichText.fsproj" />
+    <ProjectReference Include="../../packages/content-client/ContentHostContext.fsproj" />
+    <ProjectReference Include="../../packages/content-client/ContentClient.fsproj" />
     <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
     <ProjectReference Include="../../packages/modules/blog/src/Models/BlogModels.fsproj" />
