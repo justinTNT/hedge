@@ -120,6 +120,34 @@ let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : J
         })
     | _ -> None
 
+let [<Literal>] private mobileBodyCap = 24000
+
+/// Mobile bearer-session HTTP dispatch (/api/mobile/{bootstrap,me,exchange,signout}) via the composed
+/// MobileHttp module's generated RouteContract — the typed replacement for the host's hand-wired route arms.
+/// The browser-OAuth /api/mobile/return redirect and the /api/mobile/blobs multipart upload stay hand-wired
+/// in Worker.fs. See the default ModuleServices.fs for the full contract: bootstrap/signout (PostEmpty) and
+/// me (GET) read no body and dispatch directly; only exchange is bounded to 24,000 bytes (413 on excess) +
+/// rebuilt before dispatch (400 on malformed). Exchange authenticates by code + PKCE proof after decode, not
+/// a pre-body guest check.
+let mobileHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    let handlers : MobileHttp.RouteContract.Handlers =
+        { bootstrap = fun () _req _ctx -> Server.Handlers.mobileBootstrap env
+          me = fun () req _ctx -> Server.Handlers.mobileMe req env
+          exchange = fun r req _ctx -> Server.Handlers.mobileExchange r.code r.verifier req env
+          signout = fun () req _ctx -> Server.Handlers.mobileSignout req env }
+    match parseRoute request with
+    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
+        Some (promise {
+            let! bounded = readBodyCapped request mobileBodyCap
+            if isNull (box bounded) then
+                return payloadTooLarge ()
+            else
+                match MobileHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
+                | Some p -> return! p
+                | None -> return notFound ()
+        })
+    | _ -> MobileHttp.RouteContract.dispatch handlers request ctx
+
 /// The alerts cron — poll enabled feeds, promote approved drafts. Fires on the [env.idealist]
 /// [triggers] crons schedule; inert without it.
 let scheduled : (ScheduledController -> obj -> ExecutionContext -> JS.Promise<unit>) option =

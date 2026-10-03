@@ -9,20 +9,12 @@ open Server.Env
 let private authRoutes (request: WorkerRequest) (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
     let route = parseRoute request
     match route with
-    // Mobile bearer-session routes (Capacitor POC): anonymous bootstrap + a bearer /me. Minting the
-    // VERIFIED session on login is the OAuth native-return path (a separate slice).
-    | POST path when matchPath "/api/mobile/bootstrap" path = Some (Exact "/api/mobile/bootstrap") ->
-        Some (Server.Handlers.mobileBootstrap env)
-    | GET path when matchPath "/api/mobile/me" path = Some (Exact "/api/mobile/me") ->
-        Some (Server.Handlers.mobileMe request env)
-    // Browser-OAuth login handoff: the same-site return (mints a one-time code → deeplink) and the
-    // app's PKCE exchange (code + verifier + old anon bearer → merge → verified bearer).
+    // Browser-OAuth login handoff: the same-site return (mints a one-time code → deeplink), kept hand-wired
+    // because it 302-redirects to the app deeplink (not a JSON contract). The bearer bootstrap/me/exchange/
+    // signout JSON routes are now the composed MobileHttp dispatch (Server.ModuleServices.mobileHttp below).
     | GET path when matchPath "/api/mobile/return" path = Some (Exact "/api/mobile/return") ->
         Some (Server.Handlers.mobileReturn request env)
-    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
-        Some (Server.Handlers.mobileExchange request env)
-    | POST path when matchPath "/api/mobile/signout" path = Some (Exact "/api/mobile/signout") ->
-        Some (Server.Handlers.mobileSignout request env)
+    // Bearer-authorized native comment-image upload — kept hand-wired (multipart, not a JSON contract).
     | POST path when matchPath "/api/mobile/blobs" path = Some (Exact "/api/mobile/blobs") ->
         Some (Server.Handlers.mobileBlobUpload request env)
     // darwin.news rhyming — a bespoke route over the composed blog module's tables,
@@ -40,10 +32,14 @@ let private authRoutes (request: WorkerRequest) (env: Env) (ctx: ExecutionContex
     // here is unreachable. The block lives in the framework blob route (Router.fs), before
     // generic serving; /archive/<id> above is the only sanctioned (sandboxed) path.
     //
-    // Identity lifecycle (/api/auth/{identities,disconnect,revert,activate}) — typed, generated dispatch
-    // through the composed IdentityHttp module, with a bounded-body preflight. Returns None (fall through
-    // to the framework) for every other path, including the framework-owned /api/auth/* routes.
-    | _ -> Server.ModuleServices.identityHttp env request ctx
+    // Composed-module HTTP dispatch with bounded-body preflights, each returning None (fall through) for
+    // paths it doesn't own: the mobile bearer-session routes (/api/mobile/{bootstrap,me,exchange,signout})
+    // then the identity lifecycle (/api/auth/{identities,disconnect,revert,activate}). Everything else —
+    // including the framework-owned /api/auth/* and /api/mobile/return handled above — falls through.
+    | _ ->
+        match Server.ModuleServices.mobileHttp env request ctx with
+        | Some p -> Some p
+        | None -> Server.ModuleServices.identityHttp env request ctx
 
 [<ExportDefault>]
 let exports = createWorker {

@@ -44,6 +44,12 @@
        tables. Import AFTER identity.server.props (Composition.bind closes over Identity.Handlers) and BEFORE
        ModuleServices.fs (which runs the bounded-body preflight and hands bind's result to the dispatch). -->
   <Import Project="../../../../packages/modules/identity/http/identity.http.server.props" />
+  <!-- Mobile HTTP module dispatch (MobileHttp.RouteContract) — typed replacement for the hand-wired
+       /api/mobile/{bootstrap,me,exchange,signout} arms (return + blobs stay hand-wired adapters).
+       Microblog-only (Capacitor POC), like identity.mobile.server.props. Contributes no tables. There is NO
+       module-side Composition (the mobile handler bodies are app-owned); ModuleServices.mobileHttp binds the
+       generated Handlers record inline. Import BEFORE ModuleServices.fs. -->
+  <Import Project="../../../../packages/modules/identity/mobile-http/identity.mobile-http.server.props" />
   <ItemGroup>
     <!-- The merge policy composes each composed module's own reassignComments + comment table
          (Tables-driven); after the module props (needs Blog.Sql / Blog.Db), before Handlers

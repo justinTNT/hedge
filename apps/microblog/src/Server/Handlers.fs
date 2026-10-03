@@ -99,13 +99,12 @@ let mobileReturn (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse
 /// POST /api/mobile/exchange {code, verifier} — the app trades its one-time code + PKCE verifier,
 /// presenting its OLD anonymous bearer, for a verified bearer. Verifies the code and the PKCE proof,
 /// MERGES the app's anonymous content into the verified identity (cross-guest reassign), rotates the
-/// old anon session out, and mints the verified session.
-let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+/// old anon session out, and mints the verified session. Takes the ALREADY-DECODED (code, verifier) from
+/// the generated MobileHttp dispatch (which decodes the bounded body); authentication is the code + PKCE
+/// proof below, AFTER the required-field check — the optional old bearer identifies content to merge, not
+/// permission to sign in.
+let mobileExchange (rawCode: string) (verifier: string) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let! bodyText = request.text()
-        let parsed = JS.JSON.parse bodyText
-        let rawCode : string = parsed?code
-        let verifier : string = parsed?verifier
         if isNull (box rawCode) || rawCode = "" || isNull (box verifier) || verifier = "" then
             return badRequest "Missing code or verifier"
         else

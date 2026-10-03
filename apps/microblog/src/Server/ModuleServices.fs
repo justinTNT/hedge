@@ -92,5 +92,38 @@ let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : J
         })
     | _ -> None
 
+let [<Literal>] private mobileBodyCap = 24000
+
+/// Mobile bearer-session HTTP dispatch (/api/mobile/{bootstrap,me,exchange,signout}) via the composed
+/// MobileHttp module's generated RouteContract — the typed replacement for the host's hand-wired route arms.
+/// The browser-OAuth /api/mobile/return redirect and the /api/mobile/blobs multipart upload stay hand-wired
+/// in Worker.fs. Returns None for every other path. The handler bodies are app-owned (Server.Handlers.mobile*
+/// close over Server.GuestConfig / Server.AttributionPolicy / Identity.Mobile), so the generated Handlers
+/// record is bound inline here rather than by a module-side Composition.
+///
+/// bootstrap + signout are PostEmpty and me is GET — the generated dispatch reads NO body for them, so they
+/// dispatch directly (an unread body is never buffered → no cap needed). Only exchange is a JSON-body POST:
+/// bound it to 24,000 bytes (413 on excess), rebuild, then dispatch (400 on malformed). Per plan §2.5,
+/// exchange is NOT guest-pre-authenticated — authentication is the one-time code + PKCE proof the handler
+/// performs AFTER decode; the optional old bearer only identifies anonymous content to merge.
+let mobileHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    let handlers : MobileHttp.RouteContract.Handlers =
+        { bootstrap = fun () _req _ctx -> Server.Handlers.mobileBootstrap env
+          me = fun () req _ctx -> Server.Handlers.mobileMe req env
+          exchange = fun r req _ctx -> Server.Handlers.mobileExchange r.code r.verifier req env
+          signout = fun () req _ctx -> Server.Handlers.mobileSignout req env }
+    match parseRoute request with
+    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
+        Some (promise {
+            let! bounded = readBodyCapped request mobileBodyCap
+            if isNull (box bounded) then
+                return payloadTooLarge ()
+            else
+                match MobileHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
+                | Some p -> return! p
+                | None -> return notFound ()  // unreachable: the exchange path already matched
+        })
+    | _ -> MobileHttp.RouteContract.dispatch handlers request ctx
+
 /// No cron on the default microblog tenants (idealist runs the alerts cron — see the .idealist variant).
 let scheduled : (ScheduledController -> obj -> ExecutionContext -> JS.Promise<unit>) option = None

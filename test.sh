@@ -37,9 +37,10 @@ run_module_surface microblog ../../packages/modules/blog
 run_module_surface articles ../../packages/modules/articles
 run_module_surface microblog ../../packages/modules/alerts   # C6: admin+cron module (0 endpoints)
 run_module_surface microblog ../../packages/modules/identity/http  # Track 2B: endpoint-only identity HTTP (0 tables, 4 endpoints)
-if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated; then
+run_module_surface microblog ../../packages/modules/identity/mobile-http  # Track 2C: endpoint-only mobile HTTP (0 tables, 4 endpoints incl. 2 PostEmpty)
+if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated; then
     echo "!!! FAIL: a module's generated surface differs from committed. Regenerate + commit:"
-    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated
+    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated
     exit 1
 fi
 echo "--- module surfaces match committed ---"

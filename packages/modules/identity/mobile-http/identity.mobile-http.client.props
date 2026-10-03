@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    The mobile HTTP module's transport-neutral typed client (MobileHttp.ClientGen). NOT imported by any
+    host: the native (Capacitor) client is JavaScript (lib/guest-session.js) calling /api/mobile/* directly,
+    so the F# generated client has no consumer. This props exists so the module's client surface is whole
+    and a future F# consumer is a one-line import. Depends on Thoth.Json + Hedge.Http + MobileHttp.Codecs.
+    Contributes no tables.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/ClientGen.fs" />
+  </ItemGroup>
+</Project>

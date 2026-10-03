@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    The mobile HTTP module's generated codecs (MobileHttp.Codecs), for a consuming app's shared Codecs
+    project to compose. Depends only on Thoth.Json + Hedge.Codec + MobileModels (the MobileHttp.Api
+    contracts — referenced transitively by any app whose Models project references MobileModels), and the
+    app's generated RouteContract opens it. Microblog-only (the Capacitor POC host); articles never imports
+    it. Contributes no tables.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Codecs.fs" />
+  </ItemGroup>
+</Project>

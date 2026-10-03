@@ -1,0 +1,8 @@
+{
+  "assembly": "MobileModels",
+  "namespace": "MobileHttp",
+  "tablePrefix": "",
+  "routePrefix": "/api/mobile",
+  "handlerNs": "MobileHttp.Handlers",
+  "namePrefix": "mobileHttp"
+}
