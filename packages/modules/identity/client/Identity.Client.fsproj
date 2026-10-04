@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The identity module's client presentation (namespace Content: the identity subsystem `Content.Identity`
+    and its connection UI `Content.IdentityView`), relocated out of the generic ContentClient library so it
+    can reference the identity module's own HTTP contract. Keeping `namespace Content` means consuming hosts
+    (`module Identity = Content.Identity`, `Content.IdentityView.identityView`) need no code change — only a
+    project reference. Depends on the identity HTTP client/codecs (IdentityHttp), the shared browser-client
+    runtime (Hedge.Client: Client.Api / Client.GuestSession) and Hedge. The identity.css stays delivered by
+    each app's Vite/prep:lib pipeline from packages/content-client — this project packages only F#.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Identity.Client</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Identity.fs" />
+    <Compile Include="IdentityView.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../http/IdentityHttp.fsproj" />
+    <ProjectReference Include="../../../hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../../../hedge/src/Hedge/Hedge.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Feliz" Version="2.9.0" />
+    <PackageReference Include="Fable.Elmish" Version="4.2.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+  </ItemGroup>
+</Project>

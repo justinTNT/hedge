@@ -47,10 +47,12 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# Custom domain for the DEFAULT deploy (darwin.news). It was created via the dashboard, so `wrangler
-# deploy` reported it as routes drift and could drop it. Declaring it here makes local match remote:
-# the drift disappears and wrangler owns/keeps the domain (idempotent when it already exists). Named
-# [env.*] tenants do NOT inherit top-level routes, so this affects only the darwin.news deploy.
+# Custom domain for the DEFAULT deploy (darwin.news / the "hedge" worker). Created via the dashboard, so
+# `wrangler deploy` reported it as routes drift and could drop it; declaring it here makes local match
+# remote (idempotent when it already exists).
+# WARNING: wrangler 4.x DOES inherit top-level [[routes]] into named [env.*] tenants. So every tenant MUST
+# declare its own `routes` (they all do below) — otherwise it inherits this darwin.news route and a
+# `deploy --env <tenant>` tries to STEAL darwin.news onto that tenant's worker.
 [[routes]]
 pattern = "darwin.news"
 custom_domain = true
@@ -77,6 +79,10 @@ ENVIRONMENT = "production"
 # -- wt.fail (worker "fail") --
 [env.wtfail]
 name = "fail"
+# Own custom domain, so this tenant overrides (does not inherit) the top-level darwin.news route.
+routes = [
+    { pattern = "wt.fail", custom_domain = true }
+]
 
 [env.wtfail.vars]
 ENVIRONMENT = "production"
@@ -141,6 +147,11 @@ not_found_handling = "single-page-application"
 # -- id-ea.li/st (worker "idealist"), served under a sub-path --
 [env.idealist]
 name = "idealist"
+# Own custom domain (the app lives under /st via BASE_PATH below); overrides (does not inherit) the
+# top-level darwin.news route, so `deploy --env idealist` no longer tries to steal darwin.news.
+routes = [
+    { pattern = "id-ea.li", custom_domain = true }
+]
 
 # C6: hourly alerts poll → promote. The worker's `scheduled` export is inert without this block, and
 # only idealist declares it (alerts is composed idealist-only).

@@ -8,13 +8,15 @@
   <!-- Composed module codecs live with the module. Blog only outside ndct (ndct = articles-only). -->
   <Import Project="../../../../packages/modules/articles/articles.codecs.props" />
   <Import Project="../../../../packages/modules/blog/blog.codecs.props" Condition="'$(HEDGE_SITE)' != 'ndct'" />
-  <!-- Identity HTTP contracts (IdentityHttp.Codecs) — the request/response codecs the server's
-       IdentityHttp.RouteContract dispatch opens. Contributes no tables; IdentityHttp.Api comes from
-       IdentityModels (referenced transitively via Models below). Import order is free. -->
-  <Import Project="../../../../packages/modules/identity/http/identity.http.codecs.props" />
+  <!-- Identity HTTP codecs (IdentityHttp.Codecs) + typed client (IdentityHttp.ClientGen) now come from the
+       shared IdentityHttp assembly (ProjectReference below) instead of per-app source compilation, so ONE
+       IdentityHttp.Codecs serves both the server dispatch (transitively via this Codecs project) and the
+       client-side Identity.Client. (identity.http.codecs.props is retired by this reference.) -->
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <!-- Shared identity HTTP codecs + client assembly (promoted from per-app codecs). -->
+    <ProjectReference Include="../../../../packages/modules/identity/http/IdentityHttp.fsproj" />
     <ProjectReference Include="../../../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
     <ProjectReference Include="../../../../packages/modules/blog/src/Models/BlogModels.fsproj" />
   </ItemGroup>

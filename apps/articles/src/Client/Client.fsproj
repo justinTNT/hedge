@@ -41,6 +41,9 @@
     <ProjectReference Include="../../../../packages/rich-text/RichText.fsproj" />
     <ProjectReference Include="../../../../packages/content-client/ContentHostContext.fsproj" />
     <ProjectReference Include="../../../../packages/content-client/ContentClient.fsproj" />
+    <!-- Identity subsystem + connection UI (Content.Identity / Content.IdentityView), now its own
+         identity-owned library (moved out of ContentClient). -->
+    <ProjectReference Include="../../../../packages/modules/identity/client/Identity.Client.fsproj" />
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />

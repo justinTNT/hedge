@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Shared assembly for the identity HTTP module's generated codecs (IdentityHttp.Codecs) + typed
+    transport-neutral client (IdentityHttp.ClientGen). Promoted out of per-app compilation so BOTH the
+    server-side dispatch (the app Server's RouteContract, via identity.http.server.props) and the client-side
+    identity component (Identity.Client) reference ONE IdentityHttp.Codecs — otherwise a client library
+    compiling its own copy would collide with the per-app copy in the Client's reference closure.
+
+    Contributes zero tables (the contracts carry no Domain records). Compile order: Codecs before ClientGen
+    (ClientGen opens IdentityHttp.Codecs). The generated RouteContract/Db/AdminGen stay out of here —
+    RouteContract is server dispatch compiled in the host; Db/AdminGen are empty.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>IdentityHttp</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="generated/Codecs.fs" />
+    <Compile Include="generated/ClientGen.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../src/Models/IdentityModels.fsproj" />
+    <ProjectReference Include="../../../hedge/src/Hedge/Hedge.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Thoth.Json" Version="10.2.0" />
+  </ItemGroup>
+</Project>
