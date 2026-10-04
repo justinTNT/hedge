@@ -7,9 +7,10 @@ namespace Content
 // shell now, the ndct + microblog standalone hosts as they migrate — consumes ONE copy,
 // and the per-module identity duplication can then be deleted.
 //
-// Ordinary shared client code, compiled into the ContentClient library (Track 3) and referenced by each
-// consuming Client project; it builds on the Hedge.Client (Client.GuestSession/Client.Api) and RichText
-// libraries. A packaged reusable library, not part of the core Hedge framework assembly.
+// Lives in the identity-owned Identity.Client library (packages/modules/identity/client), referenced by
+// each consuming Client project. It builds on the generated IdentityHttp client (the typed /api/auth/*
+// contract) and the Hedge.Client runtime (Client.GuestSession/Client.Api). A packaged reusable library,
+// not part of the core Hedge framework assembly and no longer part of the generic ContentClient.
 
 open Fable.Core.JsInterop
 open Elmish
@@ -75,18 +76,32 @@ module Identity =
         /// An identity operation failed — the host surfaces the message to the user.
         | Failed of string
 
-    // -- Codecs + commands (the /api/auth/* endpoints are shared across every site). Typed with
-    //    Thoth (C2 item 4): request bodies escape their values — fallbackName is the
-    //    user-controlled DisplayName, so string-interpolating it into JSON was an injection risk
-    //    — and responses decode through explicit decoders instead of `?field |> unbox`. The wire
-    //    is unchanged: the same JSON keys and shapes as before. --
+    // -- Commands. The identity lifecycle endpoints (revert / disconnect / list) go through the generated,
+    //    typed IdentityHttp client below: request records + response decoding come from the one contract
+    //    that also drives the server, so the wire shape can't drift unnoticed and user-controlled values
+    //    (e.g. a display name) are escaped by the codec. The framework endpoints (providers, email) remain
+    //    hand-written. The wire is unchanged: the same JSON keys and shapes as before. --
 
-    let private encodeRevert (identityId: string) (merge: bool) : string =
-        Encode.object [ "identityId", Encode.string identityId; "merge", Encode.bool merge ] |> Encode.toString 0
+    /// The typed identity client (IdentityHttp.ClientGen) — the single source of truth for the revert /
+    /// disconnect / list wire shape, replacing the hand-written encoders + endpoint strings + response
+    /// decoder. Driven by `appTransport`, which resolves exactly as the old direct helpers' `reqBase` +
+    /// `authHeaderList` did: on web, basePath + the browser's cookie; in the Capacitor WebView (this switcher
+    /// renders there too), the absolute API origin + the bearer. (NOT browserTransport — that would drop the
+    /// bearer and hit the wrong origin in the mobile app.)
+    let private api = IdentityHttp.ClientGen.createClient Client.Api.appTransport
 
-    let private encodeDisconnect (identityId: string) (name: string) : string =
-        Encode.object [ "identityId", Encode.string identityId; "name", Encode.string name ] |> Encode.toString 0
+    let private apiErrorText (e: Hedge.Http.ApiError) : string =
+        match e with
+        | Hedge.Http.TransportFailure m -> m
+        | Hedge.Http.HttpFailure (_, m) -> m
+        | Hedge.Http.DecodeFailure m -> m
+        | Hedge.Http.ValidationFailure (_, errs) -> errs |> List.map (fun v -> v.Message) |> String.concat "; "
 
+    let private toUnitResult (r: Result<'a, Hedge.Http.ApiError>) : Result<unit, string> =
+        match r with Ok _ -> Ok () | Error e -> Error (apiErrorText e)
+
+    // Framework endpoints (not part of the IdentityHttp module contract) stay hand-written: the
+    // passwordless email magic-link (POST /api/auth/email) and the provider list (GET /api/auth/providers).
     let private encodeMagicLink (email: string) (returnTo: string) : string =
         Encode.object [ "email", Encode.string email; "returnTo", Encode.string returnTo ] |> Encode.toString 0
 
@@ -100,30 +115,21 @@ module Identity =
     let private providersDecoder : Decoder<string list> =
         Decode.field "providers" (Decode.list Decode.string)
 
-    let private identityDecoder : Decoder<IdentityListItem> =
-        Decode.object (fun get ->
-            { Id = get.Required.Field "id" Decode.string
-              Provider = get.Required.Field "provider" Decode.string
-              Name = get.Required.Field "name" Decode.string
-              Picture = get.Required.Field "picture" Decode.string
-              ActivatedAt = get.Optional.Field "activatedAt" Decode.int })
-
-    let private identitiesDecoder : Decoder<IdentityListItem list> =
-        Decode.field "identities" (Decode.list identityDecoder)
-
     let private revertIdentityCmd (identityId: string) (merge: bool) : Cmd<Msg> =
-        Cmd.OfPromise.either
-            (fun () -> Client.Api.postJsonRaw "/api/auth/revert" (encodeRevert identityId merge))
+        Cmd.OfPromise.perform
+            (fun () -> promise {
+                let! r = api.identityHttpRevert { identityId = identityId; merge = merge }
+                return toUnitResult r })
             ()
             GotRevertIdentity
-            (fun ex -> GotRevertIdentity (Error ex.Message))
 
     let private disconnectIdentityCmd (identityId: string) (fallbackName: string) : Cmd<Msg> =
-        Cmd.OfPromise.either
-            (fun () -> Client.Api.postJsonRaw "/api/auth/disconnect" (encodeDisconnect identityId fallbackName))
+        Cmd.OfPromise.perform
+            (fun () -> promise {
+                let! r = api.identityHttpDisconnect { identityId = identityId; name = Some fallbackName }
+                return toUnitResult r })
             ()
             GotDisconnect
-            (fun ex -> GotDisconnect (Error ex.Message))
 
     let private loadProvidersCmd : Cmd<Msg> =
         Cmd.OfPromise.perform
@@ -140,14 +146,16 @@ module Identity =
 
     let loadIdentitiesCmd : Cmd<Msg> =
         Cmd.OfPromise.perform
-            (fun () ->
-                promise {
-                    let! data = Client.Api.fetchJsonRaw "/api/auth/identities"
-                    return
-                        match Decode.fromValue "$" identitiesDecoder data with
-                        | Ok identities -> identities
-                        | Error _ -> []
-                })
+            (fun () -> promise {
+                let! r = api.identityHttpGetIdentities ()
+                return
+                    match r with
+                    | Ok resp ->
+                        resp.identities
+                        |> List.map (fun (it: IdentityHttp.Api.IdentityListItem) ->
+                            ({ Id = it.id; Provider = it.provider; Name = it.name
+                               Picture = it.picture; ActivatedAt = it.activatedAt } : IdentityListItem))
+                    | Error _ -> [] })
             ()
             GotIdentities
 

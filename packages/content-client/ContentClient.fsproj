@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    The shared content-client presentation layer (namespace Content): the OAuth claim-return glue
-    (ClaimGlue), the identity subsystem + its connection UI (Identity / IdentityView), and the comments
-    renderer (Comments). Explicit library dependencies: ContentHostContext (host nav/title contract),
-    RichText (Client.RichText renderer), Hedge.Client (Client.Api / Client.GuestSession) and Hedge (wire
-    types). The .css siblings (identity.css / comments.css) stay delivered by each app's Vite/prep:lib
-    pipeline — this project does not package or copy them. Distinct obj/ from ContentHostContext via this
-    directory's Directory.Build.props.
+    The GENERIC shared content-client presentation layer (namespace Content): the OAuth claim-return glue
+    (ClaimGlue) and the comments renderer (Comments). The identity subsystem + its connection UI moved to
+    the identity-owned Identity.Client library (packages/modules/identity/client) so it can reference the
+    identity HTTP contract with the correct dependency direction. Explicit library dependencies:
+    ContentHostContext (host nav/title contract), RichText (Client.RichText renderer), Hedge.Client
+    (Client.Api / Client.GuestSession) and Hedge (wire types). The comments.css sibling stays delivered by
+    each app's Vite/prep:lib pipeline — this project does not package or copy it. Distinct obj/ from
+    ContentHostContext via this directory's Directory.Build.props.
   -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -14,8 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ClaimGlue.fs" />
-    <Compile Include="Identity.fs" />
-    <Compile Include="IdentityView.fs" />
     <Compile Include="Comments.fs" />
   </ItemGroup>
   <ItemGroup>

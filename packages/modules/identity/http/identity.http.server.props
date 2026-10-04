@@ -10,8 +10,10 @@
     Ordering: IMPORT AFTER identity.server.props — Composition.bind closes over the shared Identity.Handlers
     cores (switchDecoded / disconnectDecoded / getIdentitiesDecoded) defined there — and BEFORE the app's
     ModuleServices (which builds the WriteDeps, runs the bounded-body preflight, and hands bind's result to
-    IdentityHttp.RouteContract.dispatch). The Codecs the generated RouteContract opens come from the Codecs
-    project via identity.http.codecs.props; this props must not be imported into the Codecs project.
+    IdentityHttp.RouteContract.dispatch). The Codecs the generated RouteContract opens come from the shared
+    IdentityHttp assembly (packages/modules/identity/http/IdentityHttp.fsproj) — referenced by the app's
+    Codecs project and transitively visible here, and also referenced by the client-side Identity.Client so
+    one IdentityHttp.Codecs serves both sides.
   -->
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
