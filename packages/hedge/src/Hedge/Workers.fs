@@ -261,6 +261,10 @@ let readBodyCapped (request: WorkerRequest) (maxBytes: int) : JS.Promise<string>
 /// Reconstruct a request carrying `body` as its (re-readable) body, preserving url/method/headers. Used by
 /// the bounded-JSON-body guard: generated POST dispatch reads the body itself, so after the guard reads it
 /// once to measure it, downstream must read the SAME bounded bytes rather than re-stream an unbounded input.
+/// NOTE: this builds a FRESH Request from url/method/headers/body only — non-standard init on the original
+/// (e.g. Cloudflare's `cf` object) is NOT carried over. It can't clone the original (its body is already
+/// consumed by the guard's capped read). Safe for handlers that read only url/headers/body (every current
+/// caller — identity + mobile dispatch); revisit if a reuse needs `request.cf` or other dropped init.
 [<Emit("new Request($0.url, { method: $0.method, headers: $0.headers, body: $1 })")>]
 let rebuildRequest (orig: WorkerRequest) (body: string) : WorkerRequest = jsNative
 
