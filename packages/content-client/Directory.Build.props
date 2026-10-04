@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Two F# library projects live in this directory (ContentHostContext.fsproj + ContentClient.fsproj).
+    SDK projects in one folder would otherwise share obj/ (project.assets.json) and clobber each other's
+    restore; give each its own intermediate dir keyed on the project name (mirrors
+    test/BoundaryFixtures/Directory.Build.props). Output DLLs already differ by AssemblyName.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The shared navigation/title host contract (namespace Content, HostContext.fs) that content module
+    clients program against. A leaf library independent of React, Elmish and the browser-session runtime —
+    depends only on Fable.Core — so non-browser probes (test/HostContextProbe) can consume it standalone.
+    Distinct obj/ from the sibling ContentClient.fsproj via this directory's Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>ContentHostContext</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="HostContext.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+  </ItemGroup>
+</Project>

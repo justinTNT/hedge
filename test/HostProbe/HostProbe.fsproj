@@ -9,8 +9,6 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The shared author-resolution contract, compiled once (as an app does) before the props. -->
-    <Compile Include="../../packages/content-server/Author.fs" />
     <!-- Each module's generated Codecs (its Handlers/RouteContract open it). -->
     <Compile Include="../../packages/modules/blog/generated/Codecs.fs" />
   </ItemGroup>
@@ -27,6 +25,9 @@
     <Compile Include="HostProbe.fs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The shared author-resolution contract now comes from its own assembly (Track 3), referenced as an
+         app does; the module server props' handlers resolve Content.Server.Author from it. -->
+    <ProjectReference Include="../../packages/content-server/ContentServer.fsproj" />
     <ProjectReference Include="../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <ProjectReference Include="../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />

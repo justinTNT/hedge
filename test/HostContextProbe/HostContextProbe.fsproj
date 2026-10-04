@@ -4,9 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The shared content-client contract, compiled exactly as the apps link it. -->
-    <Compile Include="../../packages/content-client/HostContext.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The shared host contract now comes from its own assembly (Track 3), referenced exactly as the apps
+         link it — this probe is the non-browser consumer that proves ContentHostContext stands alone. -->
+    <ProjectReference Include="../../packages/content-client/ContentHostContext.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

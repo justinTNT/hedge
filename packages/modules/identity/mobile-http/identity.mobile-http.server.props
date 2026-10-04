@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    The mobile HTTP module's generated dispatch (MobileHttp.RouteContract), for the microblog host (the
+    Capacitor POC) to compose. This is the typed replacement for the hand-wired /api/mobile/{bootstrap,me,
+    exchange,signout} route arms; the browser-OAuth /api/mobile/return redirect and the /api/mobile/blobs
+    multipart upload stay hand-wired adapters (not JSON contracts). Contributes ZERO tables (the
+    mobile_sessions / mobile_auth_codes tables come from the separate Mobile.Domain storage slice).
+
+    Unlike the content modules, there is NO module-side Composition.fs: the handler bodies are app-owned
+    (they close over Server.GuestConfig / Server.AttributionPolicy / Identity.Mobile), so the host binds the
+    generated Handlers record inline in Server.ModuleServices.mobileHttp, after its bounded-body preflight
+    for the one JSON-body POST (exchange). The Codecs the RouteContract opens come from the Codecs project
+    via identity.mobile-http.codecs.props. Microblog-only; import AFTER identity.mobile.server.props and
+    BEFORE ModuleServices.fs.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
+  </ItemGroup>
+</Project>

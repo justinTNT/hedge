@@ -233,6 +233,41 @@ let r2PutText (blobs: R2Bucket) (key: string) (text: string) (contentType: strin
 [<Emit("$0.replace(/[^A-Za-z0-9._-]/g, '-')")>]
 let private safeName (s: string) : string = jsNative
 
+/// Read a request body once, capped at `maxBytes`, returning a null result (detect with `isNull`) when the
+/// stream exceeds the cap — so the caller returns 413 without ever buffering an unbounded input. Reads the
+/// raw `request.body` stream rather than `request.text()` (which buffers the whole body first), so a chunked
+/// body with no Content-Length is still bounded. A null/absent body decodes to "". The decoded text is then
+/// handed to `rebuildRequest` so downstream (generated POST dispatch) reads the SAME bounded bytes.
+[<Emit("""(async function(req, cap){
+  var body = req.body;
+  if (body == null) { return ""; }
+  var reader = body.getReader();
+  var received = 0;
+  var chunks = [];
+  while (true) {
+    var r = await reader.read();
+    if (r.done) { break; }
+    received += r.value.byteLength;
+    if (received > cap) { try { await reader.cancel(); } catch (e) {} return null; }
+    chunks.push(r.value);
+  }
+  var merged = new Uint8Array(received);
+  var off = 0;
+  for (var i = 0; i < chunks.length; i++) { merged.set(chunks[i], off); off += chunks[i].byteLength; }
+  return new TextDecoder().decode(merged);
+})($0, $1)""")>]
+let readBodyCapped (request: WorkerRequest) (maxBytes: int) : JS.Promise<string> = jsNative
+
+/// Reconstruct a request carrying `body` as its (re-readable) body, preserving url/method/headers. Used by
+/// the bounded-JSON-body guard: generated POST dispatch reads the body itself, so after the guard reads it
+/// once to measure it, downstream must read the SAME bounded bytes rather than re-stream an unbounded input.
+/// NOTE: this builds a FRESH Request from url/method/headers/body only — non-standard init on the original
+/// (e.g. Cloudflare's `cf` object) is NOT carried over. It can't clone the original (its body is already
+/// consumed by the guard's capped read). Safe for handlers that read only url/headers/body (every current
+/// caller — identity + mobile dispatch); revisit if a reuse needs `request.cf` or other dropped init.
+[<Emit("new Request($0.url, { method: $0.method, headers: $0.headers, body: $1 })")>]
+let rebuildRequest (orig: WorkerRequest) (body: string) : WorkerRequest = jsNative
+
 let handleBlobUpload (request: WorkerRequest) (blobs: R2Bucket) : JS.Promise<WorkerResponse> =
     promise {
         let! fd = request.formData()

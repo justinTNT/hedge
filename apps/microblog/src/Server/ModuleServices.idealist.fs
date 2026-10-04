@@ -8,6 +8,8 @@ module Server.ModuleServices
 
 open Fable.Core
 open Hedge.Workers
+open Hedge.Router
+open Hedge.GuestSession
 open Content.Server.Author
 open Server.Env
 
@@ -81,6 +83,75 @@ let dispatch (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Pr
         (Blog.Composition.bind (blog env request))
         (Alerts.Composition.bind (alertsServices env))
         request ctx
+
+/// The identity lifecycle paths this module owns and dispatches through the composed IdentityHttp
+/// RouteContract. The framework-owned /api/auth/{me,providers,email*,login,callback,logout} are NOT here
+/// and fall through untouched — identityHttp must never read or decode their bodies.
+let private identityMutationPaths = [ "/api/auth/activate"; "/api/auth/revert"; "/api/auth/disconnect" ]
+let [<Literal>] private identityBodyCap = 24000
+
+/// Identity lifecycle HTTP dispatch (/api/auth/{identities,disconnect,revert,activate}) via the composed
+/// IdentityHttp module's generated RouteContract — the typed replacement for the host's hand-written route
+/// arms + body-reading wrappers. Returns None for every other path so the framework auth routes fall
+/// through. See the default ModuleServices.fs for the full preflight contract (refactor plan §2.5): auth
+/// resolved before any body is consumed, body bounded to 24,000 bytes read once from the raw stream (413 on
+/// excess), the bounded bytes reconstructed for the generated dispatch (400 on malformed), the handler
+/// re-resolving the guest request-locally and checking ownership before mutating.
+let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    let deps = Server.Handlers.writeDeps env
+    let handlers = IdentityHttp.Composition.bind deps
+    let isMutation p = identityMutationPaths |> List.exists (fun pat -> matchPath pat p = Some (Exact pat))
+    match parseRoute request with
+    | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
+        IdentityHttp.RouteContract.dispatch handlers request ctx
+    | POST path when isMutation path ->
+        Some (promise {
+            let! authz = deps.RequireGuest request
+            match authz with
+            | Rejected -> return unauthorized ()
+            | Accepted guest ->
+                let! bounded = readBodyCapped request identityBodyCap
+                if isNull (box bounded) then
+                    // Preserve the accepted guest's renewal/rotation cookie on the 413 (plan §2.5 fix).
+                    return withReplacementCookie guest.Replacement (payloadTooLarge ())
+                else
+                    match IdentityHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
+                    | Some p ->
+                        // ...and on the generated dispatch's 400 (malformed JSON); a no-op on handler
+                        // successes, which already carry the cookie.
+                        let! resp = p
+                        return withReplacementCookie guest.Replacement resp
+                    | None -> return notFound ()
+        })
+    | _ -> None
+
+let [<Literal>] private mobileBodyCap = 24000
+
+/// Mobile bearer-session HTTP dispatch (/api/mobile/{bootstrap,me,exchange,signout}) via the composed
+/// MobileHttp module's generated RouteContract — the typed replacement for the host's hand-wired route arms.
+/// The browser-OAuth /api/mobile/return redirect and the /api/mobile/blobs multipart upload stay hand-wired
+/// in Worker.fs. See the default ModuleServices.fs for the full contract: bootstrap/signout (PostEmpty) and
+/// me (GET) read no body and dispatch directly; only exchange is bounded to 24,000 bytes (413 on excess) +
+/// rebuilt before dispatch (400 on malformed). Exchange authenticates by code + PKCE proof after decode, not
+/// a pre-body guest check.
+let mobileHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> option =
+    let handlers : MobileHttp.RouteContract.Handlers =
+        { bootstrap = fun () _req _ctx -> Server.Handlers.mobileBootstrap env
+          me = fun () req _ctx -> Server.Handlers.mobileMe req env
+          exchange = fun r req _ctx -> Server.Handlers.mobileExchange r.code r.verifier req env
+          signout = fun () req _ctx -> Server.Handlers.mobileSignout req env }
+    match parseRoute request with
+    | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
+        Some (promise {
+            let! bounded = readBodyCapped request mobileBodyCap
+            if isNull (box bounded) then
+                return payloadTooLarge ()
+            else
+                match MobileHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
+                | Some p -> return! p
+                | None -> return notFound ()
+        })
+    | _ -> MobileHttp.RouteContract.dispatch handlers request ctx
 
 /// The alerts cron — poll enabled feeds, promote approved drafts. Fires on the [env.idealist]
 /// [triggers] crons schedule; inert without it.

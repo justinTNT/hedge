@@ -18,7 +18,8 @@ let private oauthDeps : Identity.Handlers.OAuthDeps =
       ActivateOnReturn = fun _ -> false }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
-let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
+/// Public: Server.ModuleServices.identityHttp builds the IdentityHttp dispatch over these deps.
+let writeDeps (env: Env) : Identity.Handlers.WriteDeps =
     { DB = env.DB
       RequireGuest = Server.GuestConfig.require env
       ReassignStatements = Server.AttributionPolicy.reassignStatements
@@ -29,8 +30,5 @@ let resolveIdentity = Identity.Handlers.resolveIdentity
 let onOAuthComplete : D1Database -> R2Bucket -> string -> obj -> string -> JS.Promise<OAuthComplete> =
     Identity.Handlers.onOAuthComplete oauthDeps
 
-/// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
-let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request
-let revertIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.revert (writeDeps env) request
-let disconnectIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.disconnect (writeDeps env) request
-let getIdentities (request: WorkerRequest) (env: Env) = Identity.Handlers.getIdentities (writeDeps env) request
+// The /api/auth/{identities,disconnect,revert,activate} routes are now dispatched through the composed
+// IdentityHttp module (Server.ModuleServices.identityHttp over writeDeps), replacing the hand-wired wrappers.

@@ -5,6 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="MobileSession.fs" />
+    <!-- HTTP contracts for /api/mobile/* (namespace MobileHttp) — same assembly, no Domain records. -->
+    <Compile Include="Api.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../hedge/src/Hedge/Hedge.fsproj" />

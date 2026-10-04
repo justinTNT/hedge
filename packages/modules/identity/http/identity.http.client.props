@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    The identity HTTP module's transport-neutral typed client (IdentityHttp.ClientGen), for a consuming
+    app's Client project to compose. It depends only on Thoth.Json + Hedge.Http + IdentityHttp.Codecs
+    (the codecs come from the Codecs project via identity.http.codecs.props), so import this AFTER the
+    app's shared Client plumbing and its Codecs reference.
+
+    NOT YET imported by any host: the content-client Identity component still calls /api/auth/* through
+    hand-written fetch (Client.Api.postJsonRaw), unchanged by the server-side cutover. This props exists so
+    the module's client surface is whole and a later client migration is a one-line import. Contributes no
+    tables.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/ClientGen.fs" />
+  </ItemGroup>
+</Project>

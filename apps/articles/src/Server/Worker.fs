@@ -6,24 +6,14 @@ open Hedge.Workers
 open Hedge.Router
 open Server.Env
 
-let private authRoutes (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> option =
-    let route = parseRoute request
-    match route with
-    | POST path when matchPath "/api/auth/activate" path = Some (Exact "/api/auth/activate") ->
-        Some (Server.Handlers.activateIdentity request env)
-    | POST path when matchPath "/api/auth/revert" path = Some (Exact "/api/auth/revert") ->
-        Some (Server.Handlers.revertIdentity request env)
-    | POST path when matchPath "/api/auth/disconnect" path = Some (Exact "/api/auth/disconnect") ->
-        Some (Server.Handlers.disconnectIdentity request env)
-    | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
-        Some (Server.Handlers.getIdentities request env)
-    | _ -> None
-
 [<ExportDefault>]
 let exports = createWorker {
     Routes = fun request env ctx ->
         let e = env :?> Env
-        match authRoutes request e with
+        // Identity lifecycle (/api/auth/{identities,disconnect,revert,activate}) — typed, generated dispatch
+        // through the composed IdentityHttp module, with a bounded-body preflight. Returns None (fall through)
+        // for every other path, including the framework-owned /api/auth/* routes.
+        match Server.ModuleServices.identityHttp e request ctx with
         | Some p -> Some p
         | None ->
         // C3: ModuleServices.dispatch binds each composed module's handler record from `env`

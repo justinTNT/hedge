@@ -13,9 +13,9 @@ open Fable.Core
 /// this: the generated client keeps its own `/api/<module>/*` prefix, and a client
 /// mount is never prepended to it.
 ///
-/// This is ordinary shared client code, file-linked into each consuming Client
-/// project before the module `.props` — not a project, and not part of the core Hedge
-/// library.
+/// This is ordinary shared client code, compiled into the ContentHostContext library (Track 3) — a leaf
+/// assembly depending only on Fable.Core — and referenced by each consuming Client project and by the
+/// non-browser HostContextProbe. Not part of the core Hedge framework assembly.
 type HostContext =
     { /// Deployment sub-path segments (`window.BASE_PATH`), e.g. `["st"]`; `[]` at root.
       BaseSegments: string list

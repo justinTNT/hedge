@@ -3,22 +3,11 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- App-level client infra: the guest-session + HTTP helpers the generated
-         ClientGen builds on, plus the shared rich-text module (Client.RichText). -->
-    <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
-    <Compile Include="../../../../packages/hedge/src/Client/Api.fs" />
+    <!-- The shared client runtime + presentation are now referenced libraries (Track 3): Hedge.Client
+         (Client.Api/GuestSession), RichText (Client.RichText), ContentHostContext (Content.HostContext) and
+         ContentClient (Content.ClaimGlue/Identity/IdentityView/Comments) — see the ProjectReferences below.
+         Only this app's own generated transport client stays compiled in-assembly. -->
     <Compile Include="generated/ClientGen.fs" />
-    <Compile Include="../../../../packages/rich-text/RichText.fs" />
-    <!-- Shared content-client contract (immutable host context) both content modules
-         reference; linked once before the module .props (unified shell, Stage 0). -->
-    <Compile Include="../../../../packages/content-client/HostContext.fs" />
-    <!-- Shared OAuth claim-return glue (parse + route pattern + return-nav) both hosts use. -->
-    <Compile Include="../../../../packages/content-client/ClaimGlue.fs" />
-    <!-- Shared identity subsystem + UI (CP-B: the single identity authority every host uses). -->
-    <Compile Include="../../../../packages/content-client/Identity.fs" />
-    <Compile Include="../../../../packages/content-client/IdentityView.fs" />
-    <!-- Shared comments renderer (Content.Comments) both content modules consume. -->
-    <Compile Include="../../../../packages/content-client/Comments.fs" />
   </ItemGroup>
   <!-- Content module clients, composed via each module's own .props (it owns its
        file list). Imported after ClientGen/RichText; then the thin entries run each
@@ -47,6 +36,11 @@
     <Compile Include="Shell/Main.fs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Track 3 shared libraries (replace the former source includes above). -->
+    <ProjectReference Include="../../../../packages/hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../../../../packages/rich-text/RichText.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentHostContext.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentClient.fsproj" />
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />

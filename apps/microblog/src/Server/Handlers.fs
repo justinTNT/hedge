@@ -32,7 +32,8 @@ let private oauthDeps : Identity.Handlers.OAuthDeps =
         || returnTo.StartsWith("/api/mobile/return") }
 
 /// Write-handler seams, per request env: the DB, the guest-write authorizer, and the attribution policy.
-let private writeDeps (env: Env) : Identity.Handlers.WriteDeps =
+/// Public: Server.ModuleServices.identityHttp builds the IdentityHttp dispatch over these deps.
+let writeDeps (env: Env) : Identity.Handlers.WriteDeps =
     { DB = env.DB
       RequireGuest = Server.GuestConfig.require env
       ReassignStatements = Server.AttributionPolicy.reassignStatements
@@ -98,13 +99,12 @@ let mobileReturn (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse
 /// POST /api/mobile/exchange {code, verifier} — the app trades its one-time code + PKCE verifier,
 /// presenting its OLD anonymous bearer, for a verified bearer. Verifies the code and the PKCE proof,
 /// MERGES the app's anonymous content into the verified identity (cross-guest reassign), rotates the
-/// old anon session out, and mints the verified session.
-let mobileExchange (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
+/// old anon session out, and mints the verified session. Takes the ALREADY-DECODED (code, verifier) from
+/// the generated MobileHttp dispatch (which decodes the bounded body); authentication is the code + PKCE
+/// proof below, AFTER the required-field check — the optional old bearer identifies content to merge, not
+/// permission to sign in.
+let mobileExchange (rawCode: string) (verifier: string) (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResponse> =
     promise {
-        let! bodyText = request.text()
-        let parsed = JS.JSON.parse bodyText
-        let rawCode : string = parsed?code
-        let verifier : string = parsed?verifier
         if isNull (box rawCode) || rawCode = "" || isNull (box verifier) || verifier = "" then
             return badRequest "Missing code or verifier"
         else
@@ -151,11 +151,10 @@ let mobileBlobUpload (request: WorkerRequest) (env: Env) : JS.Promise<WorkerResp
         | Hedge.GuestSession.Rejected -> return unauthorized ()
     }
 
-/// Hand-wired /api/auth/* write routes (Worker.fs calls these `request env`).
-let activateIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.activate (writeDeps env) request
-let revertIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.revert (writeDeps env) request
-let disconnectIdentity (request: WorkerRequest) (env: Env) = Identity.Handlers.disconnect (writeDeps env) request
-let getIdentities (request: WorkerRequest) (env: Env) = Identity.Handlers.getIdentities (writeDeps env) request
+// The /api/auth/{identities,disconnect,revert,activate} routes are now dispatched through the composed
+// IdentityHttp module (Server.ModuleServices.identityHttp over writeDeps), replacing the hand-wired wrappers
+// that used to live here. The shared Identity.Handlers still exposes the body-reading wrappers for hosts not
+// yet migrated (articles).
 
 // ---- darwin.news glue (app-specific) ----
 

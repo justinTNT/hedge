@@ -3,13 +3,16 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../Client/AdminCredential.fs" />
     <Compile Include="RichText.fs" />
     <Compile Include="Blobs.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Track 3: the admin-credential store (Client.AdminCredential) is now part of the shared Hedge.Client
+         library, referenced instead of source-included. Admin's own RichText/Api (module Admin.*) are
+         distinct and stay local. -->
+    <ProjectReference Include="../Client/Hedge.Client.fsproj" />
     <ProjectReference Include="../Hedge/Hedge.fsproj" />
   </ItemGroup>
   <ItemGroup>

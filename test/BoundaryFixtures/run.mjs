@@ -17,6 +17,25 @@ test('generated standalone and module GET bindings preserve request, environment
     }
   }
 });
+test('generated POST decodes a body; parameterless POST dispatches with no body (absent and {})',async()=>{
+  for(const dispatch of [runtime.standalone,runtime.modular]) {
+    const sub=await dispatch(new Request('https://test/submit',{method:'POST',headers:{Cookie:'signed'},body:JSON.stringify({note:'hi'})}),{marker:'ctx'});
+    assert.equal((await sub.json()).value,'hi:signed:fixture:ctx');
+    // No body at all, and an empty {} — both must work (proves PostEmpty dispatch never requires/decodes a body).
+    const p1=await dispatch(new Request('https://test/ping',{method:'POST',headers:{Cookie:'signed'}}),{marker:'ctx'});
+    assert.equal((await p1.json()).value,'pong:signed:fixture:ctx');
+    const p2=await dispatch(new Request('https://test/ping',{method:'POST',headers:{Cookie:'signed'},body:'{}'}),{marker:'ctx'});
+    assert.equal((await p2.json()).value,'pong:signed:fixture:ctx');
+  }
+});
+test('generated client emits POST+body for Post and POST+no-body for parameterless POST',async()=>{
+  let captured=null;
+  const client=createClient(async req=>{captured=req;return {tag:0,fields:[{Status:200,Headers:[],Body:JSON.stringify({value:'ok'})}]};});
+  const s=await client.submit({Note:'hi'});
+  assert.equal(s.tag,0);assert.equal(captured.Method,'POST');assert.equal(captured.Path,'/submit');assert.ok(captured.Body&&captured.Body.includes('hi'));
+  const p=await client.ping();   // unit argument, no request DTO
+  assert.equal(p.tag,0);assert.equal(captured.Method,'POST');assert.equal(captured.Path,'/ping');assert.equal(captured.Body,undefined);
+});
 test('generated client decodes nested records/lists and distinguishes invalid success from rejection',async()=>{
   const client=createClient(async req=>({tag:0,fields:[{Status:200,Headers:[],Body:JSON.stringify({value:'ok',identity:{provider:'google',roles:['curator']}})}]}));
   const good=await client.readPrivate();assert.equal(good.tag,0);assert.equal(good.fields[0].Identity.Provider,'google');assert.deepEqual([...good.fields[0].Identity.Roles],['curator']);

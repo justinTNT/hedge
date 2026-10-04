@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The shared author-resolution contract (module Content.Server.Author) that content module handlers
+    depend on instead of an app's Server.Env / Server.Identity. App-specific identity/attribution policy
+    stays in the host; this library carries only the contract. References Hedge for the runtime primitives.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>ContentServer</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Author.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../hedge/src/Hedge/Hedge.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+  </ItemGroup>
+</Project>

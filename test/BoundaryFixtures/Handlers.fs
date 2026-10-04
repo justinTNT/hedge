@@ -17,3 +17,8 @@ let readPrivate request env ctx = privateRequest request env ctx
 let by id request env ctx = promise { return respond ({Value=id+":"+context request env ctx}:Probe.Api.By.Response) }
 let query (q:Probe.Api.Query.Query) request env ctx = promise { return respond ({Value=defaultArg q.Q ""+":"+context request env ctx}:Probe.Api.Query.Response) }
 let both id (q:Probe.Api.Both.Query) request env ctx = promise { return respond ({Value=id+":"+defaultArg q.Q ""+":"+context request env ctx}:Probe.Api.Both.Response) }
+// Normal POST: the decoded request body + threaded context.
+let submit (req:Probe.Api.Submit.Request) request env ctx = promise { return respond ({Value=req.Note+":"+context request env ctx}:Probe.Api.Submit.Response) }
+// Parameterless POST: env-shaped (no request DTO), context still threaded. Proves dispatch reaches it
+// without reading a body.
+let ping request env ctx = promise { return respond ({Value="pong:"+context request env ctx}:Probe.Api.Ping.Response) }

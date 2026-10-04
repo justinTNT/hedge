@@ -146,7 +146,7 @@ let discoverWsTypes (ns: string) (assembly: Assembly) : Type list =
 // The GET family is a 2x2 over (path param? x typed query?): EGet (neither),
 // EGetQuery (query only), EGetBy (path param only, formerly EGetOne), EGetByQuery
 // (both). EGetQuery/EGetByQuery carry the query record type in ParsedEndpoint.QueryType.
-type EndpointMethod = EGet | EGetQuery | EGetBy | EGetByQuery | EPost
+type EndpointMethod = EGet | EGetQuery | EGetBy | EGetByQuery | EPost | EPostEmpty
 
 type ParsedEndpoint = {
     ModuleName: string
@@ -173,6 +173,23 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
         let nestedModules = apiParent.GetNestedTypes(BindingFlags.Public ||| BindingFlags.Static)
         nestedModules
         |> Array.choose (fun moduleType ->
+            // Diagnostic: an endpoint-typed value must be the property named exactly `endpoint`, and a
+            // module may declare at most one. Guards the former activateEndpoint/revertEndpoint mistake and
+            // two-endpoints-in-one-module. Helper modules, shared DTO records and the Get<unit> WebSocket
+            // marker are unaffected (its value is still named `endpoint`; non-endpoint props are ignored).
+            let endpointTyped =
+                moduleType.GetProperties(BindingFlags.Public ||| BindingFlags.Static)
+                |> Array.filter (fun p ->
+                    let t = p.PropertyType
+                    t.IsGenericType &&
+                    (let d = t.GetGenericTypeDefinition() in
+                     d = typedefof<Get<_>> || d = typedefof<GetQuery<_,_>> || d = typedefof<GetBy<_>>
+                     || d = typedefof<GetByQuery<_,_>> || d = typedefof<Post<_,_>> || d = typedefof<PostEmpty<_>>))
+            match endpointTyped |> Array.tryFind (fun p -> p.Name <> "endpoint") with
+            | Some p -> failwithf "%s.%s: an endpoint must be the property named 'endpoint', not '%s'" ns moduleType.Name p.Name
+            | None ->
+            if endpointTyped.Length > 1 then
+                failwithf "%s.%s declares %d endpoint properties; a module must declare exactly one 'endpoint'" ns moduleType.Name endpointTyped.Length
             let endpointProp = moduleType.GetProperty("endpoint", BindingFlags.Public ||| BindingFlags.Static)
             if endpointProp = null then None
             else
@@ -196,6 +213,9 @@ let discoverApiModules (ns: string) (namePrefix: string) (assembly: Assembly) (r
                             EGet, fields.[0] :?> string
                     elif typeDef = typedefof<Post<_,_>> then
                         EPost, fields.[0] :?> string
+                    elif typeDef = typedefof<PostEmpty<_>> then
+                        // Parameterless POST: path is the single DU field, no request type (no nested Request).
+                        EPostEmpty, fields.[0] :?> string
                     elif typeDef = typedefof<GetBy<_>> then
                         // GetBy contains a function string -> string
                         let func = fields.[0] :?> (string -> string)
@@ -1091,6 +1111,7 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
                 | EGetQuery -> apiTypeRef qualify ep "Query"
                 | EGetByQuery -> sprintf "string -> %s" (apiTypeRef qualify ep "Query")
                 | EPost -> apiTypeRef qualify ep "Request"
+                | EPostEmpty -> "unit"
             emit (sprintf "    %s: %s -> %s" funcName argTy resultTy)
         emit "}"
         emit ""
@@ -1114,6 +1135,8 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
                 emit (sprintf "    %s = fun id query -> Hedge.Http.sendDecode transport ({ Method = \"GET\"; Path = (sprintf \"%s\" id); Query = (%s); Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName pathTemplate pairs respName)
             | EPost ->
                 emit (sprintf "    %s = fun req -> Hedge.Http.sendDecode transport ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = Some (Encode.%s req |> Encode.toString 0) }: Hedge.Http.Request) Decode.%s" funcName ep.Path reqName respName)
+            | EPostEmpty ->
+                emit (sprintf "    %s = fun () -> Hedge.Http.sendDecode transport ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName ep.Path respName)
         emit "}"
 
     emit ""
@@ -1214,6 +1237,8 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
             | EGetQuery -> sprintf "%s -> %s" (apiTypeRef true ep "Query") resp
             | EGetByQuery -> sprintf "string -> %s -> %s" (apiTypeRef true ep "Query") resp
             | EPost -> sprintf "%s -> WorkerRequest -> ExecutionContext -> %s" (apiTypeRef true ep "Request") resp
+            // Parameterless POST: like a context-carrying GET (unit + request/ctx via resp), no Request arg.
+            | EPostEmpty -> sprintf "unit -> %s" resp
         emit (sprintf "    %s: %s" name sigStr)
     emit "}"
     emit ""
@@ -1263,6 +1288,13 @@ let generateRouteContractFs (ns: string) (endpoints: ParsedEndpoint list) : stri
         emit "            | Ok req ->"
         emit (sprintf "                return! handlers.%s req request ctx" name)
         emit "        })"
+        emit ""
+
+    // Parameterless POST: match the verb, but (like GET) read no body — dispatch straight to the handler.
+    for ep in endpoints |> List.filter (fun ep -> ep.Method = EPostEmpty) do
+        let name = toCamelCase ep.ModuleName
+        emit (sprintf "    | POST path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
+        emit (sprintf "        Some (handlers.%s ()%s)" name (if ep.RequestContext then " request ctx" else ""))
         emit ""
 
     emit "    | _ -> None"
@@ -1346,6 +1378,14 @@ let generateRoutesFs (extraCodecOpens: string list) (ownedModuleNamespaces: stri
             emit "        })"
             emit ""
 
+        // Parameterless POST: POST verb, no body read — dispatch straight through like GET (env-shaped
+        // handler, no request DTO arg).
+        for ep in endpoints |> List.filter (fun ep -> ep.Method = EPostEmpty) do
+            let handlerName = toCamelCase ep.ModuleName
+            emit (sprintf "    | POST path when matchPath \"%s\" path = Some (Exact \"%s\") ->" ep.Path ep.Path)
+            emit (sprintf "        Some (%s.%s %s)" ep.HandlerNs handlerName (if ep.RequestContext then "request env ctx" else "env"))
+            emit ""
+
         emit "    | _ -> None"
         emit ""
     | owned ->
@@ -1418,6 +1458,14 @@ let generateHandlersFs (endpoints: ParsedEndpoint list) : string =
         | EPost ->
             emit (sprintf "let %s (req: %s.Request) (request: WorkerRequest)" handlerName ep.ModuleName)
             emit "    (env: Env) (ctx: ExecutionContext) : JS.Promise<WorkerResponse> ="
+            emit "    promise {"
+            emit "        // TODO: implement"
+            emit "        return notFound ()"
+            emit "    }"
+            emit ""
+        | EPostEmpty ->
+            // Parameterless POST: no request DTO — env-shaped like GET (+ request/ctx when RequestContext).
+            emit (sprintf "let %s %s : JS.Promise<WorkerResponse> =" handlerName (if ep.RequestContext then "(request: WorkerRequest) (env: Env) (ctx: ExecutionContext)" else "(env: Env)"))
             emit "    promise {"
             emit "        // TODO: implement"
             emit "        return notFound ()"
