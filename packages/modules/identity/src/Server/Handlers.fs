@@ -264,17 +264,20 @@ let disconnectDecoded (deps: WriteDeps) (request: WorkerRequest) (identityId: st
         | None -> return okJson """{"ok":true}"""
     }
 
-/// Identity-list projection: the guest's identities as the existing wire JSON, with the renewal cookie.
+/// Identity-list projection: the guest's identities as the declared IdentityHttp response DTO, encoded
+/// through the typed codec (Hedge.Codec.encode escapes strings) rather than hand-interpolated — so a display
+/// name or email containing `"` or `\` can't produce malformed JSON. The public projection excludes guest
+/// ownership / provider account id / internal lifecycle fields. (Absent optional fields encode as `null`
+/// rather than being omitted; the client reads them with Optional.Field, which treats null as absent.)
 let private listIdentitiesResponse (deps: WriteDeps) (guest: Authorized) : JS.Promise<WorkerResponse> =
     promise {
         let! rows = Identity.Server.listFor deps.DB guest.GuestId
-        let identities =
-            rows |> Array.map (fun i ->
-                let emailJson = match i.Email with Some e -> sprintf ",\"email\":\"%s\"" e | None -> ""
-                let activeJson = match i.ActivatedAt with Some t -> sprintf ",\"activatedAt\":%d" t | None -> ""
-                sprintf """{"id":"%s","provider":"%s","name":"%s","picture":"%s"%s%s}""" i.Id i.Provider i.Name i.Picture emailJson activeJson
-            )
-        let body = sprintf """{"identities":[%s]}""" (identities |> String.concat ",")
+        let toItem (i: IdentityRow) : IdentityHttp.Api.IdentityListItem =
+            { id = i.Id; provider = i.Provider; name = i.Name; picture = i.Picture
+              email = i.Email; activatedAt = i.ActivatedAt }
+        let items = rows |> Array.map toItem |> Array.toList
+        let response : IdentityHttp.Api.GetIdentities.Response = { identities = items }
+        let body = Hedge.Codec.encode response |> Thoth.Json.Encode.toString 0
         match guest.Replacement with
         | Some c -> return okJsonWithCookie body c
         | None -> return okJson body

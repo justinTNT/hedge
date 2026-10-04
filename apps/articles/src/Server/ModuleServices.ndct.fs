@@ -59,13 +59,18 @@ let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : J
             let! authz = deps.RequireGuest request
             match authz with
             | Rejected -> return unauthorized ()
-            | Accepted _ ->
+            | Accepted guest ->
                 let! bounded = readBodyCapped request identityBodyCap
                 if isNull (box bounded) then
-                    return payloadTooLarge ()
+                    // Preserve the accepted guest's renewal/rotation cookie on the 413 (plan §2.5 fix).
+                    return withReplacementCookie guest.Replacement (payloadTooLarge ())
                 else
                     match IdentityHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
-                    | Some p -> return! p
+                    | Some p ->
+                        // ...and on the generated dispatch's 400 (malformed JSON); a no-op on handler
+                        // successes, which already carry the cookie.
+                        let! resp = p
+                        return withReplacementCookie guest.Replacement resp
                     | None -> return notFound ()
         })
     | _ -> None

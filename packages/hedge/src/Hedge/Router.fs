@@ -119,6 +119,19 @@ let forbidden () = jsonResponse """{"error":"Forbidden"}""" 403
 let notFound () = jsonResponse """{"error":"Not found"}""" 404
 /// 413 for an over-cap request body — returned by the bounded-JSON-body guard before generated dispatch.
 let payloadTooLarge () = jsonResponse """{"error":"Request body too large"}""" 413
+
+[<Emit("(function(r,c){ var h = new Headers(r.headers); if (!h.has('Set-Cookie')) { h.append('Set-Cookie', c); return new Response(r.body, { status: r.status, headers: h }); } return r; })($0,$1)")>]
+let private attachCookieIfAbsent (resp: WorkerResponse) (cookie: string) : WorkerResponse = jsNative
+
+/// Ensure an accepted guest's renewal/rotation cookie still rides a response that bypassed the handler —
+/// the bounded-body preflight's 413 (oversize) and the generated dispatch's 400 (malformed JSON) — so a
+/// session needing renewal or key rotation isn't left on its old credential. Adds the replacement as a
+/// Set-Cookie only when one is present AND the response doesn't already carry one (handler successes already
+/// do), so it is idempotent and safe to wrap any preflight outcome with.
+let withReplacementCookie (replacement: string option) (resp: WorkerResponse) : WorkerResponse =
+    match replacement with
+    | Some c -> attachCookieIfAbsent resp c
+    | None -> resp
 let badRequest msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
     jsonResponse body 400

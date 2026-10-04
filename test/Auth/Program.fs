@@ -23,6 +23,8 @@ let reqUrl () : string = jsNative
 let reqHeader (name: string) : string = jsNative
 [<Emit("(globalThis.__req.opts.body || '')")>]
 let reqBody () : string = jsNative
+[<Emit("($0.headers.get('Set-Cookie') || '')")>]
+let setCookieOf (resp: Workers.WorkerResponse) : string = jsNative
 
 let private reg preset issuer clientId : Oidc.OidcRegistration =
     { Preset = preset; Issuer = issuer; AuthorizeUrl = None; TokenUrl = None; UserinfoUrl = None
@@ -133,6 +135,27 @@ let run () =
         let rebuilt = Workers.rebuildRequest (Workers.createRequest "https://x/api/auth/revert" "POST" "ORIGINAL-IGNORED") """{"identityId":"b","merge":true}"""
         let! rebuiltBody = rebuilt.text()
         check "bodyguard: rebuilt request carries the bounded body for downstream dispatch" (rebuiltBody = """{"identityId":"b","merge":true}""")
+
+        // ---- Renewal cookie preserved on preflight error responses (identity bounded-body guard) ----
+        // withReplacementCookie adds the accepted guest's rotation cookie to responses that bypass the
+        // handler (413 oversize, 400 malformed), but never double-sets when the handler already did.
+        let r413 = Router.withReplacementCookie (Some "g=renewed; Path=/; HttpOnly") (Router.payloadTooLarge ())
+        check "renewal: added to a cookieless 413" (setCookieOf r413 = "g=renewed; Path=/; HttpOnly")
+        let rHad = Router.withReplacementCookie (Some "g=renewed") (Router.okJsonWithCookie """{"ok":true}""" "orig=1; Path=/")
+        check "renewal: not double-set when the handler already carried a cookie" (setCookieOf rHad = "orig=1; Path=/")
+        let rNone = Router.withReplacementCookie None (Router.payloadTooLarge ())
+        check "renewal: None leaves the response untouched" (setCookieOf rNone = "")
+
+        // ---- Identity-list response encodes through the typed DTO (quoted/backslash name stays valid JSON) ----
+        let idResp : IdentityHttp.Api.GetIdentities.Response =
+            { identities =
+                [ { id = "i1"; provider = "google"; name = "Jane \"JJ\" O'Hare \\ x"; picture = "p"; email = Some "a@b.com"; activatedAt = Some 7 }
+                  { id = "i2"; provider = "anonymous"; name = "Anon"; picture = ""; email = None; activatedAt = None } ] }
+        let idBody = Codec.encode idResp |> Thoth.Json.Encode.toString 0
+        let idParsed = JS.JSON.parse idBody        // throws if the encoder produced malformed JSON
+        let idFirst = (unbox<obj array> (idParsed?identities)).[0]
+        check "identities: quoted/backslash name round-trips as valid JSON" (unbox<string> (idFirst?name) = "Jane \"JJ\" O'Hare \\ x")
+        check "identities: required fields present + typed" (unbox<string> (idFirst?id) = "i1" && unbox<string> (idFirst?provider) = "google" && unbox<string> (idFirst?picture) = "p")
 
         if failures = 0 then printfn "auth-fixtures: all %d checks OK" checks
         else eprintfn "auth-fixtures: %d of %d checks FAILED" failures checks
