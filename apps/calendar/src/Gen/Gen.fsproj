@@ -8,5 +8,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Models/Models.fsproj" />
+    <!-- Identity slice assembly (Assembly.Load by the gen): shared guests/identities. -->
+    <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
   </ItemGroup>
 </Project>

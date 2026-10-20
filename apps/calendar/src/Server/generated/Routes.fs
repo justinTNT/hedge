@@ -2,26 +2,8 @@
 module Server.Routes
 
 open Fable.Core
-open Thoth.Json
 open Hedge.Workers
-open Hedge.Router
-open Codecs
-open Server.Env
 
-let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
+let dispatch (calendarHandlers: Calendar.RouteContract.Handlers) (request: WorkerRequest) (ctx: ExecutionContext)
     : JS.Promise<WorkerResponse> option =
-    let route = parseRoute request
-    match route with
-    | GET path when matchPath "/api/posts" path = Some (Exact "/api/posts") ->
-        Some (Server.Handlers.getPosts env)
-
-    | POST path when matchPath "/api/post" path = Some (Exact "/api/post") ->
-        Some (promise {
-            let! bodyText = request.text()
-            match Decode.fromString Decode.createPostReq bodyText with
-            | Error err -> return badRequest err
-            | Ok req ->
-                return! Server.Handlers.createPost req request env ctx
-        })
-
-    | _ -> None
+    Calendar.RouteContract.dispatch calendarHandlers request ctx

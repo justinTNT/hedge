@@ -7,26 +7,54 @@ open Hedge.Admin
 // The AdminTable type + the schema-driven CRUD live in Hedge.Admin; this
 // file only emits the table descriptors.
 
-let post : AdminTable =
-    { Name = "Post"
-      Table = "posts"
+let guest : AdminTable =
+    { Name = "Guest"
+      Table = "guests"
       Schema =
-        schema "Post" [
+        schema "Guest" [
             fieldWith "Id" FString [PrimaryKey]
-            fieldWith "Title" FString []
-            fieldWith "Body" FString []
+            fieldWith "SessionId" FString []
             fieldWith "CreatedAt" FInt [CreateTimestamp]
+            fieldWith "DeletedAt" (FOption FInt) [SoftDelete]
         ]
-      SelectAll = "SELECT id, title, body, created_at FROM posts ORDER BY created_at DESC LIMIT 100"
-      SelectOne = "SELECT id, title, body, created_at FROM posts WHERE id = ?"
-      Insert = "INSERT INTO posts (id, title, body, created_at) VALUES (?, ?, ?, ?)"
+      SelectAll = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, session_id, created_at, deleted_at FROM guests WHERE id = ? AND deleted_at IS NULL"
+      Insert = "INSERT INTO guests (id, session_id, created_at) VALUES (?, ?, ?)"
       HasCreateTs = true
       HasUpdateTs = false
-      Update = "UPDATE posts SET title = ?, body = ? WHERE id = ?"
-      Delete = "DELETE FROM posts WHERE id = ?"
+      Update = "UPDATE guests SET session_id = ? WHERE id = ?"
+      Delete = "UPDATE guests SET deleted_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?"
       SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
-      MutableFields = ["Title"; "Body"] }
+      MutableFields = ["SessionId"] }
 
-let tables : AdminTable list = [
-    post
+let identity : AdminTable =
+    { Name = "Identity"
+      Table = "identities"
+      Schema =
+        schema "Identity" [
+            fieldWith "Id" FString [PrimaryKey]
+            fieldWith "GuestId" FString [ForeignKey "Guest"]
+            fieldWith "Provider" FString []
+            fieldWith "ProviderUserId" FString []
+            fieldWith "Name" FString []
+            fieldWith "Picture" FString []
+            fieldWith "Email" (FOption FString) []
+            fieldWith "ActivatedAt" (FOption FInt) []
+            fieldWith "SupersededBy" (FOption FString) []
+            fieldWith "CreatedAt" FInt [CreateTimestamp]
+        ]
+      SelectAll = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities ORDER BY created_at DESC LIMIT 100"
+      SelectOne = "SELECT id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at FROM identities WHERE id = ?"
+      Insert = "INSERT INTO identities (id, guest_id, provider, provider_user_id, name, picture, email, activated_at, superseded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      HasCreateTs = true
+      HasUpdateTs = false
+      Update = "UPDATE identities SET guest_id = ?, provider = ?, provider_user_id = ?, name = ?, picture = ?, email = ?, activated_at = ?, superseded_by = ? WHERE id = ?"
+      Delete = "DELETE FROM identities WHERE id = ?"
+      SupportedOps = [ OpList; OpRead; OpCreate; OpUpdate; OpDelete ]
+      MutableFields = ["GuestId"; "Provider"; "ProviderUserId"; "Name"; "Picture"; "Email"; "ActivatedAt"; "SupersededBy"] }
+
+let private ownTables : AdminTable list = [
+    guest
+    identity
 ]
+let tables : AdminTable list = ownTables @ Calendar.AdminGen.tables

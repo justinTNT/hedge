@@ -36,7 +36,7 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
-# Environment variables
+# ADMIN_KEY, GUEST_SECRET, OAUTH_SECRET and the provider credentials are secrets: local dev reads them
+# from .dev.vars; a deployment sets them with `wrangler secret put`. A plain var here would shadow them.
 [vars]
 ENVIRONMENT = "development"
-ADMIN_KEY = "dev-admin-key"

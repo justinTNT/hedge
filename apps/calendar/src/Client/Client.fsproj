@@ -3,16 +3,27 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Shared client infra (one source for the estate); do not copy locally. -->
-    <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
-    <Compile Include="../../../../packages/hedge/src/Client/Api.fs" />
+    <!-- The identity slice's generated transport client (empty of endpoints here). -->
     <Compile Include="generated/ClientGen.fs" />
-    <Compile Include="../../../../packages/rich-text/RichText.fs" />
-    <Compile Include="App.fs" />
+  </ItemGroup>
+  <!-- The calendar module's hosted client component (its own file list). Calendar is PRIMARY here, run
+       at "/" by Host/Main.fs. -->
+  <Import Project="../../../../packages/modules/calendar/calendar.client.props" />
+  <ItemGroup>
+    <!-- The single-module host (chrome + shared identity + router) that runs the module via its hosted surface. -->
+    <Compile Include="Host/Chrome.fs" />
+    <Compile Include="Host/App.fs" />
+    <Compile Include="Host/Main.fs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../../packages/hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../../../../packages/rich-text/RichText.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentHostContext.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentClient.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/identity/client/Identity.Client.fsproj" />
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

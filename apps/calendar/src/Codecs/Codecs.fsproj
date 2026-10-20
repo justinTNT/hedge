@@ -5,9 +5,15 @@
   <ItemGroup>
     <Compile Include="generated/Codecs.fs" />
   </ItemGroup>
+  <!-- Composed module codecs (Calendar.Codecs) live with the module, not per-app. -->
+  <Import Project="../../../../packages/modules/calendar/calendar.codecs.props" />
   <ItemGroup>
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
+    <!-- Identity HTTP codecs + typed client (IdentityHttp): one assembly serves the server dispatch and the
+         client-side Identity.Client. -->
+    <ProjectReference Include="../../../../packages/modules/identity/http/IdentityHttp.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

@@ -1,4 +1,3 @@
 module Models.Ws
 
-/// WebSocket event payloads.
-/// Add event types here as needed.
+// No identity-layer WebSocket events; the calendar module (Calendar.Ws) has none either.

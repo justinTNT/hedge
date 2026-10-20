@@ -4,8 +4,6 @@ module Codecs
 open Thoth.Json
 open Hedge.Interface
 open Hedge.Codec
-open Models.Domain
-open Models.Api
 
 /// Unwrap helpers — terse pattern matches used in Handlers.fs.
 let inline pk (PrimaryKey v) = v
@@ -21,30 +19,26 @@ let inline uq (Unique v) = v
 module Encode =
 
     // -- Domain types --
-    let inline post (v: Post) = encode v
+    let inline guest (v: Models.Domain.Guest) = encode v
+    let inline identity (v: Models.Domain.Identity) = encode v
 
     // -- API view types --
-    let inline postItem (v: GetPosts.PostItem) = encode v
 
     // -- API request encoders --
-    let inline createPostReq (v: CreatePost.Request) = encode v
 
     // -- WebSocket event encoders --
 
 module Decode =
 
     // -- Domain types --
-    let post : Decoder<Post> = decode<Post>()
+    let guest : Decoder<Models.Domain.Guest> = decode<Models.Domain.Guest>()
+    let identity : Decoder<Models.Domain.Identity> = decode<Models.Domain.Identity>()
 
     // -- API view types --
-    let postItem : Decoder<GetPosts.PostItem> = decode<GetPosts.PostItem>()
 
     // -- API response decoders --
-    let createPostResponse : Decoder<CreatePost.Response> = decode<CreatePost.Response>()
-    let getPostsResponse : Decoder<GetPosts.Response> = decode<GetPosts.Response>()
 
     // -- API request decoders --
-    let createPostReq : Decoder<CreatePost.Request> = decode<CreatePost.Request>()
 
     // -- WebSocket event decoders --
 
@@ -52,11 +46,3 @@ module Validate =
 
     open Hedge.Schema
     open Hedge.Validate
-
-    let createPostSchema =
-        schema "CreatePost.Request" [
-            fieldWith "Title" FString [Required; Trim]
-            fieldWith "Body" FString [Required; Trim]
-        ]
-
-    let inline createPostReq (r: CreatePost.Request) = validate createPostSchema r

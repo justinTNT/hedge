@@ -3,21 +3,7 @@ module Client.ClientGen
 
 open Fable.Core
 open Thoth.Json
-open Models.Api
-open Models.Ws
 open Codecs
 
-
-// --- Transport-neutral client (C2) ---
-
-type Client = {
-    createPost: CreatePost.Request -> JS.Promise<Result<CreatePost.Response, Hedge.Http.ApiError>>
-    getPosts: unit -> JS.Promise<Result<GetPosts.Response, Hedge.Http.ApiError>>
-}
-
-let createClient (transport: Hedge.Http.Transport) : Client = {
-    createPost = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/post"; Query = []; Headers = []; Body = Some (Encode.createPostReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.createPostResponse
-    getPosts = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/posts"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPostsResponse
-}
 
 // --- WebSocket Events ---
