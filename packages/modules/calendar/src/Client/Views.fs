@@ -44,9 +44,10 @@ let private monthNav (ctx: Content.HostContext) (model: Model) =
         ]
     ]
 
-let private facets (model: Model) (dispatch: Msg -> unit) =
-    // A guest has no personal facet: nothing of theirs is in the stream.
-    let shown = Category.all |> List.filter (fun c -> Category.isPublic c || model.SignedIn)
+let private facetChips (model: Model) (dispatch: Msg -> unit) =
+    // The site's public facets, plus the reserved personal one for a signed-in viewer (a guest has
+    // nothing of their own in the stream).
+    let shown = model.Facets.Public @ (if model.SignedIn then [ Category.personal ] else [])
     Html.div [
         prop.className "facets"
         prop.children [
@@ -100,12 +101,11 @@ let private cell (ctx: Content.HostContext) (model: Model) (todayDay: Day) (day:
     ]
 
 let private grid (ctx: Content.HostContext) (model: Model) (first: Day) (last: Day) (projected: Map<Day, Occurrence list>) =
-    let todayDay = today ()
     Html.div [
         prop.className "cal-grid"
         prop.children [
             for day in first .. last do
-                cell ctx model todayDay day (projected |> Map.tryFind day |> Option.defaultValue [])
+                cell ctx model model.Today day (projected |> Map.tryFind day |> Option.defaultValue [])
         ]
     ]
 
@@ -147,7 +147,7 @@ let private occurrenceView (dispatch: Msg -> unit) (o: Occurrence) =
         ]
     ]
 
-let private editorView (ed: EditorState) (dispatch: Msg -> unit) =
+let private editorView (requestable: string list) (ed: EditorState) (dispatch: Msg -> unit) =
     let set (ed': EditorState) = dispatch (EditorChanged ed')
     Html.form [
         prop.className "entry-editor"
@@ -208,7 +208,7 @@ let private editorView (ed: EditorState) (dispatch: Msg -> unit) =
                                 prop.onChange (fun (v: string) -> set { ed with Requested = v })
                                 prop.children [
                                     Html.option [ prop.value ""; prop.text "just for me" ]
-                                    for c in Category.requestable do
+                                    for c in requestable do
                                         Html.option [ prop.value c; prop.text (c + " (needs approval)") ]
                                 ] ]
                         ]
@@ -270,7 +270,7 @@ let private dayModal (model: Model) (dispatch: Msg -> unit) (day: Day) (occ: Occ
                                 Html.p [ prop.className "day-empty"; prop.text "Nothing on this day." ]
                             for o in occ do occurrenceView dispatch o
                             match model.Editor with
-                            | Some ed -> editorView ed dispatch
+                            | Some ed -> editorView model.Facets.Requestable ed dispatch
                             | None when model.SignedIn ->
                                 Html.button [
                                     prop.className "btn btn-primary add-entry"; prop.text "+ Add an entry"
@@ -293,7 +293,7 @@ let contentView (ctx: Content.HostContext) (model: Model) (dispatch: Msg -> unit
         prop.children [
             Html.div [
                 prop.className "cal-toolbar"
-                prop.children [ monthNav ctx model; facets model dispatch ]
+                prop.children [ monthNav ctx model; facetChips model dispatch ]
             ]
             match model.Error with
             | Some err ->

@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Author.fs" />
+    <Compile Include="Viewer.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../hedge/src/Hedge/Hedge.fsproj" />

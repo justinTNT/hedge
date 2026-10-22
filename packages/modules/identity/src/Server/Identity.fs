@@ -68,17 +68,34 @@ let hasLinkedIdentity (db: D1Database) (guestId: string) : JS.Promise<bool> =
         return not (isNull (box row))
     }
 
-/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id). None when
-/// the guest is soft-deleted, has no active identity, or its active identity is anonymous. This is
-/// CORE authenticated-subject resolution — available to any identity host for OWNERSHIP checks, with
-/// no grants package composed; role checking (Identity.Grants.hasGrant) is layered on TOP of this.
-let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * string) option> =
+/// The guest's active PROVIDER identity: the guest must be live (not soft-deleted) and its active
+/// identity a claimed provider account — the anonymous fallback is not signed in.
+let private activeProvider (db: D1Database) (guestId: string) : JS.Promise<IdentityRow option> =
     promise {
         let! live = (bind (db.prepare Sql.guestNotDeleted) [| box guestId |]).first()
         if isNull (box live) then return None
         else
             let! id = activeFor db guestId
             match id with
-            | Some i when i.Provider <> "anonymous" -> return Some (i.Provider, i.ProviderUserId)
+            | Some i when i.Provider <> "anonymous" -> return Some i
             | _ -> return None
+    }
+
+/// The guest's ACTIVE identity as its durable OAuth subject (provider, provider_user_id). None when
+/// the guest is soft-deleted, has no active identity, or its active identity is anonymous. This is
+/// CORE authenticated-subject resolution — available to any identity host for OWNERSHIP checks, with
+/// no grants package composed; role checking (Identity.Grants.hasGrant) is layered on TOP of this.
+let activeSubject (db: D1Database) (guestId: string) : JS.Promise<(string * string) option> =
+    promise {
+        let! i = activeProvider db guestId
+        return i |> Option.map (fun i -> i.Provider, i.ProviderUserId)
+    }
+
+/// The signed-in identity id behind a verified guest — the OWNER KEY for anything a content module
+/// keeps private to a person (Content.Server.Viewer). None when the guest is soft-deleted, has no
+/// active identity, or its active identity is the anonymous fallback.
+let signedIn (db: D1Database) (guestId: string) : JS.Promise<string option> =
+    promise {
+        let! i = activeProvider db guestId
+        return i |> Option.map (fun i -> i.Id)
     }

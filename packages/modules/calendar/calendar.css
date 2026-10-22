@@ -1,15 +1,17 @@
 /* ============================================================
    Calendar module — content look, scoped under .calendar-content.
    Flat style: solid colours, hairline borders, no shadows or
-   gradients. Each facet owns one colour (the --cat-* tokens; a
-   host may override them). The host owns the page baseline and
-   its chrome; this file styles only the projection + day modal.
+   gradients. Each facet owns one colour, read through --cat by
+   the chips, cell entries and pills: the module colours only its
+   reserved `personal` facet; the host's stylesheet sets --cat on
+   `.calendar-content .cat-<name>` for each facet it defines
+   (unstyled facets fall back to the soft ink). The host owns the
+   page baseline and its chrome; this file styles only the
+   projection + day modal.
    ============================================================ */
 
 .calendar-content {
-  --cat-sitewide: #2f6fed;
-  --cat-community: #1f9d55;
-  --cat-art: #c2369b;
+  --cat: #6b6b6b;
   --cat-personal: #e08a00;
   --cal-ink: #1a1a1a;
   --cal-ink-soft: #6b6b6b;
@@ -42,9 +44,6 @@
 }
 .calendar-content .facet-on { background: var(--cat); color: var(--cal-paper); }
 .calendar-content .facet-off { opacity: 0.6; }
-.calendar-content .cat-sitewide { --cat: var(--cat-sitewide); }
-.calendar-content .cat-community { --cat: var(--cat-community); }
-.calendar-content .cat-art { --cat: var(--cat-art); }
 .calendar-content .cat-personal { --cat: var(--cat-personal); }
 
 /* -- the grid -- */

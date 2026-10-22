@@ -70,12 +70,16 @@ let alertsHandlers (env: ProbeEnv) : Alerts.RouteContract.Handlers =
 let alertsCron (env: ProbeEnv) (ctx: ExecutionContext) : JS.Promise<unit> =
     Alerts.Cron.run (alertsServices env) ctx
 
-/// The calendar module composed by an identity-LESS host: Services.guestOnly stands in for the viewer
-/// resolver, so everyone reads the public stream and personal entries are off. Proves the calendar
+/// The calendar module composed by an identity-LESS host: Content.Server.Viewer.guestOnly stands in for
+/// the viewer resolver, so everyone reads the public stream and personal entries are off. Proves the calendar
 /// server layer builds with no identity layer and no Server.Env in sight.
 let calendarHandlers (env: ProbeEnv) : Calendar.RouteContract.Handlers =
     Calendar.Composition.bind
-        ({ DB = env.Db; Viewer = Calendar.Services.guestOnly; NewId = newId; Now = epochNow }
+        ({ DB = env.Db
+           Viewer = Content.Server.Viewer.guestOnly
+           Facets = Calendar.Vocab.Facets.define [ "fixtures"; "social" ] [ "social" ]
+           NewId = newId
+           Now = epochNow }
          : Calendar.Services.Services)
 
 /// A whole site dispatch composed from the probe-built module records — the shape an app's

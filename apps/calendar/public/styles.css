@@ -32,3 +32,9 @@ a { color: inherit; text-decoration: none; }
   padding: 14px 0; border-bottom: 2px solid var(--ink);
 }
 .brand { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.02em; text-transform: uppercase; }
+
+/* This site's calendar facets (named in src/Models/Site.fs): one colour each, read by the module's
+   chips, cell entries and pills through --cat. The module colours only its own `personal`. */
+.calendar-content .cat-sitewide { --cat: #2f6fed; }
+.calendar-content .cat-community { --cat: #1f9d55; }
+.calendar-content .cat-art { --cat: #c2369b; }

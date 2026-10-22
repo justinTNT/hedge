@@ -1,26 +1,44 @@
 module Calendar.Vocab
 
-// The closed vocabularies the stream uses. Stored as plain strings (Gen reflects strings into TEXT
-// columns); these modules are the single source of the allowed values for the server's validation,
-// the client's filters and editor, and anyone reading the admin.
+// The module's vocabularies. `personal` is the ONE facet the module reserves (an entry private to the
+// identity that wrote it); every public facet is the host's to name — a site's filter chips are its
+// own words (sitewide/community/art on the reference host; a club might say fixtures/social). The
+// repeat rules are the module's: the projection expands them.
 
-/// Filter facets over the one entry stream. These are NOT separate calendars: the month grid is a
-/// projection of the whole stream, and a facet merely hides or shows entries.
+/// The reserved facet: private to its owner, never on the public grid.
 module Category =
-    let sitewide = "sitewide"
-    let community = "community"
-    let art = "art"
-    /// Owner-scoped: authored by a signed-in identity on the public site and visible only to it.
     let personal = "personal"
-    let all = [ sitewide; community; art; personal ]
-    let isPublic (c: string) = c <> personal
-    let isValid (c: string) = List.contains c all
-    /// Facets an owner may ask for on their own entry (sitewide is admin-authored only). The entry
-    /// stays personal until an admin approves the request by setting its Category.
-    let requestable = [ community; art ]
-    let isRequestable (c: string) = List.contains c requestable
 
-/// Recurrence of an entry, expanded by the projection (client) within the viewed window.
+/// A site's facet vocabulary. `Public` names the facets on the shared grid (the filter chips, and
+/// what an admin may publish an entry as); `Requestable` is the subset a signed-in user may ask for
+/// from the editor (an approval-queue request). Facet names double as CSS class suffixes
+/// (`cat-<name>`): the host's stylesheet gives each a `--cat` colour.
+type Facets = { Public: string list; Requestable: string list }
+
+module Facets =
+    /// A facet name is a CSS class suffix and an API value: lowercase letters, digits and hyphens,
+    /// starting with a letter.
+    let isName (s: string) =
+        not (isNull s) && s.Length > 0
+        && (s.[0] >= 'a' && s.[0] <= 'z')
+        && (s |> Seq.forall (fun c -> (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c = '-'))
+
+    /// Define a site's facets, failing FAST (at module load, server and client alike) on a vocabulary
+    /// the module can't honour: a malformed or duplicate name, the reserved `personal`, or a
+    /// requestable facet that isn't public.
+    let define (publicFacets: string list) (requestable: string list) : Facets =
+        let bad = publicFacets @ requestable |> List.filter (isName >> not)
+        if not bad.IsEmpty then failwithf "calendar facets: invalid name(s) %A" bad
+        if List.contains Category.personal publicFacets then
+            failwithf "calendar facets: '%s' is reserved by the module" Category.personal
+        if List.length (List.distinct publicFacets) <> List.length publicFacets then
+            failwith "calendar facets: duplicate public facet"
+        let orphan = requestable |> List.filter (fun r -> not (List.contains r publicFacets))
+        if not orphan.IsEmpty then failwithf "calendar facets: requestable %A must be public" orphan
+        { Public = publicFacets; Requestable = requestable }
+
+    let isRequestable (f: Facets) (name: string) = List.contains name f.Requestable
+
 module Repeat =
     let none = "none"
     let daily = "daily"
@@ -29,4 +47,4 @@ module Repeat =
     let monthly = "monthly"
     let yearly = "yearly"
     let all = [ none; daily; weekly; fortnightly; monthly; yearly ]
-    let isValid (r: string) = List.contains r all
+    let isValid (s: string) = List.contains s all

@@ -1,11 +1,13 @@
 # calendar module
 
-One stream of dated entries; the month grid is a projection of it; `sitewide | community | art |
-personal` are filter facets, not calendars. Recurrence (`daily | weekly | fortnightly | monthly |
-yearly`, optional until) is expanded by the client projection. A signed-in user writes personal
-entries only they see, and may ask for `community` or `art`; the host's admin approves by setting
-the entry's category (the `ApprovalQueue` admin resource), and an owner edit takes it back to
-personal until re-approved. `apps/calendar` is the reference host.
+One stream of dated entries; the month grid is a projection of it; the facets are filters, not
+calendars. The module reserves one facet, `personal` (private to the signed-in identity that wrote
+it); the host names the public ones (`sitewide | community | art` on the reference host) and which
+of them a user may ask for. Recurrence (`daily | weekly | fortnightly | monthly | yearly`, optional
+until) is expanded by the client projection. A signed-in user writes personal entries only they
+see, and may ask for a requestable facet; the host's admin approves by setting the entry's category
+(the module's `ApprovalQueue` admin resource), and an owner edit takes it back to personal until
+re-approved. `apps/calendar` is the reference host.
 
 ## Composing it into a host (e.g. basewatch)
 
@@ -15,16 +17,21 @@ personal until re-approved. `apps/calendar` is the reference host.
 2. Gen/Models/Codecs/Server/Client projects: reference `src/Models/CalendarModels.fsproj`; import
    `calendar.codecs.props` (Codecs), `calendar.server.props` (Server, after generated Db, before the
    app's AdminGen/Routes) and `calendar.client.props` (Client, after the shared client libraries).
-3. Server: build a `Calendar.Services.Services` (`Server.ModuleServices`) — `DB`, a `Viewer` resolver
-   (the app's identity layer; `Calendar.Services.guestOnly` when the host has no identity: everyone
-   reads the public stream, personal is off), `NewId`, `Now` — and pass
-   `Calendar.Composition.bind services` to the generated `Server.Routes.dispatch`. Put the host's
-   authorize-then-bound-body preflight in front of `POST /api/calendar/entry[/delete]`.
-4. Admin allowlist: `Calendar.AdminGen.entry` plus the queue descriptor (see `apps/calendar`
-   `Server/AdminConfig.fs`: `SelectAll = Calendar.Sql.approvalQueue`, `Update = Calendar.Sql.approve`,
-   `MutableFields = ["Category"; "Requested"]`). Identity merges: add `Calendar.Sql.reassignOwner` /
-   `Calendar.Db.Tables.entry` to the host's attribution policy.
-5. Client: host the component via its hosted surface (`Calendar.Client.App.emptyHosted / enterHosted /
-   updateHosted / withSession / invalidateContent / contentView`) with a `Content.HostContext` and
-   `Calendar.ClientGen.createClient` over the host transport; include `calendar.css` in the host's
-   stylesheet. The host enables `AllowGuestUploads` if entry bodies may carry images.
+3. Facets: define the site's vocabulary ONCE where both server and client see it (the host's Models
+   assembly, e.g. `Models.Site.calendarFacets = Calendar.Vocab.Facets.define [public…] [requestable…]`;
+   it fails fast at load on a name the module can't honour) and give each public facet a colour in
+   the host stylesheet (`.calendar-content .cat-<name> { --cat: … }`).
+4. Server: build a `Calendar.Services.Services` (`Server.ModuleServices`) — `DB`, a `Viewer` resolver
+   (`Content.Server.Viewer.resolve (GuestConfig.require env) (Identity.Server.signedIn env.DB)` over the
+   app's identity layer; `Content.Server.Viewer.guestOnly` when the host has no identity: everyone
+   reads the public stream, personal is off), `Facets`, `NewId`, `Now` — and pass
+   `Calendar.Composition.bind services` to the generated `Server.Routes.dispatch`, with the framework's
+   `Hedge.Router.guestBoundedPost` in front of `POST /api/calendar/entry[/delete]`. The Server project
+   references `packages/content-server/ContentServer.fsproj`.
+5. Admin allowlist: `Calendar.AdminGen.entry` plus `Calendar.Admin.approvalQueue`. Identity merges: add
+   `Calendar.Sql.reassignOwner` / `Calendar.Db.Tables.entry` to the host's attribution policy.
+6. Client: host the component via its hosted surface (`Calendar.Client.App.emptyHosted facets /
+   enterHosted / updateHosted / withSession / invalidateContent / contentView`) with a
+   `Content.HostContext` and `Calendar.ClientGen.createClient` over the host transport; include
+   `calendar.css` in the host's stylesheet. The host enables `AllowGuestUploads` if entry bodies may
+   carry images.

@@ -13,6 +13,7 @@ open Calendar.Codecs
 open Calendar.Api
 open Calendar.Vocab
 open Calendar.Db
+open Content.Server.Viewer
 open Calendar.Services
 
 let private respond (v: Viewer) (resp: WorkerResponse) = withReplacementCookie v.Replacement resp
@@ -64,7 +65,7 @@ let getEntries (query: GetEntries.Query) (request: WorkerRequest) (services: Ser
 let [<Literal>] private MaxSummaryChars = 200
 let [<Literal>] private MaxBodyChars = 60000
 
-let private validateSave (req: SaveEntry.Request) : Result<SaveEntry.Request, string> =
+let private validateSave (facets: Facets) (req: SaveEntry.Request) : Result<SaveEntry.Request, string> =
     let summary = req.Summary.Trim()
     if summary = "" then Error "A summary is required."
     elif summary.Length > MaxSummaryChars then Error "The summary is too long (200 characters max)."
@@ -73,8 +74,8 @@ let private validateSave (req: SaveEntry.Request) : Result<SaveEntry.Request, st
     elif (match req.RepeatUntil with Some u -> u < req.Date | None -> false) then
         Error "The repeat-until date can't be before the entry's date."
     elif req.Body.Length > MaxBodyChars then Error "The body is too long."
-    elif (match req.Requested with Some f when f <> "" -> not (Category.isRequestable f) | _ -> false) then
-        Error "You can ask for community or art; sitewide entries are the site's own."
+    elif (match req.Requested with Some f when f <> "" -> not (Facets.isRequestable facets f) | _ -> false) then
+        Error (sprintf "You can ask for %s; the other facets are the site's own." (String.concat " or " facets.Requestable))
     else
         Ok { req with
                 Summary = summary
@@ -100,7 +101,7 @@ let saveEntry (req: SaveEntry.Request) (request: WorkerRequest) (services: Servi
         match v.IdentityId with
         | None -> return respond v (unauthorized ())
         | Some owner ->
-            match validateSave req with
+            match validateSave services.Facets req with
             | Error msg -> return respond v (badRequest msg)
             | Ok req ->
                 let now = services.Now ()

@@ -77,24 +77,7 @@ let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : J
     | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
         IdentityHttp.RouteContract.dispatch handlers request ctx
     | POST path when isMutation path ->
-        Some (promise {
-            let! authz = deps.RequireGuest request
-            match authz with
-            | Rejected -> return unauthorized ()
-            | Accepted guest ->
-                let! bounded = readBodyCapped request identityBodyCap
-                if isNull (box bounded) then
-                    // Preserve the accepted guest's renewal/rotation cookie on the 413 (plan §2.5 fix).
-                    return withReplacementCookie guest.Replacement (payloadTooLarge ())
-                else
-                    match IdentityHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
-                    | Some p ->
-                        // ...and on the generated dispatch's 400 (malformed JSON); a no-op on handler
-                        // successes, which already carry the cookie.
-                        let! resp = p
-                        return withReplacementCookie guest.Replacement resp
-                    | None -> return notFound ()  // unreachable: isMutation already matched the path
-        })
+        Some (guestBoundedPost deps.RequireGuest identityBodyCap (fun r -> IdentityHttp.RouteContract.dispatch handlers r ctx) request)
     | _ -> None
 
 let [<Literal>] private mobileBodyCap = 24000
@@ -119,15 +102,7 @@ let mobileHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : JS.
           signout = fun () req _ctx -> Server.Handlers.mobileSignout req env }
     match parseRoute request with
     | POST path when matchPath "/api/mobile/exchange" path = Some (Exact "/api/mobile/exchange") ->
-        Some (promise {
-            let! bounded = readBodyCapped request mobileBodyCap
-            if isNull (box bounded) then
-                return payloadTooLarge ()
-            else
-                match MobileHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
-                | Some p -> return! p
-                | None -> return notFound ()  // unreachable: the exchange path already matched
-        })
+        Some (boundedPost mobileBodyCap (fun r -> MobileHttp.RouteContract.dispatch handlers r ctx) request)
     | _ -> MobileHttp.RouteContract.dispatch handlers request ctx
 
 /// No cron on the default microblog tenants (idealist runs the alerts cron — see the .idealist variant).

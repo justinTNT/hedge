@@ -17,11 +17,14 @@ open Calendar.Client.Types
 
 // -- Hosted surface --
 
-/// An idle content model — no fetch, no location read, no listeners. The host seeds the session
-/// snapshot; a first `enterHosted` drives the initial route.
-let emptyHosted (session: GuestSession.GuestSessionData) : Model =
+/// An idle content model — no fetch, no location read, no listeners. The host names the site's
+/// facets (the same Facets value its server binds into Services) and seeds the session snapshot; a
+/// first `enterHosted` drives the initial route.
+let emptyHosted (facets: Facets) (session: GuestSession.GuestSessionData) : Model =
     let t = today ()
-    { Route = []
+    { Facets = facets
+      Route = []
+      Today = t
       Year = yearOf t
       Month = monthOf t
       OpenDay = None
@@ -59,10 +62,10 @@ let disposeHostedCmd : Cmd<Msg> =
 
 /// Module-local routes: [] = this month; [yyyy; mm] = a month; [yyyy; mm; dd] = that month with the
 /// day modal open. Anything else shows this month.
-let private parseRoute (route: string list) : int * int * Day option =
+let private parseRoute (todayDay: Day) (route: string list) : int * int * Day option =
     let tryInt (s: string) = match System.Int32.TryParse s with | true, n -> Some n | _ -> None
     let validMonth y m = y >= 1970 && y <= 2200 && m >= 1 && m <= 12
-    let thisMonth () = let t = today () in yearOf t, monthOf t, None
+    let thisMonth () = yearOf todayDay, monthOf todayDay, None
     match route with
     | [] -> thisMonth ()
     | [ y; m ] ->
@@ -75,13 +78,15 @@ let private parseRoute (route: string list) : int * int * Day option =
         | _ -> thisMonth ()
     | _ -> thisMonth ()
 
-/// Enter a module-local content route: set the viewed month + open day, close any editor, and
-/// (re)load when the window changes or a read was still in flight.
+/// Enter a module-local content route: refresh "today" (the edge read — a tab can outlive midnight),
+/// set the viewed month + open day, close any editor, and (re)load when the window changes or a read
+/// was still in flight.
 let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) : Model * Cmd<Msg> =
-    let year, month, openDay = parseRoute route
+    let t = today ()
+    let year, month, openDay = parseRoute t route
     let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
     let needsLoad = not model.Loaded || year <> model.Year || month <> model.Month || model.Loading
-    let model' = { model with Route = route; Year = year; Month = month; OpenDay = openDay; Editor = None }
+    let model' = { model with Route = route; Today = t; Year = year; Month = month; OpenDay = openDay; Editor = None }
     model', Cmd.batch [ disposeHostedCmd; resetTitle; (if needsLoad then Cmd.ofMsg Load else Cmd.none) ]
 
 // -- Commands --

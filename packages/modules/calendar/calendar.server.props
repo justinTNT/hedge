@@ -5,11 +5,13 @@
 
     Ordering: Calendar.Db (generated) provides Tables + rows for Calendar.Sql; Services before the
     Handlers that consume it; the generated RouteContract (Handlers record + dispatch) then the
-    authored Composition.bind; Calendar.AdminGen last (its registry is appended by the app's site
-    generated/AdminGen.fs). Import AFTER the app's generated Db, BEFORE the app's own Handlers,
-    generated/AdminGen and generated/Routes. Calendar.Codecs is composed via calendar.codecs.props
-    into the app's Codecs project (Handlers/RouteContract/AdminGen open it). No identity dependency:
-    the host resolves the viewer into Services (Calendar.Services.guestOnly for an identity-less host).
+    authored Composition.bind; Calendar.AdminGen (its registry is appended by the app's site
+    generated/AdminGen.fs) then the authored Calendar.Admin resources over it. Import AFTER the app's
+    generated Db, BEFORE the app's own Handlers, generated/AdminGen and generated/Routes. Calendar.Codecs
+    is composed via calendar.codecs.props into the app's Codecs project (Handlers/RouteContract/AdminGen
+    open it). Services depends on packages/content-server (Content.Server.Viewer) — reference
+    ContentServer.fsproj; no identity dependency: the host resolves the viewer into Services
+    (Content.Server.Viewer.guestOnly for an identity-less host).
   -->
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)generated/Db.fs" />
@@ -19,5 +21,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)generated/RouteContract.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)src/Server/Composition.fs" />
     <Compile Include="$(MSBuildThisFileDirectory)generated/AdminGen.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Server/Admin.fs" />
   </ItemGroup>
 </Project>

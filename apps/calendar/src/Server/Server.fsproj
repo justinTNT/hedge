@@ -34,6 +34,8 @@
     <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
     <ProjectReference Include="../Models/Models.fsproj" />
     <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
+    <!-- Shared server-side content contracts (Content.Server.Viewer) the calendar module's Services use. -->
+    <ProjectReference Include="../../../../packages/content-server/ContentServer.fsproj" />
     <ProjectReference Include="../Codecs/Codecs.fsproj" />
   </ItemGroup>
   <ItemGroup>

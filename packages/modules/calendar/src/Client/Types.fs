@@ -5,6 +5,7 @@ module Calendar.Client.Types
 module GuestSession = Client.GuestSession
 
 open Calendar.Api
+open Calendar.Vocab
 open Calendar.Client.Dates
 
 /// The own-entry editor's draft. Body is the TipTap JSON the rich-text editor reports.
@@ -25,8 +26,13 @@ type EditorState = {
 }
 
 type Model = {
+    /// This site's facet vocabulary (host-supplied at emptyHosted): the chips, and what the editor may ask for.
+    Facets: Facets
     /// The module-local route the host last entered.
     Route: string list
+    /// The viewer's calendar date, read at the edge (emptyHosted / enterHosted) so the view is a
+    /// function of the model alone.
+    Today: Day
     Year: int
     Month: int
     /// The day whose modal is open (route-driven: yyyy/mm/dd).

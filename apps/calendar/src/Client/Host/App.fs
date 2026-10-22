@@ -38,11 +38,11 @@ let init () : Model * Cmd<Msg> =
     | ClaimRoute ->
         let claimFocus, returnTo = parseClaimFromRoute ()
         let idModel, idCmd = Identity.init claimFocus
-        { Route = []; Content = CalApp.emptyHosted idModel.GuestSession; Identity = idModel },
+        { Route = []; Content = CalApp.emptyHosted Models.Site.calendarFacets idModel.GuestSession; Identity = idModel },
         Cmd.batch [ Cmd.map IdentityMsg idCmd; returnNavCmd Chrome.navigateToPath returnTo ]
     | _ ->
         let idModel, idCmd = Identity.init None
-        let content, cmd = CalApp.enterHosted ctx route (CalApp.emptyHosted idModel.GuestSession)
+        let content, cmd = CalApp.enterHosted ctx route (CalApp.emptyHosted Models.Site.calendarFacets idModel.GuestSession)
         { Route = route; Content = content; Identity = idModel },
         Cmd.batch [ Cmd.map IdentityMsg idCmd; Cmd.map ContentMsg cmd ]
 
