@@ -46,6 +46,10 @@ let occurrences (first: Day) (last: Day) (entry: GetEntries.EntryItem) : Day lis
                     if d >= lo && d <= until then yield d ]
         else []
 
+/// Whether an entry falls on one day, by its repeat rule.
+let occursOn (day: Day) (entry: GetEntries.EntryItem) : bool =
+    not (List.isEmpty (occurrences day day entry))
+
 /// Project the stream onto [first, last]: hidden facets removed, recurrences expanded, bucketed by
 /// day in stream order (the server orders by date, then creation).
 let project (first: Day) (last: Day) (hidden: Set<string>) (entries: GetEntries.EntryItem list)

@@ -207,7 +207,15 @@ let updateHosted (deps: Deps) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             if model.Entries |> List.exists (fun x -> x.Id = e.Id)
             then model.Entries |> List.map (fun x -> if x.Id = e.Id then e else x)
             else model.Entries @ [ e ]
-        { model with Entries = entries; Editor = None; SignedIn = true }, disposeHostedCmd
+        // Show the entry where it landed. Its facet is unhidden, and if it no longer falls on the
+        // open day (the date moved, or a repeat rule no longer reaches it) we follow it to its first
+        // day: the host routes there and reloads the window when that is another month.
+        let follow =
+            match model.OpenDay with
+            | Some day when Calendar.Client.Projection.occursOn day e -> Cmd.none
+            | _ -> Cmd.ofEffect (fun _ -> deps.Ctx.Navigate (daySegments (dayOfSeconds e.Date)))
+        { model with Entries = entries; Editor = None; SignedIn = true; Hidden = model.Hidden.Remove e.Category },
+        Cmd.batch [ disposeHostedCmd; follow ]
     | GotSaved (Error err) ->
         let text = Hedge.Http.renderError err
         match model.Editor with
