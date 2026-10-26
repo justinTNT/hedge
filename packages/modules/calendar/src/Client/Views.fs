@@ -199,20 +199,22 @@ let private editorView (requestable: string list) (ed: EditorState) (dispatch: M
                                     prop.onChange (fun (v: string) -> set { ed with RepeatUntil = v }) ]
                             ]
                         ]
-                    Html.label [
-                        prop.className "field"
-                        prop.children [
-                            Html.span [ prop.text "Share as" ]
-                            Html.select [
-                                prop.value ed.Requested
-                                prop.onChange (fun (v: string) -> set { ed with Requested = v })
-                                prop.children [
-                                    Html.option [ prop.value ""; prop.text "just for me" ]
-                                    for c in requestable do
-                                        Html.option [ prop.value c; prop.text (c + " (needs approval)") ]
-                                ] ]
+                    // A site that takes no requests has nothing to share as: the field goes away.
+                    if not requestable.IsEmpty then
+                        Html.label [
+                            prop.className "field"
+                            prop.children [
+                                Html.span [ prop.text "Share as" ]
+                                Html.select [
+                                    prop.value ed.Requested
+                                    prop.onChange (fun (v: string) -> set { ed with Requested = v })
+                                    prop.children [
+                                        Html.option [ prop.value ""; prop.text "just for me" ]
+                                        for c in requestable do
+                                            Html.option [ prop.value c; prop.text (c + " (needs approval)") ]
+                                    ] ]
+                            ]
                         ]
-                    ]
                 ]
             ]
             if ed.Published then

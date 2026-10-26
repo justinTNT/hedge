@@ -33,6 +33,8 @@ module Facets =
             failwithf "calendar facets: '%s' is reserved by the module" Category.personal
         if List.length (List.distinct publicFacets) <> List.length publicFacets then
             failwith "calendar facets: duplicate public facet"
+        if List.length (List.distinct requestable) <> List.length requestable then
+            failwith "calendar facets: duplicate requestable facet"
         let orphan = requestable |> List.filter (fun r -> not (List.contains r publicFacets))
         if not orphan.IsEmpty then failwithf "calendar facets: requestable %A must be public" orphan
         { Public = publicFacets; Requestable = requestable }

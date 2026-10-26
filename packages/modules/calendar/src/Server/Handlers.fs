@@ -65,6 +65,11 @@ let getEntries (query: GetEntries.Query) (request: WorkerRequest) (services: Ser
 let [<Literal>] private MaxSummaryChars = 200
 let [<Literal>] private MaxBodyChars = 60000
 
+/// The message for a request the site doesn't accept: name the facets it does take, or say it takes none.
+let private requestError (facets: Facets) : string =
+    if facets.Requestable.IsEmpty then "This site doesn't take requests to publish entries."
+    else sprintf "You can ask for %s; the other facets are the site's own." (String.concat " or " facets.Requestable)
+
 let private validateSave (facets: Facets) (req: SaveEntry.Request) : Result<SaveEntry.Request, string> =
     let summary = req.Summary.Trim()
     if summary = "" then Error "A summary is required."
@@ -75,7 +80,7 @@ let private validateSave (facets: Facets) (req: SaveEntry.Request) : Result<Save
         Error "The repeat-until date can't be before the entry's date."
     elif req.Body.Length > MaxBodyChars then Error "The body is too long."
     elif (match req.Requested with Some f when f <> "" -> not (Facets.isRequestable facets f) | _ -> false) then
-        Error (sprintf "You can ask for %s; the other facets are the site's own." (String.concat " or " facets.Requestable))
+        Error (requestError facets)
     else
         Ok { req with
                 Summary = summary
