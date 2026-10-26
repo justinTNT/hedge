@@ -44,3 +44,4 @@ CREATE INDEX idx_identities_guest_id ON identities(guest_id);
 CREATE INDEX idx_identities_created_at ON identities(created_at DESC);
 CREATE INDEX idx_calendar_entries_identity_id ON calendar_entries(identity_id);
 CREATE INDEX idx_calendar_entries_created_at ON calendar_entries(created_at DESC);
+CREATE INDEX idx_calendar_entries_deleted_at_date ON calendar_entries(deleted_at, date);

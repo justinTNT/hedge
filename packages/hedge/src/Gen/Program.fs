@@ -280,6 +280,8 @@ type ParsedType = {
     Table: string option
     AdminList: string option
     UniqueTogether: string list option
+    /// Each [<Index>] on the type, as the F# field names it lists (in order).
+    Indexes: string list list
     Fields: FieldSchema list
 }
 
@@ -296,8 +298,10 @@ let reflectToParsedType (t: Type) : ParsedType =
         match t.GetCustomAttribute<UniqueTogetherAttribute>() with
         | null -> None
         | attr -> Some (List.ofArray attr.Fields)
+    let indexes =
+        t.GetCustomAttributes<IndexAttribute>() |> Seq.map (fun attr -> List.ofArray attr.Fields) |> List.ofSeq
     { Name = t.Name; Table = tableName; AdminList = adminList
-      UniqueTogether = uniqueTogether; Fields = getFieldSchemas t }
+      UniqueTogether = uniqueTogether; Indexes = indexes; Fields = getFieldSchemas t }
 
 // ============================================================
 // Shared table metadata — used by AdminGen, Db, and Schema.sql
@@ -319,6 +323,8 @@ type TableMeta = {
     FkFields: FieldSchema list
     /// Snake-cased columns of a composite-unique constraint ([<UniqueTogether>]); [] when none.
     UniqueTogether: string list
+    /// Snake-cased columns of each plain index ([<Index>], one list per attribute); [] when none.
+    Indexes: string list list
     SelectAll: string
     SelectOne: string
     Insert: string
@@ -400,24 +406,26 @@ let computeMeta (tablePrefix: string) (parsed: ParsedType) : TableMeta =
             let placeholders = insertCols |> List.map (fun _ -> "?") |> String.concat ", "
             sprintf "INSERT INTO %s (%s) VALUES (%s)" tableName (String.concat ", " insertCols) placeholders
 
-    // Composite-unique columns ([<UniqueTogether>]): validate each named field belongs to this type
-    // (fail loud on a typo) and snake_case to column names.
+    // Columns named by a table-level attribute ([<UniqueTogether>], [<Index>]): validate each named
+    // field belongs to this type (fail loud on a typo, or on an attribute naming nothing) and
+    // snake_case to column names.
+    let known = dbFields |> List.map (fun f -> f.Name) |> Set.ofList
+    let namedCols (attr: string) (names: string list) =
+        if names.IsEmpty then failwithf "%s on %s names no fields" attr displayName
+        names
+        |> List.map (fun n ->
+            if not (Set.contains n known) then
+                failwithf "%s on %s references unknown field '%s'" attr displayName n
+            toSnakeCase n)
     let uniqueTogetherCols =
-        match parsed.UniqueTogether with
-        | None -> []
-        | Some names ->
-            let known = dbFields |> List.map (fun f -> f.Name) |> Set.ofList
-            names
-            |> List.map (fun n ->
-                if not (Set.contains n known) then
-                    failwithf "UniqueTogether on %s references unknown field '%s'" displayName n
-                toSnakeCase n)
+        parsed.UniqueTogether |> Option.map (namedCols "UniqueTogether") |> Option.defaultValue []
+    let indexCols = parsed.Indexes |> List.map (namedCols "Index")
 
     { DisplayName = displayName; TableName = tableName; Schema = schema
       DbFields = dbFields; Cols = cols; ColStr = colStr
       PkCol = pkCol; HasPk = hasPk; HasCreateTs = hasCreateTs; HasUpdateTs = hasUpdateTs
       MutableFields = mutableFields; MutableCols = mutableCols; FkFields = fkFields
-      UniqueTogether = uniqueTogetherCols
+      UniqueTogether = uniqueTogetherCols; Indexes = indexCols
       SelectAll = selectAll; SelectOne = selectOne; Insert = insert; Update = update; Delete = delete }
 
 // ============================================================
@@ -792,27 +800,29 @@ let generateCreateTable (m: TableMeta) (metasByName: Map<string, TableMeta>) : s
     let body = allLines |> String.concat ",\n"
     sprintf "CREATE TABLE %s (\n%s\n);" m.TableName body
 
-let generateIndexes (m: TableMeta) : string list =
-    let indexes = ResizeArray<string>()
+/// Every Gen-managed index on a table as (name, CREATE statement), in schema order: one per
+/// ForeignKey/IdentityRef column, one per Unique field, the [<UniqueTogether>] constraint,
+/// created_at, then each [<Index>]. The ONE source for schema.sql and the migrate index diff — so an
+/// index the model doesn't declare is one migrate will drop. Fails loud when two declarations land
+/// on the same name (an [<Index>] over a column Gen already indexes).
+let managedIndexes (m: TableMeta) : (string * string) list =
+    let name (cols: string list) = sprintf "idx_%s_%s" m.TableName (String.concat "_" cols)
+    let create unique (cols: string list) =
+        name cols,
+        sprintf "CREATE %sINDEX %s ON %s(%s);" (if unique then "UNIQUE " else "") (name cols) m.TableName (String.concat ", " cols)
+    let all =
+        [ for f in m.FkFields do yield create false [ toSnakeCase f.Name ]
+          for f in m.DbFields do
+              if f.Attrs |> List.contains FieldAttr.Unique then yield create true [ toSnakeCase f.Name ]
+          if not (List.isEmpty m.UniqueTogether) then yield create true m.UniqueTogether
+          if m.HasCreateTs then
+              yield name [ "created_at" ], sprintf "CREATE INDEX %s ON %s(created_at DESC);" (name [ "created_at" ]) m.TableName
+          for cols in m.Indexes do yield create false cols ]
+    match all |> List.countBy fst |> List.filter (fun (_, n) -> n > 1) |> List.map fst with
+    | [] -> all
+    | dups -> failwithf "%s declares the same index twice: %s (an [<Index>] over a column Gen already indexes?)" m.DisplayName (String.concat ", " dups)
 
-    for f in m.FkFields do
-        let col = toSnakeCase f.Name
-        indexes.Add(sprintf "CREATE INDEX idx_%s_%s ON %s(%s);" m.TableName col m.TableName col)
-
-    for f in m.DbFields do
-        if f.Attrs |> List.contains FieldAttr.Unique then
-            let col = toSnakeCase f.Name
-            indexes.Add(sprintf "CREATE UNIQUE INDEX idx_%s_%s ON %s(%s);" m.TableName col m.TableName col)
-
-    if not (List.isEmpty m.UniqueTogether) then
-        let name = String.concat "_" m.UniqueTogether
-        let cols = String.concat ", " m.UniqueTogether
-        indexes.Add(sprintf "CREATE UNIQUE INDEX idx_%s_%s ON %s(%s);" m.TableName name m.TableName cols)
-
-    if m.HasCreateTs then
-        indexes.Add(sprintf "CREATE INDEX idx_%s_created_at ON %s(created_at DESC);" m.TableName m.TableName)
-
-    indexes |> Seq.toList
+let generateIndexes (m: TableMeta) : string list = managedIndexes m |> List.map snd
 
 let generateSchemaSql (metas: TableMeta list) : string =
     let metasByName = metas |> List.map (fun m -> m.DisplayName, m) |> Map.ofList
@@ -1672,18 +1682,8 @@ let desiredForeignKeys (m: TableMeta) (metasByName: Map<string, TableMeta>) : Se
             | _ -> None))
     |> Set.ofList
 
-/// The Gen-managed index names the model expects (matches generateIndexes).
-let desiredIndexNames (m: TableMeta) : Set<string> =
-    [ for f in m.FkFields do
-          yield sprintf "idx_%s_%s" m.TableName (toSnakeCase f.Name)
-      for f in m.DbFields do
-          if f.Attrs |> List.contains FieldAttr.Unique then
-              yield sprintf "idx_%s_%s" m.TableName (toSnakeCase f.Name)
-      if not (List.isEmpty m.UniqueTogether) then
-          yield sprintf "idx_%s_%s" m.TableName (String.concat "_" m.UniqueTogether)
-      if m.HasCreateTs then
-          yield sprintf "idx_%s_created_at" m.TableName ]
-    |> Set.ofList
+/// The Gen-managed index names the model expects (the same list schema.sql is generated from).
+let desiredIndexNames (m: TableMeta) : Set<string> = managedIndexes m |> List.map fst |> Set.ofList
 
 // ============================================================
 // Migration SQL generation

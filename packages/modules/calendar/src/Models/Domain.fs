@@ -5,6 +5,9 @@ open Hedge.Interface
 /// One dated entry in the stream. The calendar is a projection over these — there are no
 /// calendars as such — and `Category` is a filter facet (see Calendar.Vocab.Category).
 [<Table "entries">]
+// The month-window reads (Sql.publicEntries / visibleEntries) search live rows by date; without
+// this they scan the whole table and sort.
+[<Index("DeletedAt", "Date")>]
 type Entry = {
     Id: PrimaryKey<string>
     /// The day this entry (or its first occurrence) falls on: epoch seconds at UTC midnight.

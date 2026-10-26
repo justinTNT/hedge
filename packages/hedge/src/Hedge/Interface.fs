@@ -86,6 +86,18 @@ type UniqueTogetherAttribute([<System.ParamArray>] fields: string[]) =
     inherit System.Attribute()
     member _.Fields = fields
 
+/// A plain index for code generation: the named fields (this type's OWN fields, by their F# names,
+/// in index order). Emits one `CREATE INDEX idx_<table>_<cols>` over the snake_cased columns and is
+/// included in the migrate index diff — the only way to keep an index, since migrate DROPS any index
+/// the model doesn't declare. Gen already indexes every ForeignKey/IdentityRef column and
+/// created_at; declare one of these for the column(s) a hot query searches or ranges over, e.g. a
+/// soft-deleted table read by date window: `[<Index("DeletedAt", "Date")>]`. Repeatable.
+[<AllowNullLiteral>]
+[<System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple = true)>]
+type IndexAttribute([<System.ParamArray>] fields: string[]) =
+    inherit System.Attribute()
+    member _.Fields = fields
+
 // -- API endpoint types --
 // The GET family is a 2x2 over (path parameter? x typed query?). A query type is a
 // record whose fields Gen turns into ?k=v params (string/int, each optional or
