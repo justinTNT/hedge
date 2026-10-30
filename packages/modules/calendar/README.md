@@ -24,7 +24,9 @@ re-approved. `apps/calendar` is the reference host.
 4. Server: build a `Calendar.Services.Services` (`Server.ModuleServices`) — `DB`, a `Viewer` resolver
    (`Content.Server.Viewer.resolve (GuestConfig.require env) (Identity.Server.signedIn env.DB)` over the
    app's identity layer; `Content.Server.Viewer.guestOnly` when the host has no identity: everyone
-   reads the public stream, personal is off), `Facets`, `NewId`, `Now` — and pass
+   reads the public stream, personal is off), `Facets`, `Derived` (`Calendar.Services.noDerived`, or a
+   per-window projection of another service's data into read-only entries — see `apps/flare`), `NewId`,
+   `Now` — and pass
    `Calendar.Composition.bind services` to the generated `Server.Routes.dispatch`, with the framework's
    `Hedge.Router.guestBoundedPost` in front of `POST /api/calendar/entry[/delete]`. The Server project
    references `packages/content-server/ContentServer.fsproj`.

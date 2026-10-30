@@ -23,6 +23,7 @@ let calendar (env: Env) : Calendar.Services.Services =
     { DB = env.DB
       Viewer = viewer env
       Facets = Models.Site.calendarFacets
+      Derived = Calendar.Services.noDerived
       NewId = newId
       Now = epochNow }
 

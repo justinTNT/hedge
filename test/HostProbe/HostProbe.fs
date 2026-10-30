@@ -78,6 +78,7 @@ let calendarHandlers (env: ProbeEnv) : Calendar.RouteContract.Handlers =
         ({ DB = env.Db
            Viewer = Content.Server.Viewer.guestOnly
            Facets = Calendar.Vocab.Facets.define [ "fixtures"; "social" ] [ "social" ]
+           Derived = Calendar.Services.noDerived
            NewId = newId
            Now = epochNow }
          : Calendar.Services.Services)

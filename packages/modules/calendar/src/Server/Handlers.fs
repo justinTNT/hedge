@@ -36,7 +36,8 @@ let private toItem (viewerId: string option) (r: EntryRow) : GetEntries.EntryIte
 /// A month grid spans at most 6 weeks; allow a little slack, never an open-ended scan.
 let [<Literal>] private MaxWindowSeconds = 70 * 86400
 
-/// GET /api/calendar/entries?from=&to= — the windowed stream (public + the viewer's own entries).
+/// GET /api/calendar/entries?from=&to= — the windowed stream (public + the viewer's own entries), plus
+/// whatever the host derives for the window (Services.Derived).
 let getEntries (query: GetEntries.Query) (request: WorkerRequest) (services: Services)
     : JS.Promise<WorkerResponse> =
     promise {
@@ -53,7 +54,8 @@ let getEntries (query: GetEntries.Query) (request: WorkerRequest) (services: Ser
                     bind (services.DB.prepare Sql.publicEntries)
                          [| box query.From; box query.To; box query.To; box query.From |]
             let! r = stmt.all()
-            let items = r.results |> Array.map (parseEntryRow >> toItem v.IdentityId) |> Array.toList
+            let! derived = services.Derived query
+            let items = (r.results |> Array.map (parseEntryRow >> toItem v.IdentityId) |> Array.toList) @ derived
             let resp : GetEntries.Response = { Entries = items; SignedIn = v.IdentityId.IsSome }
             return respond v (okJson (encode resp |> Encode.toString 0))
     }
