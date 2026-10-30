@@ -1,0 +1,61 @@
+name = "flare"
+main = "worker-entry.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Public address: santos.wt.fail (the wt.fail zone is on this account). custom_domain has Cloudflare
+# create the DNS record + certificate and bind the hostname to this Worker; the .workers.dev URL stays
+# reachable alongside it.
+workers_dev = true
+routes = [
+    { pattern = "santos.wt.fail", custom_domain = true }
+]
+
+# Local development
+[dev]
+port = 8787
+local_protocol = "http"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "flare-db"
+database_id = "fd93bc33-7a45-406d-a71d-3b7a8e0a1005"
+
+# Durable Objects
+[durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["EventHub"]
+
+# R2 blob storage
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "flare-blobs"
+
+# Static assets
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# ADMIN_KEY, GUEST_SECRET, OAUTH_SECRET and the provider credentials are secrets: local dev reads them
+# from .dev.vars; a deployment sets them with `wrangler secret put`. A plain var here would shadow them.
+# "production" makes the guest cookie Secure; local dev reads ENVIRONMENT=development from .dev.vars.
+[vars]
+ENVIRONMENT = "production"
+# Public base of the camera pictures flarecam2 scores (the first frame of each flaring period is shown).
+FLARECAM_PICTURES = "https://pub-14ae4185f6af442388c4aff3f50af799.r2.dev/"
+
+# The flarecam2 Worker (../../../flarecam2/worker), whose /api/log is projected into the calendar at view
+# time (Server.Flare). A service binding, not a URL: a Worker can't fetch another Worker on the same
+# account through workers.dev. `remote = true` has local dev call the deployed flarecam2 as well.
+[[services]]
+binding = "FLARECAM"
+service = "flarecam2"
+remote = true

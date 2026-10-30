@@ -1,0 +1,4 @@
+[
+  { "identity": true, "assembly": "IdentityModels" },
+  { "module": "../../packages/modules/calendar", "primary": true }
+]

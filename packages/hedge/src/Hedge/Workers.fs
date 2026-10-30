@@ -58,6 +58,12 @@ type R2Bucket =
     abstract get: key: string -> JS.Promise<R2ObjectBody option>
     abstract delete: key: string -> JS.Promise<unit>
 
+/// Service binding: another Worker on the account, called directly (no public hop; a Worker can't reach
+/// another Worker on the same account by its workers.dev URL). The URL's host is nominal — it names the
+/// path and query; the binding decides where the request goes.
+type ServiceBinding =
+    abstract fetch: url: string * options: obj -> JS.Promise<WorkerResponse>
+
 /// KV Namespace binding
 type KVNamespace =
     abstract get: key: string -> JS.Promise<string option>
