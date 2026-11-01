@@ -10,6 +10,13 @@ const encoder = new TextEncoder();
 const handshake = /^\/api\/(?:auth\/[A-Za-z0-9_-]+\/(?:login|callback)|mobile\/return)$/;
 const isHandshake = (request, url) => request.method === 'GET' && handshake.test(url.pathname);
 
+// The Android app is recognised by a fixed client marker, not by the preview password: the password is
+// the web's outer boundary, and the APK, handed out directly, is the device's. The marker is not a
+// secret; anyone holding the APK could send it, which is exactly the access the APK grants. Hedge's own
+// sessions, roles and the verified sign-in that notes and photographs need are unchanged behind it.
+const APP_MARKER = 'native-plants-app';
+const isApp = request => request.headers.get('X-Preview-Client') === APP_MARKER;
+
 async function sameCredential(actual, expected) {
   const hashes = await Promise.all([actual, expected].map(value =>
     crypto.subtle.digest('SHA-256', encoder.encode(value))));
@@ -41,7 +48,8 @@ export function protectPreview(application) {
         return privateResponse(new Response('Private preview unavailable', {status: 503}));
 
       const nativeCredential = request.headers.get('X-Preview-Authorization');
-      if (!isHandshake(request, url)) {
+      const fromApp = isApp(request) || nativeCredential !== null;
+      if (!isHandshake(request, url) && !isApp(request)) {
         const header = nativeCredential ?? request.headers.get('Authorization') ?? '';
         let credential = '';
         const encoded = header.length <= 1024 && /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(header);
@@ -55,11 +63,13 @@ export function protectPreview(application) {
           }));
       }
 
-      // Hedge never sees the preview credential: the native header is removed, and a browser's Basic
-      // header (checked above, or merely cached by the browser on a handshake route) is not a bearer.
+      // Hedge never sees the preview credential or the app marker: both are removed, and a browser's
+      // Basic header (checked above, or merely cached by the browser on a handshake route) is not a
+      // bearer. The app's own Authorization is its Hedge bearer and stays.
       const headers = new Headers(request.headers);
       headers.delete('X-Preview-Authorization');
-      if (nativeCredential === null) headers.delete('Authorization');
+      headers.delete('X-Preview-Client');
+      if (!fromApp) headers.delete('Authorization');
       return privateResponse(await application.fetch(new Request(request, {headers}), env, context));
     },
   };

@@ -26,6 +26,11 @@ This is a shared-password preview, not an invitation system or per-person access
 log. Anyone given the preview password can browse the catalogue. Notes and photo
 features require a verified Hedge login inside that boundary; the preview password
 does not grant those capabilities. Hedge roles also remain independent.
+The Android app does not use the password: the gate recognises it by a fixed
+client marker header (`X-Preview-Client`), stripped before Hedge. The marker is
+not a secret, so possession of the APK, which is handed out directly, is the
+device-side boundary, while the password remains the web's. Earlier APKs that
+send the password as a native credential are still accepted.
 The preview password is removed from requests before they reach Hedge. Hedge
 logout clears its session, not the browser's cached Basic credentials. Use a
 private browser window and close it to finish a preview session; rotate
@@ -380,3 +385,16 @@ guide with no network. Design and status: `notes/HEDGE-offline.md`.
 Live checks without credentials: `/api/plants/accounts`, `/api/plants/catalogue`
 and `/api/plants/v2/personal/*` answer 401 from the gate; the Google login
 route still redirects. No migration, secret or provider change was needed.
+
+## Android app recognised without the password — 2 November 2026
+
+Worker version `fbacb3f4-8612-46b8-841f-a079bd172560`. The gate now admits
+requests carrying the app's fixed client marker header (`X-Preview-Client:
+native-plants-app`) and strips it before Hedge; the app no longer asks for the
+preview password on first launch, and removes any password an earlier build
+saved. This is a deliberate choice: the marker is not a secret, so possession
+of the APK, handed out directly, is the device-side boundary, while the
+password remains the web's. Earlier APKs that send the password as a native
+credential are still accepted. Live checks: with the marker the revision route
+answers 200, without it or with any other value 401; the handshake routes and
+the web password are unchanged.

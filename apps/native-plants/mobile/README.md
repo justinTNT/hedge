@@ -46,10 +46,11 @@ version afterwards. Never distribute a live-reload build.
 
 ## Preview and login
 
-Enter the existing preview password on first launch (see `../PREVIEW.md` for its
-local location). It is saved in Android's encrypted secure store, independently
-of Hedge's revocable account token. The APK contains neither password nor admin
-key. The native preview header is stripped before Hedge sees a request; its
+The app never asks for the preview password. The gate recognises it by a fixed
+client marker header that `mobile/transport.mjs` adds to API-origin requests and
+the gate strips before Hedge sees them. The marker is not a secret: handing out
+the APK is what grants device access, and the password remains the web's
+boundary. The APK contains neither password nor admin key. The app's
 `Authorization: Bearer` remains available to identity and role checks. Browser
 Basic authentication and the existing OAuth callback URLs remain unchanged.
 
@@ -88,7 +89,7 @@ logout, private preview transport and migration compatibility. The shared client
 callback tests reject another app's URL and clean up failed/cancelled login.
 Run `npm run check:preview` and the repository `./test.sh` before publishing.
 
-Manual device checks remain: enter preview password, browse/search, Google login
+Manual device checks remain: first launch opens without a password, browse/search, Google login
 and return, upload an actual camera/library photo, private note/ID request,
 restart with the saved login, logout and a second account. This environment can
 build/install the APK and inspect startup logs; completing real provider login
@@ -104,8 +105,8 @@ The app keeps the guide on the device and lets the notebook work without signal.
 - **First launch.** The bundle carries the catalogue and every account as the worker served them at
   build time (`npm run build:mobile` runs `scripts/seed-mobile.mjs` over the local import), so the guide
   opens with no network from the very first start; the first connection refreshes anything that changed.
-  With no network, a saved preview password opens the saved guide and a signed-in person stays signed in
-  to their saved notebook; the server judges both when it is next reachable.
+  With no network, the guide opens from what is saved and a signed-in person stays signed in to their
+  saved notebook; the server judges the sign-in when it is next reachable.
 - **Reading.** Catalogue reads go through the framework's read cache (`Client.Offline`, IndexedDB
   database `native-plants`): the network is tried first, and when it gives no answer the saved copy is
   shown with an "Offline: showing the guide as saved on …" notice. After each catalogue load with a new

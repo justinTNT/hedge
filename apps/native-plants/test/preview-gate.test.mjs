@@ -56,6 +56,27 @@ test('preview opens only the GET OAuth handshake so the Android system browser c
   assert.equal(seen.length, 3);
 });
 
+test('the Android app passes by its client marker alone, which never reaches Hedge, while its bearer does', async () => {
+  const seen = [];
+  const worker = protectPreview({fetch(req) {seen.push(req); return new Response('ok');}});
+  const app = {'X-Preview-Client':'native-plants-app', Authorization:'Bearer mobile-session-token'};
+  for (const [method, path] of [['GET', '/api/plants/catalogue'], ['GET', '/api/plants/accounts'], ['GET', '/media/photo.webp'], ['POST', '/api/plants/v2/notes/entry'], ['GET', '/api/plants/v2/personal/x']]) {
+    const response = await worker.fetch(request(path, {method, headers:app}), env);
+    assert.equal(response.status, 200, method + ' ' + path);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  }
+  assert.equal(seen.length, 5);
+  for (const req of seen) {
+    assert.equal(req.headers.get('x-preview-client'), null, 'the marker is stripped');
+    assert.equal(req.headers.get('authorization'), 'Bearer mobile-session-token', 'the Hedge bearer stays');
+  }
+  for (const headers of [{'X-Preview-Client':'native-plants'}, {'X-Preview-Client':''}, {'X-Preview-Client':'native-plants-app-2'}, {'X-Preview-Client':'Native-Plants-App'}, {'X-Native-Plants':'native-plants-app'}])
+    assert.equal((await worker.fetch(request('/api/plants/catalogue', {headers}), env)).status, 401);
+  assert.equal((await worker.fetch(new Request('http://plants.test/api/plants/catalogue', {headers:app}), env)).status, 403, 'HTTPS still required');
+  assert.equal((await worker.fetch(request('/api/plants/catalogue', {headers:app}), {PREVIEW_PASSWORD:''})).status, 503, 'the gate still fails closed without its secret');
+  assert.equal(seen.length, 5);
+});
+
 test('preview fails closed without its secret and rejects malformed or wrong credentials', async () => {
   const worker = protectPreview({fetch() {throw Error('Must never run');}});
   for (const value of [undefined, '', 'short'])

@@ -78,11 +78,11 @@ test('preview gate keeps bearer separate and requires its password for native en
   assert.equal((await call()).status,401);assert.equal((await call({'X-Preview-Authorization':'Basic invalid'})).status,401);
   assert.equal((await call({'X-Preview-Authorization':credential})).status,200);assert.equal(calls,1);
 });
-test('native preview transport never leaks preview credentials to external hosts or packaged assets',async()=>{
+test('native preview transport marks only API-origin requests as the app, never external hosts or packaged assets',async()=>{
   globalThis.location={href:'https://localhost/'};const requests=[];
-  const fetch=previewFetch(async(input,init)=>{requests.push({input,init});return new Response('ok')},'https://plants.test','Basic preview');
+  const fetch=previewFetch(async(input,init)=>{requests.push({input,init});return new Response('ok')},'https://plants.test');
   await fetch('https://plants.test/api/mobile/me',{headers:{Authorization:'Bearer account'}});
-  assert.equal(requests[0].init.headers.get('Authorization'),'Bearer account');assert.equal(requests[0].init.headers.get('X-Preview-Authorization'),'Basic preview');
+  assert.equal(requests[0].init.headers.get('Authorization'),'Bearer account');assert.equal(requests[0].init.headers.get('X-Preview-Client'),'native-plants-app');assert.equal(requests[0].init.headers.get('X-Preview-Authorization'),null);
   await fetch('https://elsewhere.test/image');await fetch('/assets/app.js');
   assert.equal(requests[1].init.headers,undefined);assert.equal(requests[2].init.headers,undefined);
 });

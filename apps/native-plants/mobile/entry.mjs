@@ -8,38 +8,14 @@ import './mobile.css';
 window.API_ORIGIN=__PLANTS_API_ORIGIN__;
 window.HEDGE_MOBILE_RETURN_URL='nativeplants://auth';
 const nativeFetch=window.fetch.bind(window);
-const key='native_plants_preview';
 const root=document.getElementById('app');
-async function accepts(credential) {
-  const response=await previewFetch(nativeFetch,window.API_ORIGIN,credential)(window.API_ORIGIN+'/api/auth/providers');
-  if (response.status===401 || response.status===403) return false;
-  if (!response.ok) throw new Error('The preview is temporarily unavailable. Please try again.');
-  return true;
-}
-async function unlock() {
-  let saved='';try {saved=(await store.get({key})).value;} catch {}
-  if (saved) {
-    // Only the server's refusal asks for the password again. With no network, the saved password opens
-    // the saved guide; the server judges it when it is next reachable.
-    try {if(await accepts(saved)) return saved;} catch {return saved;}
-  }
-  root.innerHTML=`<main class="preview-unlock"><p class="eyebrow">JOHN BROCK’S FIELD GUIDE</p><h1>Native Plants</h1><p>Enter the private preview password to open the guide.</p><form><label for="preview-password">Preview password</label><input id="preview-password" type="password" autocomplete="current-password" required><button type="submit">Open guide</button><p role="alert"></p></form></main>`;
-  return new Promise(resolve => {
-    const form=root.querySelector('form'), input=form.querySelector('input'), button=form.querySelector('button'), error=form.querySelector('[role=alert]');
-    form.addEventListener('submit',async event => {
-      event.preventDefault();if(button.disabled)return;button.disabled=true;error.textContent='';
-      try {
-        const credential='Basic '+btoa('preview:'+input.value);
-        if(!await accepts(credential)) throw new Error('That password did not open the preview. Please try again.');
-        await store.set({key,value:credential});input.value='';resolve(credential);
-      } catch(e) {error.textContent=e.message || 'Could not connect. Please try again.';button.disabled=false;}
-    });
-  });
-}
+// Earlier builds asked for the preview password once and kept it in the secure store. The app is now
+// recognised by its client marker (see transport.mjs), so any saved password is removed.
+const legacyPasswordKey='native_plants_preview';
 async function start() {
   if(!Capacitor.isNativePlatform()) throw new Error('Open this build in the Android app. Use the regular website in a browser.');
-  const credential=await unlock();
-  window.fetch=previewFetch(nativeFetch,window.API_ORIGIN,credential);
+  window.fetch=previewFetch(nativeFetch,window.API_ORIGIN);
+  store.remove({key:legacyPasswordKey}).catch(()=>{});
   root.textContent='Opening the guide…';
   await import('../../../packages/hedge/lib/guest-session.js');
   await window.HedgeGuest.ensureSession();
