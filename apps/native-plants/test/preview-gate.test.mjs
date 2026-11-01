@@ -11,7 +11,7 @@ const request = (path, options = {}) => new Request('https://plants.test' + path
 test('preview denies all routes and methods before application or asset access', async () => {
   let called = 0;
   const worker = protectPreview({fetch() {called++; throw Error('Must never run');}});
-  for (const path of ['/', '/admin', '/review', '/media/photo.jpg', '/assets/app.js', '/api/plants/catalogue', '/api/auth/me', '/api/auth/google/callback', '/blobs/private/example', '/robots.txt']) {
+  for (const path of ['/', '/admin', '/review', '/media/photo.jpg', '/assets/app.js', '/api/plants/catalogue', '/api/auth/me', '/api/auth/providers', '/blobs/private/example', '/robots.txt']) {
     for (const method of ['GET', 'HEAD', 'POST', 'OPTIONS']) {
       const response = await worker.fetch(request(path, {method}), env);
       assert.equal(response.status, 401, method + ' ' + path);
@@ -22,6 +22,38 @@ test('preview denies all routes and methods before application or asset access',
     }
   }
   assert.equal(called, 0);
+});
+
+test('preview opens only the GET OAuth handshake so the Android system browser can finish login', async () => {
+  const seen = [];
+  const worker = protectPreview({fetch(req) {seen.push(req); return new Response(null, {status:302, headers:{Location:'nativeplants://auth?code=one-time'}});}});
+  const stale = {Authorization:'Basic ' + btoa('preview:stale-browser-credential'), Cookie:'hedge_guest=session'};
+  for (const path of ['/api/auth/google/login?returnTo=' + encodeURIComponent('/api/mobile/return?challenge=' + 'a'.repeat(64)),
+                      '/api/auth/github/callback?code=provider&state=signed', '/api/mobile/return?challenge=' + 'a'.repeat(64)]) {
+    const response = await worker.fetch(request(path, {headers:stale}), env);
+    assert.equal(response.status, 302, path);
+    assert.equal(response.headers.get('location'), 'nativeplants://auth?code=one-time');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.match(response.headers.get('x-robots-tag'), /noindex/);
+  }
+  assert.equal(seen.length, 3);
+  for (const req of seen) {
+    assert.equal(req.headers.get('authorization'), null, 'a cached browser credential never reaches Hedge');
+    assert.equal(req.headers.get('x-preview-authorization'), null);
+    assert.equal(req.headers.get('cookie'), 'hedge_guest=session');
+  }
+  for (const [method, path] of [['POST', '/api/auth/google/login'], ['HEAD', '/api/auth/google/callback'], ['OPTIONS', '/api/mobile/return'],
+                                ['GET', '/api/auth/providers'], ['GET', '/api/auth/me'], ['GET', '/api/auth/google/logins'], ['GET', '/api/auth//login'],
+                                ['GET', '/api/auth/google/login/'], ['GET', '/api/mobile/return/'], ['GET', '/api/mobile/me'], ['GET', '/api/mobile/exchange'],
+                                ['GET', '/api/auth/google/login/../../plants/catalogue'], ['GET', '/api/auth/google/callback/../../../media/photo.jpg']]) {
+    const response = await worker.fetch(request(path, {method}), env);
+    assert.equal(response.status, 401, method + ' ' + path);
+    assert.match(response.headers.get('www-authenticate'), /^Basic /);
+  }
+  assert.equal(seen.length, 3);
+  assert.equal((await worker.fetch(new Request('http://plants.test/api/auth/google/login'), env)).status, 403);
+  assert.equal((await worker.fetch(request('/api/auth/google/login'), {PREVIEW_PASSWORD:''})).status, 503);
+  assert.equal(seen.length, 3);
 });
 
 test('preview fails closed without its secret and rejects malformed or wrong credentials', async () => {

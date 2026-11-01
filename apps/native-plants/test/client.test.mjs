@@ -2,7 +2,10 @@ import './helpers/browser.mjs';
 import { hasPhotoCredit } from '../dist/client/Core/Catalogue.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { init, update, Msg, Page, readQuery, queryUrl, canEnlargePhoto, sectionId } from '../dist/client/App.js';
+import { init, update, Msg, Page, readQuery, queryUrl, canEnlargePhoto, sectionId, view } from '../dist/client/App.js';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { Section } from '../dist/client/Models/Api.js';
+import { Image } from '../dist/client/packages/hedge/src/Hedge/Interface.js';
 import { PlantCard, PlantDetail, GetCatalogue_Response, GetPlant_Response, Photo } from '../dist/client/Models/Api.js';
 import { FSharpResult$2 as Result } from '../dist/client/fable_modules/fable-library-js.4.29.0/Result.js';
 import { empty, ofArray } from '../dist/client/fable_modules/fable-library-js.4.29.0/List.js';
@@ -74,12 +77,12 @@ test('photographer filter URLs round-trip names and combine with botanical filte
 test('either dimension below 200 prevents photograph preview',()=>{
   for(const [w,h,expected] of [[199,500,false],[500,199,false],[200,200,true],[0,0,false]])
     assert.equal(canEnlargePhoto(w,h),expected);
-  const photo=new Photo('photo','/full.webp','/thumb.webp','Leaves','');
+  const photo=new Photo('photo',new Image('/full.webp'),new Image('/thumb.webp'),'Leaves','');
   const zoom=new Msg(14,[photo]);
   let m=model();assert.equal(update(zoom,m)[0].Zoom,undefined);
-  [m]=update(new Msg(15,[photo.Image,199,500]),m);
+  [m]=update(new Msg(15,[photo.Image.fields[0],199,500]),m);
   assert.equal(update(zoom,m)[0].Zoom,undefined);
-  [m]=update(new Msg(15,[photo.Image,200,200]),m);
+  [m]=update(new Msg(15,[photo.Image.fields[0],200,200]),m);
   assert.equal(update(zoom,m)[0].Zoom,photo);
 });
 
@@ -108,3 +111,19 @@ test('section anchors use readable IDs without spaces or URL-encoding artifacts'
   assert.equal(sectionId('Growing this plant'),'section-growing-this-plant');
   assert.equal(sectionId('Aboriginal uses · source account'),'section-aboriginal-uses-source-account');
 });
+
+test('a submitted query shows descriptive matches from the saved accounts under the name results, with marked excerpts and section links',()=>{
+  globalThis.document??={title:''};
+  let [m]=init();
+  const accounts=ofArray([['stable-id',ofArray([new Section('Bark','Smooth, colourful bark on the trunk, grey above.'),new Section('References','colourful bark (Brock 2022)')])]]);
+  m={...m,Data:catalogue,Page:new Page(1,[]),Query:{...m.Query,Q:'colourful bark'},Search:'colourful bark',Accounts:accounts};
+  const html=renderToStaticMarkup(view(m,()=>{}));
+  assert.match(html,/1 match in descriptions/);
+  assert.match(html,/<details class="description-matches" open=""/,'open, because no name matched');
+  assert.match(html,/<mark>colourful<\/mark> <mark>bark<\/mark>/);
+  assert.match(html,/href="\/plants\/stable-id\/acacia-example#section-bark"/);
+  assert.doesNotMatch(html,/Brock 2022/,'the bibliography never surfaces');
+  const named=renderToStaticMarkup(view({...m,Query:{...m.Query,Q:'Acacia'}},()=>{}));
+  assert.doesNotMatch(named,/in descriptions/,'a name match with no descriptive match shows no group');
+});
+

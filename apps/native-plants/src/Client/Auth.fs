@@ -43,6 +43,15 @@ let account (result: SessionReadiness option) =
         if r.Ready then r.Session.Identity |> Option.filter(fun i -> i.Provider<>"anonymous" && i.Provider<>"" && i.Id<>"")
         else None)
 
+/// Away from the network on the bundled app, the identity last confirmed for the stored bearer stands in,
+/// so the person keeps their saved notebook and queued writes; the server judges the bearer when it is
+/// next reachable. Never on the web, where cookies carry the session and a stale read is a fact.
+let lastKnown (result: SessionReadiness option) =
+    result |> Option.bind(fun r ->
+        if not r.Ready && Client.Api.currentBearer()<>"" && Client.GuestSession.isMobile then
+            r.Session.Identity |> Option.filter(fun i -> i.Provider<>"anonymous" && i.Provider<>"" && i.Id<>"")
+        else None)
+
 let signedIn model = model.Account.IsSome && not model.LoggingOut
 
 [<Emit("window.HedgeGuest.signIn($0).then(()=>undefined)")>]
@@ -62,7 +71,7 @@ let update msg model =
         let request=model.Request+1
         {model with Request=request;Loading=true},load request
     | Loaded(request,result) when request=model.Request && not model.LoggingOut ->
-        let current=account result
+        let current=account result |> Option.orElse (lastKnown result)
         let needsProviders=model.Open && current.IsNone && model.Account.IsSome
         let providerRequest=if needsProviders then model.ProviderRequest+1 else model.ProviderRequest
         {model with Account=current;Loading=false;ProviderRequest=providerRequest},

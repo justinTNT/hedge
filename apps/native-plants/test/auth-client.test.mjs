@@ -30,3 +30,24 @@ test('failed refresh fails closed and a failed logout offers recovery',()=>{
 test('login links retain the species, search and section anchor',()=>{
   assert.equal(loginUrl('google'),'/api/auth/google/login?returnTo=%2Fplants%2Fa%2Fname%3Fview%3Dflowers%23section-fruit');
 });
+
+test('away from the network, the bundled app keeps the identity last confirmed for its stored bearer; the web does not',()=>{
+  const stale=new SessionReadiness(false,session);
+  let [m]=init();
+  [m]=update(new Msg(1,[m.Request,stale]),m);
+  assert.equal(m.Account,undefined,'web: a stale read is signed out');
+  const previous={API_ORIGIN:window.API_ORIGIN,HedgeGuest:window.HedgeGuest};
+  window.API_ORIGIN='https://api.test';window.HedgeGuest={currentBearer:()=>'stored-bearer',isMobile:true};
+  try {
+    [m]=init();[m]=update(new Msg(1,[m.Request,stale]),m);
+    assert.equal(m.Account?.Id,'identity-id','bundled app with a bearer: the last identity stands in');
+    window.HedgeGuest={currentBearer:()=>'',isMobile:true};
+    [m]=init();[m]=update(new Msg(1,[m.Request,stale]),m);
+    assert.equal(m.Account,undefined,'no bearer, no identity');
+    window.HedgeGuest={currentBearer:()=>'stored-bearer',isMobile:true};
+    const anonymous=new SessionReadiness(false,new GuestSessionData('guest-id','Name','','','',new IdentityData('anon','anonymous','Anonymous','')));
+    [m]=init();[m]=update(new Msg(1,[m.Request,anonymous]),m);
+    assert.equal(m.Account,undefined,'an anonymous last identity is not a sign-in');
+  } finally {window.API_ORIGIN=previous.API_ORIGIN;window.HedgeGuest=previous.HedgeGuest;}
+});
+

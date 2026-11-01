@@ -5,11 +5,16 @@ import { empty as blank, enter, update, Msg, compose, view, uploadTile, galleryF
 import { Personal, Photo as PersonalPhoto, Note, Capacity } from '../dist/client/Models/Contributions.js';
 import { PlantCard, PlantDetail, Photo } from '../dist/client/Models/Api.js';
 import { Msg as AppMsg, Page, init, update as updateApp, detail, changeRoute } from '../dist/client/App.js';
+import { Image } from '../dist/client/packages/hedge/src/Hedge/Interface.js';
 import { Msg as AuthMsg } from '../dist/client/Auth.js';
+import { Pending, Change } from '../dist/client/Sync.js';
+import { OutboxItem } from '../dist/client/packages/hedge/src/Client/Offline.js';
+import { Request } from '../dist/client/packages/hedge/src/Hedge/Http.js';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { FSharpResult$2 as Result } from '../dist/client/fable_modules/fable-library-js.4.29.0/Result.js';
 import { empty, ofArray } from '../dist/client/fable_modules/fable-library-js.4.29.0/List.js';
 const ok=value=>new Result(0,[value]);
-const own=(id='own',publicId='')=>new PersonalPhoto(id,'/api/image/'+id,'/api/thumb/'+id,'My flowers','',300,220,false,1,publicId);
+const own=(id='own',publicId='')=>new PersonalPhoto(id,new Image('/api/image/'+id),new Image('/api/thumb/'+id),'My flowers','',300,220,false,1,publicId);
 const state=(token='viewer-a',photos=[own()],hero='own')=>new Personal(false,token,[],photos,hero,new Capacity(0,5),new Capacity(photos.length,5));
 
 test('private loads and saves cannot repopulate a notebook after navigation or clearing',()=>{
@@ -28,8 +33,8 @@ test('an owner change clears private drafts while a same-owner refresh preserves
 });
 
 test('private gallery appends all own photos, selects a personal hero and deduplicates promoted photos',()=>{
-  const original=new Photo('site','/site','/site-thumb','Site selection','');
-  const promoted=new Photo('public-own','/public','/public-thumb','Selected photo','');
+  const original=new Photo('site',new Image('/site'),new Image('/site-thumb'),'Site selection','');
+  const promoted=new Photo('public-own',new Image('/public'),new Image('/public-thumb'),'Selected photo','');
   const list=empty();
   const card=new PlantCard('plant-a','plant-a','Plant A','','Family','Genus',list,list,'',list,list,list,list,false,'',original,list);
   const plant=new PlantDetail(card,list,ofArray([original,promoted]),list);
@@ -41,7 +46,7 @@ test('private gallery appends all own photos, selects a personal hero and dedupl
 
 test('logout clears personal data, drafts and private lightboxes in the app model',()=>{
   globalThis.window={location:{pathname:'/plants/plant-a',search:''}};globalThis.document={title:''};
-  let [model]=init();model.Page=new Page(3,['plant-a']);model.Personal={...blank(4),PlantId:'plant-a',Data:state()};model.Zoom=new Photo('private','/private','/private','','');
+  let [model]=init();model.Page=new Page(3,['plant-a']);model.Personal={...blank(4),PlantId:'plant-a',Data:state()};model.Zoom=new Photo('private',new Image('/private'),new Image('/private'),'','');
   [model]=updateApp(new AppMsg(16,[new AuthMsg(5,[])]),model);
   assert.equal(model.Personal.Data,undefined);assert.equal(model.Personal.PlantId,'');assert.equal(model.Zoom,undefined);
   [model]=updateApp(new AppMsg(17,[new Msg(18,[4,'Saved',ok(state())])]),model);
@@ -90,7 +95,7 @@ test('anonymous species pages render only the curated gallery; verified users ge
   const {renderToStaticMarkup}=await import('react-dom/server');
   const {IdentityData}=await import('../dist/client/packages/hedge/src/Client/GuestSession.js');
   globalThis.window={location:{pathname:'/plants/plant-a',search:''}};globalThis.document={title:''};
-  const sitePhoto=new Photo('site','/site','/site-thumb','Site selection','');
+  const sitePhoto=new Photo('site',new Image('/site'),new Image('/site-thumb'),'Site selection','');
   const list=empty();
   const card=new PlantCard('plant-a','plant-a','Plant A','','Family','Genus',list,list,'',list,list,list,list,false,'',sitePhoto,list);
   const plant=new PlantDetail(card,list,ofArray([sitePhoto]),list);
@@ -202,3 +207,17 @@ test('identification results distinguish alternatives/rejections and label respo
   assert.match(html,/id-outcome-rejected/);assert.match(html,/id-outcome-alternative previous-response/);
   assert.match(html,/Identifier A/);assert.match(html,/earlier version/);assert.match(html,/Original question/);assert.match(html,/href="\/plants\/plant-b"/);
 });
+
+test('a parked deletion or hero choice stays recoverable even though its target is no longer on screen',()=>{
+  let [model]=enter('plant-a',9);[model]=update(new Msg(1,[9,ok(state())]),model);
+  const parked=reason=>new OutboxItem('item-'+reason,'me',new Request('POST','/x',empty(),empty(),undefined),empty(),1,Date.now(),reason);
+  model={...model,Pending:ofArray([
+    new Pending(parked('This item changed. Refresh and try again.'),new Change(2,[{PlantId:'plant-a',Id:'n-gone',Revision:3}])),
+    new Pending(parked('You can keep 5 photos per species.'),new Change(5,[{PlantId:'plant-a',Id:'own'}])),
+  ])};
+  const html=renderToStaticMarkup(view(model,()=>{},()=>{}));
+  assert.match(html,/Deleting a note · not sent: This item changed/);
+  assert.match(html,/The hero photograph choice · not sent: You can keep 5 photos/);
+  assert.equal((html.match(/Send my version/g)||[]).length,2);assert.equal((html.match(/>Discard</g)||[]).length,2);
+});
+

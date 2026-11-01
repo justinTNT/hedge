@@ -23,6 +23,11 @@ let searchPlants (query: SearchPlants.Query) (env: Env) = promise {
     let plants = NativePlants.Catalogue.filter query catalogue.Public.Plants
     return respond ({Plants=plants;Total=plants.Length}: SearchPlants.Response)
 }
+let getAccounts (env: Env) = promise {
+    let! catalogue = CatalogueStore.get env
+    let plants = catalogue.ById |> Map.toList |> List.map snd |> List.sortBy (fun d -> NativePlants.Catalogue.normalize d.Card.ScientificName, d.Card.Id)
+    return respond ({Plants=plants; Revision=catalogue.Public.Revision}: GetAccounts.Response)
+}
 let getRevision (env: Env) = promise {
     let! catalogue = CatalogueStore.get env
     return respond ({Revision=catalogue.Public.Revision}:GetRevision.Response)

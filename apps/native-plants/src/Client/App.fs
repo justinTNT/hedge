@@ -5,9 +5,10 @@ open Fable.Core.JsInterop
 open Feliz
 open Elmish
 open Models.Api
+open Hedge.Interface
 open NativePlants.Catalogue
 
-type Page = Home | Browse | Taxonomy | Detail of string | About | GlossaryPage | ReferencesPage | ReviewPage
+type Page = Home | Browse | Taxonomy | Detail of string | About | GlossaryPage | ReferencesPage | ReviewPage | OfflinePage
 
 type Model = {
     Page: Page; Query: SearchPlants.Query; Data: GetCatalogue.Response option; Plant: PlantDetail option
@@ -16,6 +17,11 @@ type Model = {
     Auth: Client.Auth.Model; Access: Client.Access.Model
     Personal: Client.Personal.Model; Review: Client.Review.Model
     Request: int; DetailRequest: int; Polling: bool; Loading: bool; PhotoSizes: Map<string,int*int>
+    /// When the page is being shown from the device's saved copy: the time that copy was stored.
+    Saved: float option
+    Offline: Client.OfflinePage.Model
+    /// The saved accounts for descriptive search (id, searchable sections), in scientific-name order.
+    Accounts: (string * Section list) list
 }
 type Msg =
     | Loaded of int * Result<GetCatalogue.Response,Hedge.Http.ApiError>
@@ -29,8 +35,16 @@ type Msg =
     | Personal of Client.Personal.Msg
     | Review of Client.Review.Msg
     | Access of Client.Access.Msg
+    // New cases go last: the client tests address messages by union index.
+    | Served of Client.Offline.Served | Warmed of int
+    | Offline of Client.OfflinePage.Msg
+    | AccountsLoaded of (string * Section list) list
+    | Seeded of bool
 
-let api = Client.ClientGen.createClient Client.Api.appTransport
+// Public catalogue reads go through the device's read cache: network first, the saved copy when the network
+// is away. Private reads (ContributionsApi) keep their own uncached, session-locked transport.
+let transport = Client.Offline.cachedTransport Client.Storage.store (fun () -> "") (fun _ outcome -> Client.Sync.served outcome) Client.Api.appTransport
+let api = Client.ClientGen.createClient transport
 [<Emit("window.location.pathname")>]
 let path () : string = jsNative
 [<Emit("new URLSearchParams(window.location.search).get($0)")>]
@@ -43,6 +57,8 @@ let top () : unit = jsNative
 let enc (s:string) : string = jsNative
 [<Emit("document.title = $0")>]
 let title (s:string) : unit = jsNative
+[<Emit("new Date($0).toLocaleString()")>]
+let savedAt (ms:float) : string = jsNative
 [<Emit("(()=>{try{return decodeURIComponent(window.location.hash.slice(1))}catch{return ''}})()")>]
 let fragment () : string = jsNative
 [<Emit("document.getElementById($0)?.scrollIntoView({block:'start',behavior:'instant'})")>]
@@ -68,6 +84,7 @@ let route () =
     elif bits.[0]="about" then About
     elif bits.[0]="glossary" then GlossaryPage
     elif bits.[0]="references" then ReferencesPage
+    elif bits.[0]="offline" then OfflinePage
     elif bits.[0]="review" then ReviewPage else Home
 let queryUrl (q: SearchPlants.Query) =
     let ps=["q",q.Q;"family",q.Family;"genus",q.Genus;"form",q.Form;"sun",q.Sun;"water",q.Water;"feature",q.Feature;"wildlife",q.Wildlife;"endemic",q.Endemic;"photos",q.Photos;"photographer",q.Photographer]
@@ -78,17 +95,46 @@ let load request = Cmd.OfPromise.either api.getCatalogue () (fun r -> Loaded(req
 let loadPlant request id = Cmd.OfPromise.either api.getPlant id (fun r -> PlantLoaded(request,id,r)) (fun e -> PlantLoaded(request,id,Error(Hedge.Http.TransportFailure e.Message)))
 let currentPlant request = function Detail id -> loadPlant request id | _ -> Cmd.none
 let revision = Cmd.OfPromise.either api.getRevision () Revised (fun e -> Revised(Error(Hedge.Http.TransportFailure e.Message)))
-[<Import("measurePhoto", "./image-client.mjs")>]
-let measurePhoto (url:string) : JS.Promise<string*int*int> = jsNative
+let loadAccounts = Cmd.OfPromise.either Client.Search.load () AccountsLoaded (fun _ -> AccountsLoaded [])
+let measurePhoto = Client.Images.measure
+/// Keep every plant account on the device: after a catalogue load whose revision has not been warmed, fetch all
+/// accounts in one request and prime the per-account cache from it, or, when the server does not offer that
+/// yet or the request fails, read each account through the cached transport a few at a time. The revision is
+/// recorded once all have arrived.
+let private bulk = Client.ClientGen.createClient Client.Api.appTransport
+let warmAccounts (data:GetCatalogue.Response) : JS.Promise<int> = promise {
+    let! warmed = Client.Storage.store.Get "warm/catalogue"
+    if warmed = Some(box data.Revision) then return 0
+    else
+        let! accounts = promise { try return! bulk.getAccounts() with ex -> return Error(Hedge.Http.TransportFailure ex.Message) }
+        let! count = promise {
+            match accounts with
+            | Ok response when response.Plants.Length>0 ->
+                do! Client.Search.prime response
+                return (if response.Revision=data.Revision then response.Plants.Length else 0)
+            | _ -> return! Client.Offline.warm Client.Storage.store "" Client.Api.appTransport [for p in data.Plants -> Client.ClientGen.requests.getPlant p.Id] 4
+        }
+        if count = data.Plants.Length then
+            do! Client.Storage.store.Put "warm/catalogue" (box data.Revision)
+            do! Client.Storage.store.Put "warm/updated" (box (System.DateTime.UtcNow.Subtract(System.DateTime(1970,1,1)).TotalMilliseconds))
+        return count
+}
 let canEnlargePhoto width height = width>=200 && height>=200
 let canViewPhoto model (photo:Photo) =
-    model.PhotoSizes |> Map.tryFind photo.Image |> Option.exists(fun (w,h)->canEnlargePhoto w h)
+    model.PhotoSizes |> Map.tryFind (Codecs.img photo.Image) |> Option.exists(fun (w,h)->canEnlargePhoto w h)
 let init () =
     let q=readQuery()
     let p=route()
     let auth,authCmd=Client.Auth.init()
-    {Personal=Client.Personal.empty 0;Review=Client.Review.empty 0;Auth=auth;Access=Client.Access.empty 0;Page=p;Query=q;Data=None;Plant=None;Error=None;DetailError=None;Search=Option.defaultValue "" q.Q;Suggest=false;Active= -1;Limit=36;FiltersOpen=false;Zoom=None;Request=1;DetailRequest=1;Polling=false;Loading=true;PhotoSizes=Map.empty},
-    Cmd.batch [load 1;currentPlant 1 p;Cmd.map Auth authCmd;Cmd.ofMsg(Access Client.Access.Refresh)
+    let offline,offlineCmd=Client.OfflinePage.init()
+    {Personal=Client.Personal.empty 0;Review=Client.Review.empty 0;Auth=auth;Access=Client.Access.empty 0;Page=p;Query=q;Data=None;Plant=None;Error=None;DetailError=None;Search=Option.defaultValue "" q.Q;Suggest=false;Active= -1;Limit=36;FiltersOpen=false;Zoom=None;Request=1;DetailRequest=1;Polling=false;Loading=true;PhotoSizes=Map.empty;Saved=None;Offline=offline;Accounts=[]},
+    // The first load waits for the bundled seed, so a first launch with no network still opens the guide.
+    Cmd.batch [Cmd.OfPromise.either Client.Seed.ensure () Seeded (fun _ -> Seeded false);Cmd.map Auth authCmd;Cmd.map Offline offlineCmd;Cmd.ofMsg(Access Client.Access.Refresh)
+               Cmd.ofEffect(fun dispatch ->
+                   Client.Sync.served <- (fun outcome -> dispatch(Served outcome))
+                   Client.Sync.onChange (fun () -> dispatch(Personal Client.Personal.PendingChanged))
+                   Client.Offline.onReconnect (fun () -> Client.Sync.flush() |> ignore;dispatch(Offline Client.OfflinePage.Check)) |> ignore
+                   Client.Offline.persist() |> ignore)
                Cmd.ofEffect(fun dispatch ->
                    listen (fun ()->dispatch LocationChanged) (fun ()->dispatch Refresh;dispatch(Auth Client.Auth.Refresh)) (fun ()->dispatch(Zoom None);dispatch(Auth Client.Auth.Close);dispatch(Review Client.Review.Close))
                    Client.Auth.listen (fun ()->dispatch(Auth Client.Auth.SessionCleared)) (fun ()->dispatch(Auth Client.Auth.Refresh))
@@ -121,13 +167,14 @@ let changeRoute model =
     Cmd.batch [currentPlant request p;Cmd.map Personal personalCmd;reviewCmd]
 let update msg model =
     match msg with
-    | Loaded(request,Ok data) when request=model.Request -> {model with Data=Some data;Error=None;Loading=false},Cmd.none
+    | Loaded(request,Ok data) when request=model.Request ->
+        {model with Data=Some data;Error=None;Loading=false},Cmd.batch [Cmd.OfPromise.either warmAccounts data Warmed (fun _ -> Warmed 0);loadAccounts]
     | Loaded(request,Error _) when request=model.Request -> {model with Data=None;Loading=false;Error=Some "We couldn’t load the plant collection. Please try again."},Cmd.none
     | Loaded _ -> model,Cmd.none
     | PlantLoaded(request,id,Ok data) when model.Page=Detail id && request=model.DetailRequest ->
         title (data.Plant.Card.ScientificName+" · Native Plants")
-        let measurements = data.Plant.Photos |> List.filter(fun p -> not(Map.containsKey p.Image model.PhotoSizes))
-                           |> List.map(fun p -> Cmd.OfPromise.perform measurePhoto p.Image PhotoMeasured)
+        let measurements = data.Plant.Photos |> List.filter(fun p -> not(Map.containsKey (Codecs.img p.Image) model.PhotoSizes))
+                           |> List.map(fun p -> Cmd.OfPromise.perform measurePhoto (Codecs.img p.Image) PhotoMeasured)
         {model with Plant=Some data.Plant;DetailError=None},Cmd.batch measurements
     | PlantLoaded(request,id,Error _) when model.Page=Detail id && request=model.DetailRequest -> {model with Plant=None;DetailError=Some "This plant account is unavailable."},Cmd.none
     | PlantLoaded _ -> model,Cmd.none
@@ -142,7 +189,22 @@ let update msg model =
         let r=model.Request+1
         let d=model.DetailRequest+1
         {model with Request=r;DetailRequest=d;Loading=true;Polling=false},Cmd.batch [load r;currentPlant d model.Page]
+    // Away from the network the saved copy stays on screen; the offline notice says so.
+    | Revised(Error(Hedge.Http.TransportFailure _)) -> {model with Polling=false},Cmd.none
     | Revised(Error _) -> {model with Polling=false;Data=None;Plant=None;DetailRequest=model.DetailRequest+1;Error=Some "The collection couldn’t be refreshed. Please try again.";DetailError=Some "The plant account couldn’t be refreshed."},Cmd.none
+    | Served Client.Offline.FromNetwork -> {model with Saved=None},Cmd.none
+    | Served(Client.Offline.FromCache at) -> {model with Saved=Some at},Cmd.none
+    // Newly saved accounts may bring new photographs for the packs to keep.
+    | Warmed n -> model,(if n>0 then Cmd.batch [Cmd.ofMsg(Offline Client.OfflinePage.Check);loadAccounts] else Cmd.none)
+    | AccountsLoaded accounts -> {model with Accounts=accounts},Cmd.none
+    | Seeded seeded ->
+        let r=model.Request+1
+        let d=model.DetailRequest+1
+        {model with Request=r;DetailRequest=d;Loading=true},
+        Cmd.batch [load r;currentPlant d model.Page;if seeded then Cmd.ofMsg(Offline Client.OfflinePage.Check)]
+    | Offline msg ->
+        let offline,cmd=Client.OfflinePage.update msg model.Offline
+        {model with Offline=offline},Cmd.map Offline cmd
     | Navigate url -> push url;top();changeRoute model
     // A native fragment navigation keeps the rendered account available to the browser.
     | LocationChanged when route()=model.Page && readQuery()=model.Query -> model,Cmd.none
@@ -169,6 +231,8 @@ let update msg model =
     | PhotoMeasured(url,width,height) -> {model with PhotoSizes=Map.add url (width,height) model.PhotoSizes},Cmd.none
     | Auth msg ->
         let auth,cmd=Client.Auth.update msg model.Auth
+        // Queued writes belong to the signed-in identity; none queue while anonymous.
+        Client.Storage.owner <- (match auth.Account with Some account when not auth.LoggingOut -> account.Provider+":"+account.Id | _ -> "")
         let cleared =
             match msg with Client.Auth.Logout | Client.Auth.SessionCleared -> true | _ -> auth.Account<>model.Auth.Account
         let personal=if cleared then Client.Personal.empty (model.Personal.Epoch+1) else model.Personal
@@ -189,13 +253,15 @@ let update msg model =
         let accessCmd =
             if (ready || cleared) && not auth.LoggingOut then Cmd.ofMsg(Access Client.Access.Refresh) else Cmd.none
         {model with Auth=auth;Access=access;Personal=personal;Review=review;Zoom=if cleared then None else model.Zoom},
-        Cmd.batch [Cmd.map Auth cmd;Cmd.map Personal personalCmd;accessCmd]
+        Cmd.batch [Cmd.map Auth cmd;Cmd.map Personal personalCmd;accessCmd
+                   // A completed sign-in is the moment queued writes for that identity can go.
+                   if ready && Client.Auth.signedIn auth then Cmd.ofEffect(fun _->Client.Sync.flush() |> ignore)]
     | Personal _ when not(Client.Auth.signedIn model.Auth) -> model,Cmd.none
     | Personal(Client.Personal.Preview photo) -> {model with Zoom=Some(Client.Personal.apiPhoto photo)},Cmd.none
     | Personal msg ->
         let personal,cmd=Client.Personal.update msg model.Personal
         let dataChanged=personal.Data<>model.Personal.Data
-        let sizes=personal.Data |> Option.map(fun d->d.Photos |> Array.fold(fun sizes p->Map.add p.Image (p.Width,p.Height) sizes) model.PhotoSizes) |> Option.defaultValue model.PhotoSizes
+        let sizes=Client.Personal.notebook personal |> Option.map(fun d->d.Photos |> Array.fold(fun sizes p->Map.add (Codecs.img p.Image) (p.Width,p.Height) sizes) model.PhotoSizes) |> Option.defaultValue model.PhotoSizes
         {model with Personal=personal;PhotoSizes=sizes;Zoom=if dataChanged then None else model.Zoom},Cmd.map Personal cmd
     | Review(Client.Review.ImageLoaded(_,_,Ok url)) when model.Access.Key<>Client.Access.storedKey() || not(Client.Access.canReview model.Access) ->
         Client.Review.release url
@@ -281,6 +347,7 @@ let footer model dispatch =
             a "/glossary" "Glossary" dispatch
             a "/references" "References & bibliography" dispatch
             a "/about" "About the guide" dispatch
+            if Client.Packs.enabled() then a "/offline" "On this phone" dispatch
             if Client.Access.canEdit model.Access then
                 Html.a [prop.href "/admin";prop.text "Edit catalogue"]
             if Client.Access.canReview model.Access then
@@ -333,6 +400,39 @@ let filterSelect (label:string) key selected (options:string list) dispatch =
     ]]
 let checkFilter (label:string) key (value:string option) dispatch =
     Html.label [prop.className "check-filter";prop.children [Html.input [prop.type' "checkbox";prop.isChecked((value=Some "true"));prop.onChange(fun (v:bool)->dispatch(FilterChanged(key,if v then "true" else "")))];Html.span label]]
+/// Plants whose account text carries every word of the query, within the chosen filters and not already a
+/// name match. Search finds what an account says; it does not certify an identification.
+let descriptions model (data:GetCatalogue.Response) (named:PlantCard list) =
+    match model.Query.Q |> Option.map(fun q->q.Trim()) with
+    | Some q when q<>"" && (NativePlants.Descriptions.tokens q).Length>0 ->
+        let allowed=filter {model.Query with Q=None} data.Plants |> List.map(fun p->p.Id) |> Set.ofList
+        let namedIds=named |> List.map(fun p->p.Id) |> Set.ofList
+        NativePlants.Descriptions.search q model.Accounts |> List.filter(fun m->allowed.Contains m.PlantId && not(namedIds.Contains m.PlantId))
+    | _ -> []
+let descriptionMatches model (data:GetCatalogue.Response) (named:PlantCard list) (matches:NativePlants.Descriptions.Match list) dispatch =
+    let byId=data.Plants |> List.map(fun p->p.Id,p) |> Map.ofList
+    let tokens=NativePlants.Descriptions.tokens (model.Query.Q |> Option.defaultValue "")
+    Html.details [
+        prop.className "description-matches"
+        if named.IsEmpty then prop.custom("open",true)
+        prop.children [
+        Html.summary(sprintf "%d %s in descriptions" matches.Length (if matches.Length=1 then "match" else "matches"))
+        if model.Accounts.Length<data.Plants.Length then
+            Html.p [prop.className "coverage";prop.text(sprintf "Searched the %d of %d accounts saved on this device so far." model.Accounts.Length data.Plants.Length)]
+        Html.ul [prop.children [
+            for m in matches do
+                match Map.tryFind m.PlantId byId with
+                | None -> ()
+                | Some p ->
+                    let url=if m.Label="Recognise this plant" then plantUrl p else plantUrl p+"#"+sectionId m.Label
+                    Html.li [prop.key m.PlantId;prop.children [
+                        a url p.ScientificName dispatch
+                        Html.small(m.Label+(if p.CommonNames="" then "" else " · "+p.CommonNames.Replace(" | ",", ")))
+                        Html.p [prop.children [for (text,hit) in NativePlants.Descriptions.fragments tokens m.Excerpt do if hit then Html.mark text else Html.text text]]
+                    ]]
+        ]]
+    ]]
+
 let browse model (data:GetCatalogue.Response) dispatch =
     let results=filter model.Query data.Plants
     let heading=Option.orElse model.Query.Family model.Query.Genus |> Option.defaultValue "Explore the plants"
@@ -358,9 +458,11 @@ let browse model (data:GetCatalogue.Response) dispatch =
             ]]
             Html.div [prop.className "results";prop.children [
                 Html.div [prop.className "results-heading";prop.children [Html.p [prop.role "status";prop.text(sprintf "%i %s%s" results.Length (if results.Length=1 then "plant" else "plants") (model.Query.Q |> Option.map(fun q->" matching “"+q+"”") |> Option.defaultValue ""))];Html.span(if model.Query.Q.IsSome then "Best name matches first" else "Scientific name A–Z")]]
-                if results.IsEmpty then Html.div [prop.className "empty-state";prop.children [leaf;Html.h2 "No plants match these choices";Html.p "Try a broader name or clear a filter.";button "Clear filters" ClearFilters dispatch]]
-                else Html.div [prop.className "plant-grid";prop.children(results |> List.truncate model.Limit |> List.map(fun p->card p dispatch))]
+                let described=descriptions model data results
+                if results.IsEmpty && described.IsEmpty then Html.div [prop.className "empty-state";prop.children [leaf;Html.h2 "No plants match these choices";Html.p "Try a broader name or clear a filter.";button "Clear filters" ClearFilters dispatch]]
+                if not results.IsEmpty then Html.div [prop.className "plant-grid";prop.children(results |> List.truncate model.Limit |> List.map(fun p->card p dispatch))]
                 if results.Length>model.Limit then Html.div [prop.className "more";prop.children [button (sprintf "Show more plants · %i remaining" (results.Length-model.Limit)) More dispatch]]
+                if not described.IsEmpty then descriptionMatches model data results described dispatch
             ]]
         ]]
     ]]
@@ -392,7 +494,7 @@ let photoImage model hero (photo:Photo) dispatch =
 let detail model (plant:PlantDetail) dispatch =
     let signedIn=Client.Auth.signedIn model.Auth
     let personal=if signedIn && model.Personal.PlantId=plant.Card.Id then model.Personal else Client.Personal.empty model.Personal.Epoch
-    let plant=Client.Personal.compose personal.Data plant
+    let plant=Client.Personal.compose (Client.Personal.notebook personal) plant
     let p=plant.Card
     let glossary=model.Data |> Option.map(fun d->d.Glossary) |> Option.defaultValue [] |> NativePlants.Glossary.glossaryMatcher
     let references=model.Data |> Option.map(fun d->d.References) |> Option.defaultValue []
@@ -490,7 +592,7 @@ let glossaryPage model (data:GetCatalogue.Response) dispatch =
                 Html.dt entry.Term
                 Html.dd [prop.children [
                     Client.Annotations.text matcher entry.Definition
-                    if entry.Illustration<>"" then Client.Images.View entry.Illustration [prop.alt(entry.Term+" illustration");prop.custom("loading","lazy")]
+                    if entry.Illustration<>Image "" then Client.Images.View entry.Illustration [prop.alt(entry.Term+" illustration");prop.custom("loading","lazy")]
                     Html.small entry.SourceLabel
                 ]]
             ]]
@@ -544,6 +646,10 @@ let view model dispatch =
         Html.a [prop.className "skip-link";prop.href "#main";prop.text "Skip to content"]
         header model dispatch
         Html.div [prop.id "main";prop.children [
+            if model.Saved.IsSome then
+                Html.div [prop.className "offline-notice";prop.role "status";prop.children [
+                    Html.text("Offline: showing the guide as saved on "+savedAt model.Saved.Value+".")
+                    if Client.Packs.enabled() then a "/offline" "What is on this phone" dispatch]]
             match model.Page,model.Data with
             | ReviewPage,_ when Client.Access.canReview model.Access ->
                 Client.Review.view model.Access.Data.Value (model.Data |> Option.map(fun d->d.Plants) |> Option.defaultValue []) model.Review (Review >> dispatch)
@@ -561,6 +667,7 @@ let view model dispatch =
                     a "/" "Back to the guide" dispatch
                 ]]
             | About,_ -> about dispatch
+            | OfflinePage,_ -> Client.OfflinePage.view model.Offline (Offline >> dispatch)
             | GlossaryPage,Some data -> glossaryPage model data dispatch
             | ReferencesPage,Some data -> referencesPage model data dispatch
             | Detail _,_ ->

@@ -1311,19 +1311,34 @@ em {
   .browse-forms>.eyebrow {
     font-size:8px;
   }
+  /* Phone browsers and the native WebView share the same text-friendly layout. */
   .form-links {
-    gap:19px 15px;
-    grid-template-columns:repeat(4,minmax(0,1fr));
+    display:flex;
+    flex-wrap:wrap;
+    gap:.75rem 1rem;
   }
   .form-links a {
-    font-size:21px;
-    gap:4px;
+    flex:1 1 8em;
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:500;
+    line-height:1.4;
+    min-height:44px;
+    gap:.4em;
+    padding-bottom:.5em;
+  }
+  .form-links a > span:first-child {
+    white-space:nowrap;
   }
   .form-links small {
-    font-size:8px;
+    font-size:.7em;
+    flex-shrink:0;
+    align-self:center;
+    margin-top:0;
   }
   .form-links span:last-child {
-    font-size:9px;
+    font-size:.8em;
+    flex-shrink:0;
   }
   .section {
     padding:38px 20px;
@@ -1654,7 +1669,10 @@ em {
 .term-button:hover,.term-button:focus-visible { color:#47652f; text-decoration-style:solid; }
 .term-button:focus-visible { outline:2px solid #71835e; outline-offset:3px; }
 .definition-popover { position:fixed; z-index:100; display:block; overflow:auto; padding:18px 20px; border:1px solid #b9c5aa; border-radius:7px; background:#fffef9; color:#223427; box-shadow:0 8px 30px #17261930; font:14px/1.6 Arial,sans-serif; font-style:normal; font-weight:400; letter-spacing:normal; text-transform:none; text-align:left; cursor:auto; }
-.definition-popover>strong { display:block; margin-bottom:6px; font-size:17px; }
+.definition-popover>strong { display:block; margin-bottom:6px; padding-right:30px; font-size:17px; }
+.definition-close { position:absolute; top:6px; right:6px; width:34px; height:34px; border:0; border-radius:50%; background:transparent; color:#697562; font:22px/1 Arial,sans-serif; cursor:pointer; }
+.definition-close:hover,.definition-close:focus-visible { background:#eef1e6; color:#223427; }
+.definition-close:focus-visible { outline:2px solid #71835e; outline-offset:1px; }
 .definition-body { display:block; }
 .definition-popover>small { display:block; margin-top:10px; color:#697562; font-size:11px; }
 .definition-popover>img { display:block; max-width:100%; height:auto; margin-top:12px; background:white; }
@@ -1773,3 +1791,30 @@ em {
   .notebook-heading { flex-wrap:wrap; gap:.6rem; }
   .note-attachments img { max-width:110px; height:90px; }
 }
+
+.offline-notice { background:#eef1ea; color:#4a5443; text-align:center; font-size:14px; padding:8px 16px; border-bottom:1px solid #d9dfd3; }
+
+.pending-summary { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; margin:0 0 .9rem; padding:.5rem .8rem; background:#eef1ea; border:1px solid #d9dfd3; border-radius:4px; font-size:.85rem; color:#4a5443; }
+.pending-marker { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; padding:.35rem .7rem 0; font-size:.75rem; color:#56734b; }
+.pending-marker.parked { color:#973b2e; }
+.personal-photo-controls .pending-marker { padding:0; width:100%; }
+.photo-upload-slot .icon-button + .icon-button, .attachment-options .icon-button + .icon-button { margin-left:.4rem; }
+
+.offline-notice a { margin-left:.6rem; }
+.offline-page .pack { margin:1rem 0; padding:.8rem 1rem; border:1px solid #d9dfd3; border-radius:6px; background:#f8f8f0; }
+.offline-page .pack h2 { margin:0 0 .3rem; font-size:1.05rem; }
+.offline-page .pack p, .offline-page .pack-status { margin:.25rem 0; }
+.offline-page progress { width:100%; height:8px; margin:.4rem 0 .2rem; }
+.offline-page .pack-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.6rem; }
+.offline-page .check-field { margin:.6rem 0; }
+
+.description-matches { margin-top:34px; border-top:1px solid var(--line); padding-top:18px; }
+.description-matches summary { cursor:pointer; font-size:14px; font-weight:600; color:var(--green); }
+.description-matches .coverage { font-size:.8rem; color:var(--muted); margin:.5rem 0 0; }
+.description-matches ul { list-style:none; padding:0; margin:14px 0 0; display:grid; gap:14px; }
+.description-matches li { padding:12px 14px; background:#f8f8f0; border:1px solid #d9dfd3; border-radius:4px; }
+.description-matches li a { font-style:italic; font-weight:600; }
+.description-matches li small { display:block; color:var(--muted); font-size:.75rem; margin:.15rem 0 .35rem; }
+.description-matches li p { margin:0; font-size:.92rem; line-height:1.6; }
+.description-matches mark { background:#f3e7a9; padding:0 .1em; }
+

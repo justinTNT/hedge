@@ -58,12 +58,26 @@ let oauth (env: Env) : Hedge.Router.OAuthConfig =
     let ready = not (isNull env.OAUTH_SECRET) && env.OAUTH_SECRET.Length >= 32
                 && not (isNull env.GUEST_SECRET) && env.GUEST_SECRET.Length >= 32
     { Secret = env.OAUTH_SECRET
+      // Map.ofList is applied, not piped, so the field's anonymous record type reaches the literal
+      // before inference assigns it this assembly's own; piped, the full .NET compiler reports FS0001.
       Providers =
-        [ if ready && configured env.GOOGLE_CLIENT_ID env.GOOGLE_CLIENT_SECRET then
-              "google", {| ClientId = env.GOOGLE_CLIENT_ID; ClientSecret = env.GOOGLE_CLIENT_SECRET |}
-          if ready && configured env.GITHUB_CLIENT_ID env.GITHUB_CLIENT_SECRET then
+        Map.ofList
+          [ if ready && configured env.GITHUB_CLIENT_ID env.GITHUB_CLIENT_SECRET then
               "github", {| ClientId = env.GITHUB_CLIENT_ID; ClientSecret = env.GITHUB_CLIENT_SECRET |} ]
+      // The preset preserves the existing Google endpoints and provider account IDs.
+      OidcProviders =
+        [ if ready && configured env.GOOGLE_CLIENT_ID env.GOOGLE_CLIENT_SECRET then
+              "google",
+              ({ Preset = Some "google"
+                 Issuer = None
+                 AuthorizeUrl = None
+                 TokenUrl = None
+                 UserinfoUrl = None
+                 Scopes = None
+                 ClientId = env.GOOGLE_CLIENT_ID
+                 ClientSecret = env.GOOGLE_CLIENT_SECRET } : Hedge.Oidc.OidcRegistration) ]
         |> Map.ofList
+      SendEmail = None
       ResolveIdentity = resolveIdentity
       OnOAuthComplete = fun db blobs guestId userInfo returnTo -> promise {
           let! result = Identity.Handlers.onOAuthComplete completion db blobs guestId userInfo returnTo

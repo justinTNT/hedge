@@ -39,7 +39,7 @@ let update msg model =
         {model with Data=Some data;Busy=false;Error=None;Draft=None},
         Array.append (data.Photos |> Array.map(fun p->p.Photo)) (data.Notes |> Array.collect(fun n->List.toArray n.Note.Photos))
         |> Array.distinctBy(fun p->p.Id)
-        |> Array.map(fun p->Cmd.OfPromise.either (fun ()->image p.Thumbnail model.Key) () (fun url->ImageLoaded(epoch,p.Id,Ok url)) (fun ex->ImageLoaded(epoch,p.Id,Error ex.Message))) |> Cmd.batch
+        |> Array.map(fun p->Cmd.OfPromise.either (fun ()->image (Codecs.img p.Thumbnail) model.Key) () (fun url->ImageLoaded(epoch,p.Id,Ok url)) (fun ex->ImageLoaded(epoch,p.Id,Error ex.Message))) |> Cmd.batch
     | Loaded(epoch,Error error) when epoch=model.Epoch -> {model with Data=None;Busy=false;Error=Some error},Cmd.none
     | Loaded _ -> model,Cmd.none
     | Respond _ | Outcome _ | ReplyText _ | Alternative _ | CancelReply | SubmitReply when model.Busy -> model,Cmd.none
@@ -106,7 +106,7 @@ let view (access:Capabilities) (plants:Models.Api.PlantCard list) model dispatch
                                         | Some url ->
                                             let thumbnail=Html.img [prop.src url;prop.alt(if photo.Caption="" then "Attached photograph" else photo.Caption)]
                                             if photo.Width>=200 && photo.Height>=200 then
-                                                Html.button [prop.type' "button";prop.ariaLabel "View photograph";prop.onClick(fun _->dispatch(Show photo.Image));prop.children [thumbnail]]
+                                                Html.button [prop.type' "button";prop.ariaLabel "View photograph";prop.onClick(fun _->dispatch(Show (Codecs.img photo.Image)));prop.children [thumbnail]]
                                             else thumbnail
                                 ]]
                                 if purpose="correction" then
@@ -150,7 +150,7 @@ let view (access:Capabilities) (plants:Models.Api.PlantCard list) model dispatch
                             | None -> Html.p "Loading photograph…"
                             Html.p photo.Caption
                             if photo.Photographer<>"" then Html.small("Photo: "+photo.Photographer)
-                            if photo.Width>=200 && photo.Height>=200 then button "View photograph" (Show photo.Image)
+                            if photo.Width>=200 && photo.Height>=200 then button "View photograph" (Show (Codecs.img photo.Image))
                             button "Include on species page" (Act(PromotePhoto(photo.Id,photo.Revision)))
                         ]]
                 ]]

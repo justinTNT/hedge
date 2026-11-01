@@ -2,8 +2,9 @@ module NativePlants.Glossary
 
 open System.Text.RegularExpressions
 open Models.Api
+open Hedge.Interface
 
-type Note = { Key: string; Heading: string; Body: string; Image: string; Source: string }
+type Note = { Key: string; Heading: string; Body: string; Image: Image; Source: string }
 type Chunk = { Text: string; Note: Note option }
 type Matcher = { Pattern: Regex option; Entries: Map<string,Note> }
 
@@ -12,7 +13,7 @@ let glossaryNote (g:GlossaryEntry) =
     {Key=g.Id;Heading=g.Term;Body=g.Definition;Image=g.Illustration;Source=g.SourceLabel}
 let referenceNote (r:ReferenceEntry) =
     {Key=r.Id;Heading=(if r.Kind="usage" then "Reference "+string r.Number else "Source reference")
-     Body=r.Citation;Image="";Source=r.SourceLabel}
+     Body=r.Citation;Image=Image "";Source=r.SourceLabel}
 let private matcher (entries:(string*Note) list) =
     let entries = entries |> List.filter(fun (label,_) -> label.Trim()<>"") |> List.map(fun (label,note) -> key label,note) |> Map.ofList
     let terms = entries |> Map.toList |> List.map fst |> List.sortBy(fun s -> -s.Length,s) |> List.map(fun term -> (Regex.Escape term).Replace(@"\-", "-"))
@@ -48,7 +49,7 @@ let usageCitations glossary (references:ReferenceEntry list) (text:string) =
               if number.Index>offset then yield {Text=group.Value.Substring(offset,number.Index-offset);Note=None}
               let n=int number.Value
               let note=Map.tryFind n numbered |> Option.map referenceNote |> Option.defaultValue
-                           {Key="missing-reference-"+string n;Heading="Reference "+string n;Body="This reference is cited in the account, but its entry is missing from the supplied reference list.";Image="";Source="Unresolved source citation"}
+                           {Key="missing-reference-"+string n;Heading="Reference "+string n;Body="This reference is cited in the account, but its entry is missing from the supplied reference list.";Image=Image "";Source="Unresolved source citation"}
               yield {Text=number.Value;Note=Some note}
               offset<-number.Index+number.Length
           yield {Text=group.Value.Substring(offset);Note=None}

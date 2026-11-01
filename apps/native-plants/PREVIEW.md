@@ -15,8 +15,9 @@ into notes. `.local/preview-secrets.json` holds the independent remote secrets.
 
 Cloudflare Access is not enabled on this account. Instead, the deployment-only
 `worker-preview.js` wraps Hedge with HTTPS Basic authentication. Every request,
-including assets, media, API routes, OPTIONS and OAuth callbacks, passes through
-the gate. `assets.run_worker_first=true` is essential: asset-first routing would
+including assets, media, API routes and OPTIONS, passes through the gate; only
+the GET OAuth handshake (`/api/auth/*/login`, `/api/auth/*/callback` and
+`/api/mobile/return`) skips the credential check, as explained below. `assets.run_worker_first=true` is essential: asset-first routing would
 expose the static catalogue media. A missing/short gate secret fails closed.
 Responses carry `private, no-store`, `noindex` and `no-referrer` headers. Version
 preview URLs are disabled. R2 has no public r2.dev URL or custom domain.
@@ -59,10 +60,18 @@ npx wrangler secret put GITHUB_CLIENT_ID --env preview
 npx wrangler secret put GITHUB_CLIENT_SECRET --env preview
 ```
 
-Do not exempt callbacks from the preview gate. Both providers return through the
-browser to this same HTTPS origin; its Basic credentials and Lax Hedge cookie
-can accompany that navigation. Google live sign-in has been confirmed by the
-owner. Legacy anonymous-content adoption and both providers' callbacks also have
+The GET OAuth handshake routes are deliberately outside the credential check:
+the Android app completes login in the system browser, which cannot carry the
+app's native credential and must not be challenged for the browser password
+(a Chrome Custom Tab stalls on the challenge or shows the bare 401 body). Those
+routes expose no catalogue content: `login` only redirects to the provider,
+`callback` needs the provider's code plus Hedge's signed state and guest cookie,
+and `/api/mobile/return` needs a verified Hedge cookie. Pages, assets, media,
+`/api/auth/providers`, `/api/auth/me` and every data API remain gated, and a
+browser's cached Basic header is still stripped before Hedge sees the request.
+Both providers return through the browser to this same HTTPS origin, so the
+Lax Hedge cookie accompanies that navigation. Google live sign-in has been
+confirmed by the owner. Legacy anonymous-content adoption and both providers' callbacks also have
 simulated-provider integration coverage; GitHub needs a live round trip if enabled.
 
 ## Data and deployments
@@ -331,3 +340,26 @@ Real Google login/return, a phone photo upload and persisted login across an
 app restart remain manual device checks; the automated browser inspection page
 was blocked by the environment's browser security policy. Build and testing
 instructions are in [mobile/README.md](mobile/README.md).
+
+
+## Device login handshake opened — 31 October 2026
+
+Worker version `4c5c7c9d-d71f-4632-9539-eeb9fe32b09c` lets the Android app
+complete Google login. The Chrome Custom Tab that runs the OAuth flow cannot
+carry the app's native preview credential, so it was stopped by the gate: it
+either stalled on the Basic challenge or showed the bare 401 body
+"Private preview", and the app waited for a `nativeplants://auth` return that
+never came. The gate now skips the credential check for GET
+`/api/auth/*/login`, `/api/auth/*/callback` and `/api/mobile/return` only.
+No client, APK, migration, secret or provider change was needed.
+
+Live checks without credentials: the login route redirects to Google and sets
+the Hedge guest cookie; `/api/mobile/return` redirects to the app scheme with
+`error=session` when no verified cookie accompanies it; a provider error on the
+callback reaches Hedge's 400 message. Pages, media, the catalogue API,
+`/api/auth/providers`, `/api/auth/me`, `/api/mobile/me`, and POST/HEAD on the
+handshake routes still return 401 with the Basic challenge. Gate tests cover
+method restriction, neighbouring paths and dot-segment traversal. Build,
+112 app tests and preview validation (4,041 media references; 4,610 assets)
+passed before deployment. A real Google round trip from the installed APK
+remains the owner's manual check.

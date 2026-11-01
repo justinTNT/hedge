@@ -184,3 +184,16 @@ test('glossary and reference edits share catalogue publication rules and revisio
   await f.admin('GlossaryTerm/'+saved.id,{method:'DELETE'});
   assert.equal((await (await f.call('/api/plants/catalogue')).json()).glossary.length,0);
 });
+
+test('the bulk accounts endpoint carries every published account once, with the catalogue revision',async()=>{
+  const f=fixture();const p=await f.create();
+  const catalogue=await (await f.call('/api/plants/catalogue')).json();
+  const response=await f.call('/api/plants/accounts');assert.equal(response.status,200);
+  const accounts=await response.json();
+  assert.equal(accounts.revision,catalogue.revision);
+  assert.deepEqual(accounts.plants.map(a=>a.card.id),[p.id]);
+  assert.ok(Array.isArray(accounts.plants[0].sections));
+  await f.admin('Plant/'+p.id,{method:'PUT',body:{...p,published:false}});
+  assert.equal((await (await f.call('/api/plants/accounts')).json()).plants.length,0,'unpublished accounts drop out with the snapshot');
+});
+

@@ -14,6 +14,7 @@ let inline ed (EditableDate v) = v
 let inline fk (ForeignKey v) = v
 let inline rc (RichContent v) = v
 let inline lk (Link v) = v
+let inline img (Image v) = v
 let inline uq (Unique v) = v
 
 module Encode =
@@ -86,6 +87,7 @@ module Decode =
     let getAccessResponse : Decoder<Models.Api.GetAccess.Response> = decode<Models.Api.GetAccess.Response>()
     let searchPlantsResponse : Decoder<Models.Api.SearchPlants.Response> = decode<Models.Api.SearchPlants.Response>()
     let getRevisionResponse : Decoder<Models.Api.GetRevision.Response> = decode<Models.Api.GetRevision.Response>()
+    let getAccountsResponse : Decoder<Models.Api.GetAccounts.Response> = decode<Models.Api.GetAccounts.Response>()
     let getPlantResponse : Decoder<Models.Api.GetPlant.Response> = decode<Models.Api.GetPlant.Response>()
     let getCatalogueResponse : Decoder<Models.Api.GetCatalogue.Response> = decode<Models.Api.GetCatalogue.Response>()
 
@@ -198,3 +200,36 @@ module Validate =
         ]
 
     let inline saveNoteReq (r: Models.Api.SaveNote.Request) = validate saveNoteSchema r
+
+module Images =
+
+    /// Every `Image` a wire value carries: its own Image fields first, then those of nested records
+    /// through options, lists and arrays. A field opts in by its type, so an offline media cache can
+    /// prefetch exactly what a response shows without an app-maintained list. One recursive group,
+    /// because records may nest in any order.
+    let rec identifyNoteResponse (v: Models.Api.IdentifyNote.Response) : Image list = (reviewSnapshot v.Review)
+    and reviewSnapshot (v: Models.Api.ReviewSnapshot) : Image list = List.concat [ (v.Notes |> List.collect (fun x -> (contributionsReviewNote x))); (v.Photos |> List.collect (fun x -> (contributionsReviewPhoto x))) ]
+    and contributionsReviewNote (v: Models.Contributions.ReviewNote) : Image list = (contributionsNote v.Note)
+    and contributionsNote (v: Models.Contributions.Note) : Image list = (v.Photos |> List.collect (fun x -> (contributionsPhoto x)))
+    and contributionsPhoto (v: Models.Contributions.Photo) : Image list = [ v.Image; v.Thumbnail ]
+    and contributionsReviewPhoto (v: Models.Contributions.ReviewPhoto) : Image list = (contributionsPhoto v.Photo)
+    and saveFieldNoteResponse (v: Models.Api.SaveFieldNote.Response) : Image list = (personalSnapshot v.Personal)
+    and personalSnapshot (v: Models.Api.PersonalSnapshot) : Image list = List.concat [ (v.Notes |> List.collect (fun x -> (contributionsNote x))); (v.Photos |> List.collect (fun x -> (contributionsPhoto x))) ]
+    and promotePhotoResponse (v: Models.Api.PromotePhoto.Response) : Image list = (reviewSnapshot v.Review)
+    and reviewCorrectionResponse (v: Models.Api.ReviewCorrection.Response) : Image list = (reviewSnapshot v.Review)
+    and selectHeroResponse (v: Models.Api.SelectHero.Response) : Image list = (personalSnapshot v.Personal)
+    and deletePhotoResponse (v: Models.Api.DeletePhoto.Response) : Image list = (personalSnapshot v.Personal)
+    and updatePhotoResponse (v: Models.Api.UpdatePhoto.Response) : Image list = (personalSnapshot v.Personal)
+    and deleteNoteResponse (v: Models.Api.DeleteNote.Response) : Image list = (personalSnapshot v.Personal)
+    and saveNoteResponse (v: Models.Api.SaveNote.Response) : Image list = (personalSnapshot v.Personal)
+    and getReviewResponse (v: Models.Api.GetReview.Response) : Image list = (reviewSnapshot v.Review)
+    and getPersonalResponse (v: Models.Api.GetPersonal.Response) : Image list = (personalSnapshot v.Personal)
+    and searchPlantsResponse (v: Models.Api.SearchPlants.Response) : Image list = (v.Plants |> List.collect (fun x -> (plantCard x)))
+    and plantCard (v: Models.Api.PlantCard) : Image list = (match v.Photo with Some x -> (photo x) | None -> [])
+    and photo (v: Models.Api.Photo) : Image list = [ v.Image; v.Thumbnail ]
+    and getAccountsResponse (v: Models.Api.GetAccounts.Response) : Image list = (v.Plants |> List.collect (fun x -> (plantDetail x)))
+    and plantDetail (v: Models.Api.PlantDetail) : Image list = List.concat [ (plantCard v.Card); (v.Photos |> List.collect (fun x -> (photo x))); (v.DistributionMaps |> List.collect (fun x -> (distributionMap x))) ]
+    and distributionMap (v: Models.Api.DistributionMap) : Image list = [ v.Image ]
+    and getPlantResponse (v: Models.Api.GetPlant.Response) : Image list = (plantDetail v.Plant)
+    and getCatalogueResponse (v: Models.Api.GetCatalogue.Response) : Image list = List.concat [ (v.Plants |> List.collect (fun x -> (plantCard x))); (v.Glossary |> List.collect (fun x -> (glossaryEntry x))) ]
+    and glossaryEntry (v: Models.Api.GlossaryEntry) : Image list = [ v.Illustration ]

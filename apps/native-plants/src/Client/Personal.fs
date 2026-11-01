@@ -21,6 +21,8 @@ type Model = {
     PlantId:string; Epoch:int; Data:Personal option; Loading:bool; Busy:bool; Error:string option
     Draft:Draft option; PhotoDraft:PhotoDraft option; Notice:string option
     PendingAction:string; PendingId:string; FeedbackInGallery:bool
+    /// Changes made on this phone that the server has not yet taken, oldest first.
+    Pending:Client.Sync.Pending list
 }
 type Msg =
     | Load | Loaded of int * Result<Personal,string>
@@ -31,15 +33,21 @@ type Msg =
     | PhotoLimit
     | NewEntry of string | ToggleAttachment of string | UploadAttachment of obj
     | NotePurpose of string | Withdraw of Note | AttachmentLimit | Preview of Photo
+    // New cases go last: the client tests address messages by union index.
+    | PendingLoaded of int * Client.Sync.Pending list | Queued of int * string | PendingChanged
+    | SendNow | RetryPending of string | DiscardPending of string
 
 [<Emit("requestAnimationFrame(()=>document.getElementById($0)?.scrollIntoView({block:'center',behavior:'smooth'}))")>]
 let scrollEditor (id:string) : unit = jsNative
 let focus id = Cmd.ofEffect(fun _ -> scrollEditor id)
-let empty epoch = {PlantId="";Epoch=epoch;Data=None;Loading=false;Busy=false;Error=None;Draft=None;PhotoDraft=None;Notice=None;PendingAction="";PendingId="";FeedbackInGallery=false}
+let empty epoch = {PlantId="";Epoch=epoch;Data=None;Loading=false;Busy=false;Error=None;Draft=None;PhotoDraft=None;Notice=None;PendingAction="";PendingId="";FeedbackInGallery=false;Pending=[]}
 let load model = Cmd.OfPromise.either (fun ()->Client.ContributionsApi.personal model.PlantId |> Client.ContributionsApi.forView) () (fun data->Loaded(model.Epoch,Ok data)) (fun ex->Loaded(model.Epoch,Error ex.Message))
+let loadPending model = Cmd.OfPromise.either (fun ()->Client.Sync.pendingFor model.PlantId) () (fun pending->PendingLoaded(model.Epoch,pending)) (fun _->PendingLoaded(model.Epoch,[]))
+/// The notebook as it stands on this phone: the last snapshot with the queued changes applied over it.
+let notebook model = model.Data |> Option.map(fun data->Client.Sync.overlay data model.Pending)
 let enter plantId epoch =
     let model={empty epoch with PlantId=plantId;Loading=true}
-    model,load model
+    model,Cmd.batch [load model;loadPending model]
 let save label command model =
     match model.Data with
     | None -> model,Cmd.none
@@ -53,11 +61,12 @@ let save label command model =
             | SelectHero id -> "hero",id,true
         let next={model with Busy=true;Error=None;Notice=None;Epoch=model.Epoch+1;Loading=false;PendingAction=action;PendingId=id;FeedbackInGallery=gallery}
         next,Cmd.OfPromise.either
-            (fun ()->Client.ContributionsApi.change model.PlantId current.ViewerToken command |> Client.ContributionsApi.forView) ()
-            (fun data->Saved(next.Epoch,label,Ok data)) (fun ex->Saved(next.Epoch,label,Error ex.Message))
+            (fun ()->Client.ContributionsApi.changeOrQueue model.PlantId current.ViewerToken command) ()
+            (fun outcome->match outcome with Ok(Some data)->Saved(next.Epoch,label,Ok data) | Ok None->Queued(next.Epoch,label) | Error error->Saved(next.Epoch,label,Error error))
+            (fun ex->Saved(next.Epoch,label,Error ex.Message))
 
-let private notesFull model = model.Data |> Option.forall(fun d->d.NoteCapacity.Used>=d.NoteCapacity.Limit)
-let private photosFull model = model.Data |> Option.forall(fun d->d.PhotoCapacity.Used>=d.PhotoCapacity.Limit)
+let private notesFull model = notebook model |> Option.forall(fun d->d.NoteCapacity.Used>=d.NoteCapacity.Limit)
+let private photosFull model = notebook model |> Option.forall(fun d->d.PhotoCapacity.Used>=d.PhotoCapacity.Limit)
 
 let private noteLimit model =
     match model.Data with
@@ -75,7 +84,10 @@ let update msg model =
     | Loaded(epoch,Ok data) when epoch=model.Epoch ->
         let changed=model.Data |> Option.exists(fun old->old.ViewerToken<>data.ViewerToken)
         {model with Data=Some data;Loading=false;Error=None
-                    Draft=(if changed then None else model.Draft);PhotoDraft=(if changed then None else model.PhotoDraft)},Cmd.none
+                    Draft=(if changed then None else model.Draft);PhotoDraft=(if changed then None else model.PhotoDraft)},
+        // Parked changes the fresh snapshot already shows are finished, not conflicts; the person's own
+        // photographs of this plant are kept on the phone.
+        Cmd.ofEffect(fun _->Client.Sync.reconcile data model.Pending |> ignore;Client.Sync.keepOwnPhotos data |> ignore)
     | Loaded(epoch,Error error) when epoch=model.Epoch ->
         {model with Data=None;Loading=false;Draft=None;PhotoDraft=None;Error=Some error},Cmd.none
     | Loaded _ | Saved _ when model.PlantId="" -> model,Cmd.none
@@ -86,11 +98,29 @@ let update msg model =
                 draft |> Option.map(fun d->{d with PhotoIds=d.PhotoIds @ [model.PendingId] |> List.distinct})
             else draft
         let photoDraft=model.PhotoDraft |> Option.filter(fun d->not(List.contains model.PendingAction ["savePhoto";"deletePhoto"] && d.Id=model.PendingId))
-        {model with Data=Some data;Busy=false;Draft=draft;PhotoDraft=photoDraft;PendingAction="";PendingId="";Error=None;Notice=Some label},Cmd.none
+        // A delivered change means the network is back: send whatever is still waiting.
+        {model with Data=Some data;Busy=false;Draft=draft;PhotoDraft=photoDraft;PendingAction="";PendingId="";Error=None;Notice=Some label},
+        (if model.Pending.IsEmpty then Cmd.none else Cmd.ofEffect(fun _->Client.Sync.flush() |> ignore))
     | Saved(epoch,_,Error error) when epoch=model.Epoch ->
         {model with Busy=false;Error=Some error;Notice=None},Cmd.none
-    | Loaded _ | Saved _ -> model,Cmd.none
+    | Queued(epoch,label) when epoch=model.Epoch ->
+        let draft=model.Draft |> Option.filter(fun d->not(List.contains model.PendingAction ["saveNote";"deleteNote"] && d.Id=model.PendingId))
+        let draft =
+            if model.PendingAction="uploadAttachment" then
+                draft |> Option.map(fun d->{d with PhotoIds=d.PhotoIds @ [model.PendingId] |> List.distinct})
+            else draft
+        let photoDraft=model.PhotoDraft |> Option.filter(fun d->not(List.contains model.PendingAction ["savePhoto";"deletePhoto"] && d.Id=model.PendingId))
+        {model with Busy=false;Draft=draft;PhotoDraft=photoDraft;PendingAction="";PendingId="";Error=None;Notice=Some(label+" Kept on this phone until you're back online.")},loadPending model
+    | PendingLoaded(epoch,pending) when epoch=model.Epoch ->
+        // Something waiting has gone (delivered or discarded): the server's notebook has moved, reload it.
+        let settled=model.Pending |> List.exists(fun p->not(pending |> List.exists(fun q->q.Item.Id=p.Item.Id)))
+        {model with Pending=pending},(if settled && not model.Busy && not model.Loading && model.PlantId<>"" then Cmd.ofMsg Load else Cmd.none)
+    | PendingChanged when model.PlantId<>"" -> model,loadPending model
+    | Loaded _ | Saved _ | Queued _ | PendingLoaded _ | PendingChanged -> model,Cmd.none
     | _ when model.Busy -> model,Cmd.none
+    | SendNow -> model,Cmd.ofEffect(fun _->Client.Sync.flush() |> ignore)
+    | RetryPending id -> model,Cmd.ofEffect(fun _->Client.Sync.retry model.Data id |> ignore)
+    | DiscardPending id -> model,Cmd.ofEffect(fun _->Client.Sync.discard id |> ignore)
     | NewNote | NewEntry _ when notesFull model -> noteLimit model
     | NewNote | NewEntry _ ->
         let purpose=match msg with NewEntry purpose -> purpose | _ -> "private"
@@ -142,8 +172,8 @@ let update msg model =
             let attachment=match msg with UploadAttachment _ -> true | _ -> false
             let id=uuid()
             let next={model with Busy=true;Error=None;Notice=Some "Preparing and uploading your photograph…";Epoch=model.Epoch+1;Loading=false;PendingAction=(if attachment then "uploadAttachment" else "upload");PendingId=id;FeedbackInGallery=not attachment}
-            next,Cmd.OfPromise.either (fun ()->Client.ContributionsApi.upload model.PlantId id file current.ViewerToken |> Client.ContributionsApi.forView) ()
-                (fun data->Saved(next.Epoch,"Photograph added.",Ok data))
+            next,Cmd.OfPromise.either (fun ()->Client.ContributionsApi.uploadOrQueue model.PlantId id file current.ViewerToken) ()
+                (fun outcome->match outcome with Ok(Some data)->Saved(next.Epoch,"Photograph added.",Ok data) | Ok None->Queued(next.Epoch,"Photograph added.") | Error error->Saved(next.Epoch,"",Error error))
                 (fun ex->Saved(next.Epoch,"",Error ex.Message))
 
 let apiPhoto (photo:Photo) : Models.Api.Photo =
@@ -162,15 +192,26 @@ let compose (personal:Personal option) (plant:Models.Api.PlantDetail) =
         {plant with Card={plant.Card with Photo=hero};Photos=plant.Photos @ extras}
 
 let ownPhoto model (photo:Models.Api.Photo) =
-    model.Data |> Option.bind(fun d->d.Photos |> Array.tryFind(fun p->"personal-"+p.Id=photo.Id || (p.PublicPhotoId<>"" && p.PublicPhotoId=photo.Id)))
+    notebook model |> Option.bind(fun d->d.Photos |> Array.tryFind(fun p->"personal-"+p.Id=photo.Id || (p.PublicPhotoId<>"" && p.PublicPhotoId=photo.Id)))
 let btn (label:string) disabled action dispatch = Html.button [prop.type' "button";prop.disabled disabled;prop.text label;prop.onClick(fun _->dispatch action)]
+let pendingMarker model id dispatch =
+    match Client.Sync.pendingState model.Pending id with
+    | None -> Html.none
+    | Some item ->
+        Html.div [prop.className(if item.Parked.IsSome then "pending-marker parked" else "pending-marker");prop.children [
+            Html.span(match item.Parked with Some reason->"Not sent: "+reason | None->"On this phone · will send when online")
+            if item.Parked.IsSome then
+                btn "Send my version" model.Busy (RetryPending item.Id) dispatch
+                btn "Discard" model.Busy (DiscardPending item.Id) dispatch
+        ]]
 let controls model photo dispatch =
     match ownPhoto model photo with
     | None -> Html.none
     | Some p ->
-        let hero=model.Data |> Option.exists(fun d->d.HeroPhotoId=p.Id)
+        let hero=notebook model |> Option.exists(fun d->d.HeroPhotoId=p.Id)
         Html.div [prop.className "personal-photo-controls";prop.children [
             Html.span [prop.className "personal-badge";prop.text(if p.PublicPhotoId<>"" then "Your photo · included in the guide" elif p.Offered then "Your photo · offered to the guide" else "Your photo · private")]
+            pendingMarker model p.Id dispatch
             btn (if hero then "Use site hero" else "Make my hero") model.Busy (Hero(if hero then "" else p.Id)) dispatch
             btn "Photo details" model.Busy (EditPhoto p) dispatch
         ]]
@@ -182,6 +223,7 @@ let private icon (paths:string list) =
                  svg.children [for path in paths do Svg.path [svg.d path]]]
     ]]
 let private cameraPlus () = icon ["M13.5 4h-4L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8";"M15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0";"M20 2v6m-3-3h6"]
+let private camera () = icon ["M4 8h3l2-3h6l2 3h3v11H4z";"M15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0"]
 let private pencil () = icon ["m16 3 5 5-12 12-6 1 1-6Z";"m14 5 5 5"]
 let private trash () = icon ["M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"]
 let private iconButton label icon disabled action =
@@ -191,11 +233,23 @@ let private iconButton label icon disabled action =
 [<Emit("document.getElementById($0)?.click()")>]
 let private openPicker (id:string) : unit = jsNative
 
+/// On the bundled app a second chooser asks the camera directly (the `capture` hint opens the system
+/// camera without a permission of our own); a taken photograph joins the roll like a chosen one.
+let private onBundledApp () = Client.Api.apiOrigin<>""
+let private captureInput (id:string) (label:string) disabled (onFile:obj->unit) =
+    Html.input [prop.id id;prop.type' "file";prop.hidden true;prop.accept "image/*";prop.custom("capture","environment")
+                prop.disabled disabled;prop.ariaLabel label
+                prop.onChange(fun (e:Browser.Types.Event)->let f=selectedFile e in resetFile e; if not(isNull f) then onFile f)]
 let uploadTile model dispatch =
     let inputId="photo-upload-"+model.PlantId
+    let captureId="photo-capture-"+model.PlantId
     Html.figure [prop.className "photo-upload-slot";prop.children [
         iconButton "Add a photograph" (cameraPlus()) (model.Busy || model.Data.IsNone)
             (fun ()->if photosFull model then dispatch PhotoLimit else openPicker inputId)
+        if onBundledApp() then
+            iconButton "Take a photograph" (camera()) (model.Busy || model.Data.IsNone)
+                (fun ()->if photosFull model then dispatch PhotoLimit else openPicker captureId)
+            captureInput captureId "Take a photograph" (model.Busy || model.Data.IsNone) (fun f->dispatch(Upload f))
         Html.input [prop.id inputId;prop.type' "file";prop.hidden true;prop.accept "image/jpeg,image/png,image/webp"
                     prop.disabled(model.Busy || model.Data.IsNone);prop.ariaLabel "Choose a photograph"
                     prop.onChange(fun (e:Browser.Types.Event)->let f=selectedFile e in resetFile e; if not(isNull f) then dispatch(Upload f))]
@@ -233,7 +287,30 @@ let view model login dispatch =
                     btn "ID request" model.Busy (NewEntry "identification") dispatch
                 ]]
         ]]
-        match model.Data with
+        if not model.Pending.IsEmpty then
+            let waiting=model.Pending |> List.filter(fun p->p.Item.Parked.IsNone) |> List.length
+            let parked=model.Pending.Length-waiting
+            Html.div [prop.className "pending-summary";prop.role "status";prop.children [
+                let waitingText=if waiting>0 then sprintf "%d change%s on this phone, waiting to send." waiting (if waiting=1 then "" else "s") else ""
+                let parkedText=if parked>0 then sprintf "%s%d not sent." (if waiting>0 then " " else "") parked else ""
+                Html.span(waitingText+parkedText)
+                if waiting>0 then btn "Send now" model.Busy SendNow dispatch
+            ]]
+            // A parked deletion or hero choice has no item on screen to carry its marker: list it here so it
+            // can still be resent or discarded.
+            let shown=notebook model
+            let visible id=shown |> Option.exists(fun d->d.Notes |> Array.exists(fun n->n.Id=id) || d.Photos |> Array.exists(fun p->p.Id=id))
+            let orphaned=model.Pending |> List.filter(fun p->p.Item.Parked.IsSome && (Client.Sync.itemOf p.Change="" || not(visible(Client.Sync.itemOf p.Change))))
+            if not orphaned.IsEmpty then
+                Html.ul [prop.className "parked-list";prop.children [
+                    for p in orphaned do
+                        Html.li [prop.key p.Item.Id;prop.className "pending-marker parked";prop.children [
+                            Html.span(Client.Sync.label p.Change+" · not sent: "+(p.Item.Parked |> Option.defaultValue ""))
+                            btn "Send my version" model.Busy (RetryPending p.Item.Id) dispatch
+                            btn "Discard" model.Busy (DiscardPending p.Item.Id) dispatch
+                        ]]
+                ]]
+        match notebook model with
         | None ->
             Html.p [prop.role "status";prop.text(if model.Loading then "Opening your notebook…" else "Your notebook is unavailable.")]
             if not model.Loading then
@@ -271,6 +348,11 @@ let view model login dispatch =
                                     (fun ()->if photosFull model then dispatch AttachmentLimit else openPicker inputId)
                                 Html.input [prop.id inputId;prop.type' "file";prop.hidden true;prop.accept "image/jpeg,image/png,image/webp";prop.ariaLabel "Upload an attachment"
                                             prop.onChange(fun (e:Browser.Types.Event)->let file=selectedFile e in resetFile e; if not(isNull file) then dispatch(UploadAttachment file))]
+                                if onBundledApp() then
+                                    let captureId="attachment-capture-"+model.PlantId
+                                    iconButton "Take and attach a photograph" (camera()) model.Busy
+                                        (fun ()->if photosFull model then dispatch AttachmentLimit else openPicker captureId)
+                                    captureInput captureId "Take and attach a photograph" model.Busy (fun f->dispatch(UploadAttachment f))
                             ]]
                             Html.small "Uploads also join your photo roll. Sharing with reviewers does not offer a photo for the public guide."
                         ]]
@@ -286,6 +368,7 @@ let view model login dispatch =
                         | "identification" -> if note.Responses |> List.exists(fun r->r.Revision=note.Revision) then "ID request · answered" else "ID request · awaiting identification"
                         | _ -> "Private Note"
                     Html.small status
+                    pendingMarker model note.Id dispatch
                     Html.div [prop.className "note-attachments";prop.children [
                         for photo in note.Photos do
                             let thumbnail=Client.Images.View photo.Thumbnail [prop.alt(if photo.Caption="" then "Attached photograph" else photo.Caption)]
@@ -310,7 +393,7 @@ let view model login dispatch =
 
 let photoEditor model dispatch =
     Html.div [prop.className "gallery-photo-editor";prop.children [
-        match model.Data with
+        match notebook model with
         | None -> ()
         | Some data ->
             match model.PhotoDraft with

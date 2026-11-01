@@ -298,3 +298,20 @@ photos. Fresh databases use the generated schema.
 
 See [the implementation note](../../notes/NATIVE-PLANTS-field-notes-and-identification.md)
 for lifecycle, storage, verification and deferred decisions.
+
+## Offline notebook (1 November 2026)
+
+Writes made while the network is away are kept on the phone and replayed in order when it returns
+(`src/Client/Sync.fs` over the framework outbox in `packages/hedge/src/Client/Offline.fs`; see
+`notes/HEDGE-offline.md`). Two server behaviours exist for that replay:
+
+- A photo upload with an id the owner already completed answers with the notebook (unchanged).
+- A note create (revision 0) whose id already exists for the owner with the same text, purpose and
+  photo ids answers as the success it was, rather than a conflict. The earlier attempt committed
+  before the network dropped; the client could not know. Different content is still a 409 conflict,
+  which the client parks for the person to resolve.
+
+Everything else is unchanged: revision checks, quotas and ownership guards apply to replayed writes
+exactly as to live ones, and the client reads the 409 messages to tell a full notebook from a
+changed item.
+

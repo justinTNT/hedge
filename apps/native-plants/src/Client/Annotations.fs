@@ -5,10 +5,13 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Feliz
 open NativePlants.Glossary
+open Hedge.Interface
 
 [<Emit("(()=>{const r=$0.getBoundingClientRect(),w=Math.min(380,window.innerWidth-24),above=window.innerHeight-r.bottom<220 && r.top>r.bottom-r.top;return [Math.max(12,Math.min(r.left,window.innerWidth-w-12)),above?r.top:r.bottom,w,above,Math.max(100,(above?r.top:window.innerHeight-r.bottom)-12)];})()")>]
 let private position (target:obj) : float*float*float*bool*float = jsNative
-[<Emit("(()=>{const close=e=>{if(e.type==='keydown'){if(e.key==='Escape')$1();}else if(e.type==='resize'||!$0.parentElement?.contains(e.target))$1();};window.addEventListener('keydown',close);window.addEventListener('pointerdown',close);window.addEventListener('scroll',close,true);window.addEventListener('resize',close);return ()=>{window.removeEventListener('keydown',close);window.removeEventListener('pointerdown',close);window.removeEventListener('scroll',close,true);window.removeEventListener('resize',close);};})()")>]
+// `$1` is captured under its own name first: Fable substitutes the caller's identifier textually, so a
+// local named like the F# argument (`close`) would shadow it and the handler would call itself.
+[<Emit("(()=>{const dismiss=$1;const handler=e=>{if(e.type==='keydown'){if(e.key==='Escape')dismiss();}else if(e.type==='resize'||!$0.parentElement?.contains(e.target))dismiss();};window.addEventListener('keydown',handler);window.addEventListener('pointerdown',handler);window.addEventListener('scroll',handler,true);window.addEventListener('resize',handler);return ()=>{window.removeEventListener('keydown',handler);window.removeEventListener('pointerdown',handler);window.removeEventListener('scroll',handler,true);window.removeEventListener('resize',handler);};})()")>]
 let private watch (target:obj) (close:unit->unit) : unit->unit = jsNative
 
 [<ReactComponent>]
@@ -41,15 +44,21 @@ let Term (note:Note) (label:string) =
             prop.onKeyDown(fun e -> if e.key="Escape" then e.preventDefault();e.stopPropagation();close())
         ]
         if visible then
-            Html.span [prop.id id.current;prop.role "tooltip";prop.className "definition-popover"
+            // A hover preview is a tooltip; a pinned definition (every touch open) is a small dialog
+            // with its own close control, in addition to Escape, scrolling or a tap outside.
+            Html.span [prop.id id.current;prop.role (if pinned then "dialog" else "tooltip");prop.className "definition-popover"
+                       if pinned then prop.ariaLabel note.Heading
                        prop.style [
                            style.left(int left);style.top(int top);style.width(int width);style.maxHeight(int maxHeight)
                            if above then style.transform [transform.translateY(length.percent -100)]
                        ]
                        prop.children [
+                           if pinned then
+                               Html.button [prop.type' "button";prop.className "definition-close";prop.ariaLabel "Close definition";prop.text "×"
+                                            prop.onClick(fun e -> e.stopPropagation();close())]
                            Html.strong note.Heading
                            Html.span [prop.className "definition-body";prop.text note.Body]
-                           if note.Image<>"" then Client.Images.View note.Image [prop.alt(note.Heading+" illustration")]
+                           if note.Image<>Image "" then Client.Images.View note.Image [prop.alt(note.Heading+" illustration")]
                            Html.small note.Source
                        ]]
     ]]

@@ -13,6 +13,7 @@
 
     <Compile Include="generated/Db.fs" />
     <Compile Include="../Core/Catalogue.fs" />
+    <Compile Include="../Core/Descriptions.fs" />
     <Compile Include="CatalogueStore.fs" />
     <Compile Include="Contributions.fs" />
     <Compile Include="FieldNotes.fs" />

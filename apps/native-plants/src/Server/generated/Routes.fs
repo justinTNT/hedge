@@ -18,6 +18,9 @@ let dispatch (request: WorkerRequest) (env: Env) (ctx: ExecutionContext)
     | GET path when matchPath "/api/plants/revision" path = Some (Exact "/api/plants/revision") ->
         Some (Server.Handlers.getRevision env)
 
+    | GET path when matchPath "/api/plants/accounts" path = Some (Exact "/api/plants/accounts") ->
+        Some (Server.Handlers.getAccounts env)
+
     | GET path when matchPath "/api/plants/catalogue" path = Some (Exact "/api/plants/catalogue") ->
         Some (Server.Handlers.getCatalogue env)
 

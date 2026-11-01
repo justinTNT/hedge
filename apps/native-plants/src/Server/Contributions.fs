@@ -7,6 +7,7 @@ open Hedge.Workers
 open Hedge.Router
 open Hedge.GuestSession
 open Models.Contributions
+open Hedge.Interface
 open Server.Env
 
 type Owner = { Provider:string; Id:string; Cookie:string option }
@@ -56,8 +57,13 @@ let stmt (env:Env) sql args = bind (env.DB.prepare sql) args
 let first env sql args = (stmt env sql args).first()
 let rows env sql args = promise { let! r=(stmt env sql args).all() in return r.results }
 let run env sql args = promise { let! r=(stmt env sql args).run() in return (unbox<int> r.meta?changes)>0 }
+// The legacy v1 contract is the raw record shape, so a typed `Image` must still appear as its path.
+// JSON.stringify hands a replacer the union's own toJSON form, so the holder's original value is tested.
+[<Emit("JSON.stringify($0,function(key,value){const original=this[key];return original instanceof $1?original.fields[0]:value;})")>]
+let private stringifyUnwrapping (value:obj) (imageClass:obj) : string = jsNative
+let private v1Json (value:obj) = stringifyUnwrapping value (jsConstructor<Image>)
 let response cookie status value =
-    let result=jsonResponse (JS.JSON.stringify value) status
+    let result=jsonResponse (v1Json value) status
     result?headers?set("Cache-Control","private, no-store") |> ignore
     result?headers?set("Vary","Cookie, Authorization, X-Admin-Key") |> ignore
     match cookie with Some c -> result?headers?set("Set-Cookie",c) |> ignore |None -> ()
@@ -114,7 +120,7 @@ let notePurpose (r:obj) =
 
 let photoDto (r:obj) : Photo =
     let id:string=r?id
-    {Id=id;Image="/api/plants/personal-media/"+id+"/image";Thumbnail="/api/plants/personal-media/"+id+"/thumbnail"
+    {Id=id;Image=Image("/api/plants/personal-media/"+id+"/image");Thumbnail=Image("/api/plants/personal-media/"+id+"/thumbnail")
      Caption=r?caption;Photographer=r?photographer;Width=r?width;Height=r?height
      Offered=(unbox<int> r?offered)=1;Revision=r?revision
      PublicPhotoId=if isNull r?published_photo_id then "" else r?published_photo_id}
@@ -259,9 +265,23 @@ let mutateCommand env plantId who command onSuccess = promise {
         let! data=personalData env plantId who
         return onSuccess data
     elif (match command with SaveNote(_,0,_,_) | SaveEntry(_,0,_,_,_) -> true | _ -> false) then
-        let! notes,_=capacities env plantId who
-        if notes.Used>=notes.Limit then return noteLimitResponse who.Cookie
-        else return conflict who.Cookie
+        // A replayed create whose earlier attempt committed before the network dropped finds its own
+        // note already present with the same content: answer as the success it was, so an offline
+        // queue can resend safely. Different content is a real conflict for the person to settle.
+        let text,purpose,photoIds =
+            match command with
+            | SaveEntry(_,_,value,purpose,photos) -> checkedText "Text" 6000 value,purpose,photos
+            | SaveNote(_,_,value,correction) -> checkedText "Text" 6000 value,(if correction then "correction" else "private"),[]
+            | _ -> "","",[]
+        let! existing=first env ("SELECT text,"+purposeSql.Replace("n.","")+" purpose,COALESCE(photo_ids,'[]') photo_ids FROM plant_notes WHERE "+owned+" AND deleted_at IS NULL") args
+        match existing with
+        | Some row when (unbox<string> row?text)=text && (unbox<string> row?purpose)=purpose && (unbox<string> row?photo_ids)=JS.JSON.stringify(List.toArray photoIds) ->
+            let! data=personalData env plantId who
+            return onSuccess data
+        | _ ->
+            let! notes,_=capacities env plantId who
+            if notes.Used>=notes.Limit then return noteLimitResponse who.Cookie
+            else return conflict who.Cookie
     else return conflict who.Cookie
 }
 

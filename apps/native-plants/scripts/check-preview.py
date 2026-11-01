@@ -34,4 +34,4 @@ for file in files:
     assert file.stat().st_size <= 25 * 1024 * 1024, f'Asset too large: {file}'
     assert file.suffix not in ('.sql', '.sqlite', '.toml', '.map'), f'Unexpected deploy asset: {file}'
     assert not any(part.startswith('.') for part in file.relative_to(app / '_site').parts), f'Hidden deploy asset: {file}'
-print(f'Preview checked: {len(paths)} referenced media paths; {len(files)} assets; empty user tables; all routes gated.')
+print(f'Preview checked: {len(paths)} referenced media paths; {len(files)} assets; empty user tables; content routes gated.')

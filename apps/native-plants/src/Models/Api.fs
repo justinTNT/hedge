@@ -1,19 +1,19 @@
 module Models.Api
 open Hedge.Interface
 
-type Photo = { Id: string; Image: string; Thumbnail: string; Caption: string; Photographer: string }
+type Photo = { Id: string; Image: Image; Thumbnail: Image; Caption: string; Photographer: string }
 type Section = { Label: string; Text: string }
 type PlantCard = {
     Id: string; Slug: string; ScientificName: string; CommonNames: string; Family: string; Genus: string
     Aliases: string list; Forms: string list; Height: string; Sun: string list; Water: string list
     GardenFeatures: string list; Wildlife: string list; EndemicNt: bool; Summary: string; Photo: Photo option; Photographers: string list
 }
-type DistributionMap = { Id: string; Image: string; Caption: string; SourceLabel: string }
+type DistributionMap = { Id: string; Image: Image; Caption: string; SourceLabel: string }
 type PlantDetail = { Card: PlantCard; Sections: Section list; Photos: Photo list; DistributionMaps: DistributionMap list }
 type Taxon = { Name: string; Count: int; Genera: string list }
 type Facet = { Name: string; Count: int }
 
-type GlossaryEntry = { Id: string; Term: string; Aliases: string list; Definition: string; Illustration: string; SourceLabel: string }
+type GlossaryEntry = { Id: string; Term: string; Aliases: string list; Definition: string; Illustration: Image; SourceLabel: string }
 type ReferenceEntry = { Id: string; Kind: string; Number: int; Citation: string; Aliases: string list; SourceLabel: string }
 
 module GetCatalogue =
@@ -23,6 +23,11 @@ module GetCatalogue =
 module GetPlant =
     type Response = { Plant: PlantDetail }
     let endpoint : GetBy<Response> = GetBy (sprintf "/api/plants/plant/%s")
+
+/// Every published account in one response, for the device's warm-up. The revision is the catalogue's.
+module GetAccounts =
+    type Response = { Plants: PlantDetail list; Revision: string }
+    let endpoint : Get<Response> = Get "/api/plants/accounts"
 
 module GetRevision =
     type Response = { Revision: string }

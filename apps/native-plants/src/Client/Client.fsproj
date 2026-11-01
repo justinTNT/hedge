@@ -4,19 +4,27 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../../../packages/hedge/src/Client/Api.fs" />
+    <Compile Include="../../../../packages/hedge/src/Client/Offline.fs" />
 
     <Compile Include="generated/ClientGen.fs" />
     <Compile Include="../Core/Catalogue.fs" />
+    <Compile Include="../Core/Descriptions.fs" />
     <Compile Include="../Core/Glossary.fs" />
+    <Compile Include="Storage.fs" />
     <Compile Include="Images.fs" />
     <Compile Include="Annotations.fs" />
     <Compile Include="../../../../packages/hedge/src/Client/GuestSession.fs" />
     <Compile Include="../../../../packages/hedge/src/Client/AdminCredential.fs" />
+    <Compile Include="Sync.fs" />
+    <Compile Include="Search.fs" />
+    <Compile Include="Packs.fs" />
+    <Compile Include="Seed.fs" />
     <Compile Include="ContributionsApi.fs" />
     <Compile Include="Auth.fs" />
     <Compile Include="Access.fs" />
     <Compile Include="Personal.fs" />
     <Compile Include="Review.fs" />
+    <Compile Include="OfflinePage.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>

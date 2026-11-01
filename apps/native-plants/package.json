@@ -22,7 +22,7 @@
     "check:preview": "python3 scripts/check-preview.py && node --test test/preview-gate.test.mjs",
     "deploy:preview": "npm run build && npm run check:preview && wrangler deploy --env preview",
     "db:migrate:field-notes": "wrangler d1 execute native-plants-db --local --file migrations/0003_field_notes.sql",
-    "build:mobile": "npm run gen && npm run build:client && vite build --mode native",
+    "build:mobile": "npm run gen && npm run build:client && npm run build:server && vite build --mode native && node scripts/seed-mobile.mjs mobile/www/seed",
     "dev:mobile": "vite --mode native",
     "db:migrate:mobile": "wrangler d1 execute native-plants-db --local --file migrations/0004_mobile.sql"
   },

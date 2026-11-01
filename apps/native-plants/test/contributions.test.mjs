@@ -565,3 +565,12 @@ test('0003 preserves legacy notes, correction flags, photographs and catalogue r
   assert.deepEqual(data.personal.notes.map(n=>[n.id,n.purpose]).sort(),[['correction','correction'],['private','private']]);
   assert.ok(data.personal.notes.every(n=>n.photos.length===0 && n.responses.length===0));
 });
+
+test('a replayed create with the same content is answered as the success it was; different content is still a conflict',async()=>{
+  const f=fixture(),anon=await f.bootstrap();const cookie=await f.login(anon);
+  const first=await body200(await f.post(cookie,note('replay','Same words')));
+  const again=await body200(await f.post(cookie,note('replay','Same words')));
+  assert.deepEqual(again.Notes.map(n=>[n.Id,n.Text,n.Revision]),first.Notes.map(n=>[n.Id,n.Text,n.Revision]));
+  assert.equal((await f.post(cookie,note('replay','Different words'))).status,409);
+  assert.equal((await body200(await f.personal(cookie))).Notes.filter(n=>n.Id==='replay').length,1);
+});

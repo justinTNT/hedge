@@ -4,6 +4,7 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Hedge.Workers
 open Models.Api
+open Hedge.Interface
 open NativePlants.Catalogue
 open Server.Env
 
@@ -36,7 +37,7 @@ let invalidate env =
 
 let private boolField row name = rowInt row name = 1
 let private photo row : Photo =
-    { Id=rowStr row "id"; Image=rowStr row "image"; Thumbnail=rowStr row "thumbnail"
+    { Id=rowStr row "id"; Image=Image(rowStr row "image"); Thumbnail=Image(rowStr row "thumbnail")
       Caption=rowStr row "caption"; Photographer=rowStr row "photographer" }
 let private labels =
     [ "features","Recognise this plant"; "habit","Habit"; "bark","Bark"; "leaves","Leaves"; "phyllodes","Phyllodes"
@@ -45,12 +46,12 @@ let private labels =
       "traditional_uses","Aboriginal uses · source account"; "notes","Notes"; "source_references","References" ]
 
 let private distributionMap row : DistributionMap =
-    { Id=rowStr row "id"; Image=rowStr row "image"; Caption=rowStr row "caption"; SourceLabel=rowStr row "source_label" }
+    { Id=rowStr row "id"; Image=Image(rowStr row "image"); Caption=rowStr row "caption"; SourceLabel=rowStr row "source_label" }
 
 let private build (rows: obj array) (photoRows: obj array) (mapRows: obj array) (glossaryRows: obj array) (referenceRows: obj array) =
     let glossary = glossaryRows |> Array.map(fun row ->
         {Id=rowStr row "id";Term=rowStr row "term";Aliases=values(rowStr row "aliases");Definition=rowStr row "definition"
-         Illustration=rowStr row "illustration";SourceLabel=rowStr row "source_label"}:GlossaryEntry) |> Array.toList
+         Illustration=Image(rowStr row "illustration");SourceLabel=rowStr row "source_label"}:GlossaryEntry) |> Array.toList
     let references = referenceRows |> Array.map(fun row ->
         {Id=rowStr row "id";Kind=rowStr row "kind";Number=rowInt row "number";Citation=rowStr row "citation"
          Aliases=values(rowStr row "aliases");SourceLabel=rowStr row "source_label"}:ReferenceEntry) |> Array.toList

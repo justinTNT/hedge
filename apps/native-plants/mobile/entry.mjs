@@ -19,7 +19,9 @@ async function accepts(credential) {
 async function unlock() {
   let saved='';try {saved=(await store.get({key})).value;} catch {}
   if (saved) {
-    try {if(await accepts(saved)) return saved;} catch {}
+    // Only the server's refusal asks for the password again. With no network, the saved password opens
+    // the saved guide; the server judges it when it is next reachable.
+    try {if(await accepts(saved)) return saved;} catch {return saved;}
   }
   root.innerHTML=`<main class="preview-unlock"><p class="eyebrow">JOHN BROCK’S FIELD GUIDE</p><h1>Native Plants</h1><p>Enter the private preview password to open the guide.</p><form><label for="preview-password">Preview password</label><input id="preview-password" type="password" autocomplete="current-password" required><button type="submit">Open guide</button><p role="alert"></p></form></main>`;
   return new Promise(resolve => {
@@ -43,7 +45,7 @@ async function start() {
   await window.HedgeGuest.ensureSession();
   await import('../dist/client/Main.js');
   await App.addListener('backButton',() => {
-    const close=document.querySelector('.lightbox-close,.account-close');
+    const close=document.querySelector('.definition-close,.lightbox-close,.account-close');
     if(close) close.click();
     else if(history.length>1) history.back();
     else App.minimizeApp();

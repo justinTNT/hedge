@@ -1,8 +1,9 @@
 module Models.Contributions
+open Hedge.Interface
 
 /// App view data and the legacy v1 JSON contract. V2 uses generated codecs and lists.
 type Photo = {
-    Id:string; Image:string; Thumbnail:string; Caption:string; Photographer:string
+    Id:string; Image:Image; Thumbnail:Image; Caption:string; Photographer:string
     Width:int; Height:int; Offered:bool; Revision:int; PublicPhotoId:string
 }
 type Identification = {
