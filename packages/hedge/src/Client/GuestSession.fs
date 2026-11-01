@@ -132,6 +132,10 @@ let assetUrl (url: string) : string =
 [<Emit("window.HedgeGuest.invalidateSession()")>]
 let invalidateSession () : unit = jsNative
 
+/// The message the session lock refuses with when the session changed under a request. Offline code tells
+/// this local refusal apart from a network that is away, since both arrive as a TransportFailure.
+let sessionChangedMessage = "Your session changed. Refresh and try again."
+
 /// Run a typed operation under the browser session lifecycle. The operation owns decoding;
 /// the runtime owns cookie serialization and rejects results from an invalidated session.
 [<Emit("window.HedgeGuest.withSessionRequest($0)")>]

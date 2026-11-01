@@ -8,6 +8,23 @@ open Alerts.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    alertsEditFraming: Alerts.Api.EditFraming.Request -> Hedge.Http.Request
+    alertsDismiss: Alerts.Api.Dismiss.Request -> Hedge.Http.Request
+    alertsApprove: Alerts.Api.Approve.Request -> Hedge.Http.Request
+    alertsQueue: Alerts.Api.Queue.Request -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    alertsEditFraming = fun req -> ({ Method = "POST"; Path = "/api/alerts/curation/framing"; Query = []; Headers = []; Body = Some (Encode.alertsEditFramingReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    alertsDismiss = fun req -> ({ Method = "POST"; Path = "/api/alerts/curation/dismiss"; Query = []; Headers = []; Body = Some (Encode.alertsDismissReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    alertsApprove = fun req -> ({ Method = "POST"; Path = "/api/alerts/curation/approve"; Query = []; Headers = []; Body = Some (Encode.alertsApproveReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    alertsQueue = fun req -> ({ Method = "POST"; Path = "/api/alerts/curation/queue"; Query = []; Headers = []; Body = Some (Encode.alertsQueueReq req |> Encode.toString 0) }: Hedge.Http.Request)
+}
+
 type Client = {
     alertsEditFraming: Alerts.Api.EditFraming.Request -> JS.Promise<Result<Alerts.Api.EditFraming.Response, Hedge.Http.ApiError>>
     alertsDismiss: Alerts.Api.Dismiss.Request -> JS.Promise<Result<Alerts.Api.Dismiss.Response, Hedge.Http.ApiError>>
@@ -16,10 +33,10 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    alertsEditFraming = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/alerts/curation/framing"; Query = []; Headers = []; Body = Some (Encode.alertsEditFramingReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.alertsEditFramingResponse
-    alertsDismiss = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/alerts/curation/dismiss"; Query = []; Headers = []; Body = Some (Encode.alertsDismissReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.alertsDismissResponse
-    alertsApprove = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/alerts/curation/approve"; Query = []; Headers = []; Body = Some (Encode.alertsApproveReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.alertsApproveResponse
-    alertsQueue = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/alerts/curation/queue"; Query = []; Headers = []; Body = Some (Encode.alertsQueueReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.alertsQueueResponse
+    alertsEditFraming = fun req -> Hedge.Http.sendDecode transport (requests.alertsEditFraming req) Decode.alertsEditFramingResponse
+    alertsDismiss = fun req -> Hedge.Http.sendDecode transport (requests.alertsDismiss req) Decode.alertsDismissResponse
+    alertsApprove = fun req -> Hedge.Http.sendDecode transport (requests.alertsApprove req) Decode.alertsApproveResponse
+    alertsQueue = fun req -> Hedge.Http.sendDecode transport (requests.alertsQueue req) Decode.alertsQueueResponse
 }
 
 // --- WebSocket Events ---

@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     The shared browser-client runtime: the admin-credential store (Client.AdminCredential), the HTTP client
-    (Client.Api) and the signed-guest-session coordinator (Client.GuestSession). References Hedge for the
+    (Client.Api), the signed-guest-session coordinator (Client.GuestSession) and the offline runtime
+    (Client.Offline: store, read cache, outbox, media). References Hedge for the
     shared wire types. Consumed by ContentClient and the app/admin clients + runtime fixtures; the one-off
     `music` app keeps its own bespoke Client.GuestSession and is intentionally NOT a consumer.
   -->
@@ -13,6 +14,7 @@
     <Compile Include="AdminCredential.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="GuestSession.fs" />
+    <Compile Include="Offline.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Hedge/Hedge.fsproj" />

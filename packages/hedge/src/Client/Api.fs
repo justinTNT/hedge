@@ -102,6 +102,11 @@ let private methodOf (m: string) : HttpMethod =
 [<Emit("$0.cache = 'no-store'")>]
 let private disableCache (options: obj) : unit = jsNative
 
+/// The response headers as pairs. Forwarded on every completed response so a caching transport can
+/// honour ETag and Cache-Control generically; Http.sendDecode never reads them.
+[<Emit("Array.from($0.headers.entries())")>]
+let private headerPairs (response: Response) : (string * string)[] = jsNative
+
 let private browserTransportWithCache (noStore: bool) : Hedge.Http.Transport =
     fun (req: Hedge.Http.Request) ->
         promise {
@@ -124,7 +129,7 @@ let private browserTransportWithCache (noStore: bool) : Hedge.Http.Transport =
                 if noStore then disableCache options
                 let! response = GlobalFetch.fetch(RequestInfo.Url url, options)
                 let! text = response.text()
-                return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
+                return Ok ({ Status = response.Status; Headers = List.ofArray (headerPairs response); Body = text }: Hedge.Http.Response)
             with ex ->
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }
@@ -164,7 +169,7 @@ let capacitorTransport (apiOrigin: string) (bearer: unit -> string) : Hedge.Http
                 disableCache options
                 let! response = GlobalFetch.fetch(RequestInfo.Url url, options)
                 let! text = response.text()
-                return Ok ({ Status = response.Status; Headers = []; Body = text }: Hedge.Http.Response)
+                return Ok ({ Status = response.Status; Headers = List.ofArray (headerPairs response); Body = text }: Hedge.Http.Response)
             with ex ->
                 return Error (Hedge.Http.TransportFailure ex.Message)
         }

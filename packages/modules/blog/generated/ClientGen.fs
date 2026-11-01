@@ -8,6 +8,29 @@ open Blog.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    blogSubmitSnapshot: Blog.Api.SubmitSnapshot.Request -> Hedge.Http.Request
+    blogGetItemsByTag: string -> Blog.Api.GetItemsByTag.Query -> Hedge.Http.Request
+    blogGetTags: unit -> Hedge.Http.Request
+    blogGetItem: string -> Hedge.Http.Request
+    blogSubmitItem: Blog.Api.SubmitItem.Request -> Hedge.Http.Request
+    blogSubmitComment: Blog.Api.SubmitComment.Request -> Hedge.Http.Request
+    blogGetFeed: Blog.Api.GetFeed.Query -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    blogSubmitSnapshot = fun req -> ({ Method = "POST"; Path = "/api/blog/snapshot"; Query = []; Headers = []; Body = Some (Encode.blogSubmitSnapshotReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    blogGetItemsByTag = fun id query -> ({ Method = "GET"; Path = (sprintf "/api/blog/tags/%s/items" id); Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request)
+    blogGetTags = fun () -> ({ Method = "GET"; Path = "/api/blog/tags"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    blogGetItem = fun id -> ({ Method = "GET"; Path = (sprintf "/api/blog/item/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    blogSubmitItem = fun req -> ({ Method = "POST"; Path = "/api/blog/item"; Query = []; Headers = []; Body = Some (Encode.blogSubmitItemReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    blogSubmitComment = fun req -> ({ Method = "POST"; Path = "/api/blog/comment"; Query = []; Headers = []; Body = Some (Encode.blogSubmitCommentReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    blogGetFeed = fun query -> ({ Method = "GET"; Path = "/api/blog/feed"; Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     blogSubmitSnapshot: Blog.Api.SubmitSnapshot.Request -> JS.Promise<Result<Blog.Api.SubmitSnapshot.Response, Hedge.Http.ApiError>>
     blogGetItemsByTag: string -> Blog.Api.GetItemsByTag.Query -> JS.Promise<Result<Blog.Api.GetItemsByTag.Response, Hedge.Http.ApiError>>
@@ -19,13 +42,13 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    blogSubmitSnapshot = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/blog/snapshot"; Query = []; Headers = []; Body = Some (Encode.blogSubmitSnapshotReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.blogSubmitSnapshotResponse
-    blogGetItemsByTag = fun id query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/blog/tags/%s/items" id); Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetItemsByTagResponse
-    blogGetTags = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/blog/tags"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetTagsResponse
-    blogGetItem = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/blog/item/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetItemResponse
-    blogSubmitItem = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/blog/item"; Query = []; Headers = []; Body = Some (Encode.blogSubmitItemReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.blogSubmitItemResponse
-    blogSubmitComment = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/blog/comment"; Query = []; Headers = []; Body = Some (Encode.blogSubmitCommentReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.blogSubmitCommentResponse
-    blogGetFeed = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/blog/feed"; Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.blogGetFeedResponse
+    blogSubmitSnapshot = fun req -> Hedge.Http.sendDecode transport (requests.blogSubmitSnapshot req) Decode.blogSubmitSnapshotResponse
+    blogGetItemsByTag = fun id query -> Hedge.Http.sendDecode transport (requests.blogGetItemsByTag id query) Decode.blogGetItemsByTagResponse
+    blogGetTags = fun () -> Hedge.Http.sendDecode transport (requests.blogGetTags ()) Decode.blogGetTagsResponse
+    blogGetItem = fun id -> Hedge.Http.sendDecode transport (requests.blogGetItem id) Decode.blogGetItemResponse
+    blogSubmitItem = fun req -> Hedge.Http.sendDecode transport (requests.blogSubmitItem req) Decode.blogSubmitItemResponse
+    blogSubmitComment = fun req -> Hedge.Http.sendDecode transport (requests.blogSubmitComment req) Decode.blogSubmitCommentResponse
+    blogGetFeed = fun query -> Hedge.Http.sendDecode transport (requests.blogGetFeed query) Decode.blogGetFeedResponse
 }
 
 // --- WebSocket Events ---

@@ -14,6 +14,7 @@ let inline ed (EditableDate v) = v
 let inline fk (ForeignKey v) = v
 let inline rc (RichContent v) = v
 let inline lk (Link v) = v
+let inline img (Image v) = v
 let inline uq (Unique v) = v
 
 module Encode =

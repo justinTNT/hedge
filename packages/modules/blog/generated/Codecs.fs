@@ -94,3 +94,13 @@ module Validate =
         ]
 
     let inline blogSubmitCommentReq (r: Blog.Api.SubmitComment.Request) = validate blogSubmitCommentSchema r
+
+module Images =
+
+    /// Every `Image` a wire value carries: its own Image fields first, then those of nested records
+    /// through options, lists and arrays. A field opts in by its type, so an offline media cache can
+    /// prefetch exactly what a response shows without an app-maintained list. One recursive group,
+    /// because records may nest in any order.
+    let rec blogGetItemResponse (v: Blog.Api.GetItem.Response) : Image list = (blogItemView v.Item)
+    and blogItemView (v: Blog.Api.SubmitItem.Item) : Image list = (match v.Image with Some x -> [ x ] | None -> [])
+    and blogSubmitItemResponse (v: Blog.Api.SubmitItem.Response) : Image list = (blogItemView v.Item)

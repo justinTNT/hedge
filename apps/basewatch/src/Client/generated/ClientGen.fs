@@ -10,14 +10,27 @@ open Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    getPage: string -> Hedge.Http.Request
+    getSite: unit -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    getPage = fun id -> ({ Method = "GET"; Path = (sprintf "/api/page/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    getSite = fun () -> ({ Method = "GET"; Path = "/api/site"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     getPage: string -> JS.Promise<Result<GetPage.Response, Hedge.Http.ApiError>>
     getSite: unit -> JS.Promise<Result<GetSite.Response, Hedge.Http.ApiError>>
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    getPage = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/page/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getPageResponse
-    getSite = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/site"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getSiteResponse
+    getPage = fun id -> Hedge.Http.sendDecode transport (requests.getPage id) Decode.getPageResponse
+    getSite = fun () -> Hedge.Http.sendDecode transport (requests.getSite ()) Decode.getSiteResponse
 }
 
 // --- WebSocket Events ---

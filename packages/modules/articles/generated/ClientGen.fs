@@ -8,6 +8,21 @@ open Articles.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    articlesGetPost: string -> Hedge.Http.Request
+    articlesSubmitComment: Articles.Api.SubmitComment.Request -> Hedge.Http.Request
+    articlesGetFeed: Articles.Api.GetFeed.Query -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    articlesGetPost = fun id -> ({ Method = "GET"; Path = (sprintf "/api/articles/post/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    articlesSubmitComment = fun req -> ({ Method = "POST"; Path = "/api/articles/comment"; Query = []; Headers = []; Body = Some (Encode.articlesSubmitCommentReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    articlesGetFeed = fun query -> ({ Method = "GET"; Path = "/api/articles/feed"; Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     articlesGetPost: string -> JS.Promise<Result<Articles.Api.GetPost.Response, Hedge.Http.ApiError>>
     articlesSubmitComment: Articles.Api.SubmitComment.Request -> JS.Promise<Result<Articles.Api.SubmitComment.Response, Hedge.Http.ApiError>>
@@ -15,9 +30,9 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    articlesGetPost = fun id -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = (sprintf "/api/articles/post/%s" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.articlesGetPostResponse
-    articlesSubmitComment = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/articles/comment"; Query = []; Headers = []; Body = Some (Encode.articlesSubmitCommentReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.articlesSubmitCommentResponse
-    articlesGetFeed = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/articles/feed"; Query = (List.choose (fun p -> p) [ (match query.Cursor with Some v -> Some ("cursor", v) | None -> None) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.articlesGetFeedResponse
+    articlesGetPost = fun id -> Hedge.Http.sendDecode transport (requests.articlesGetPost id) Decode.articlesGetPostResponse
+    articlesSubmitComment = fun req -> Hedge.Http.sendDecode transport (requests.articlesSubmitComment req) Decode.articlesSubmitCommentResponse
+    articlesGetFeed = fun query -> Hedge.Http.sendDecode transport (requests.articlesGetFeed query) Decode.articlesGetFeedResponse
 }
 
 // --- WebSocket Events ---

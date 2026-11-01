@@ -889,6 +889,61 @@ let viewCodecName (domainNames: Set<string>) (namePrefix: string) (vt: Type) =
     let disambiguated = if domainNames.Contains base_ then base_ + "View" else base_
     if namePrefix = "" then disambiguated else namePrefix + (capitalize disambiguated)
 
+// ============================================================
+// Image references — structural media discovery for offline caches
+// ============================================================
+
+let elementType (t: Type) = if t.IsArray then t.GetElementType() else t.GenericTypeArguments.[0]
+let isOptionType (t: Type) = t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<option<_>>
+let isListType (t: Type) = t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<list<_>>
+let isContainerType (t: Type) = t.IsArray || isOptionType t || isListType t
+let isRecordType (t: Type) = FSharpType.IsRecord(t, BindingFlags.Public ||| BindingFlags.Instance)
+
+/// The record types reachable from `roots` (through records, options, lists and arrays) that carry
+/// an `Image` somewhere in their structure, in discovery order, plus the carries-test itself. Decided
+/// as a fixpoint over the record graph, so a recursive record resolves instead of looping. A field
+/// opts into media discovery by its type alone — no attribute, no app-maintained list.
+let imageBearingRecords (roots: Type list) : Type list * (Type -> bool) =
+    let records = ResizeArray<Type>()
+    let rec visit (t: Type) =
+        if isContainerType t then visit (elementType t)
+        elif isRecordType t && not (records.Contains t) then
+            records.Add t
+            for p in FSharpType.GetRecordFields t do visit p.PropertyType
+    for root in roots do visit root
+    let carries = System.Collections.Generic.Dictionary<Type, bool>()
+    for r in records do carries.[r] <- false
+    let rec fieldCarries (t: Type) =
+        if t = typeof<Image> then true
+        elif isContainerType t then fieldCarries (elementType t)
+        elif isRecordType t then (match carries.TryGetValue t with | true, b -> b | _ -> false)
+        else false
+    let mutable changed = true
+    while changed do
+        changed <- false
+        for r in records do
+            if not carries.[r] && (FSharpType.GetRecordFields r |> Array.exists (fun p -> fieldCarries p.PropertyType)) then
+                carries.[r] <- true
+                changed <- true
+    (records |> Seq.filter (fun r -> carries.[r]) |> List.ofSeq), fieldCarries
+
+/// The expression collecting every Image under `access` (a value of type `t`) as an `Image list`,
+/// or None when the type cannot carry one. Records delegate to their named collector.
+let rec imageExpr (collectorName: Type -> string) (carries: Type -> bool) (t: Type) (access: string) : string option =
+    if t = typeof<Image> then Some (sprintf "[ %s ]" access)
+    elif not (carries t) then None
+    elif isOptionType t then
+        imageExpr collectorName carries (elementType t) "x"
+        |> Option.map (fun inner -> sprintf "(match %s with Some x -> %s | None -> [])" access inner)
+    elif isListType t then
+        imageExpr collectorName carries (elementType t) "x"
+        |> Option.map (fun inner -> sprintf "(%s |> List.collect (fun x -> %s))" access inner)
+    elif t.IsArray then
+        imageExpr collectorName carries (elementType t) "x"
+        |> Option.map (fun inner -> sprintf "(%s |> Array.toList |> List.collect (fun x -> %s))" access inner)
+    elif isRecordType t then Some (sprintf "(%s %s)" (collectorName t) access)
+    else None
+
 /// `moduleName` is the emitted F# module (site: "Codecs"; a module surface: "Blog.Codecs").
 /// `emitHelpers` emits the unwrap helpers (pk/ct/…) — only in the site "Codecs", never in a
 /// module surface, so opening both doesn't double-define them.
@@ -920,6 +975,7 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
         emit "let inline fk (ForeignKey v) = v"
         emit "let inline rc (RichContent v) = v"
         emit "let inline lk (Link v) = v"
+        emit "let inline img (Image v) = v"
         emit "let inline uq (Unique v) = v"
         emit ""
     emit "module Encode ="
@@ -1051,6 +1107,49 @@ let generateCodecsFs (domainTypes: Type list) (endpoints: ParsedEndpoint list) (
             emit ""
         | None -> ()
 
+    // Image references (offline media discovery). Only wire types that carry an Image get a
+    // collector, and the module is omitted when none does, so image-free surfaces are unchanged.
+    let responseRoots = endpoints |> List.choose (fun ep -> ep.ResponseType |> Option.map (fun t -> ep, t))
+    let viewRoots = endpoints |> List.collect (fun ep -> ep.ViewTypes |> List.map (fun t -> ep, t))
+    let bearing, carries = imageBearingRecords (List.map snd (responseRoots @ viewRoots))
+    if not bearing.IsEmpty then
+        let prefixes = endpoints |> List.map (fun ep -> ep.Namespace, ep.NamePrefix) |> Map.ofList
+        let rootNames =
+            [ for (ep, t) in responseRoots -> t, genName ep.NamePrefix ep.ModuleName + "Response"
+              for (ep, t) in viewRoots -> t, viewCodecName domainNames ep.NamePrefix t ]
+        // A shared record is named by its path under the module namespace, in the module's prefix:
+        // "Models.Api.Photo" -> photo, "Models.Contributions.Photo" -> contributionsPhoto,
+        // "Blog.Domain.Post" -> blogPost. Any residual collision falls back to the full path.
+        let pathName (t: Type) =
+            let segments = (qualifiedTypeName t).Split('.') |> List.ofArray
+            let rest = match List.tail segments with ("Api" | "Domain") :: more -> more | more -> more
+            genName (prefixes |> Map.tryFind (List.head segments) |> Option.defaultValue "") (String.concat "" rest)
+        let named =
+            bearing |> List.map (fun t ->
+                match rootNames |> List.tryFind (fun (k, _) -> k = t) with
+                | Some (_, n) -> t, n
+                | None -> t, pathName t)
+        let counts = named |> List.countBy snd |> Map.ofList
+        let named = named |> List.map (fun (t, n) -> if counts.[n] > 1 then t, toCamelCase ((qualifiedTypeName t).Replace(".", "")) else t, n)
+        let nameOf (t: Type) = named |> List.find (fun (k, _) -> k = t) |> snd
+        let body (t: Type) =
+            let fields = FSharpType.GetRecordFields t |> List.ofArray
+            let direct = fields |> List.filter (fun p -> p.PropertyType = typeof<Image>) |> List.map (fun p -> "v." + p.Name)
+            let nested = fields |> List.filter (fun p -> p.PropertyType <> typeof<Image>) |> List.choose (fun p -> imageExpr nameOf carries p.PropertyType ("v." + p.Name))
+            match (if direct.IsEmpty then [] else [ sprintf "[ %s ]" (String.concat "; " direct) ]) @ nested with
+            | [] -> "[]"
+            | [ one ] -> one
+            | many -> sprintf "List.concat [ %s ]" (String.concat "; " many)
+        emit "module Images ="
+        emit ""
+        emit "    /// Every `Image` a wire value carries: its own Image fields first, then those of nested records"
+        emit "    /// through options, lists and arrays. A field opts in by its type, so an offline media cache can"
+        emit "    /// prefetch exactly what a response shows without an app-maintained list. One recursive group,"
+        emit "    /// because records may nest in any order."
+        named |> List.iteri (fun i (t, n) ->
+            emit (sprintf "    %s %s (v: %s) : Image list = %s" (if i = 0 then "let rec" else "and") n (qualifiedTypeName t) (body t)))
+        emit ""
+
     lines |> String.concat "\n"
 
 // ============================================================
@@ -1097,46 +1196,70 @@ let generateClientGenFs (endpoints: ParsedEndpoint list) (wsTypes: (Type * strin
     // Hedge.Http.Request annotation resolves its fields even when a consumer namespace also
     // opens an `Api` with same-named record fields.
     if not (List.isEmpty endpoints) then
+        let argTy (ep: ParsedEndpoint) =
+            match ep.Method with
+            | EGet -> "unit"
+            | EGetBy -> "string"
+            | EGetQuery -> apiTypeRef qualify ep "Query"
+            | EGetByQuery -> sprintf "string -> %s" (apiTypeRef qualify ep "Query")
+            | EPost -> apiTypeRef qualify ep "Request"
+            | EPostEmpty -> "unit"
         emit ""
         emit "// --- Transport-neutral client (C2) ---"
         emit ""
-        emit "type Client = {"
+        // Request builders: the wire request each endpoint sends, with no transport involved. The
+        // client composes them with Http.sendDecode; an offline outbox persists and replays them
+        // through the same decorated transport, and a read cache keys on them, so no consumer
+        // re-derives a path, query or body.
+        emit "// Request builders: the wire request each endpoint sends, before any transport. createClient"
+        emit "// composes them with Http.sendDecode; an offline outbox persists and replays them through the"
+        emit "// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body."
+        emit "type Requests = {"
+        for ep in endpoints do
+            emit (sprintf "    %s: %s -> Hedge.Http.Request" (genName ep.NamePrefix ep.ModuleName) (argTy ep))
+        emit "}"
+        emit ""
+        emit "let requests : Requests = {"
         for ep in endpoints do
             let funcName = genName ep.NamePrefix ep.ModuleName
+            let reqName = genName ep.NamePrefix ep.ModuleName + "Req"
+            match ep.Method with
+            | EGet ->
+                emit (sprintf "    %s = fun () -> ({ Method = \"GET\"; Path = \"%s\"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)" funcName ep.Path)
+            | EGetBy ->
+                let pathTemplate = ep.Path.Replace(":id", "%s")
+                emit (sprintf "    %s = fun id -> ({ Method = \"GET\"; Path = (sprintf \"%s\" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request)" funcName pathTemplate)
+            | EGetQuery ->
+                let pairs = "List.choose (fun p -> p) [ " + String.concat "; " (queryItems "query" ep.QueryType.Value) + " ]"
+                emit (sprintf "    %s = fun query -> ({ Method = \"GET\"; Path = \"%s\"; Query = (%s); Headers = []; Body = None }: Hedge.Http.Request)" funcName ep.Path pairs)
+            | EGetByQuery ->
+                let pathTemplate = ep.Path.Replace(":id", "%s")
+                let pairs = "List.choose (fun p -> p) [ " + String.concat "; " (queryItems "query" ep.QueryType.Value) + " ]"
+                emit (sprintf "    %s = fun id query -> ({ Method = \"GET\"; Path = (sprintf \"%s\" id); Query = (%s); Headers = []; Body = None }: Hedge.Http.Request)" funcName pathTemplate pairs)
+            | EPost ->
+                emit (sprintf "    %s = fun req -> ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = Some (Encode.%s req |> Encode.toString 0) }: Hedge.Http.Request)" funcName ep.Path reqName)
+            | EPostEmpty ->
+                emit (sprintf "    %s = fun () -> ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)" funcName ep.Path)
+        emit "}"
+        emit ""
+        emit "type Client = {"
+        for ep in endpoints do
             let resultTy = sprintf "JS.Promise<Result<%s, Hedge.Http.ApiError>>" (apiTypeRef qualify ep "Response")
-            let argTy =
-                match ep.Method with
-                | EGet -> "unit"
-                | EGetBy -> "string"
-                | EGetQuery -> apiTypeRef qualify ep "Query"
-                | EGetByQuery -> sprintf "string -> %s" (apiTypeRef qualify ep "Query")
-                | EPost -> apiTypeRef qualify ep "Request"
-                | EPostEmpty -> "unit"
-            emit (sprintf "    %s: %s -> %s" funcName argTy resultTy)
+            emit (sprintf "    %s: %s -> %s" (genName ep.NamePrefix ep.ModuleName) (argTy ep) resultTy)
         emit "}"
         emit ""
         emit "let createClient (transport: Hedge.Http.Transport) : Client = {"
         for ep in endpoints do
             let funcName = genName ep.NamePrefix ep.ModuleName
             let respName = genName ep.NamePrefix ep.ModuleName + "Response"
-            let reqName = genName ep.NamePrefix ep.ModuleName + "Req"
-            match ep.Method with
-            | EGet ->
-                emit (sprintf "    %s = fun () -> Hedge.Http.sendDecode transport ({ Method = \"GET\"; Path = \"%s\"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName ep.Path respName)
-            | EGetBy ->
-                let pathTemplate = ep.Path.Replace(":id", "%s")
-                emit (sprintf "    %s = fun id -> Hedge.Http.sendDecode transport ({ Method = \"GET\"; Path = (sprintf \"%s\" id); Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName pathTemplate respName)
-            | EGetQuery ->
-                let pairs = "List.choose (fun p -> p) [ " + String.concat "; " (queryItems "query" ep.QueryType.Value) + " ]"
-                emit (sprintf "    %s = fun query -> Hedge.Http.sendDecode transport ({ Method = \"GET\"; Path = \"%s\"; Query = (%s); Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName ep.Path pairs respName)
-            | EGetByQuery ->
-                let pathTemplate = ep.Path.Replace(":id", "%s")
-                let pairs = "List.choose (fun p -> p) [ " + String.concat "; " (queryItems "query" ep.QueryType.Value) + " ]"
-                emit (sprintf "    %s = fun id query -> Hedge.Http.sendDecode transport ({ Method = \"GET\"; Path = (sprintf \"%s\" id); Query = (%s); Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName pathTemplate pairs respName)
-            | EPost ->
-                emit (sprintf "    %s = fun req -> Hedge.Http.sendDecode transport ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = Some (Encode.%s req |> Encode.toString 0) }: Hedge.Http.Request) Decode.%s" funcName ep.Path reqName respName)
-            | EPostEmpty ->
-                emit (sprintf "    %s = fun () -> Hedge.Http.sendDecode transport ({ Method = \"POST\"; Path = \"%s\"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.%s" funcName ep.Path respName)
+            let call =
+                match ep.Method with
+                | EGet | EPostEmpty -> sprintf "fun () -> Hedge.Http.sendDecode transport (requests.%s ()) Decode.%s" funcName respName
+                | EGetBy -> sprintf "fun id -> Hedge.Http.sendDecode transport (requests.%s id) Decode.%s" funcName respName
+                | EGetQuery -> sprintf "fun query -> Hedge.Http.sendDecode transport (requests.%s query) Decode.%s" funcName respName
+                | EGetByQuery -> sprintf "fun id query -> Hedge.Http.sendDecode transport (requests.%s id query) Decode.%s" funcName respName
+                | EPost -> sprintf "fun req -> Hedge.Http.sendDecode transport (requests.%s req) Decode.%s" funcName respName
+            emit (sprintf "    %s = %s" funcName call)
         emit "}"
 
     emit ""

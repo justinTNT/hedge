@@ -10,12 +10,23 @@ open Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    getAlbums: unit -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    getAlbums = fun () -> ({ Method = "GET"; Path = "/api/albums"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     getAlbums: unit -> JS.Promise<Result<GetAlbums.Response, Hedge.Http.ApiError>>
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    getAlbums = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/albums"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.getAlbumsResponse
+    getAlbums = fun () -> Hedge.Http.sendDecode transport (requests.getAlbums ()) Decode.getAlbumsResponse
 }
 
 // --- WebSocket Events ---

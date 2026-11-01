@@ -8,6 +8,23 @@ open MobileHttp.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    mobileHttpSignout: unit -> Hedge.Http.Request
+    mobileHttpExchange: MobileHttp.Api.Exchange.Request -> Hedge.Http.Request
+    mobileHttpMe: unit -> Hedge.Http.Request
+    mobileHttpBootstrap: unit -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    mobileHttpSignout = fun () -> ({ Method = "POST"; Path = "/api/mobile/signout"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    mobileHttpExchange = fun req -> ({ Method = "POST"; Path = "/api/mobile/exchange"; Query = []; Headers = []; Body = Some (Encode.mobileHttpExchangeReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    mobileHttpMe = fun () -> ({ Method = "GET"; Path = "/api/mobile/me"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    mobileHttpBootstrap = fun () -> ({ Method = "POST"; Path = "/api/mobile/bootstrap"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     mobileHttpSignout: unit -> JS.Promise<Result<MobileHttp.Api.Signout.Response, Hedge.Http.ApiError>>
     mobileHttpExchange: MobileHttp.Api.Exchange.Request -> JS.Promise<Result<MobileHttp.Api.Exchange.Response, Hedge.Http.ApiError>>
@@ -16,10 +33,10 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    mobileHttpSignout = fun () -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/mobile/signout"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.mobileHttpSignoutResponse
-    mobileHttpExchange = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/mobile/exchange"; Query = []; Headers = []; Body = Some (Encode.mobileHttpExchangeReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.mobileHttpExchangeResponse
-    mobileHttpMe = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/mobile/me"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.mobileHttpMeResponse
-    mobileHttpBootstrap = fun () -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/mobile/bootstrap"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.mobileHttpBootstrapResponse
+    mobileHttpSignout = fun () -> Hedge.Http.sendDecode transport (requests.mobileHttpSignout ()) Decode.mobileHttpSignoutResponse
+    mobileHttpExchange = fun req -> Hedge.Http.sendDecode transport (requests.mobileHttpExchange req) Decode.mobileHttpExchangeResponse
+    mobileHttpMe = fun () -> Hedge.Http.sendDecode transport (requests.mobileHttpMe ()) Decode.mobileHttpMeResponse
+    mobileHttpBootstrap = fun () -> Hedge.Http.sendDecode transport (requests.mobileHttpBootstrap ()) Decode.mobileHttpBootstrapResponse
 }
 
 // --- WebSocket Events ---

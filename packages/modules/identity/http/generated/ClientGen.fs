@@ -8,6 +8,23 @@ open IdentityHttp.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    identityHttpGetIdentities: unit -> Hedge.Http.Request
+    identityHttpDisconnect: IdentityHttp.Api.Disconnect.Request -> Hedge.Http.Request
+    identityHttpRevert: IdentityHttp.Api.Revert.Request -> Hedge.Http.Request
+    identityHttpActivate: IdentityHttp.Api.Activate.Request -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    identityHttpGetIdentities = fun () -> ({ Method = "GET"; Path = "/api/auth/identities"; Query = []; Headers = []; Body = None }: Hedge.Http.Request)
+    identityHttpDisconnect = fun req -> ({ Method = "POST"; Path = "/api/auth/disconnect"; Query = []; Headers = []; Body = Some (Encode.identityHttpDisconnectReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    identityHttpRevert = fun req -> ({ Method = "POST"; Path = "/api/auth/revert"; Query = []; Headers = []; Body = Some (Encode.identityHttpRevertReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    identityHttpActivate = fun req -> ({ Method = "POST"; Path = "/api/auth/activate"; Query = []; Headers = []; Body = Some (Encode.identityHttpActivateReq req |> Encode.toString 0) }: Hedge.Http.Request)
+}
+
 type Client = {
     identityHttpGetIdentities: unit -> JS.Promise<Result<IdentityHttp.Api.GetIdentities.Response, Hedge.Http.ApiError>>
     identityHttpDisconnect: IdentityHttp.Api.Disconnect.Request -> JS.Promise<Result<IdentityHttp.Api.Disconnect.Response, Hedge.Http.ApiError>>
@@ -16,10 +33,10 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    identityHttpGetIdentities = fun () -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/auth/identities"; Query = []; Headers = []; Body = None }: Hedge.Http.Request) Decode.identityHttpGetIdentitiesResponse
-    identityHttpDisconnect = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/auth/disconnect"; Query = []; Headers = []; Body = Some (Encode.identityHttpDisconnectReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.identityHttpDisconnectResponse
-    identityHttpRevert = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/auth/revert"; Query = []; Headers = []; Body = Some (Encode.identityHttpRevertReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.identityHttpRevertResponse
-    identityHttpActivate = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/auth/activate"; Query = []; Headers = []; Body = Some (Encode.identityHttpActivateReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.identityHttpActivateResponse
+    identityHttpGetIdentities = fun () -> Hedge.Http.sendDecode transport (requests.identityHttpGetIdentities ()) Decode.identityHttpGetIdentitiesResponse
+    identityHttpDisconnect = fun req -> Hedge.Http.sendDecode transport (requests.identityHttpDisconnect req) Decode.identityHttpDisconnectResponse
+    identityHttpRevert = fun req -> Hedge.Http.sendDecode transport (requests.identityHttpRevert req) Decode.identityHttpRevertResponse
+    identityHttpActivate = fun req -> Hedge.Http.sendDecode transport (requests.identityHttpActivate req) Decode.identityHttpActivateResponse
 }
 
 // --- WebSocket Events ---

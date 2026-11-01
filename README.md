@@ -109,4 +109,7 @@ Fable.Remoting's server needs the .NET CLR — it doesn't compile to JS. Workers
 need pure Fable → JS on both ends, so Hedge uses Thoth codecs + fetch wrappers for
 the same type-safe serialization without a runtime dependency. The wrapper cost is
 small and now shared (`packages/hedge/src/Client/Api.fs`), and Gen writes the typed
-API surface (`generated/ClientGen.fs`) on top of it.
+API surface (`generated/ClientGen.fs`) on top of it: a `Client` record over an injected
+transport, plus a `Requests` record (each endpoint's wire request, for caches and
+offline outboxes). Codecs also gain an `Images` module collecting every `Image` a
+response carries, when a surface has any. See `notes/HEDGE-offline.md`.
