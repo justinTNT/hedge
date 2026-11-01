@@ -363,3 +363,20 @@ method restriction, neighbouring paths and dot-segment traversal. Build,
 112 app tests and preview validation (4,041 media references; 4,610 assets)
 passed before deployment. A real Google round trip from the installed APK
 remains the owner's manual check.
+
+## Offline field use deployed — 2 November 2026
+
+Worker version `9cb5f1f1-8760-4a71-a05d-17b424074f02` carries the server side
+of the offline work: the bulk accounts endpoint (`/api/plants/accounts`, every
+published account with the catalogue revision, for the app's one-request
+warm-up), and the idempotent answer to a replayed identical note create, so an
+offline queue can resend safely after a drop. The web client bundle gains the
+read cache, descriptive search over the saved accounts and the Image wrapper;
+none of it changes the wire JSON, and older APKs keep working through their
+per-account warm-up fallback. The Android bundle (`npm run build:mobile`) now
+includes a 2 MB seed of the catalogue and accounts, so a first launch opens the
+guide with no network. Design and status: `notes/HEDGE-offline.md`.
+
+Live checks without credentials: `/api/plants/accounts`, `/api/plants/catalogue`
+and `/api/plants/v2/personal/*` answer 401 from the gate; the Google login
+route still redirects. No migration, secret or provider change was needed.
