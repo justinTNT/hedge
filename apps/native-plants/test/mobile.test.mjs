@@ -78,6 +78,13 @@ test('preview gate keeps bearer separate and requires its password for native en
   assert.equal((await call()).status,401);assert.equal((await call({'X-Preview-Authorization':'Basic invalid'})).status,401);
   assert.equal((await call({'X-Preview-Authorization':credential})).status,200);assert.equal(calls,1);
 });
+test('the Android version code is derived from the mobile package version and rises with every bump',async()=>{
+  const {versionCode,appVersion}=await import('../mobile/scripts/version.mjs');
+  assert.equal(versionCode('1.1.0'),10100);assert.equal(versionCode('1.1.1'),10101);assert.equal(versionCode('2.0.0'),20000);
+  assert.ok(versionCode('2.0.0')>versionCode('1.99.99'));
+  assert.throws(()=>versionCode('1.1'));assert.throws(()=>versionCode('1.100.0'));assert.throws(()=>versionCode('1.0.0-beta'));
+  assert.equal(versionCode(appVersion()),versionCode(JSON.parse(readFileSync(new URL('../mobile/package.json',import.meta.url),'utf8')).version),'the prepare step and the package agree');
+});
 test('native preview transport marks only API-origin requests as the app, never external hosts or packaged assets',async()=>{
   globalThis.location={href:'https://localhost/'};const requests=[];
   const fetch=previewFetch(async(input,init)=>{requests.push({input,init});return new Response('ok')},'https://plants.test');

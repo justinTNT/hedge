@@ -20,8 +20,8 @@ let defaults = { Thumbnails = true; FullSize = false; WifiOnly = true }
 
 /// The guide's media as the cache holds it: accounts saved of the catalogue's total, when the text was
 /// last refreshed, and each pack's URLs (distinct, in catalogue order).
-type Plan = { Accounts: int; Total: int; Updated: float option; Base: string list; Thumbnails: string list; FullSize: string list }
-let emptyPlan = { Accounts = 0; Total = 0; Updated = None; Base = []; Thumbnails = []; FullSize = [] }
+type Plan = { Accounts: int; Total: int; Revision: string; Updated: float option; Base: string list; Thumbnails: string list; FullSize: string list }
+let emptyPlan = { Accounts = 0; Total = 0; Revision = ""; Updated = None; Base = []; Thumbnails = []; FullSize = [] }
 
 let store = Client.Storage.store
 /// Packs are for the bundled app: on the web, photographs are ordinary image requests.
@@ -56,6 +56,7 @@ let plan () : JS.Promise<Plan> = promise {
     return
         { Accounts = details.Length
           Total = catalogue |> Option.map (fun c -> c.Plants.Length) |> Option.defaultValue 0
+          Revision = catalogue |> Option.map (fun c -> c.Revision) |> Option.defaultValue ""
           Updated = updated |> Option.map unbox<float>
           Base = distinct ([ for d in details do for m in d.DistributionMaps -> path m.Image ]
                            @ [ for c in Option.toList catalogue do for g in c.Glossary -> path g.Illustration ])

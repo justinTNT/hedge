@@ -148,6 +148,9 @@ let update msg (model: Model) =
 
 [<Emit("new Date($0).toLocaleString()")>]
 let private at (ms: float) : string = jsNative
+/// The bundle's own account of itself (version, commit, build time), set by the native entry.
+[<Emit("(window.PLANTS_BUILD ? window.PLANTS_BUILD.version + ' · build ' + window.PLANTS_BUILD.commit + ' · ' + new Date(window.PLANTS_BUILD.builtAt).toLocaleString() : '')")>]
+let private buildStamp () : string = jsNative
 let private button (label: string) disabled msg dispatch =
     Html.button [ prop.type' "button"; prop.disabled disabled; prop.text label; prop.onClick (fun _ -> dispatch msg) ]
 let private check (label: string) (checked': bool) disabled (onChange: bool -> unit) =
@@ -196,6 +199,7 @@ let view (model: Model) dispatch =
                 Html.p [ prop.className "standfirst"
                          prop.text (sprintf "%d of %d plant accounts saved%s. Every saved account opens without signal." plan.Accounts (max plan.Total plan.Accounts)
                                         (match plan.Updated with Some t -> ", last refreshed " + at t | None -> "")) ]
+                Html.p [ prop.className "build-stamp"; prop.text ((if buildStamp () = "" then "" else "App " + buildStamp () + " · ") + "guide revision " + (if plan.Revision.Length > 12 then plan.Revision.Substring(0, 12) else plan.Revision)) ]
                 Html.p (sprintf "Using %s on this phone. %s%s" (megabytes model.Usage)
                             (match model.Connection with Wifi -> "On Wi-Fi." | Mobile -> "On mobile data." | Unknown -> "Connection type unknown." | Offline -> "Offline.")
                             (if model.Pending > 0 then sprintf " %d change%s waiting to send." model.Pending (if model.Pending = 1 then "" else "s") else ""))

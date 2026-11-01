@@ -22,6 +22,15 @@ npm run run:android
 
 The debug APK is `android/app/build/outputs/apk/debug/app-debug.apk`.
 It is suitable for direct installation/testing, not a Play Store release.
+
+The app's version is the `version` in this directory's `package.json`. Bump it
+before building any APK that is handed out: `scripts/prepare-android.mjs` stamps
+it into the generated Android project on every sync as `versionName`, with
+`versionCode` derived as major×10000 + minor×100 + patch so it always rises
+(`scripts/version.mjs`). The "On this phone" screen shows the running version,
+the commit it was built from, the build time and the guide revision it holds, so
+a tester can confirm a build without a cable; with one, compare
+`adb shell md5sum` of the installed package with the built APK.
 Android Studio, Android SDK 36 and Java 21 are required. On macOS the setup script
 finds Java 21 and the usual SDK location; elsewhere configure `JAVA_HOME` and
 `ANDROID_HOME`. `npm run sync` reapplies the callback intent, icon, backup policy

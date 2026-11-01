@@ -1,5 +1,13 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+// What the app can say about itself: the mobile package version, the commit it was built from and when.
+function buildStamp() {
+  const version=JSON.parse(readFileSync(resolve(import.meta.dirname,'mobile/package.json'),'utf8')).version;
+  let commit='local';try {commit=execSync('git rev-parse --short HEAD',{encoding:'utf8'}).trim();} catch {}
+  return JSON.stringify({version,commit,builtAt:new Date().toISOString()});
+}
 export default defineConfig(({mode}) => {
   const native=mode==='native';
   const origin=process.env.API_ORIGIN || 'https://native-plants-preview.justin-8ee.workers.dev';
@@ -7,7 +15,7 @@ export default defineConfig(({mode}) => {
     throw new Error('API_ORIGIN must be an HTTPS origin, without a path or trailing slash.');
   return {
     publicDir:native ? false : 'public',
-    define:native ? {'__PLANTS_API_ORIGIN__':JSON.stringify(origin)} : {},
+    define:native ? {'__PLANTS_API_ORIGIN__':JSON.stringify(origin),'__PLANTS_BUILD__':buildStamp()} : {},
     plugins:native ? [{name:'native-plants-shell',transformIndexHtml:{order:'pre',handler(html) {
       return html.replace('<script src="/lib/guest-session.js"></script>','')
         .replace('/dist/client/Main.js','/mobile/entry.mjs')

@@ -29,7 +29,7 @@ test('the plan is exactly the photographs, maps and drawings of the accounts the
   for(const path of Object.keys(bodies))await read(get(path));
   await store.Put('warm/updated',1700000000000);
   const planned=await plan();
-  assert.equal(planned.Accounts,2);assert.equal(planned.Total,3);assert.equal(planned.Updated,1700000000000);
+  assert.equal(planned.Accounts,2);assert.equal(planned.Total,3);assert.equal(planned.Updated,1700000000000);assert.equal(planned.Revision,'r1');
   assert.deepEqual(toArray(urls(planned,pack.thumbnails)),['/media/a1-thumb.webp','/media/a2-thumb.webp'],'distinct, in order');
   assert.deepEqual(toArray(urls(planned,pack.fullSize)),['/media/a1-large.webp','/media/a2-large.webp']);
   assert.deepEqual(toArray(urls(planned,pack.base)),['/media/map-a.webp','/media/map-b.webp','/media/g1.webp'],'maps then drawings; an empty illustration is skipped');

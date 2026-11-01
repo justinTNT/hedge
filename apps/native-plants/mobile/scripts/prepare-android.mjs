@@ -1,6 +1,14 @@
 import {readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {homedir} from 'node:os';
+import {appVersion,versionCode} from './version.mjs';
+// The Android project is generated and untracked, so its version is stamped here from the tracked
+// mobile/package.json on every sync; see version.mjs.
+const gradle='android/app/build.gradle';
+const version=appVersion();
+writeFileSync(gradle,readFileSync(gradle,'utf8')
+  .replace(/versionCode \d+/,'versionCode '+versionCode(version))
+  .replace(/versionName "[^"]*"/,'versionName "'+version+'"'));
 const manifest='android/app/src/main/AndroidManifest.xml';
 let xml=readFileSync(manifest,'utf8');
 if(!xml.includes('android:scheme="nativeplants"')) {

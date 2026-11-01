@@ -6,6 +6,7 @@ import {previewFetch} from './transport.mjs';
 import './mobile.css';
 
 window.API_ORIGIN=__PLANTS_API_ORIGIN__;
+window.PLANTS_BUILD=__PLANTS_BUILD__;
 window.HEDGE_MOBILE_RETURN_URL='nativeplants://auth';
 const nativeFetch=window.fetch.bind(window);
 const root=document.getElementById('app');

@@ -1817,4 +1817,5 @@ em {
 .description-matches li small { display:block; color:var(--muted); font-size:.75rem; margin:.15rem 0 .35rem; }
 .description-matches li p { margin:0; font-size:.92rem; line-height:1.6; }
 .description-matches mark { background:#f3e7a9; padding:0 .1em; }
+.offline-page .build-stamp { font-size:.78rem; color:var(--muted); margin:-.4rem 0 .8rem; }
 
