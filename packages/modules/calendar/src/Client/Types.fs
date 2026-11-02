@@ -39,6 +39,12 @@ type Model = {
     OpenDay: Day option
     /// The windowed stream for the viewed grid, as the server returned it.
     Entries: GetEntries.EntryItem list
+    /// The viewed window's observed days, when the stream is fed by an instrument that reports them: a
+    /// past day outside this set was not watched, and the grid hatches it. None for an authored calendar,
+    /// and while a window loads.
+    Observed: Set<Day> option
+    /// The stream's newest observed day. A log opens where it ends: the landing route shows this month.
+    Latest: Day option
     /// Server-confirmed: the last read carried a signed-in identity.
     SignedIn: bool
     Loading: bool

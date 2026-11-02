@@ -55,8 +55,8 @@ let getEntries (query: GetEntries.Query) (request: WorkerRequest) (services: Ser
                          [| box query.From; box query.To; box query.To; box query.From |]
             let! r = stmt.all()
             let! derived = services.Derived query
-            let items = (r.results |> Array.map (parseEntryRow >> toItem v.IdentityId) |> Array.toList) @ derived
-            let resp : GetEntries.Response = { Entries = items; SignedIn = v.IdentityId.IsSome }
+            let items = (r.results |> Array.map (parseEntryRow >> toItem v.IdentityId) |> Array.toList) @ derived.Entries
+            let resp : GetEntries.Response = { Entries = items; SignedIn = v.IdentityId.IsSome; Observed = derived.Observed }
             return respond v (okJson (encode resp |> Encode.toString 0))
     }
 

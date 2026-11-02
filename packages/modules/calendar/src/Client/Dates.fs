@@ -74,3 +74,6 @@ let weekdayLabel (locale: string) (d: Day) : string = jsNative
 
 [<Emit("new Intl.DateTimeFormat($0 || undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date($1 * 86400000))")>]
 let longDayLabel (locale: string) (d: Day) : string = jsNative
+
+[<Emit("new Intl.DateTimeFormat($0 || undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date($1 * 86400000))")>]
+let dayLabel (locale: string) (d: Day) : string = jsNative

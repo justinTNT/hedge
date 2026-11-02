@@ -59,8 +59,24 @@
   min-height: 108px; padding: 6px; cursor: pointer;
   border-right: 1px solid var(--cal-line); border-bottom: 1px solid var(--cal-line);
 }
-.calendar-content .cal-cell:hover { background: var(--cal-paper-soft); }
-.calendar-content .cal-cell-outside { color: var(--cal-ink-soft); background: #fafaf9; }
+.calendar-content .cal-cell:hover { background-color: var(--cal-paper-soft); }
+.calendar-content .cal-cell-outside { color: var(--cal-ink-soft); background-color: #fafaf9; }
+/* A past day the stream's instrument did not watch (Observed in the read): hatched, so an empty cell
+   reads as "unwatched" rather than "quiet". The hatch is a background-image; hover and outside-month
+   tint the colour underneath it. */
+.calendar-content .cal-cell-unobserved {
+  background-image: repeating-linear-gradient(-45deg, transparent 0 7px, var(--cal-line) 7px 8px);
+}
+.calendar-content .cal-cell-unobserved .cal-daynum { color: var(--cal-ink-soft); }
+.calendar-content .cal-legend {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 0; font-size: 0.78rem; color: var(--cal-ink-soft);
+}
+.calendar-content .cal-legend-swatch {
+  display: inline-block; width: 22px; height: 14px; border: 1px solid var(--cal-line);
+  background-image: repeating-linear-gradient(-45deg, transparent 0 4px, var(--cal-line) 4px 5px);
+}
+.calendar-content .cal-legend-latest::before { content: "·"; margin-right: 8px; }
 .calendar-content .cal-cell-outside .cal-entry { opacity: 0.55; }
 .calendar-content .cal-daynum {
   display: inline-block; min-width: 24px; height: 24px; line-height: 24px;

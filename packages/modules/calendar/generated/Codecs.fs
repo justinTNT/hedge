@@ -12,6 +12,7 @@ module Encode =
 
     // -- API view types --
     let inline calendarEntryItem (v: Calendar.Api.GetEntries.EntryItem) = encode v
+    let inline calendarObserved (v: Calendar.Api.GetEntries.Observed) = encode v
 
     // -- API request encoders --
     let inline calendarDeleteEntryReq (v: Calendar.Api.DeleteEntry.Request) = encode v
@@ -26,6 +27,7 @@ module Decode =
 
     // -- API view types --
     let calendarEntryItem : Decoder<Calendar.Api.GetEntries.EntryItem> = decode<Calendar.Api.GetEntries.EntryItem>()
+    let calendarObserved : Decoder<Calendar.Api.GetEntries.Observed> = decode<Calendar.Api.GetEntries.Observed>()
 
     // -- API response decoders --
     let calendarDeleteEntryResponse : Decoder<Calendar.Api.DeleteEntry.Response> = decode<Calendar.Api.DeleteEntry.Response>()

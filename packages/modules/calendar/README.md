@@ -25,7 +25,9 @@ re-approved. `apps/calendar` is the reference host.
    (`Content.Server.Viewer.resolve (GuestConfig.require env) (Identity.Server.signedIn env.DB)` over the
    app's identity layer; `Content.Server.Viewer.guestOnly` when the host has no identity: everyone
    reads the public stream, personal is off), `Facets`, `Derived` (`Calendar.Services.noDerived`, or a
-   per-window projection of another service's data into read-only entries — see `apps/flare`), `NewId`,
+   per-window projection of another service's data into read-only entries, with — when that source is
+   an instrument that can be off — the days it observed and its newest one: the grid hatches unwatched
+   past days and the landing route opens on the newest month; see `apps/flare`), `NewId`,
    `Now` — and pass
    `Calendar.Composition.bind services` to the generated `Server.Routes.dispatch`, with the framework's
    `Hedge.Router.guestBoundedPost` in front of `POST /api/calendar/entry[/delete]`. The Server project

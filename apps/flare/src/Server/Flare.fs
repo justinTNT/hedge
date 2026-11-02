@@ -6,7 +6,9 @@ module Server.Flare
 // re-scored history or a period still running simply reads differently next time. The Worker's days are
 // the camera's local dates; the module keys days by UTC midnight and never shifts them by the viewer's
 // timezone, so a camera date maps straight onto a grid cell. A period that crosses midnight sits on the
-// day it started, as the Worker's own log does.
+// day it started, as the Worker's own log does. The log also says which days it has frames for and when
+// its newest frame is: a day without frames is unwatched (the pictures not fetched yet, or the camera
+// off), not quiet, and the calendar hatches it and opens on the newest month with frames.
 
 open Fable.Core
 open Fable.Core.JsInterop
@@ -37,7 +39,19 @@ let private period : Decoder<Period> =
           Peak = get.Required.Field "peak" Decode.int
           Minutes = get.Required.Field "minutes" Decode.float })
 
-let private log : Decoder<Period list> = Decode.field "periods" (Decode.list period)
+/// The log for a window: its periods, the days it has frames for, and the newest frame anywhere. The last two
+/// are newer than the first (flarecam2 since 2026-11-02): an older Worker's log decodes to no observation,
+/// and the grid simply shows no hatching.
+type Log =
+    { Periods: Period list
+      Days: string list option
+      Latest: string option }
+
+let private log : Decoder<Log> =
+    Decode.object (fun get ->
+        { Periods = get.Required.Field "periods" (Decode.list period)
+          Days = get.Optional.Field "days" (Decode.list (Decode.field "day" Decode.string))
+          Latest = get.Optional.Field "latest" Decode.string })
 
 // -- Days: epoch seconds <-> "yyyy-mm-dd", both at UTC midnight (the module's day key) --
 
@@ -102,10 +116,16 @@ let entry (pictures: string) (p: Period) : GetEntries.EntryItem =
       Requested = None
       Mine = false }
 
-/// The window's periods from the Worker, as entries. A failure fails the read (the module reports it in
-/// the calendar's error banner) rather than quietly showing a month with no flaring in it. The Worker is
-/// called over its service binding; the URL's host is nominal.
-let derived (env: Env) : GetEntries.Query -> JS.Promise<GetEntries.EntryItem list> =
+/// The days the camera was watched, as the module keys them, and the newest frame's day.
+let private observed (l: Log) : GetEntries.Observed option =
+    l.Days |> Option.map (fun days ->
+        { Days = days |> List.map midnight
+          Latest = l.Latest |> Option.map (dateOf >> midnight) })
+
+/// The window's periods from the Worker, as entries, with the days it observed. A failure fails the read
+/// (the module reports it in the calendar's error banner) rather than quietly showing a month with no
+/// flaring in it. The Worker is called over its service binding; the URL's host is nominal.
+let derived (env: Env) : GetEntries.Query -> JS.Promise<Calendar.Services.Derived> =
     fun query ->
         promise {
             let url = sprintf "https://flarecam2/api/log?from=%s&to=%s" (isoDate query.From) (isoDate query.To)
@@ -115,6 +135,6 @@ let derived (env: Env) : GetEntries.Query -> JS.Promise<GetEntries.EntryItem lis
             else
                 let! json = responseText resp
                 match Decode.fromString log json with
-                | Ok periods -> return periods |> List.map (entry env.FLARECAM_PICTURES)
+                | Ok l -> return { Entries = l.Periods |> List.map (entry env.FLARECAM_PICTURES); Observed = observed l }
                 | Error err -> return failwithf "the flaring log did not decode: %s" err
         }

@@ -38,8 +38,9 @@ let private monthNav (ctx: Content.HostContext) (model: Model) =
             Html.button [
                 prop.className "btn btn-ghost"; prop.ariaLabel "Next month"; prop.text "›"
                 prop.onClick (fun _ -> ctx.Navigate (monthSegments ny nm)) ]
+            // The landing: this month, or — for a stream that reports what it observed — its latest month.
             Html.button [
-                prop.className "btn btn-ghost btn-today"; prop.text "Today"
+                prop.className "btn btn-ghost btn-today"; prop.text (if model.Latest.IsSome then "Latest" else "Today")
                 prop.onClick (fun _ -> ctx.Navigate []) ]
         ]
     ]
@@ -72,16 +73,26 @@ let private weekdayRow (first: Day) =
 
 let [<Literal>] private CellMax = 3
 
+/// A past day the stream's instrument did not watch (an authored stream watches every day). The future is
+/// never "unobserved": nobody expects a reading from it yet.
+let private unobserved (model: Model) (day: Day) =
+    match model.Observed with
+    | Some days -> day <= model.Today && not (days.Contains day)
+    | None -> false
+
 let private cell (ctx: Content.HostContext) (model: Model) (todayDay: Day) (day: Day) (occ: Occurrence list) =
     let inMonth = yearOf day = model.Year && monthOf day = model.Month
     let shown = occ |> List.truncate CellMax
     let more = occ.Length - shown.Length
+    let unwatched = unobserved model day
     Html.div [
         prop.className (classes [
             "cal-cell"
             (if inMonth then "" else "cal-cell-outside")
             (if day = todayDay then "cal-cell-today" else "")
+            (if unwatched then "cal-cell-unobserved" else "")
             (if List.isEmpty occ then "" else "cal-cell-has") ])
+        if unwatched then prop.title "Not observed"
         prop.onClick (fun _ -> ctx.Navigate (daySegments day))
         prop.children [
             Html.div [ prop.className "cal-daynum"; prop.text (string (dayOfMonthOf day)) ]
@@ -108,6 +119,21 @@ let private grid (ctx: Content.HostContext) (model: Model) (first: Day) (last: D
                 cell ctx model model.Today day (projected |> Map.tryFind day |> Option.defaultValue [])
         ]
     ]
+
+/// What the hatching means, and where the log ends — only when the grid shows an unwatched day.
+let private legend (model: Model) (first: Day) (last: Day) =
+    if Seq.exists (unobserved model) (seq { first .. last }) then
+        Html.div [
+            prop.className "cal-legend"
+            prop.children [
+                Html.span [ prop.className "cal-legend-swatch"; prop.ariaHidden true ]
+                Html.span [ prop.text "not observed" ]
+                match model.Latest with
+                | Some d -> Html.span [ prop.className "cal-legend-latest"; prop.text ("last observed " + dayLabel locale d) ]
+                | None -> Html.none
+            ]
+        ]
+    else Html.none
 
 // -- The day modal --
 
@@ -269,7 +295,9 @@ let private dayModal (model: Model) (dispatch: Msg -> unit) (day: Day) (occ: Occ
                         prop.className "modal-body"
                         prop.children [
                             if List.isEmpty occ && model.Editor.IsNone then
-                                Html.p [ prop.className "day-empty"; prop.text "Nothing on this day." ]
+                                Html.p [
+                                    prop.className "day-empty"
+                                    prop.text (if unobserved model day then "Not observed on this day." else "Nothing on this day.") ]
                             for o in occ do occurrenceView dispatch o
                             match model.Editor with
                             | Some ed -> editorView model.Facets.Requestable ed dispatch
@@ -309,7 +337,7 @@ let contentView (ctx: Content.HostContext) (model: Model) (dispatch: Msg -> unit
             | None -> Html.none
             Html.div [
                 prop.className (classes [ "cal"; (if model.Loading then "cal-loading" else "") ])
-                prop.children [ weekdayRow first; grid ctx model first last projected ]
+                prop.children [ weekdayRow first; grid ctx model first last projected; legend model first last ]
             ]
             match model.OpenDay with
             | Some d -> dayModal model dispatch d (projected |> Map.tryFind d |> Option.defaultValue [])

@@ -29,6 +29,8 @@ let emptyHosted (facets: Facets) (session: GuestSession.GuestSessionData) : Mode
       Month = monthOf t
       OpenDay = None
       Entries = []
+      Observed = None
+      Latest = None
       SignedIn = false
       Loading = false
       Loaded = false
@@ -60,32 +62,42 @@ let disposeHosted () : unit =
 let disposeHostedCmd : Cmd<Msg> =
     Cmd.ofEffect (fun _ -> disposeHosted ())
 
-/// Module-local routes: [] = this month; [yyyy; mm] = a month; [yyyy; mm; dd] = that month with the
-/// day modal open. Anything else shows this month.
-let private parseRoute (todayDay: Day) (route: string list) : int * int * Day option =
+/// Module-local routes: [] = the landing month; [yyyy; mm] = a month; [yyyy; mm; dd] = that month with
+/// the day modal open. Anything else shows the landing month.
+let private parseRoute (landing: int * int) (route: string list) : int * int * Day option =
     let tryInt (s: string) = match System.Int32.TryParse s with | true, n -> Some n | _ -> None
     let validMonth y m = y >= 1970 && y <= 2200 && m >= 1 && m <= 12
-    let thisMonth () = yearOf todayDay, monthOf todayDay, None
+    let home () = fst landing, snd landing, None
     match route with
-    | [] -> thisMonth ()
+    | [] -> home ()
     | [ y; m ] ->
         match tryInt y, tryInt m with
         | Some y, Some m when validMonth y m -> y, m, None
-        | _ -> thisMonth ()
+        | _ -> home ()
     | [ y; m; d ] ->
         match tryInt y, tryInt m, tryInt d with
         | Some y, Some m, Some d when validMonth y m && d >= 1 && d <= daysInMonth y m -> y, m, Some (dayOf y m d)
-        | _ -> thisMonth ()
-    | _ -> thisMonth ()
+        | _ -> home ()
+    | _ -> home ()
+
+/// Where the landing route opens: this month — or, once the stream has reported its newest observed day,
+/// that day's month (a log opens where it ends). Before the first read of a log the landing is this month
+/// and the read's result moves it (see GotEntries).
+let private landingMonth (todayDay: Day) (model: Model) : int * int =
+    match model.Latest with
+    | Some d -> yearOf d, monthOf d
+    | None -> yearOf todayDay, monthOf todayDay
 
 /// Enter a module-local content route: refresh "today" (the edge read — a tab can outlive midnight),
 /// set the viewed month + open day, close any editor, and (re)load when the window changes or a read
-/// was still in flight.
+/// was still in flight. A landing on a log always re-reads it: the log may have grown since.
 let enterHosted (ctx: Content.HostContext) (route: string list) (model: Model) : Model * Cmd<Msg> =
     let t = today ()
-    let year, month, openDay = parseRoute t route
+    let year, month, openDay = parseRoute (landingMonth t model) route
     let resetTitle = Cmd.ofEffect (fun _ -> ctx.SetDocTitle "")
-    let needsLoad = not model.Loaded || year <> model.Year || month <> model.Month || model.Loading
+    let needsLoad =
+        not model.Loaded || year <> model.Year || month <> model.Month || model.Loading
+        || (List.isEmpty route && model.Latest.IsSome)
     let model' = { model with Route = route; Today = t; Year = year; Month = month; OpenDay = openDay; Editor = None }
     model', Cmd.batch [ disposeHostedCmd; resetTitle; (if needsLoad then Cmd.ofMsg Load else Cmd.none) ]
 
@@ -139,12 +151,23 @@ let updateHosted (deps: Deps) (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | Load ->
         let gen = model.LoadGen + 1
-        { model with LoadGen = gen; Loading = true; Loaded = true }, loadCmd deps gen model.Year model.Month
+        // The observed days belong to one window; the next response brings the new window's.
+        { model with LoadGen = gen; Loading = true; Loaded = true; Observed = None }, loadCmd deps gen model.Year model.Month
 
     | GotEntries (gen, _) when gen <> model.LoadGen ->
         model, Cmd.none   // a stale read from a window we've left
     | GotEntries (_, Ok resp) ->
-        { model with Entries = resp.Entries; SignedIn = resp.SignedIn; Loading = false; Error = None }, Cmd.none
+        let observed = resp.Observed |> Option.map (fun o -> o.Days |> List.map dayOfSeconds |> Set.ofList)
+        let latest = resp.Observed |> Option.bind (fun o -> o.Latest) |> Option.map dayOfSeconds
+        let model' =
+            { model with Entries = resp.Entries; Observed = observed; Latest = latest
+                         SignedIn = resp.SignedIn; Loading = false; Error = None }
+        // A log opens where it ends: a landing (no month in the route) that found the stream's newest
+        // observation in another month moves there and reads that window. The route stays the landing.
+        match model.Route, latest with
+        | [], Some d when yearOf d <> model.Year || monthOf d <> model.Month ->
+            { model' with Year = yearOf d; Month = monthOf d; OpenDay = None }, Cmd.ofMsg Load
+        | _ -> model', Cmd.none
     | GotEntries (_, Error err) ->
         { model with Loading = false; Error = Some (Hedge.Http.renderError err) }, Cmd.none
 

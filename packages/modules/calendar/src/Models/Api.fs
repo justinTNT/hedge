@@ -21,10 +21,20 @@ module GetEntries =
         Mine: bool
     }
     type Query = { From: int; To: int }
+    /// A stream fed by an instrument (a camera, a sensor) that can be off or not yet fetched: a day with no
+    /// entry is then either quiet or unwatched, and the grid should say which. The host's Derived reports it;
+    /// an authored calendar has no such notion (None in the response).
+    type Observed = {
+        /// The window's days with observations, as epoch seconds at UTC midnight (the module's day key).
+        Days: int list
+        /// The newest observed day in the whole stream — where a log ends, and so where it opens.
+        Latest: int option
+    }
     type Response = {
         Entries: EntryItem list
         /// Whether the request carried a signed-in identity — gates the personal facet + editor.
         SignedIn: bool
+        Observed: Observed option
     }
     let requestContext = true
     let endpoint : GetQuery<Query, Response> = GetQuery "/api/entries"
