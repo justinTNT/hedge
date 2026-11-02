@@ -8,6 +8,21 @@ open Calendar.Codecs
 
 // --- Transport-neutral client (C2) ---
 
+// Request builders: the wire request each endpoint sends, before any transport. createClient
+// composes them with Http.sendDecode; an offline outbox persists and replays them through the
+// same decorated transport, and a read cache keys on them, so nothing re-derives a path or body.
+type Requests = {
+    calendarDeleteEntry: Calendar.Api.DeleteEntry.Request -> Hedge.Http.Request
+    calendarSaveEntry: Calendar.Api.SaveEntry.Request -> Hedge.Http.Request
+    calendarGetEntries: Calendar.Api.GetEntries.Query -> Hedge.Http.Request
+}
+
+let requests : Requests = {
+    calendarDeleteEntry = fun req -> ({ Method = "POST"; Path = "/api/calendar/entry/delete"; Query = []; Headers = []; Body = Some (Encode.calendarDeleteEntryReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    calendarSaveEntry = fun req -> ({ Method = "POST"; Path = "/api/calendar/entry"; Query = []; Headers = []; Body = Some (Encode.calendarSaveEntryReq req |> Encode.toString 0) }: Hedge.Http.Request)
+    calendarGetEntries = fun query -> ({ Method = "GET"; Path = "/api/calendar/entries"; Query = (List.choose (fun p -> p) [ Some ("from", string query.From); Some ("to", string query.To) ]); Headers = []; Body = None }: Hedge.Http.Request)
+}
+
 type Client = {
     calendarDeleteEntry: Calendar.Api.DeleteEntry.Request -> JS.Promise<Result<Calendar.Api.DeleteEntry.Response, Hedge.Http.ApiError>>
     calendarSaveEntry: Calendar.Api.SaveEntry.Request -> JS.Promise<Result<Calendar.Api.SaveEntry.Response, Hedge.Http.ApiError>>
@@ -15,9 +30,9 @@ type Client = {
 }
 
 let createClient (transport: Hedge.Http.Transport) : Client = {
-    calendarDeleteEntry = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/calendar/entry/delete"; Query = []; Headers = []; Body = Some (Encode.calendarDeleteEntryReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.calendarDeleteEntryResponse
-    calendarSaveEntry = fun req -> Hedge.Http.sendDecode transport ({ Method = "POST"; Path = "/api/calendar/entry"; Query = []; Headers = []; Body = Some (Encode.calendarSaveEntryReq req |> Encode.toString 0) }: Hedge.Http.Request) Decode.calendarSaveEntryResponse
-    calendarGetEntries = fun query -> Hedge.Http.sendDecode transport ({ Method = "GET"; Path = "/api/calendar/entries"; Query = (List.choose (fun p -> p) [ Some ("from", string query.From); Some ("to", string query.To) ]); Headers = []; Body = None }: Hedge.Http.Request) Decode.calendarGetEntriesResponse
+    calendarDeleteEntry = fun req -> Hedge.Http.sendDecode transport (requests.calendarDeleteEntry req) Decode.calendarDeleteEntryResponse
+    calendarSaveEntry = fun req -> Hedge.Http.sendDecode transport (requests.calendarSaveEntry req) Decode.calendarSaveEntryResponse
+    calendarGetEntries = fun query -> Hedge.Http.sendDecode transport (requests.calendarGetEntries query) Decode.calendarGetEntriesResponse
 }
 
 // --- WebSocket Events ---

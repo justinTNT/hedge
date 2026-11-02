@@ -10,7 +10,7 @@ echo "=== Step 1: Gen stability (every app) ==="
 # hid — the check used to run for microblog only). Every app with a generator is
 # checked, so committed generated code can't silently lag the generator.
 cd "$ROOT"
-for app in microblog articles archive basewatch music calendar flare; do
+for app in microblog articles archive basewatch music calendar flare native-plants; do
     [ -f "apps/$app/src/Gen/Gen.fsproj" ] || continue
     ( cd "apps/$app" && npm run gen >/dev/null 2>&1 )
     # git diff considers only tracked files, so an app's untracked generated output
