@@ -10,7 +10,7 @@ echo "=== Step 1: Gen stability (every app) ==="
 # hid — the check used to run for microblog only). Every app with a generator is
 # checked, so committed generated code can't silently lag the generator.
 cd "$ROOT"
-for app in microblog articles archive basewatch music; do
+for app in microblog articles archive basewatch music calendar flare; do
     [ -f "apps/$app/src/Gen/Gen.fsproj" ] || continue
     ( cd "apps/$app" && npm run gen >/dev/null 2>&1 )
     # git diff considers only tracked files, so an app's untracked generated output
@@ -38,9 +38,10 @@ run_module_surface articles ../../packages/modules/articles
 run_module_surface microblog ../../packages/modules/alerts   # C6: admin+cron module (0 endpoints)
 run_module_surface microblog ../../packages/modules/identity/http  # Track 2B: endpoint-only identity HTTP (0 tables, 4 endpoints)
 run_module_surface microblog ../../packages/modules/identity/mobile-http  # Track 2C: endpoint-only mobile HTTP (0 tables, 4 endpoints incl. 2 PostEmpty)
-if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated; then
+run_module_surface calendar ../../packages/modules/calendar   # the calendar content module (1 table, 3 endpoints)
+if ! git diff --quiet -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated packages/modules/calendar/generated; then
     echo "!!! FAIL: a module's generated surface differs from committed. Regenerate + commit:"
-    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated
+    git --no-pager diff --stat -- packages/modules/blog/generated packages/modules/articles/generated packages/modules/alerts/generated packages/modules/identity/http/generated packages/modules/identity/mobile-http/generated packages/modules/calendar/generated
     exit 1
 fi
 echo "--- module surfaces match committed ---"

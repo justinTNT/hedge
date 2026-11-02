@@ -1,0 +1,8 @@
+{
+  "assembly": "CalendarModels",
+  "namespace": "Calendar",
+  "tablePrefix": "calendar_",
+  "routePrefix": "/api/calendar",
+  "handlerNs": "Calendar.Handlers",
+  "namePrefix": "calendar"
+}

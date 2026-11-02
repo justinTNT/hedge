@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    The calendar module's client — a pure HOSTED COMPONENT (Calendar.Client.App: emptyHosted /
+    enterHosted / updateHosted / withSession / invalidateContent / invalidateInFlight / disposeHosted /
+    contentView). It owns no router, identity or chrome; a host (an app's single-module host, or a
+    multi-module shell) drives it with a Content.HostContext + an injected typed client
+    (Calendar.ClientGen.createClient over the host's transport). Import AFTER the shared client
+    libraries (Hedge.Client, RichText, ContentHostContext) and before the host's own files.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/ClientGen.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Dates.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Projection.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Types.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/Views.fs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src/Client/App.fs" />
+  </ItemGroup>
+</Project>

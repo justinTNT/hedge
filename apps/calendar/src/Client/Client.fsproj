@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The identity slice's generated transport client (empty of endpoints here). -->
+    <Compile Include="generated/ClientGen.fs" />
+  </ItemGroup>
+  <!-- The calendar module's hosted client component (its own file list). Calendar is PRIMARY here, run
+       at "/" by Host/Main.fs. -->
+  <Import Project="../../../../packages/modules/calendar/calendar.client.props" />
+  <ItemGroup>
+    <!-- The single-module host (chrome + shared identity + router) that runs the module via its hosted surface. -->
+    <Compile Include="Host/Chrome.fs" />
+    <Compile Include="Host/App.fs" />
+    <Compile Include="Host/Main.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../packages/hedge/src/Client/Hedge.Client.fsproj" />
+    <ProjectReference Include="../../../../packages/rich-text/RichText.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentHostContext.fsproj" />
+    <ProjectReference Include="../../../../packages/content-client/ContentClient.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/identity/client/Identity.Client.fsproj" />
+    <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <ProjectReference Include="../Models/Models.fsproj" />
+    <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
+    <ProjectReference Include="../Codecs/Codecs.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.16.0" />
+    <PackageReference Include="Feliz" Version="2.9.0" />
+    <PackageReference Include="Feliz.Router" Version="4.0.0" />
+    <PackageReference Include="Fable.Elmish" Version="4.2.0" />
+    <PackageReference Include="Fable.Elmish.React" Version="4.0.0" />
+    <PackageReference Include="Fable.Elmish.HMR" Version="7.0.0" />
+    <PackageReference Include="Thoth.Fetch" Version="3.0.1" />
+  </ItemGroup>
+</Project>

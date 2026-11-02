@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Ws.fs" />
+    <Compile Include="Api.fs" />
+    <Compile Include="Site.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../packages/hedge/src/Hedge/Hedge.fsproj" />
+    <!-- Shared identity schema (guests/identities) — module Models.Domain lives here. -->
+    <ProjectReference Include="../../../../packages/modules/identity/src/Models/IdentityModels.fsproj" />
+    <!-- Site.fs names this site's calendar facets with the module's vocabulary type. -->
+    <ProjectReference Include="../../../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.3.0" />
+  </ItemGroup>
+</Project>

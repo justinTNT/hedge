@@ -22,6 +22,10 @@
   </ItemGroup>
   <Import Project="../../packages/modules/alerts/alerts.server.props" />
   <ItemGroup>
+    <Compile Include="../../packages/modules/calendar/generated/Codecs.fs" />
+  </ItemGroup>
+  <Import Project="../../packages/modules/calendar/calendar.server.props" />
+  <ItemGroup>
     <Compile Include="HostProbe.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +36,7 @@
     <ProjectReference Include="../../packages/modules/blog/src/Models/BlogModels.fsproj" />
     <ProjectReference Include="../../packages/modules/articles/src/Models/ArticlesModels.fsproj" />
     <ProjectReference Include="../../packages/modules/alerts/src/Models/AlertsModels.fsproj" />
+    <ProjectReference Include="../../packages/modules/calendar/src/Models/CalendarModels.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />

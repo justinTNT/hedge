@@ -653,8 +653,10 @@ module View =
             ]
         // Editable date fields (EditableDate, e.g. ArticleDate): a native date
         // picker over the stored epoch seconds — recognized by the type, not a
-        // field-name convention, so you edit a date, not a raw timestamp.
-        | FInt when (field.Attrs |> List.contains EditableDate) && not isReadOnly ->
+        // field-name convention, so you edit a date, not a raw timestamp. An
+        // optional date (EditableDate option, e.g. a repeat-until) gets the same
+        // picker; clearing it stores NULL.
+        | FInt | FOption FInt when (field.Attrs |> List.contains EditableDate) && not isReadOnly ->
             let raw = values |> Map.tryFind field.Name |> Option.defaultValue ""
             Html.div [
                 prop.className "admin-field"

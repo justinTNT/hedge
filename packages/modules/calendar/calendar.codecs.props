@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    The calendar module's generated codecs (Calendar.Codecs), for a consuming app's shared Codecs
+    project to compose. Depends only on Thoth.Json + Hedge.Codec + CalendarModels; nothing depends on
+    it at compile time within that project, so import order is free.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)generated/Codecs.fs" />
+  </ItemGroup>
+</Project>

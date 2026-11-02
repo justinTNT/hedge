@@ -1,0 +1,39 @@
+@import "./identity.css";
+@import "../lib/rich-text/styles.css";
+/* Calendar module content look — owned by the module, scoped under .calendar-content. */
+@import "../../../packages/modules/calendar/calendar.css";
+
+/* ------------------------------------------------------------
+   Calendar host — page baseline + chrome, flat style.
+   ------------------------------------------------------------ */
+
+:root {
+  --ink: #1a1a1a;
+  --ink-soft: #6b6b6b;
+  --paper: #ffffff;
+  --paper-soft: #f4f4f2;
+  --line: #e2e2de;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.45;
+}
+a { color: inherit; text-decoration: none; }
+
+.app { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 0; border-bottom: 2px solid var(--ink);
+}
+.brand { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.02em; text-transform: uppercase; }
+
+/* This site's calendar facets (named in src/Models/Site.fs): one colour each, read by the module's
+   chips, cell entries and pills through --cat. The module colours only its own `personal`. */
+.calendar-content .cat-flaring { --cat: #e3550f; }
+.calendar-content .cat-notices { --cat: #2f6fed; }

@@ -1,0 +1,49 @@
+{
+  "name": "calendar",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "prep:lib": "mkdir -p lib/rich-text && cp ../../packages/rich-text/bootstrap.js ../../packages/rich-text/tiptap-editor.js ../../packages/rich-text/styles.css lib/rich-text/ && cp ../../packages/hedge/lib/guest-session.js lib/guest-session.js && cp ../../packages/content-client/identity.css public/identity.css",
+    "predev": "npm run prep:lib",
+    "dev": "concurrently -n client,server,gen -c blue,green,yellow \"npm run dev:client\" \"npm run dev:server\" \"npm run gen:watch\"",
+    "dev:client": "concurrently -n fable,fable-admin,vite -c cyan,magenta,blue \"npm run fable:watch\" \"npm run fable:watch:admin\" \"vite\"",
+    "dev:server": "concurrently -n fable-server,wrangler -c green,yellow \"npm run fable:watch:server\" \"wrangler dev\"",
+    "build": "npm run build:client && npm run build:admin && npm run build:server && npm run build:site",
+    "build:client": "dotnet fable src/Client/Client.fsproj -o dist/client",
+    "build:admin": "dotnet fable ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "build:server": "dotnet fable src/Server/Server.fsproj -o dist/server",
+    "build:site": "npm run prep:lib && vite build && mkdir -p _site${BASE_PATH}/public _site${BASE_PATH}/lib && cp -r public/* _site${BASE_PATH}/public/ && cp lib/guest-session.js _site${BASE_PATH}/lib/ && cp ../../packages/hedge/src/Admin/admin.css _site${BASE_PATH}/admin.css && { [ -z \"${BASE_PATH}\" ] || { cp _site${BASE_PATH}/index.html _site/index.html && printf '/ %s/ 302\\n' \"${BASE_PATH}\" > _site/_redirects; }; }",
+    "deploy": "npm run build && wrangler deploy",
+    "fable:watch": "dotnet fable watch src/Client/Client.fsproj -o dist/client",
+    "fable:watch:server": "dotnet fable watch src/Server/Server.fsproj -o dist/server",
+    "fable:watch:admin": "dotnet fable watch ../../packages/hedge/src/Admin/Admin.fsproj -o dist/admin",
+    "gen": "dotnet run --project src/Gen/Gen.fsproj",
+    "gen:watch": "dotnet watch run --project src/Gen/Gen.fsproj",
+    "migrate": "dotnet run --project src/Gen/Gen.fsproj -- migrate",
+    "migrate:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --dry-run",
+    "migrate:remote:dry": "dotnet run --project src/Gen/Gen.fsproj -- migrate --remote --dry-run",
+    "migrate:remote": "dotnet run --project src/Gen/Gen.fsproj -- migrate --remote"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.24.0",
+    "vite": "^5.4.0",
+    "vite-plugin-fable": "0.0.31",
+    "wrangler": "^4.67.0"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.11.0",
+    "@tiptap/extension-color": "^2.11.0",
+    "@tiptap/extension-highlight": "^2.11.0",
+    "@tiptap/extension-image": "^2.11.0",
+    "@tiptap/extension-link": "^2.11.0",
+    "@tiptap/extension-text-align": "^2.11.0",
+    "@tiptap/extension-text-style": "^2.11.0",
+    "@tiptap/pm": "^2.11.0",
+    "@tiptap/starter-kit": "^2.11.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

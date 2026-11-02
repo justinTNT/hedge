@@ -139,6 +139,36 @@ let serverError msg =
     let body = Encode.object [ "error", Encode.string msg ] |> Encode.toString 0
     jsonResponse body 500
 
+/// Bounded-JSON-body preflight for an UNAUTHENTICATED POST: read at most `cap` bytes (413 on excess),
+/// then hand the reconstructed request to `dispatch` — a generated RouteContract dispatch, whose own
+/// 400 covers malformed JSON. `None` from dispatch is a 404. Pair with a route match so the body is
+/// only ever buffered for the paths that carry one.
+let boundedPost (cap: int) (dispatch: WorkerRequest -> JS.Promise<WorkerResponse> option)
+    (request: WorkerRequest) : JS.Promise<WorkerResponse> =
+    promise {
+        let! bounded = readBodyCapped request cap
+        if isNull (box bounded) then return payloadTooLarge ()
+        else
+            match dispatch (rebuildRequest request bounded) with
+            | Some p -> return! p
+            | None -> return notFound ()
+    }
+
+/// The same preflight for a GUEST-AUTHORIZED POST: the host's guest-write authorizer runs FIRST, so an
+/// unauthenticated mutation is denied before any body is consumed; then bound + dispatch as above. Any
+/// renewal/rotation cookie the authorizer issued rides every outcome (the 413, the 400, the handler's
+/// own response) via withReplacementCookie.
+let guestBoundedPost (require: WorkerRequest -> JS.Promise<RequireResult>) (cap: int)
+    (dispatch: WorkerRequest -> JS.Promise<WorkerResponse> option) (request: WorkerRequest) : JS.Promise<WorkerResponse> =
+    promise {
+        let! authz = require request
+        match authz with
+        | Rejected -> return unauthorized ()
+        | Accepted guest ->
+            let! resp = boundedPost cap dispatch request
+            return withReplacementCookie guest.Replacement resp
+    }
+
 /// GET /admin/logout — clears the browser's stored admin key, then returns to
 /// the key prompt. The admin SPA is a static asset and the key lives in
 /// localStorage, so the worker can't clear it directly; instead it serves a

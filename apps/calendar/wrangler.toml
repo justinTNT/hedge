@@ -1,0 +1,42 @@
+name = "calendar"
+main = "worker-entry.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local development
+[dev]
+port = 8787
+local_protocol = "http"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "calendar-db"
+database_id = "local"  # Replace with real ID after `wrangler d1 create calendar-db`
+
+# Durable Objects
+[durable_objects]
+bindings = [
+    { name = "EVENTS", class_name = "EventHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["EventHub"]
+
+# R2 blob storage
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "calendar-blobs"
+
+# Static assets
+[assets]
+directory = "./_site"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+# ADMIN_KEY, GUEST_SECRET, OAUTH_SECRET and the provider credentials are secrets: local dev reads them
+# from .dev.vars; a deployment sets them with `wrangler secret put`. A plain var here would shadow them.
+[vars]
+ENVIRONMENT = "development"

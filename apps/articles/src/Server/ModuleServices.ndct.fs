@@ -55,22 +55,5 @@ let identityHttp (env: Env) (request: WorkerRequest) (ctx: ExecutionContext) : J
     | GET path when matchPath "/api/auth/identities" path = Some (Exact "/api/auth/identities") ->
         IdentityHttp.RouteContract.dispatch handlers request ctx
     | POST path when isMutation path ->
-        Some (promise {
-            let! authz = deps.RequireGuest request
-            match authz with
-            | Rejected -> return unauthorized ()
-            | Accepted guest ->
-                let! bounded = readBodyCapped request identityBodyCap
-                if isNull (box bounded) then
-                    // Preserve the accepted guest's renewal/rotation cookie on the 413 (plan §2.5 fix).
-                    return withReplacementCookie guest.Replacement (payloadTooLarge ())
-                else
-                    match IdentityHttp.RouteContract.dispatch handlers (rebuildRequest request bounded) ctx with
-                    | Some p ->
-                        // ...and on the generated dispatch's 400 (malformed JSON); a no-op on handler
-                        // successes, which already carry the cookie.
-                        let! resp = p
-                        return withReplacementCookie guest.Replacement resp
-                    | None -> return notFound ()
-        })
+        Some (guestBoundedPost deps.RequireGuest identityBodyCap (fun r -> IdentityHttp.RouteContract.dispatch handlers r ctx) request)
     | _ -> None
