@@ -44,7 +44,10 @@ export function protectPreview(application) {
       const url = new URL(request.url);
       if (url.protocol !== 'https:')
         return privateResponse(new Response('HTTPS required', {status: 403}));
-      if (typeof env.PREVIEW_PASSWORD !== 'string' || env.PREVIEW_PASSWORD.length < 32)
+      // Fail closed only when the secret is missing or empty. Its strength is the operator's choice
+      // (PREVIEW.md): Basic authentication here has no lockout, so a short password can be guessed by
+      // an automated client, and the preview's own admin stays behind its separate key regardless.
+      if (typeof env.PREVIEW_PASSWORD !== 'string' || env.PREVIEW_PASSWORD === '')
         return privateResponse(new Response('Private preview unavailable', {status: 503}));
 
       const nativeCredential = request.headers.get('X-Preview-Authorization');

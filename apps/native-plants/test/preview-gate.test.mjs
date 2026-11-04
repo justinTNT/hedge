@@ -79,11 +79,19 @@ test('the Android app passes by its client marker alone, which never reaches Hed
 
 test('preview fails closed without its secret and rejects malformed or wrong credentials', async () => {
   const worker = protectPreview({fetch() {throw Error('Must never run');}});
-  for (const value of [undefined, '', 'short'])
+  for (const value of [undefined, ''])
     assert.equal((await worker.fetch(request('/', {headers:{Authorization:auth}}), {PREVIEW_PASSWORD:value})).status, 503);
   for (const value of ['Basic %%%', 'Basic a', 'Bearer abc', 'Basic ' + btoa('admin:' + password), 'Basic ' + btoa('preview:wrong'), auth + 'x', 'Basic ' + 'a'.repeat(2048)])
     assert.equal((await worker.fetch(request('/', {headers:{Authorization:value}}), env)).status, 401);
   assert.equal((await worker.fetch(new Request('http://plants.test/', {headers:{Authorization:auth}}), env)).status, 403);
+});
+
+test('a short preview password is the operator\'s choice: accepted when it matches, refused otherwise', async () => {
+  const worker = protectPreview({fetch() {return new Response('ok');}});
+  const short = {PREVIEW_PASSWORD: 'np7'};
+  assert.equal((await worker.fetch(request('/', {headers:{Authorization:'Basic ' + btoa('preview:np7')}}), short)).status, 200);
+  assert.equal((await worker.fetch(request('/', {headers:{Authorization:'Basic ' + btoa('preview:np8')}}), short)).status, 401);
+  assert.equal((await worker.fetch(request('/'), short)).status, 401);
 });
 
 test('preview preserves Hedge cookies, OAuth redirects, uploads and logout without forwarding its password', async () => {

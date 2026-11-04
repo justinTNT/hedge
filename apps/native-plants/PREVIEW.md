@@ -34,7 +34,13 @@ send the password as a native credential are still accepted.
 The preview password is removed from requests before they reach Hedge. Hedge
 logout clears its session, not the browser's cached Basic credentials. Use a
 private browser window and close it to finish a preview session; rotate
-`PREVIEW_PASSWORD` to revoke everyone's outer access.
+`PREVIEW_PASSWORD` to revoke everyone's outer access. The gate refuses to run
+only when that secret is missing or empty; its length is your choice. Note the
+trade-off: Basic authentication here has no lockout or rate limit, so a short
+password can be guessed by an automated client at request speed, and what it
+guards is the preview's pages, data and media. The admin and review routes stay
+behind their separate key whatever the password. Setting the secret takes
+effect at once, with no redeploy.
 
 Remote cookies are Secure, HttpOnly and SameSite=Lax (`ENVIRONMENT=preview`).
 Notes and photo features now require verified sign-in
@@ -398,3 +404,14 @@ password remains the web's. Earlier APKs that send the password as a native
 credential are still accepted. Live checks: with the marker the revision route
 answers 200, without it or with any other value 401; the handshake routes and
 the web password are unchanged.
+
+## Preview password length left to the operator — 4 November 2026
+
+Worker version `c1b98e7e-2da9-409d-9934-7516955fa3dc`. The gate used to refuse
+to run, answering 503 "Private preview unavailable" to every request including
+the Android app, whenever `PREVIEW_PASSWORD` was shorter than 32 characters, a
+rule no document stated; a rotation to a shorter password locked everyone out.
+The gate now fails closed only when the secret is missing or empty, and the
+password's length is a deliberate operator choice recorded above with its
+trade-off (no lockout on Basic authentication). Live checks after deploy: no
+password or a wrong one answers 401, the app marker 200, the handshake 302.
